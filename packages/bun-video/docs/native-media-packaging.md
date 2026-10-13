@@ -24,12 +24,64 @@ pas l'ABI du code exécuté. Le reçu `bun-sdk-receipt.json` contient les emprei
 des fichiers et conserve `nativeRuntimeABI: "not-yet-qualified"` avant les gates
 natifs.
 
-Les builds source sont explicites : `sdk-source <nouveau-répertoire>` récupère
-la révision officielle, puis `build` exige ce checkout propre. Les chemins sont
-configurables par `BUN_FFMPEG_SOURCE`, `BUN_MPV_SOURCE` et `BUN_MEDIA_PREFIX`.
-Le SDK mpv Linux reste à construire et qualifier sur la factory, avec ses
-prérequis libplacebo/libass et le SDK FFmpeg sélectionné. FFmpeg et mpv restent
-optionnels ; aucun téléchargement ni build ne survient à l'import du package.
+Les builds source passent par un propriétaire unique,
+`scripts/aphrody/media-sdk-build.ts`. `plan`, `configure`, `build` et les commandes
+`sdk-*` existantes conservent leurs entrées CLI. `sdk-build-plan <target>
+<sources> <sortie>` donne les commandes et les prérequis sans compiler.
+`sdk-build-native` exécute la recette de la plateforme native ; `sdk-build-linux`
+réutilise le runner LLVM/sysroot des quatre cibles Linux. Les chemins restent
+configurables par `BUN_FFMPEG_SOURCE`, `BUN_MPV_SOURCE`, `BUN_MEDIA_OUTPUT` et
+`BUN_MEDIA_PREFIX`. Le chemin par défaut réutilise `vendor`, sans créer un second
+checkout ni télécharger de sources à l'import.
+
+Les huit noms sont `windows-x64`, `windows-arm64`, `linux-x64`, `linux-arm64`,
+`linux-x64-musl`, `linux-arm64-musl`, `darwin-x64` et `darwin-arm64`. Windows utilise
+MSVC/Clang-CL et le Bash natif de Git. Darwin utilise Xcode/Clang, Meson et une
+cible minimale macOS 13. Les options LLVM/Linux restent dans
+`media-sdk-linux.sh`. Chaque build demande le verrou de l'hôte dans
+`BUN_MEDIA_HEAVY_LOCK`, deux jobs maximum et des délais bornés. Une recette
+présente ne constitue pas une qualification native de cette cible.
+
+`BUN_MEDIA_DEPENDENCY_PREFIXES` contient un objet JSON des préfixes existants,
+par exemple `{"ffmpeg":"/chemin/ffmpeg","zlib-ng":"/chemin/zlib"}`. Le reçu,
+l'ABI native, les fichiers et les licences de chaque dépendance sont vérifiés
+avant compilation. Le SDK zlib canonique de Bun garde ses en-têtes `generated/`
+et son archive `libzlib.a`/`zlib.lib` ; un petit overlay pkg-config les référence,
+sans recopier un vendor ni réimplémenter la compression. MPV réutilise les arbres
+source existants libplacebo, fast_float, FreeType, FriBidi, HarfBuzz et libass.
+Les pins, les hashes des arbres et les notices sont dans
+`scripts/aphrody/media-sdk-sources.json`. Les headers de stubs Vulkan et leur
+notice sont explicites via `BUN_MEDIA_VULKAN_HEADERS` et
+`BUN_MEDIA_VULKAN_LICENSE` ; ce profil qualifie le chemin CPU/null uniquement.
+
+Le registre distingue un checkout Git amont propre et un snapshot vendorizé
+avec `UPSTREAM.json`, puis vérifie le contenu des sources. Les snapshots FFmpeg
+et mpv actuellement intégrés sous `vendor` ont encore des pins différents du
+catalogue SDK et sont donc refusés avant compilation. Les propriétaires GNU x64
+déjà qualifiés sur la factory utilisent les pins du catalogue. Aucun résultat
+GNU x64 ne qualifie les sept autres plateformes.
+
+`bun run ffmpeg sdk-build-avio <target> <sources> <sortie>` compile le propriétaire
+`packages/bun-video/native/Cargo.toml` avec le triple Rust exact,
+`--locked --offline` et `filmcraft,libav,mpv`, puis installe
+`bin/bun-video-native[.exe]` et `bin/bun_video_native.dll` ou
+`lib/libbun_video_native.so`/`.dylib` dans le préfixe FFmpeg explicite. Les notices
+des crates viennent des sources Cargo déjà présentes. Linux mesure son répertoire
+GCC, sélectionne le linker du sysroot et compile le propriétaire C++ canonique
+des wrappers GNU ; aucune bibliothèque de libc
+de l'hôte n'est considérée comme portable par défaut. `gpu` reste une option
+distincte, avec ses propres probes matériels.
+
+La normalisation contrôle toutes les images : fermeture PE et architecture sur
+Windows, fermeture ELF et plafond GLIBC 2.17 sur GNU, absence de symboles GLIBC
+et loader musl sur musl, fermeture des load commands Mach-O sur Darwin. Les
+dylibs utilisent `@rpath`, les chemins relatifs au loader sont réécrits par
+`install_name_tool`, puis les images sont signées ad hoc. Ces contrôles statiques
+ne remplacent pas les probes FFmpeg/MPV/AVIO, le décodage RGBA exact, l'audio et
+l'exécution CLI. Le reçu de build reste `built-awaiting-native-ABI-closure-license-gates`.
+Le packaging exige un reçu natif réussi avant de qualifier le SDK source.
+`assets` reste vide jusqu'aux archives réellement construites, qualifiées et
+publiées avec leur SHA et leur taille mesurée.
 
 Le préfixe installé est `dirname(process.execPath)/lib/media/<ffmpeg|mpv>/<target>`
 avec `bin`, `include`, `lib` et les notices de licence. La version figure dans le

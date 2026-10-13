@@ -21,6 +21,14 @@ export interface MediaSDKDescriptor {
   upstreamAssets?: MediaSDKAsset[];
   apiMajor?: number;
   libraryName?: string;
+  buildRecipe?: {
+    owner: string;
+    sourcePins: string;
+    dependencies: string[];
+    status: string;
+    nativeSidecar?: { owner: string; features: string[]; gpuQualification: string };
+    profile?: string;
+  };
 }
 
 export function mediaSDKPrefix(component: MediaSDKComponent, executable = process.execPath): string {
@@ -48,7 +56,7 @@ export function mediaSDKPlan(component: MediaSDKComponent, target: MediaSDKTarge
     (typeof plan.libraryName !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(plan.libraryName))
   )
     throw new TypeError("SDK library name must be a file basename");
-  return plan;
+  return { ...plan, buildRecipe: structuredClone(manifest.buildRecipes[component]) };
 }
 
 export function validateSDKAsset(asset: MediaSDKAsset): void {

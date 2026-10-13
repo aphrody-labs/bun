@@ -58,21 +58,28 @@ normalize() {
 if [[ $component == ffmpeg ]]; then
   verify_source ffmpeg 7e93014c5bbb61e7c22afebb478bf92f7a08d59a
   zlib=${BUN_MEDIA_ZLIB_PREFIX:?Provide the qualified zlib SDK prefix from its existing source owner}
-  [[ $zlib =~ ^/[A-Za-z0-9_./+-]+$ && -f $zlib/lib/libz.a && -f $zlib/include/zlib.h ]]
+  [[ $zlib =~ ^/[A-Za-z0-9_./+-]+$ ]]
+  zlib_pc=${BUN_MEDIA_ZLIB_PKGCONFIG:-$zlib/lib/pkgconfig}
+  [[ $zlib_pc =~ ^/[A-Za-z0-9_./+-]+$ && -f $zlib_pc/zlib.pc ]]
+  export PKG_CONFIG_LIBDIR=$zlib_pc:$prefix/lib/pkgconfig
+  pkg-config --exists zlib
+  zlib_cflags=$(pkg-config --cflags zlib)
+  zlib_libs=$(pkg-config --static --libs zlib)
   mkdir -p "$owner/build"
   cd "$owner/build"
   timeout 300 bash "$sources/ffmpeg/configure" --prefix="$prefix" --arch="$machine" --target-os=linux \
     --enable-cross-compile --sysroot="$sysroot" --cc="$llvm/clang" --cxx="$llvm/clang++" \
     --ar="$llvm/llvm-ar" --ranlib="$llvm/llvm-ranlib" --nm="$llvm/llvm-nm" \
-    --extra-cflags="${flags[*]} -fPIC -I$zlib/include" --extra-ldflags="${flags[*]} ${link[*]} -L$zlib/lib" \
-    --extra-libs='-Wl,-Bstatic -lz -latomic -Wl,-Bdynamic' --enable-zlib \
+    --extra-cflags="${flags[*]} -fPIC $zlib_cflags" --extra-ldflags="${flags[*]} ${link[*]} -L$zlib/lib" \
+    --extra-libs="$zlib_libs -latomic" --enable-zlib \
     --disable-autodetect --enable-shared --disable-static --disable-doc --disable-debug --disable-ffplay \
     --disable-checkasm --disable-gpl --disable-nonfree
   timeout 7200 make -j2
   timeout 180 make install
   mkdir -p "$prefix/share/licenses/ffmpeg"
   cp "$sources/ffmpeg/"{COPYING.LGPLv2.1,COPYING.LGPLv3,LICENSE.md} "$prefix/share/licenses/ffmpeg/"
-  cp -a "$zlib/share/licenses/"* "$prefix/share/licenses/"
+  if [[ -d $zlib/share/licenses ]]; then cp -a "$zlib/share/licenses/"* "$prefix/share/licenses/"
+  else mkdir -p "$prefix/share/licenses/zlib-ng"; cp -a "$zlib/licenses/"* "$prefix/share/licenses/zlib-ng/"; fi
 elif [[ $component == mpv ]]; then
   verify_source mpv c3ac7f39514c7f45bc38a18e66887240539ee33c
   verify_source libplacebo 1dd022687b9ac1dd996855b51433bf770ae76aab

@@ -1,5 +1,34 @@
 {
   "schema": 1,
+  "buildRecipes": {
+    "ffmpeg": {
+      "owner": "scripts/aphrody/media-sdk-build.ts",
+      "sourcePins": "scripts/aphrody/media-sdk-sources.json",
+      "dependencies": ["zlib-ng"],
+      "nativeSidecar": {
+        "owner": "packages/bun-video/native/Cargo.toml",
+        "features": ["filmcraft", "libav", "mpv"],
+        "gpuQualification": "separate"
+      },
+      "status": "recipes-present; native source/ABI/closure/license gates required per target"
+    },
+    "mpv": {
+      "owner": "scripts/aphrody/media-sdk-build.ts",
+      "sourcePins": "scripts/aphrody/media-sdk-sources.json",
+      "dependencies": [
+        "ffmpeg",
+        "libplacebo",
+        "fast_float",
+        "freetype",
+        "fribidi",
+        "harfbuzz",
+        "libass",
+        "vulkan-headers"
+      ],
+      "profile": "LGPL CPU/null; hardware playback qualification separate",
+      "status": "recipes-present; native source/ABI/closure/license gates required per target"
+    }
+  },
   "registryBindings": {
     "package": "ffmpeg-sys-next",
     "version": "9.0.1",

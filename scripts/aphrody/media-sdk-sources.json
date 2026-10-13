@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "qualification": "source-identities-only; native builds are qualified separately per target",
+  "sources": {
+    "ffmpeg": {
+      "repository": "https://github.com/FFmpeg/FFmpeg",
+      "revision": "7e93014c5bbb61e7c22afebb478bf92f7a08d59a",
+      "sourceTreeSHA256": "293317741254449af34d037f5ae4d07e4f7e0a88b06bb6b9f115b4bd243d25a2",
+      "licenses": ["COPYING.LGPLv2.1", "COPYING.LGPLv3", "LICENSE.md"]
+    },
+    "mpv": {
+      "repository": "https://github.com/mpv-player/mpv",
+      "revision": "c3ac7f39514c7f45bc38a18e66887240539ee33c",
+      "sourceTreeSHA256": "430d5ef4c444c4699ebc9be086e6a10319696103945f3b5d2e09eea6bb30e0c1",
+      "licenses": ["Copyright", "LICENSE.LGPL"]
+    },
+    "libplacebo": {
+      "repository": "https://github.com/haasn/libplacebo",
+      "revision": "1dd022687b9ac1dd996855b51433bf770ae76aab",
+      "sourceTreeSHA256": "a9b0308afb7966c7b87f09bf0fd3dfcdcb507a644c42f60a38a3a0efa0e1362b",
+      "licenses": ["LICENSE"]
+    },
+    "fast_float": {
+      "repository": "https://github.com/fastfloat/fast_float",
+      "revision": "97b54ca9e75f5303507699d27c6b4f4efe4641a1",
+      "sourceTreeSHA256": "b37546686654d65d0e7af616f2c2bbfb9e1e24230d0d4a82ebfceefa6ccd10ce",
+      "licenses": ["LICENSE-APACHE", "LICENSE-BOOST", "LICENSE-MIT"]
+    },
+    "zlib-ng": {
+      "repository": "https://github.com/zlib-ng/zlib-ng",
+      "revision": "12731092979c6d07f42da27da673a9f6c7b13586",
+      "licenses": ["LICENSE.md"]
+    },
+    "freetype": {
+      "version": "2.14.2+dfsg-1ubuntu0.2",
+      "sourceTreeSHA256": "842f3e09d793856767b340ed7b3ca82ae5ecdbf9eb4458b8ae46955f28472d8e",
+      "dscSHA256": "37305c65f89ccfdbfdaafba675a203865603180eedd44578fb30a3b38dc6ae0c",
+      "licenses": ["LICENSE.TXT", "docs/FTL.TXT"]
+    },
+    "fribidi": {
+      "version": "1.0.16-5",
+      "sourceTreeSHA256": "5047daf16c82b7e8f4622c7fcb63893b71ea2e5208e4856eaa061b7999fc9e1e",
+      "dscSHA256": "bc60303e25c24c017928a8e19766a0d10c7196ddeb419a646b0781d746cba918",
+      "licenses": ["COPYING"]
+    },
+    "harfbuzz": {
+      "version": "12.3.2-2",
+      "sourceTreeSHA256": "d408433193cf8456d6811245ee6f44c0af91d89493e9d4ede70f0b99e4f50c3b",
+      "dscSHA256": "d6e9e342b811b32697413fb8b9ad795b01227fc5ee7cd42680aad9e4e7877b4a",
+      "licenses": ["COPYING"]
+    },
+    "libass": {
+      "version": "1:0.17.4-2",
+      "sourceTreeSHA256": "04c984b2c36177c317053e2f2f6ae141385bb484942d23004d0c01ad7c7fc83e",
+      "dscSHA256": "a5df54d5e85f5bcb369713a020e01541f043899e963c1540455f51471574b2c2",
+      "licenses": ["COPYING"]
+    }
+  }
+}

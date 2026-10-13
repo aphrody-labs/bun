@@ -1,6 +1,10 @@
 import { mkdir, realpath, readdir, stat } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
-import { qualifyMediaELFs, type MediaELF } from "./media-sdk-abi";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { qualifyMediaELFs, qualifyMediaMachOs, type MediaELF, type MediaMachO } from "./media-sdk-abi";
+import { mediaSDKTool as nativeTool, verifyMediaSourceOwner } from "./media-sdk-source";
+import { binaryImports, isMediaSystemDLL } from "./media-stage";
+import { loadCommands } from "../build/verify-binary";
+import { assertPublicMediaPath } from "./media-release";
 import {
   extractMediaSDKArchive,
   hashSDKFile,
@@ -10,38 +14,8 @@ import {
   type MediaSDKTarget,
 } from "../../packages/bun-video/src/sdk";
 
-async function nativeTool(argv: string[], cwd: string): Promise<string> {
-  await using child = Bun.spawn(argv, {
-    cwd,
-    stdout: "pipe",
-    stderr: "inherit",
-    timeout: 120_000,
-    killSignal: "SIGKILL",
-  });
-  let text = "";
-  let bytes = 0;
-  const decoder = new TextDecoder();
-  for await (const chunk of child.stdout) {
-    bytes += chunk.byteLength;
-    if (bytes > 16 * 1024 * 1024) {
-      child.kill();
-      throw new Error("SDK archive listing exceeded its bound");
-    }
-    text += decoder.decode(chunk, { stream: true });
-  }
-  if ((await child.exited) !== 0) throw new Error(`SDK factory native tool failed: ${argv[0]}`);
-  return text + decoder.decode();
-}
-
 export async function verifyMediaSource(component: MediaSDKComponent, source: string): Promise<void> {
-  const plan = mediaSDKPlan(component, "linux-x64");
-  if (!plan.sourceRevision || !plan.sourceRepository) throw new Error("Media source lacks an exact upstream pin");
-  const git = Bun.which("git");
-  if (!git) throw new Error("Media factory needs the installed native Git owner");
-  if ((await nativeTool([git, "rev-parse", "HEAD"], source)).trim() !== plan.sourceRevision)
-    throw new Error("Media factory source does not match its pinned revision");
-  if ((await nativeTool([git, "status", "--porcelain", "--untracked-files=normal"], source)).trim())
-    throw new Error("Media factory source contains unpublished changes");
+  await verifyMediaSourceOwner(component, source);
 }
 
 export async function bootstrapMediaSource(component: MediaSDKComponent, source: string): Promise<void> {
@@ -65,7 +39,8 @@ export async function normalizeMediaSDK(
   workspace: string,
   options: { reuseExtracted?: boolean } = {},
 ) {
-  if (process.platform !== "linux") throw new Error("SDK normalization belongs to the qualified Linux factory");
+  if (!target.startsWith("windows") && process.platform !== (target.startsWith("darwin") ? "darwin" : "linux"))
+    throw new Error("SDK normalization needs its native binary relocation owner");
   if (!isAbsolute(archive) || !isAbsolute(workspace)) throw new TypeError("Factory paths must be absolute");
   const plan = mediaSDKPlan(component, target);
   const sha256 = await hashSDKFile(archive);
@@ -106,6 +81,14 @@ export async function normalizeMediaSDK(
         throw new Error("Existing SDK extraction changed since its previous receipt");
     }
   }
+  const binaryNormalization = await normalizeMediaSDKPrefix(component, target, prefix);
+  return archiveMediaSDKPrefix(component, target, prefix, workspace, { upstream: asset, binaryNormalization });
+}
+
+export async function normalizeMediaSDKPrefix(component: MediaSDKComponent, target: MediaSDKTarget, prefix: string) {
+  mediaSDKPlan(component, target);
+  const canonicalPrefix = await realpath(prefix),
+    workspace = prefix;
   for await (const name of new Bun.Glob("lib/pkgconfig/*.pc").scan({ cwd: prefix, onlyFiles: true })) {
     const path = await realpath(join(prefix, name));
     const member = relative(canonicalPrefix, path);
@@ -136,7 +119,9 @@ export async function normalizeMediaSDK(
       if ((await nativeTool([patcher, "--print-rpath", path], workspace)).trim() !== "$ORIGIN")
         await nativeTool([patcher, "--set-rpath", "$ORIGIN", path], workspace);
     }
-    const executables = component === "ffmpeg" ? ["ffmpeg", "ffprobe"] : ["mpv"];
+    const executables: string[] = [];
+    for await (const name of new Bun.Glob("bin/*").scan({ cwd: prefix, onlyFiles: true }))
+      executables.push(name.slice(4));
     for (const executable of executables) {
       const path = await realpath(join(prefix, "bin", executable));
       const member = relative(canonicalPrefix, path);
@@ -150,8 +135,53 @@ export async function normalizeMediaSDK(
       libraries: "$ORIGIN",
       executables: "$ORIGIN/../lib",
     };
+  } else if (target.startsWith("darwin")) {
+    if (process.platform !== "darwin") throw new Error("Mach-O relocation requires the native Darwin tool owner");
+    const installNameTool = Bun.which("install_name_tool"),
+      objdump = Bun.which("llvm-objdump"),
+      codesign = Bun.which("codesign");
+    if (!installNameTool || !objdump || !codesign)
+      throw new Error("Mach-O normalization needs install_name_tool, LLVM objdump and codesign");
+    const libraryNames = new Set<string>();
+    for await (const name of new Bun.Glob("lib/*.dylib").scan({ cwd: prefix, onlyFiles: true }))
+      libraryNames.add(name.slice(4));
+    const seen = new Set<string>();
+    for await (const raw of new Bun.Glob("{bin,lib}/*").scan({ cwd: prefix, onlyFiles: true, followSymlinks: true })) {
+      const file = raw.replaceAll("\\", "/");
+      if (!file.startsWith("bin/") && !file.endsWith(".dylib")) continue;
+      const path = await realpath(join(prefix, file)),
+        within = relative(canonicalPrefix, path);
+      if (within.startsWith("..") || isAbsolute(within)) throw new Error("SDK Mach-O image escaped its prefix");
+      if (seen.has(path)) continue;
+      seen.add(path);
+      await binaryImports(path, target);
+      const commands = loadCommands(await nativeTool([objdump, "--macho", "--private-headers", path], prefix));
+      const args: string[] = [];
+      if (file.startsWith("lib/")) args.push("-id", `@rpath/${within.replaceAll("\\", "/").slice(4)}`);
+      for (const command of commands) {
+        if (/^LC_(LOAD|LOAD_WEAK|REEXPORT|LOAD_UPWARD|LAZY_LOAD)_DYLIB$/.test(command.cmd)) {
+          const name = command.text.match(/^\s*name (\S+) \(offset \d+\)\s*$/m)?.[1];
+          if (name && libraryNames.has(name.slice(name.lastIndexOf("/") + 1))) {
+            const replacement = `@rpath/${name.slice(name.lastIndexOf("/") + 1)}`;
+            if (name !== replacement) args.push("-change", name, replacement);
+          }
+        } else if (command.cmd === "LC_RPATH") {
+          const path = command.text.match(/^\s*path (\S+) \(offset \d+\)\s*$/m)?.[1];
+          if (path) args.push("-delete_rpath", path);
+        }
+      }
+      args.push("-add_rpath", file.startsWith("lib/") ? "@loader_path" : "@loader_path/../lib");
+      await nativeTool([installNameTool, ...args, path], prefix);
+      await nativeTool([codesign, "--force", "--sign", "-", path], prefix);
+    }
+    binaryNormalization = {
+      tool: "install_name_tool+codesign",
+      version: "native Darwin tools",
+      libraries: "@rpath",
+      executables: "@loader_path/../lib",
+    };
   }
-  return archiveMediaSDKPrefix(component, target, prefix, workspace, { upstream: asset, binaryNormalization });
+  return binaryNormalization;
 }
 
 async function archiveMediaSDKPrefix(
@@ -163,7 +193,7 @@ async function archiveMediaSDKPrefix(
 ) {
   const plan = mediaSDKPlan(component, target);
   const layout = await verifyMediaSDKLayout(component, target, prefix);
-  const linuxABI = target.startsWith("linux-") ? await qualifyLinuxMediaSDK(target, prefix) : undefined;
+  const binaryClosure = await qualifyMediaSDKClosure(target, prefix);
   const entries: Record<string, Bun.ArchiveEntry> = {};
   const fileHashes: Record<string, string> = {};
   const canonical = await realpath(prefix);
@@ -184,7 +214,13 @@ async function archiveMediaSDKPrefix(
     expanded += info.size;
     if (++count > 100_000 || expanded > 2 * 1024 * 1024 * 1024) throw new Error("SDK expanded file budget exceeded");
     const normalized = name.replaceAll("\\", "/");
-    entries[normalized] = { data: await Bun.file(path).bytes(), mode: info.mode & 0o777, mtime: 0 };
+    assertPublicMediaPath(normalized);
+    if (normalized === "bun-sdk-receipt.json") continue;
+    entries[normalized] = {
+      data: await Bun.file(path).bytes(),
+      mode: normalized.startsWith("bin/") ? 0o755 : 0o644,
+      mtime: 0,
+    };
     fileHashes[normalized] = await hashSDKFile(path);
   }
   const filename = `${component}-${plan.version}-${target}-sdk.zip`;
@@ -202,11 +238,12 @@ async function archiveMediaSDKPrefix(
     symlinks: "materialized-contained-files",
     binaryNormalization: metadata.binaryNormalization,
     nativeRuntimeABI: metadata.nativeRuntimeABI ?? "not-yet-qualified",
-    ...(linuxABI ? { linuxABI } : {}),
+    ...(target.startsWith("linux-") ? { linuxABI: binaryClosure } : { binaryClosure }),
     ...(metadata.nativeQualification ? { nativeQualification: metadata.nativeQualification } : {}),
     ...(metadata.dependencies ? { dependencies: metadata.dependencies } : {}),
   };
   entries["bun-sdk-receipt.json"] = { data: JSON.stringify(receipt, null, 2), mode: 0o644, mtime: 0 };
+  await Bun.write(join(prefix, "bun-sdk-receipt.json"), JSON.stringify(receipt, null, 2));
   await Bun.write(output, await new Bun.Archive(entries, { format: "zip", mtime: 0 }).blob());
   const distribution = {
     url: `https://bun-lib.aphrody.app/media/${filename}`,
@@ -216,6 +253,51 @@ async function archiveMediaSDKPrefix(
   };
   await Bun.write(join(workspace, "distribution.json"), JSON.stringify({ ...receipt, asset: distribution }, null, 2));
   return { output, distribution, qualification: receipt.qualification };
+}
+
+export async function qualifyMediaSDKClosure(target: MediaSDKTarget, prefix: string) {
+  if (target.startsWith("linux")) return qualifyLinuxMediaSDK(target, prefix);
+  const canonical = await realpath(prefix);
+  const images: Array<{ file: string; path: string; sha256: string }> = [];
+  for await (const raw of new Bun.Glob("{bin,lib}/*").scan({ cwd: prefix, onlyFiles: true, followSymlinks: true })) {
+    const file = raw.replaceAll("\\", "/");
+    if (
+      !(target.startsWith("windows") ? /\.(exe|dll)$/i.test(file) : file.startsWith("bin/") || file.endsWith(".dylib"))
+    )
+      continue;
+    const path = await realpath(join(prefix, raw));
+    const member = relative(canonical, path);
+    if (member.startsWith("..") || isAbsolute(member) || images.length >= 1024)
+      throw new Error("Media binary closure escaped its bounded prefix");
+    await binaryImports(path, target);
+    images.push({ file, path, sha256: await hashSDKFile(path) });
+  }
+  if (!images.length) throw new Error("Media binary closure is empty");
+  if (target.startsWith("darwin")) {
+    const objdump = Bun.which("llvm-objdump");
+    if (!objdump) throw new Error("Mach-O qualification needs the canonical LLVM objdump owner");
+    const inputs: MediaMachO[] = [];
+    for (const image of images)
+      inputs.push({
+        file: image.file,
+        sha256: image.sha256,
+        privateHeaders: await nativeTool([objdump, "--macho", "--private-headers", image.path], prefix),
+      });
+    return qualifyMediaMachOs(target, inputs);
+  }
+  const bundled = new Set(
+    images
+      .filter(image => image.file.startsWith("bin/") && image.file.endsWith(".dll"))
+      .map(image => image.file.slice(4).toLowerCase()),
+  );
+  const files = [];
+  for (const image of images) {
+    const needed = await binaryImports(image.path, target);
+    if (needed.some(name => !isMediaSystemDLL(name) && !bundled.has(name.toLowerCase())))
+      throw new Error(`Media PE dependency is outside its closure: ${image.file}`);
+    files.push({ file: image.file, sha256: image.sha256, needed });
+  }
+  return { schema: 1, target, qualification: "PE-architecture-and-import-closure-only", files };
 }
 
 export async function qualifyLinuxMediaSDK(target: MediaSDKTarget, prefix: string) {
@@ -253,68 +335,75 @@ export async function packageBuiltMediaSDK(
   workspace: string,
   metadata: { nativeQualification: Record<string, unknown>; dependencies: Record<string, unknown> },
 ) {
-  if (process.platform !== "linux") throw new Error("Source SDK packaging belongs to the qualified Linux factory");
   if (![source, prefix, workspace].every(isAbsolute)) throw new TypeError("Source SDK paths must be absolute");
   const plan = mediaSDKPlan(component, target);
   if (
     metadata.nativeQualification.target !== target ||
     metadata.nativeQualification.sourceRevision !== plan.sourceRevision ||
-    metadata.nativeQualification.sourceClean !== true
+    metadata.nativeQualification.sourceClean !== true ||
+    (metadata.nativeQualification.status !== "pass" && metadata.nativeQualification.passed !== true)
   )
     throw new Error("Native SDK qualification differs from its target or clean source pin");
-  await verifyMediaSource(component, source);
-  const sourceFiles: Record<string, { sha256: string; bytes: number }> = {};
-  const canonicalSource = await realpath(source);
-  const names = (await nativeTool(["git", "ls-files", "-z"], source)).split("\0").filter(Boolean);
-  let bytes = 0;
-  for (const name of names) {
-    const path = await realpath(join(source, name));
-    const member = relative(canonicalSource, path);
-    if (member.startsWith("..") || isAbsolute(member)) throw new Error("SDK source escaped its owner checkout");
-    const info = await stat(path);
-    bytes += info.size;
-    if (!info.isFile() || names.length > 100_000 || bytes > 512 * 1024 * 1024)
-      throw new Error("SDK source byte or file budget exceeded");
-    sourceFiles[name] = { sha256: await hashSDKFile(path), bytes: info.size };
-  }
+  const sourceIdentity = await verifyMediaSourceOwner(component, source);
   return archiveMediaSDKPrefix(component, target, prefix, workspace, {
-    source: {
-      repository: plan.sourceRepository,
-      commit: plan.sourceRevision,
-      tree: (await nativeTool(["git", "rev-parse", "HEAD^{tree}"], source)).trim(),
-      files: sourceFiles,
-      fileBytes: bytes,
-      clean: true,
-    },
-    binaryNormalization: { libraries: "$ORIGIN", executables: "$ORIGIN/../lib" },
+    source: sourceIdentity,
+    binaryNormalization: target.startsWith("linux")
+      ? { libraries: "$ORIGIN", executables: "$ORIGIN/../lib" }
+      : target.startsWith("darwin")
+        ? { libraries: "@rpath", executables: "@loader_path/../lib" }
+        : { libraries: "adjacent-bin-DLLs" },
     nativeRuntimeABI: "qualified-by-native-source-build-probes",
     ...metadata,
   });
 }
 
 export async function runMediaSDKFactory(component: MediaSDKComponent): Promise<boolean> {
-  if (process.argv[2] === "sdk-build-linux") {
-    if (process.platform !== "linux") throw new Error("Portable SDK builds belong to the Linux factory");
-    const [target, sources, output, ffmpegPrefix] = process.argv.slice(3);
-    if (!target || !/^linux-(?:x64|arm64)(?:-musl)?$/.test(target) || !sources || !output)
-      throw new TypeError(
-        "sdk-build-linux requires Linux target, source owner root, output and optional FFmpeg prefix",
-      );
-    const bash = Bun.which("bash");
-    if (!bash) throw new Error("Portable SDK builds require the native Bash build owner");
-    await using child = Bun.spawn(
-      [
-        bash,
-        join(import.meta.dir, "media-sdk-linux.sh"),
-        target,
-        component,
-        resolve(sources),
-        resolve(output),
-        ...(ffmpegPrefix ? [resolve(ffmpegPrefix)] : []),
-      ],
-      { stdout: "inherit", stderr: "inherit", timeout: 10_800_000, killSignal: "SIGTERM" },
+  const action = process.argv[2] ?? "sdk-plan";
+  if (
+    ["plan", "configure", "build", "sdk-build-native", "sdk-build-linux", "sdk-build-avio", "sdk-build-plan"].includes(
+      action,
+    )
+  ) {
+    const { mediaBuildPlan, runMediaBuild } = await import("./media-sdk-build");
+    const { mediaSDKHostTarget } = await import("../../packages/bun-video/src/sdk-platform");
+    const root = resolve(import.meta.dir, "../..");
+    const legacy = ["plan", "configure", "build"].includes(action);
+    const [targetArg, sourcesArg, outputArg, ffmpegPrefix] = process.argv.slice(3);
+    const target = (legacy ? (Bun.env.BUN_MEDIA_TARGET ?? mediaSDKHostTarget()) : targetArg) as MediaSDKTarget;
+    const source = resolve(
+      (component === "ffmpeg" ? Bun.env.BUN_FFMPEG_SOURCE : Bun.env.BUN_MPV_SOURCE) ?? join(root, "vendor", component),
     );
-    if ((await child.exited) !== 0) throw new Error("Portable SDK build failed; inspect its bounded factory log");
+    const output = resolve(
+      legacy
+        ? (Bun.env.BUN_MEDIA_OUTPUT ?? join(root, "build", component === "ffmpeg" ? "ffmpeg" : "libmpv"))
+        : (outputArg ?? ""),
+    );
+    if (!legacy && (!targetArg || !sourcesArg || !outputArg))
+      throw new Error("sdk-build requires target, existing source owner root and output");
+    if (action === "sdk-build-linux" && !target.startsWith("linux-"))
+      throw new Error("sdk-build-linux requires a Linux target");
+    const dependencies = JSON.parse(Bun.env.BUN_MEDIA_DEPENDENCY_PREFIXES ?? "{}");
+    if (ffmpegPrefix) dependencies.ffmpeg = resolve(ffmpegPrefix);
+    if (Bun.env.BUN_MEDIA_ZLIB_PREFIX) dependencies["zlib-ng"] = resolve(Bun.env.BUN_MEDIA_ZLIB_PREFIX);
+    const input = {
+      component: action === "sdk-build-avio" ? ("avio" as const) : component,
+      target,
+      root,
+      sources: legacy ? dirname(source) : resolve(sourcesArg!),
+      ...(legacy ? { source } : {}),
+      output,
+      prefix: resolve(Bun.env.BUN_MEDIA_PREFIX ?? join(output, "prefix")),
+      dependencies,
+    };
+    console.log(
+      JSON.stringify(
+        action === "plan" || action === "sdk-build-plan"
+          ? mediaBuildPlan(input)
+          : await runMediaBuild(input, action === "configure"),
+        null,
+        2,
+      ),
+    );
     return true;
   }
   if (process.argv[2] === "sdk-source") {

@@ -1,4 +1,82 @@
 import type { MediaSDKTarget } from "../../packages/bun-video/src/sdk-platform";
+import { loadCommands } from "../build/verify-binary";
+
+export interface MediaMachO {
+  file: string;
+  sha256: string;
+  privateHeaders: string;
+}
+
+/** Reuses the build owner's load-command parser; only an explicit relocatable closure is accepted. */
+export function qualifyMediaMachOs(target: MediaSDKTarget, inputs: MediaMachO[]) {
+  if (!/^darwin-(?:x64|arm64)$/.test(target) || !inputs.length || inputs.length > 1024)
+    throw new Error("Mach-O qualification requires a bounded Darwin SDK inventory");
+  const libraries = new Set(inputs.filter(input => input.file.startsWith("lib/")).map(input => input.file.slice(4)));
+  const frameworks = new Set([
+    "CoreFoundation",
+    "Foundation",
+    "AppKit",
+    "Cocoa",
+    "CoreMedia",
+    "CoreVideo",
+    "VideoToolbox",
+    "AudioToolbox",
+    "CoreAudio",
+    "IOKit",
+    "CoreGraphics",
+    "Metal",
+    "Security",
+    "QuartzCore",
+    "AVFoundation",
+    "OpenGL",
+  ]);
+  const system = (name: string) =>
+    name === "/usr/lib/libSystem.B.dylib" ||
+    name === "/usr/lib/libobjc.A.dylib" ||
+    name === "/usr/lib/libc++.1.dylib" ||
+    [...frameworks].some(
+      framework =>
+        name === `/System/Library/Frameworks/${framework}.framework/Versions/A/${framework}` ||
+        name === `/System/Library/Frameworks/${framework}.framework/${framework}`,
+    );
+  const files = inputs.map(input => {
+    if (!/^(?:bin|lib)\/[^/]+$/.test(input.file) || !/^[a-f0-9]{64}$/.test(input.sha256))
+      throw new Error("Invalid SDK Mach-O member or digest");
+    const commands = loadCommands(input.privateHeaders);
+    if (
+      commands.some(
+        command => command.cmd === "LC_BUILD_VERSION" && !/^\s*platform (?:macos|1)\s*$/im.test(command.text),
+      )
+    )
+      throw new Error(`SDK Mach-O targets a foreign Apple platform: ${input.file}`);
+    const versions = commands
+      .filter(command => command.cmd === "LC_BUILD_VERSION" || command.cmd === "LC_VERSION_MIN_MACOSX")
+      .map(command => command.text.match(/^\s*(?:minos|version) ([0-9.]+)\s*$/m)?.[1]);
+    if (versions.length !== 1 || !versions[0] || compareVersions(versions[0], "13.0") > 0)
+      throw new Error(`SDK Mach-O deployment target exceeds the release floor: ${input.file}`);
+    const needed = commands
+      .filter(command => /^LC_(LOAD|LOAD_WEAK|REEXPORT|LOAD_UPWARD|LAZY_LOAD)_DYLIB$/.test(command.cmd))
+      .map(command => command.text.match(/^\s*name (\S+) \(offset \d+\)\s*$/m)?.[1]);
+    const localPath = input.file.startsWith("lib/") ? "@loader_path" : "@loader_path/../lib";
+    for (const name of needed)
+      if (!name || (!system(name) && (!name.startsWith("@rpath/") || !libraries.has(name.slice(7)))))
+        throw new Error(`SDK Mach-O dependency is outside its closure: ${input.file}: ${name}`);
+    const paths = commands
+      .filter(command => command.cmd === "LC_RPATH")
+      .map(command => command.text.match(/^\s*path (\S+) \(offset \d+\)\s*$/m)?.[1]);
+    if (needed.some(name => name?.startsWith("@rpath/")) && (paths.length !== 1 || paths[0] !== localPath))
+      throw new Error(`SDK Mach-O search path is not relocatable: ${input.file}`);
+    const identity = commands
+      .find(command => command.cmd === "LC_ID_DYLIB")
+      ?.text.match(/^\s*name (\S+) \(offset \d+\)\s*$/m)?.[1];
+    if (input.file.startsWith("lib/") && (!identity?.startsWith("@rpath/") || !libraries.has(identity.slice(7))))
+      throw new Error(`SDK Mach-O install name differs from its member: ${input.file}`);
+    if (paths.some(path => path !== localPath))
+      throw new Error(`SDK Mach-O contains an external search path: ${input.file}`);
+    return { file: input.file, sha256: input.sha256, minimumMacOS: versions[0], needed, rpath: paths[0] ?? null };
+  });
+  return { schema: 1, target, releaseMacOSFloor: "13.0", qualification: "Mach-O-load-command-closure-only", files };
+}
 
 export interface MediaELF {
   file: string;

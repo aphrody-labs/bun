@@ -20,8 +20,9 @@ never replaces an existing output, and fails when the selected GPU cannot encode
 a 256×256 PNG probe frame. `probe` emits JSON lines with encoder and host readiness. A device
 probe success establishes encoding capability for that small fixture, not
 arbitrary dimensions, sustained performance or browser rendering acceleration.
-The default `gpu` feature wires the native path to the pinned `gpu-video`
-crate (wgpu 30). On Windows and Linux it uses Vulkan Video and keeps decoded
+The crate has no default features. The complete CPU/AVIO recipe selects
+`filmcraft,libav,mpv` explicitly. The optional `gpu` feature wires the native
+path to the pinned `gpu-video` crate (wgpu 30). On Windows and Linux it uses Vulkan Video and keeps decoded
 frames on the GPU for downstream wgpu work. `gpu-info` reports the real adapter,
 driver, device class, and hardware decode/encode flags; codec support remains
 driver-dependent.

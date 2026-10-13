@@ -221,7 +221,7 @@ const flagNames = (block: string, listKey: string): string[] => {
 };
 
 /** `llvm-objdump --macho --private-headers` → one text block per load command. */
-const loadCommands = (priv: string): { cmd: string; text: string }[] =>
+export const loadCommands = (priv: string): { cmd: string; text: string }[] =>
   priv
     .split(/^Load command \d+\s*$/m)
     .slice(1)

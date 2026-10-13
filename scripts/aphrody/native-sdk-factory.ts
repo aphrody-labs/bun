@@ -67,7 +67,7 @@ async function containedFile(directory: string, file: string): Promise<string> {
 
 async function nativeTool(argv: string[], cwd: string): Promise<void> {
   await using child = Bun.spawn(argv, { cwd, stdout: "ignore", stderr: "inherit", timeout: 120_000 });
-  if (await child.exited) throw new Error(`Native SDK tool failed: ${basename(argv[0])}`);
+  if (await child.exited) throw new Error(`Native SDK tool failed: ${basename(argv[0] ?? "native SDK tool")}`);
 }
 
 export async function packageNativeSDK(
