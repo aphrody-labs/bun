@@ -101,7 +101,11 @@ async function identity(path: string) {
   return { sha256: await hashSDKFile(path), bytes: (await lstat(path)).size };
 }
 
-async function binaryImports(path: string, target: MediaStageTarget, maxBytes = 128 * 1024 * 1024): Promise<string[]> {
+export async function binaryImports(
+  path: string,
+  target: MediaStageTarget,
+  maxBytes = 128 * 1024 * 1024,
+): Promise<string[]> {
   if ((await stat(path)).size > maxBytes) throw new Error(`Media binary exceeds its size bound: ${path}`);
   const bytes = await Bun.file(path).bytes(),
     view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -131,6 +135,10 @@ async function binaryImports(path: string, target: MediaStageTarget, maxBytes = 
   )
     throw new Error(`Media Mach-O image does not match ${target}: ${path}`);
   return [];
+}
+
+export function isMediaSystemDLL(name: string): boolean {
+  return systemDLL.test(name);
 }
 
 /** Inventory public SDK directories and the imports required by the media executables. */

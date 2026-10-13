@@ -3,9 +3,11 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import { hashSDKFile } from "../../packages/bun-video/src/sdk";
 import { mp4 } from "../../test/js/bun/video/fixture";
 import { stageMediaBundle } from "./media-stage";
-import { runtimeReleaseMatrix, vpsRuntimeReleasePlan } from "./release-matrix";
+import { runtimeFlavorManifest, runtimeReleaseMatrix, vpsRuntimeReleasePlan } from "./release-matrix";
 import mediaSDKManifest from "../../packages/bun-video/src/sdk-manifest.json";
 import { mediaSDKHostTarget } from "../../packages/bun-video/src/sdk-platform";
+import { verifyArtifactAsync } from "../../packages/bun-runtime-sdk/src/artifact";
+import type { HostPlatform, HostArch } from "../../packages/bun-runtime-sdk/src/target";
 
 export interface MediaReleaseInput {
   target?: string;
@@ -16,6 +18,7 @@ export interface MediaReleaseInput {
   mediaPrefix: string;
   output: string;
   sdkArchives: { directory: string; archive: string }[];
+  runtimeSDKArtifact?: string;
 }
 
 export function mediaReleaseTarget(name: string) {
@@ -24,8 +27,8 @@ export function mediaReleaseTarget(name: string) {
   return {
     ...target,
     sdkTarget,
-    platform: target.os === "windows" ? "win32" : target.os,
-    runtimeArch: target.arch === "aarch64" ? "arm64" : "x64",
+    platform: (target.os === "windows" ? "win32" : target.os) as HostPlatform,
+    runtimeArch: (target.arch === "aarch64" ? "arm64" : "x64") as HostArch,
   };
 }
 
@@ -423,6 +426,25 @@ export async function packageMediaRelease(input: MediaReleaseInput) {
   };
   await copy(input.runtime, runtimeName, windows ? 0o644 : 0o755);
   await copy(input.executable, videoName, windows ? 0o644 : 0o755);
+  await Bun.write(
+    join(directory, "release-flavor.json"),
+    JSON.stringify(runtimeFlavorManifest(target, input.source), null, 2) + "\n",
+  );
+  if (input.runtimeSDKArtifact) {
+    if (!isAbsolute(input.runtimeSDKArtifact)) throw new Error("Runtime SDK artifact must be absolute");
+    const artifact = await verifyArtifactAsync(input.runtimeSDKArtifact);
+    const manifest = await Bun.file(join(input.runtimeSDKArtifact, "manifest.json")).json();
+    if (
+      manifest.sources?.bun?.rev !== input.source ||
+      manifest.sources?.bun?.dirty !== false ||
+      manifest.build?.panicRecovery !== true ||
+      !/^[a-z0-9_-]+$/.test(artifact.target)
+    )
+      throw new Error("Runtime SDK source or panic recovery receipt differs from the release");
+    const destination = `lib/runtime-sdk/${artifact.target}/current`;
+    for (const name of [...Object.keys(artifact.files), "manifest.json"])
+      await copy(join(input.runtimeSDKArtifact, name), `${destination}/${name}`);
+  }
   const media = await stageMediaBundle(directory, { apply: true, prefix: input.mediaPrefix, target: target.sdkTarget });
   for (const file of media.files) if (file.mode !== undefined) modes[file.name] = file.mode;
   const sdk: Awaited<ReturnType<typeof verifyMediaSDKArchive>>[] = [];

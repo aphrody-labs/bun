@@ -92,7 +92,8 @@ export async function normalizeMediaSDK(
     await nativeTool([tool, "-xf", archive, "-C", extracted, "--no-same-owner", "--no-same-permissions"], workspace);
   }
   const roots = await readdir(extracted, { withFileTypes: true });
-  const prefix = roots.length === 1 && roots[0].isDirectory() ? join(extracted, roots[0].name) : extracted;
+  const first = roots[0];
+  const prefix = roots.length === 1 && first?.isDirectory() ? join(extracted, first.name) : extracted;
   const canonicalPrefix = await realpath(prefix);
   if (options.reuseExtracted) {
     const previous = await Bun.file(join(workspace, "distribution.json")).json();

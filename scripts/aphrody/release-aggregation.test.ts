@@ -28,6 +28,31 @@ async function fixture(run: (root: string) => Promise<void>) {
     add(executable, `validator executable ${full.target}`);
     add("sdk/video.tgz", "validator video SDK");
     add("sdk/runtime.tgz", "validator runtime SDK");
+    const tripleArch = target.arch === "aarch64" ? "aarch64" : "x86_64";
+    const triple = `${tripleArch}-${target.os === "windows" ? "pc-windows-msvc" : target.os === "darwin" ? "apple-darwin" : `unknown-linux-${target.abi}`}`;
+    const artifactRoot = `lib/runtime-sdk/${triple}/current/`;
+    const libraryName =
+      target.os === "windows"
+        ? "buv_runtime.dll"
+        : target.os === "darwin"
+          ? "libbuv_runtime.dylib"
+          : "libbuv_runtime.so";
+    add(artifactRoot + libraryName, `validator runtime module ${full.target}`);
+    add(artifactRoot + "yolo_runtime.h", "#define YOLO_ABI_MAJOR 1u\n#define YOLO_ABI_MINOR 6u\n");
+    add(
+      artifactRoot + "manifest.json",
+      JSON.stringify({
+        schema: 1,
+        target: triple,
+        abi: "1.6",
+        sources: { bun: { rev: source, dirty: false } },
+        build: { panicRecovery: true, native: { target: triple, abi: "1.6", git_rev: source, panic_recovery: true } },
+        files: {
+          [libraryName]: files[artifactRoot + libraryName],
+          "yolo_runtime.h": files[artifactRoot + "yolo_runtime.h"],
+        },
+      }),
+    );
     const gates = fullMediaGates.map(id => {
       const log = `qualification/${id}.log`;
       add(log, `validator media evidence ${id}`);
@@ -177,5 +202,35 @@ test("rehashing a changed outer archive cannot hide an altered archived native b
     receipt.archive.bytes = bytes.length;
     await Bun.write(receiptPath, JSON.stringify(receipt));
     await expect(aggregateFullRelease(root, source, version)).rejects.toThrow("member checksum differs");
+  });
+});
+
+test("rehashing all outer evidence cannot qualify a runtime SDK built from another source", async () => {
+  await fixture(async root => {
+    const full = targets[0]!;
+    const archivePath = join(root, `${full.triplet}.zip`);
+    const entries = await new Bun.Archive(await Bun.file(archivePath).bytes()).files();
+    const payload = Object.fromEntries(
+      await Promise.all([...entries].map(async ([name, file]) => [name, await file.bytes()])),
+    );
+    const receiptPath = join(root, `${full.triplet}.qualification.json`);
+    const receipt = await Bun.file(receiptPath).json();
+    const manifestName = Object.keys(receipt.files).find(
+      name => name.startsWith("lib/runtime-sdk/") && name.endsWith("/manifest.json"),
+    )!;
+    const artifact = JSON.parse(new TextDecoder().decode(payload[`${full.triplet}/${manifestName}`]));
+    artifact.sources.bun.rev = "b".repeat(40);
+    const artifactBytes = new TextEncoder().encode(JSON.stringify(artifact));
+    payload[`${full.triplet}/${manifestName}`] = artifactBytes;
+    receipt.files[manifestName] = { bytes: artifactBytes.length, sha256: hash(artifactBytes) };
+    const { archive: _archive, ...inner } = receipt;
+    payload[`${full.triplet}/bun-media-release.json`] = new TextEncoder().encode(JSON.stringify(inner));
+    const bytes = await new Bun.Archive(payload, { format: "zip" }).bytes();
+    await Bun.write(archivePath, bytes);
+    receipt.archive = { name: `${full.triplet}.zip`, bytes: bytes.length, sha256: hash(bytes) };
+    await Bun.write(receiptPath, JSON.stringify(receipt));
+    await expect(aggregateFullRelease(root, source, version)).rejects.toThrow(
+      "runtime SDK source or ABI binding differs",
+    );
   });
 });

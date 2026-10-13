@@ -306,7 +306,7 @@ test("current delivery workflows default to factory plans and require a native d
       await Bun.write(join(directory, ".github/workflows", name), text);
       const workflow = Bun.YAML.parse(text) as { jobs: Record<string, unknown> };
       expect(Object.keys(workflow.jobs)).toEqual(
-        name === "aphrody-release.yml" ? ["plan", "aggregate", "publish"] : ["plan", "publish"],
+        name === "aphrody-release.yml" ? ["plan", "native-full", "aggregate", "publish"] : ["plan", "publish"],
       );
     }
     for (const args of [

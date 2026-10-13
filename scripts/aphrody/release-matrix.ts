@@ -106,6 +106,8 @@ export function nativeFullReleasePlan(revision: string) {
           arch: target.arch === "aarch64" ? "arm64" : "x64",
           ...(target.container ? { nativeABIContainer: target.container } : {}),
           bootstrap,
+          controlBootstrap:
+            bootstraps.bootstraps[target.target.replace(/-musl$/, "") as keyof typeof bootstraps.bootstraps],
           command: ["bun", "bd", ...runtimeFlavorArgs(target), "--video-native=on", "-j2"],
           assemblyOwner: "scripts/aphrody/media-release.ts",
           sdkOwner: "scripts/aphrody/media-sdk-factory.ts",

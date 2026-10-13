@@ -1,7 +1,7 @@
 name: Aphrody release
 
-# Heavy compilation and native platform tests belong to the existing VPS Infra
-# factory. This workflow only plans and publishes its checksum-verified receipts.
+# Native producers use the existing build, SDK and packaging owners. Missing
+# capacity or SDK recipes fail before a receipt or publication is emitted.
 permissions:
   contents: read
 
@@ -39,7 +39,7 @@ concurrency:
 
 env:
   # Existing qualified bootstrap, independent of the version being released.
-  BUN_HOST_VERSION: "aphrody-v1.4.3-aphrody.4"
+  BUN_HOST_VERSION: "aphrody-v1.4.3-aphrody.2"
 
 jobs:
   plan:
@@ -49,6 +49,7 @@ jobs:
     outputs:
       version: ${{ steps.plan.outputs.version }}
       tag: ${{ steps.plan.outputs.tag }}
+      native-matrix: ${{ steps.plan.outputs.native-matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -57,7 +58,7 @@ jobs:
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
       - name: Test source publication guards
-        run: bun test ./scripts/aphrody/release-aggregation.test.ts ./scripts/aphrody/release-workflows.test.ts ./scripts/aphrody/release-matrix.test.ts ./scripts/aphrody/release-factory.test.ts ./scripts/aphrody/release-r2.test.ts
+        run: bun test ./scripts/aphrody/release-aggregation.test.ts ./scripts/aphrody/release-workflows.test.ts ./scripts/aphrody/release-native-worker.test.ts ./scripts/aphrody/release-matrix.test.ts ./scripts/aphrody/release-factory.test.ts ./scripts/aphrody/release-r2.test.ts
       - id: plan
         env:
           INPUT_VERSION: ${{ inputs.version }}
@@ -71,10 +72,11 @@ jobs:
             const targets = (process.env.INPUT_TARGETS || "").split(",").map(s => s.trim()).filter(Boolean);
             const plan = factory.vpsRuntimeReleasePlan(process.env.GITHUB_SHA, targets);
             await Bun.write("factory-plan.json", JSON.stringify(plan, null, 2) + "\n");
-            await Bun.write("native-full-plan.json", JSON.stringify(factory.nativeFullReleasePlan(process.env.GITHUB_SHA), null, 2) + "\n");
+            const native = factory.nativeFullReleasePlan(process.env.GITHUB_SHA);
+            await Bun.write("native-full-plan.json", JSON.stringify(native, null, 2) + "\n");
             const tag = process.env.GITHUB_REF_TYPE === "tag" ? process.env.GITHUB_REF_NAME : runtime.releaseTag(version);
             if (runtime.versionFromTag(tag) !== version) throw new Error("Release tag version differs from source");
-            require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\ntag=${tag}\n`);
+            require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\ntag=${tag}\nnative-matrix=${JSON.stringify({include:native.targets})}\n`);
           '
       - uses: actions/upload-artifact@v6
         with:
@@ -84,14 +86,58 @@ jobs:
             native-full-plan.json
           if-no-files-found: error
 
-  aggregate:
+  native-full:
     needs: plan
-    if: inputs.publish || startsWith(github.ref, 'refs/tags/')
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.plan.outputs.native-matrix) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+    env:
+      CARGO_BUILD_JOBS: "2"
+      NINJAFLAGS: "-j2"
+      GIT_SHA: ${{ github.sha }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ matrix.controlBootstrap.tag }}
+          expected-sha256: ${{ matrix.controlBootstrap.sha256 }}
+          expected-bytes: ${{ matrix.controlBootstrap.bytes }}
+          expected-source: ${{ matrix.controlBootstrap.source }}
+      - name: Native capacity, source and owner prerequisites
+        run: bun scripts/aphrody/release-native-worker.ts preflight "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
+      - name: Build SDK, runtime and sidecars, then execute exact native gates
+        run: bun scripts/aphrody/release-native-worker.ts produce "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-full-${{ matrix.target }}-${{ github.sha }}
+          path: ${{ runner.temp }}/native-full/products/*
+          if-no-files-found: error
+      - name: Preserve failed capacity or owner diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-full-failure-${{ matrix.target }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/native-full/diagnostics/*
+            ${{ runner.temp }}/native-full/products/*.log
+          if-no-files-found: error
+
+  aggregate:
+    needs: [plan, native-full]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
-      TAG: ${{ needs.plan.outputs.tag }}
       VERSION: ${{ needs.plan.outputs.version }}
       RELEASE_CHANNEL: ${{ inputs.release-channel || 'candidate' }}
     steps:
@@ -101,12 +147,17 @@ jobs:
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
+      - uses: actions/download-artifact@v6
+        with:
+          pattern: native-full-*-${{ github.sha }}
+          path: ${{ runner.temp }}/full-qualification
+          merge-multiple: true
       - name: Verify all eight exact-source native full products
-        run: bun scripts/aphrody/release-aggregation.ts download-verify "$TAG" "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$VERSION" "$RELEASE_CHANNEL"
+        run: bun scripts/aphrody/release-aggregation.ts aggregate "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$VERSION" "$RELEASE_CHANNEL"
       - uses: actions/upload-artifact@v6
         with:
           name: media-full-qualification-${{ github.sha }}
-          path: ${{ runner.temp }}/full-qualification/media-full-qualification.json
+          path: ${{ runner.temp }}/full-qualification/*
           if-no-files-found: error
 
   publish:

@@ -34,7 +34,8 @@ test("runtime publication depends on the aggregate and rechecks assets before R2
   const jobs = (await workflow("aphrody-release")).jobs;
   expect(jobs.publish!.needs).toContain("aggregate");
   expect(jobs.publish!.if).toContain("needs.aggregate.result == 'success'");
-  const aggregate = jobs.aggregate!.steps!.find(step => step.run?.includes("download-verify"))!;
+  expect(jobs.aggregate!.needs).toContain("native-full");
+  const aggregate = jobs.aggregate!.steps!.find(step => step.run?.includes("release-aggregation.ts aggregate"))!;
   expect(aggregate.run).toContain('"$GITHUB_SHA"');
   const steps = jobs.publish!.steps!;
   const verify = steps.findIndex(step => step.run?.includes("release-aggregation.ts verify"));
@@ -46,6 +47,27 @@ test("runtime publication depends on the aggregate and rechecks assets before R2
   expect(r2.run!.indexOf("release-aggregation.ts verify")).toBeLessThan(
     r2.run!.indexOf("scripts/aphrody/release-r2.ts"),
   );
+});
+
+test("eight native producers consume the source plan with bounded jobs and same-run receipts", async () => {
+  const jobs = (await workflow("aphrody-release")).jobs;
+  const native = jobs["native-full"]!;
+  expect(String(native.needs)).toBe("plan");
+  expect(native["runs-on"]).toBe("${{ matrix.runner }}");
+  const strategy = native.strategy as { "max-parallel": number; "fail-fast": boolean; matrix: string };
+  expect(strategy["max-parallel"]).toBe(2);
+  expect(strategy["fail-fast"]).toBe(false);
+  expect(strategy.matrix).toContain("needs.plan.outputs.native-matrix");
+  const steps = native.steps!;
+  const preflight = steps.findIndex(step => step.run?.includes("release-native-worker.ts preflight"));
+  const produce = steps.findIndex(step => step.run?.includes("release-native-worker.ts produce"));
+  const upload = steps.findIndex(step => step.uses === "actions/upload-artifact@v6");
+  expect(preflight).toBeGreaterThanOrEqual(0);
+  expect(produce).toBeGreaterThan(preflight);
+  expect(upload).toBeGreaterThan(produce);
+  expect(steps[produce]!.run).toContain('"$GITHUB_SHA"');
+  expect(jobs.aggregate!.steps!.some(step => step.uses === "actions/download-artifact@v6")).toBe(true);
+  expect(jobs.aggregate!.steps!.some(step => step.run?.includes("download-verify"))).toBe(false);
 });
 
 test("video publication uses Windows x64, registry types and the exact qualified archive", async () => {

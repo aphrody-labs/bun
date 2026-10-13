@@ -22,6 +22,15 @@ inputs:
     description: "Token for the GitHub API release lookup."
     default: ${{ github.token }}
     required: false
+  expected-sha256:
+    description: "Optional exact public bootstrap archive SHA-256."
+    required: false
+  expected-bytes:
+    description: "Optional exact public bootstrap archive byte count."
+    required: false
+  expected-source:
+    description: "Optional exact public bootstrap source commit."
+    required: false
 
 runs:
   using: composite
@@ -34,6 +43,9 @@ runs:
         APHRODY_BUN_REPO: ${{ inputs.repo }}
         APHRODY_BUN_PROVENANCE: ${{ github.action_path }}/../../../packages/bun-agent-plugin/src/hooks/common.ts
         GH_TOKEN: ${{ inputs.token }}
+        EXPECTED_SHA256: ${{ inputs.expected-sha256 }}
+        EXPECTED_BYTES: ${{ inputs.expected-bytes }}
+        EXPECTED_SOURCE: ${{ inputs.expected-source }}
       run: |
         set -euo pipefail
         repo="${APHRODY_BUN_REPO:-aphrody-labs/bun}"
@@ -46,9 +58,12 @@ runs:
           Darwin*) os=darwin;;
           *)       os=windows;;
         esac
-        case "$(uname -m)" in
+        case "${RUNNER_ARCH:-$(uname -m)}" in
+          ARM64) arch=aarch64;;
+          X64) arch=x64;;
           arm64 | aarch64)  arch=aarch64;;
-          *)                arch=x64;;
+          x86_64) arch=x64;;
+          *) echo "::error::unsupported native runner architecture"; exit 1;;
         esac
         case "$BUN_BASELINE" in
           true | 1) target="bun-${os}-${arch}-baseline";;
@@ -93,6 +108,11 @@ runs:
         want=$(awk -v f="$target.zip" '$2 == f || $2 == "*" f { print $1 }' SHA256SUMS.txt)
         if command -v sha256sum >/dev/null; then got=$(sha256sum "$target.zip" | cut -d' ' -f1); else got=$(shasum -a 256 "$target.zip" | cut -d' ' -f1); fi
         [ -n "$want" ] && [ "$want" = "$got" ] || { echo "::error::checksum mismatch for $target.zip ($tag)"; exit 1; }
+        [ -z "$EXPECTED_SHA256" ] || [ "$got" = "$EXPECTED_SHA256" ] || { echo "::error::bootstrap source pin checksum differs"; exit 1; }
+        if [ -n "$EXPECTED_BYTES" ]; then
+          got_bytes=$(wc -c < "$target.zip" | tr -d '[:space:]')
+          [ "$got_bytes" = "$EXPECTED_BYTES" ] || { echo "::error::bootstrap source pin size differs"; exit 1; }
+        fi
         unzip -q -o "$target.zip"
         mkdir -p "$RUNNER_TEMP/.bun/bin"
         mv "$target"/bun* "$RUNNER_TEMP/.bun/bin/"
@@ -104,6 +124,18 @@ runs:
           ln -fs "$RUNNER_TEMP/.bun/bin/bun" "$RUNNER_TEMP/.bun/bin/bunx"
         fi
         revision=$("$RUNNER_TEMP/.bun/bin/bun" --revision)
+        EXPECTED_PLATFORM="$os" EXPECTED_ARCH="$arch" EXPECTED_TAG="$tag" EXPECTED_REPO="$repo" \
+          "$RUNNER_TEMP/.bun/bin/bun" -e '
+            const expectedArch = process.env.EXPECTED_ARCH === "aarch64" ? "arm64" : "x64";
+            const expectedPlatform = process.env.EXPECTED_PLATFORM === "windows" ? "win32" : process.env.EXPECTED_PLATFORM;
+            const expectedVersion = process.env.EXPECTED_TAG.replace(/^(?:bun-v|aphrody-v)/, "");
+            if (process.arch !== expectedArch || process.platform !== expectedPlatform || Bun.version !== expectedVersion)
+              throw new Error("Bootstrap native architecture or version differs");
+            if (process.env.EXPECTED_SOURCE && Bun.revision !== process.env.EXPECTED_SOURCE)
+              throw new Error("Bootstrap source revision differs");
+            if (!process.release.sourceUrl?.startsWith(`https://github.com/${process.env.EXPECTED_REPO}/releases/download/${process.env.EXPECTED_TAG}/`))
+              throw new Error("Bootstrap release provenance differs");
+          '
         "$RUNNER_TEMP/.bun/bin/bun" -e '
           const { isAphrodyBun } = await import(process.argv[1]);
           if (!isAphrodyBun()) throw new Error("Bootstrap runtime provenance is not the Aphrody fork");

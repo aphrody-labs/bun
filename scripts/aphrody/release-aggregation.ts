@@ -3,6 +3,7 @@ import { basename, isAbsolute, join, relative } from "node:path";
 import { assertPublicMediaPath, mediaReleaseTarget } from "./media-release";
 import { fullIntegrationPolicy, runtimeReleaseMatrix } from "./release-matrix";
 import mediaSDKManifest from "../../packages/bun-video/src/sdk-manifest.json";
+import { targetFor } from "../../packages/bun-runtime-sdk/src/target";
 
 const fullTargets = runtimeReleaseMatrix().filter(target => target.flavor === "full");
 const sha256 = /^[a-f0-9]{64}$/;
@@ -23,6 +24,7 @@ export const fullMediaGates = [
 ] as const;
 export const fullPlatformGates = [
   "runtime-regressions",
+  "native-runtime-sdk",
   "native-closure",
   "native-install",
   "native-path",
@@ -185,6 +187,48 @@ export async function aggregateFullRelease(directory: string, source: string, ve
       if (sdk?.length !== 1 || !packed || receipt.files[`sdk/${packed.archive}`]?.sha256 !== packed.sha256)
         throw new Error(`Packed source SDK missing or changed: ${name}`);
     }
+    const artifactNames = Object.keys(receipt.files).filter(name =>
+      /^lib\/runtime-sdk\/[^/]+\/current\/manifest\.json$/.test(name),
+    );
+    if (artifactNames.length !== 1) throw new Error(`Native runtime SDK sidecar missing: ${full.target}`);
+    const artifactName = artifactNames[0]!;
+    const artifactRoot = artifactName.slice(0, -"manifest.json".length);
+    const artifact = await members.get(`${full.triplet}/${artifactName}`)!.json();
+    const sdkTarget = targetFor(target.platform, target.runtimeArch, target.os === "linux" ? target.abi : undefined);
+    const nativeBuild = artifact.build?.native;
+    if (
+      artifact.schema !== 1 ||
+      artifact.sources?.bun?.rev !== source ||
+      artifact.sources?.bun?.dirty !== false ||
+      artifact.build?.panicRecovery !== true ||
+      !/^[a-z0-9_-]+$/.test(artifact.target) ||
+      artifactRoot !== `lib/runtime-sdk/${artifact.target}/current/` ||
+      artifact.target !== sdkTarget ||
+      nativeBuild?.target !== artifact.target ||
+      nativeBuild?.abi !== artifact.abi ||
+      nativeBuild?.panic_recovery !== true ||
+      !/^[a-f0-9]{12,40}$/.test(nativeBuild?.git_rev ?? "") ||
+      !source.startsWith(nativeBuild.git_rev)
+    )
+      throw new Error(`Native runtime SDK source or ABI binding differs: ${full.target}`);
+    const libraryNames = Object.keys(artifact.files ?? {}).filter(name => /\.(?:dll|so|dylib)$/.test(name));
+    if (libraryNames.length !== 1) throw new Error(`Native runtime SDK module absent: ${full.target}`);
+    for (const [name, expected] of Object.entries(artifact.files ?? {}) as [string, FileIdentity][]) {
+      if (
+        !/^[A-Za-z0-9_.-]+$/.test(name) ||
+        name === "." ||
+        name === ".." ||
+        receipt.files[artifactRoot + name]?.sha256 !== expected.sha256 ||
+        receipt.files[artifactRoot + name]?.bytes !== expected.bytes
+      )
+        throw new Error(`Native runtime SDK archived member differs: ${full.target}/${name}`);
+    }
+    const header = members.get(`${full.triplet}/${artifactRoot}yolo_runtime.h`);
+    const headerText = header && header.size < maximumJSONBytes ? await header.text() : "";
+    const abiMajor = headerText.match(/#define YOLO_ABI_MAJOR (\d+)u/)?.[1];
+    const abiMinor = headerText.match(/#define YOLO_ABI_MINOR (\d+)u/)?.[1];
+    if (!abiMajor || !abiMinor || artifact.abi !== `${abiMajor}.${abiMinor}`)
+      throw new Error(`Native runtime SDK header ABI differs: ${full.target}`);
     const nativeBytes = await read(`${full.triplet}.platform-gates.json`);
     const native: NativePlatformQualification = JSON.parse(
       new TextDecoder("utf-8", { fatal: true }).decode(nativeBytes),

@@ -124,7 +124,7 @@ For each existing target, deliver these flat files together:
   native OS/architecture, source SHA, version and catalogue FFmpeg/mpv source pins
 - `bun-<target>-full-<gate-id>.log`: the hash-bound platform gate evidence
 
-Required platform gates are `runtime-regressions`, `native-closure`,
+Required platform gates are `runtime-regressions`, `native-runtime-sdk`, `native-closure`,
 `native-install`, `native-path`, and `native-update`. Windows also requires
 `winget-manifest` and `winget-install`. These receipts must record real native
 execution. Wine, cross compilation, a runner label, an empty log or copied
@@ -163,12 +163,16 @@ receipt does not qualify a Linux or ARM library package.
 `nativeFullReleasePlan(source)` in the existing `release-matrix.ts` allocates the
 eight targets to their native runners with `-j2` and one heavy job per host. The
 main/tag release plan exposes this allocation alongside the existing VPS plan.
-It records requirements and `qualified: false`; it does not dispatch native
-builds or invent SDK/platform receipts.
+It records requirements and `qualified: false`. The existing `aphrody-release.yml`
+consumes that plan in its `native-full` matrix, with `max-parallel: 2`. Each job
+runs `release-native-worker.ts` against the checked-out SHA and publishes its
+target-specific products only after all native commands and assertions succeed.
+The aggregate downloads the eight producers from the same workflow run. Failed
+preflights upload diagnostics and prevent the aggregate and publication jobs.
 
 | Targets | Native runner | ABI execution |
 | --- | --- | --- |
-| Linux GNU x64 / arm64 | `ubuntu-24.04` / `ubuntu-24.04-arm` | Same-architecture GNU container and closure audit |
+| Linux GNU x64 / arm64 | `ubuntu-24.04` / `ubuntu-24.04-arm` | Native GNU process, pinned sysroot and closure audit |
 | Linux musl x64 / arm64 | `ubuntu-24.04` / `ubuntu-24.04-arm` | Same-architecture `alpine:3.24` container; no QEMU |
 | macOS x64 / arm64 | `macos-15-intel` / `macos-15` | Native macOS process |
 | Windows x64 / arm64 | `windows-2025` / `windows-11-arm` | Native Windows process |
@@ -194,6 +198,35 @@ tool, not a qualification receipt for the new source.
 Complete normalized FFmpeg/mpv SDKs are still missing for Linux GNU ARM, both
 musl targets, both macOS targets and Windows ARM. Existing Windows x64 and
 portable Linux x64 evidence does not fill those six gaps. The SDK factory,
-native source/toolchain provisioning, and real platform gate producers must
-complete these targets before any eight-full aggregate can pass. No CI run or
-publication is established by the source changes above.
+native source/toolchain provisioning must complete these targets before any
+eight-full aggregate can pass. All eight catalogue SDK asset lists remain empty;
+the existing x64 evidence has not been registered as an immutable distribution
+descriptor. The current Sharp/Remotion packaging owner supports Windows x64 only.
+Mach-O media/runtime-SDK closure qualification still needs its native owner.
+Linux workers require the sysroots provisioned by `build-host.ts`/the CI image
+owner; the worker stops if those SDK artifacts are absent. Standalone GNU runtime
+SDK modules must also meet the 2.17 floor, and musl manifests must select an actual
+musl Rust target. No CI run or publication is established by these source changes.
+
+The worker reuses `setup.ts` for pinned tooling, the canonical SDK downloader and
+extractor, `bun bd` for the runtime, the serialized Cargo wrapper and SDK stage
+for the native module, and the Bun Video package qualification/build owners.
+It packs the verified runtime module, headers and source-bound manifest under
+`lib/runtime-sdk/<Rust-target>/current` in the full archive. The aggregate checks
+that module's byte hashes, source, panic recovery and header ABI as well as its
+native gate. Header-only or source-only SDK packs cannot replace it.
+
+`release-native-install.ts` serves the candidate archive on a loopback fixture
+and runs the existing `install.sh`/`install.ps1` owners into a disposable home.
+Its fresh PATH process must resolve the installed candidate, and `bun upgrade
+--local` must replace that installation with the exact candidate bytes. This
+qualifies a local update before publication without a paid provider or a prior
+release download. Windows additionally uses the Microsoft client to validate
+and install an exact-archive portable manifest, executes the installed module,
+and removes the unique fixture package. Local manifest support changes are
+limited to ephemeral GitHub-hosted Windows runners; see Microsoft's
+[local manifest installation contract](https://learn.microsoft.com/en-us/windows/package-manager/winget/install).
+
+Legacy factory flavour, alias, Mullvad and stable integration checks remain
+additional publication requirements. A successful eight-full aggregate alone
+does not satisfy an incomplete legacy draft or the pending stable owners.

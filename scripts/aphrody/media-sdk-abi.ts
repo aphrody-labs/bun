@@ -73,7 +73,7 @@ export function qualifyMediaELFs(target: MediaSDKTarget, inputs: MediaELF[]) {
     if (floor && compareVersions(floor, "2.17") > 0)
       throw new Error(`SDK requires GLIBC ${floor}, above the 2.17 release floor: ${input.file}`);
     if (floor && (!maximumGLIBC || compareVersions(floor, maximumGLIBC) > 0)) maximumGLIBC = floor;
-    const needed = [...input.dynamic.matchAll(/\(NEEDED\).*\[([^\]]+)\]/g)].map(match => match[1]);
+    const needed = [...input.dynamic.matchAll(/\(NEEDED\).*\[([^\]]+)\]/g)].map(match => match[1]!);
     for (const dependency of needed) {
       if (dependency.includes("/") || (!systemLibraries.has(dependency) && !bundled.has(dependency)))
         throw new Error(`SDK dependency is outside its qualified closure: ${input.file}: ${dependency}`);
