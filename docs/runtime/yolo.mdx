@@ -56,12 +56,12 @@ All questions for one state share one provider request. Choice supports 2–255 
 An official TypeSafe SDK client can own transport instead:
 
 ```ts
-import { TypeSafeClient } from "@typesafe-ai/sdk";
+import { TypeSafeClient } from "@aphrody/typesafe-sdk";
 import { jev } from "bun:yolo";
 const provider = jev({ client: new TypeSafeClient({ logLevel: "warn" }) });
 ```
 
-The request and answer shapes follow the [TypeSafe API](https://docs.typesafe.ai/api) and SDK 0.6.0. Jev supplies judgments rather than generated text.
+The request and answer shapes follow the [TypeSafe API](https://docs.typesafe.ai/api). The published `@aphrody/typesafe-sdk` fork shares this contract. Jev supplies judgments rather than generated text.
 
 `timeout` bounds the whole operation, including pending retries, to 1–120000 ms. `maxRetries` is an integer from zero to three, default zero. Native HTTP retries status 408, 429 and 5xx with bounded delay; SDK clients receive the same retry limit and cancellation signal. Connection and authentication failures reject. An `AbortSignal` cancels the request and settles the caller even when a custom provider does not complete.
 
