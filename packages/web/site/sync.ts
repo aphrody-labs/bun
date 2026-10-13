@@ -69,7 +69,7 @@ export async function syncSite(
   options: { dryRun?: boolean; force?: boolean; offline?: boolean; source?: string } = {},
 ) {
   const inputs = await siteSyncInputs(config);
-  git(config.checkout, ["fetch", "--quiet", "origin", "main"]);
+  git(config.checkout, ["fetch", "--quiet", "origin", "refs/heads/main:refs/remotes/origin/main"]);
   const source = git(config.checkout, ["rev-parse", "origin/main^{commit}"]);
   if (!/^[a-f0-9]{40}$/.test(source)) throw new Error("Expected an immutable origin/main revision");
   if (options.source !== undefined && options.source !== source)

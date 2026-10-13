@@ -90,6 +90,7 @@ test("a main push after the generator export fails before creating publication w
   git("add", ".");
   commit();
   git("remote", "add", "origin", root);
+  git("config", "--unset-all", "remote.origin.fetch");
   const exported = git("rev-parse", "HEAD");
   await Bun.write(join(root, "source.txt"), "second");
   commit();

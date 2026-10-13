@@ -12,7 +12,7 @@ git -C "$checkout" rev-parse --git-dir >/dev/null
 exec 9>"${XDG_RUNTIME_DIR:-/tmp}/aphrody-site-publish.lock"
 flock -n 9 || { echo "publication déjà en cours"; exit 0; }
 
-git -C "$checkout" fetch -q origin main
+git -C "$checkout" fetch -q origin refs/heads/main:refs/remotes/origin/main
 site_source=$(git -C "$checkout" rev-parse 'origin/main^{commit}')
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
