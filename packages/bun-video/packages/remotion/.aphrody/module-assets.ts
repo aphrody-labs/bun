@@ -39,14 +39,21 @@ export function rewriteIsolatedTypeExports(text: string, sourceFile: string): st
       const targetText = readFileSync(target, "utf8");
       for (const match of targetText.matchAll(/export\s+type\s*\{([^}]+)\}/g)) {
         for (const name of match[1]!.split(",")) {
-          const exported = name.trim().split(/\s+as\s+/).pop();
+          const exported = name
+            .trim()
+            .split(/\s+as\s+/)
+            .pop();
           if (exported) declaredTypes.add(exported);
         }
       }
       for (const match of targetText.matchAll(/export\s*\{([^}]+)\}/g)) {
         for (const name of match[1]!.split(",")) {
           if (!name.trim().startsWith("type ")) continue;
-          const exported = name.trim().replace(/^type\s+/, "").split(/\s+as\s+/).pop();
+          const exported = name
+            .trim()
+            .replace(/^type\s+/, "")
+            .split(/\s+as\s+/)
+            .pop();
           if (exported) declaredTypes.add(exported);
         }
       }
@@ -107,7 +114,7 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
             transformed.replace(
               /((?:from\s*|import\s*\(\s*|import\s*)["'])(\.{1,2}\/[^"']+)(["'])/g,
               (match, prefix, specifier, suffix) => {
-                if (/\.[a-z\d]+$/i.test(specifier))
+                if (/\.(tsx?|jsx)$/i.test(specifier))
                   return prefix + specifier.replace(/\.(tsx?|jsx)$/, ".js") + suffix;
                 const stem = resolve(dirname(from), specifier);
                 if (
@@ -155,9 +162,13 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
     }
     if (manifest.name === "@remotion/timeline-utils") {
       const workerFactory = join(destination, "src/audio-waveform/make-audio-waveform-worker.js");
-      writeFileSync(workerFactory, readFileSync(workerFactory, "utf8").replaceAll(
-        "./audio-waveform-worker.mjs", "../audio-waveform-worker.js",
-      ));
+      writeFileSync(
+        workerFactory,
+        readFileSync(workerFactory, "utf8").replaceAll(
+          "./audio-waveform-worker.mjs",
+          "../audio-waveform-worker.js",
+        ),
+      );
     }
     if (["remotion", "@remotion/studio", "@remotion/timeline-utils"].includes(manifest.name)) {
       const esm = join(destination, manifest.name === "remotion" ? "esm" : "src/esm");
