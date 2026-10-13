@@ -84,6 +84,20 @@ adapter and returns an unsupported error.
 Build the AVIO bridge with the native crate's `libav` feature. Its shared library
 (`bun_video_native.dll` on Windows) must accompany the seven FFmpeg libraries.
 
+## Shared composition capture
+
+The single-frame and worker Remotion paths use the same readiness, frame-seek,
+font-readiness and screenshot implementation. Remotion and HyperFrames share
+the bounded operation signal and PNG signature validation. Capture forwards
+that signal to native navigation, evaluation and screenshot calls; each frame
+has one deadline across its operations. Caller cancellation prevents publication
+of subsequent frames. Worker acknowledgements still provide backpressure.
+
+The pure context-fixture tests cover ordering, stride validation, cancellation,
+renderer errors and non-PNG output. They do not qualify a real browser renderer
+or GPU texture transfer. HyperFrames media injection and shader transitions
+remain unsupported by this capture adapter.
+
 ## libmpv above the FFmpeg foundation
 
 `mpvABI` exports the native client, asynchronous commands, property observation,

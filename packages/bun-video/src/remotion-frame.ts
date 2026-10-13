@@ -1,3 +1,52 @@
+import { validateNativePng, type NativeWebViewContext } from "./hyperframes-native";
+import { frameOperationSignal } from "./frame-plan";
+
+export async function prepareRemotionContext(
+  context: NativeWebViewContext,
+  url: string,
+  signal: AbortSignal,
+): Promise<void> {
+  signal.throwIfAborted();
+  await context.navigate(url, { signal });
+  const contract = await context.evaluate<boolean>(
+    'typeof window.remotion_setFrame === "function" && typeof window.remotion_renderReady === "boolean"',
+    { signal },
+  );
+  signal.throwIfAborted();
+  if (!contract) throw new Error("The served page must initialize the Remotion rendering globals before hydration");
+}
+
+async function waitForRemotionReady(context: NativeWebViewContext, signal: AbortSignal): Promise<void> {
+  for (;;) {
+    signal.throwIfAborted();
+    const state = await context.evaluate<{ ready: boolean; cancelled: string | null }>(
+      "({ready: window.remotion_renderReady === true, cancelled: window.remotion_cancelledError == null ? null : String(window.remotion_cancelledError)})",
+      { signal },
+    );
+    signal.throwIfAborted();
+    if (state.cancelled !== null) throw new Error(state.cancelled);
+    if (state.ready) return;
+    await Bun.sleep(10);
+  }
+}
+
+export async function captureRemotionContextFrame(
+  context: NativeWebViewContext,
+  composition: string,
+  frame: number,
+  signal: AbortSignal,
+): Promise<Uint8Array> {
+  await waitForRemotionReady(context, signal);
+  await context.evaluate(`window.remotion_setFrame(${frame}, ${JSON.stringify(composition)}, 0)`, { signal });
+  await waitForRemotionReady(context, signal);
+  await context.evaluate("document.fonts.ready.then(() => true)", { signal });
+  signal.throwIfAborted();
+  const png = await context.screenshot({ signal });
+  signal.throwIfAborted();
+  validateNativePng(png, frame);
+  return png;
+}
+
 export interface NativeFrameOptions {
   /** A served React composition initialized with Remotion's rendering globals before hydration. */
   compositionUrl: string;
@@ -26,9 +75,7 @@ export async function captureNativeRemotionFrame(options: NativeFrameOptions): P
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
     throw new RangeError("timeoutMs must be a positive safe integer");
   }
-  const signal = options.signal
-    ? AbortSignal.any([options.signal, AbortSignal.timeout(timeoutMs)])
-    : AbortSignal.timeout(timeoutMs);
+  const signal = frameOperationSignal(timeoutMs, options.signal);
   signal.throwIfAborted();
   const { BrowserRuntime } = await import("@aphrody/bun-runtime-sdk/browser");
   using runtime = BrowserRuntime.load({ libraryPath: options.libraryPath });
@@ -39,33 +86,6 @@ export async function captureNativeRemotionFrame(options: NativeFrameOptions): P
     height: options.height,
     timeoutMs,
   });
-  await context.navigate(options.compositionUrl, { signal });
-  const contract = await context.evaluate<boolean>(
-    'typeof window.remotion_setFrame === "function" && typeof window.remotion_renderReady === "boolean"',
-    { signal },
-  );
-  if (!contract) {
-    throw new Error(
-      "The served page must initialize the Remotion React composition and rendering globals before hydration",
-    );
-  }
-  const waitForReady = async (): Promise<void> => {
-    for (;;) {
-      signal.throwIfAborted();
-      const state = await context.evaluate<{ ready: boolean; cancelled: string | null }>(
-        "({ready: window.remotion_renderReady === true, cancelled: window.remotion_cancelledError === undefined ? null : String(window.remotion_cancelledError)})",
-        { signal },
-      );
-      if (state.cancelled !== null) throw new Error(state.cancelled);
-      if (state.ready) return;
-      await Bun.sleep(10);
-    }
-  };
-  await waitForReady();
-  await context.evaluate(`window.remotion_setFrame(${options.frame}, ${JSON.stringify(options.composition)}, 0)`, {
-    signal,
-  });
-  await waitForReady();
-  await context.evaluate("document.fonts.ready.then(() => true)", { signal });
-  return context.screenshot({ signal });
+  await prepareRemotionContext(context, options.compositionUrl, signal);
+  return captureRemotionContextFrame(context, options.composition, options.frame, signal);
 }

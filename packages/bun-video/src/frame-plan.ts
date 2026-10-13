@@ -13,6 +13,14 @@ export interface FramePlan {
   allowPrivateNetwork?: boolean;
 }
 
+export function frameOperationSignal(timeoutMs = 30000, signal?: AbortSignal): AbortSignal {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300000)
+    throw new RangeError("Capture timeout must be an integer from 1 to 300000 milliseconds");
+  signal?.throwIfAborted();
+  const deadline = AbortSignal.timeout(timeoutMs);
+  return signal ? AbortSignal.any([signal, deadline]) : deadline;
+}
+
 export function validateFramePlan(plan: FramePlan): FramePlan & { workers: number; timeoutMs: number } {
   if (!plan || !["remotion", "hyperframes"].includes(plan.kind)) throw new TypeError("Unknown video composition kind");
   if (

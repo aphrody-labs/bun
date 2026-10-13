@@ -1,6 +1,6 @@
 import { BrowserRuntime } from "@aphrody/bun-runtime-sdk/browser";
 import { captureCompositionFrames } from "./render-frame";
-import type { FramePlan } from "./frame-plan";
+import { frameOperationSignal, type FramePlan } from "./frame-plan";
 
 const scope = globalThis as unknown as {
   onmessage: ((event: MessageEvent) => void) | null;
@@ -20,7 +20,8 @@ scope.onmessage = event => {
 };
 
 async function capture(plan: FramePlan & { frameStride?: number }) {
-  const operationSignal = () => AbortSignal.timeout(plan.timeoutMs ?? 30000);
+  const operationSignal = (options?: { signal?: AbortSignal }) =>
+    options?.signal ?? frameOperationSignal(plan.timeoutMs);
   const frameStride = plan.frameStride ?? 1;
   if (!Number.isSafeInteger(frameStride) || frameStride < 1) throw new RangeError("Invalid frame stride");
   using runtime = BrowserRuntime.load({ libraryPath: plan.libraryPath });
@@ -43,9 +44,11 @@ async function capture(plan: FramePlan & { frameStride?: number }) {
     await ack;
   };
   const boundedContext = {
-    navigate: (url: string) => context.navigate(url, { signal: operationSignal() }),
-    evaluate: <T>(expression: string) => context.evaluate<T>(expression, { signal: operationSignal() }),
-    screenshot: () => context.screenshot({ signal: operationSignal() }),
+    navigate: (url: string, options?: { signal?: AbortSignal }) =>
+      context.navigate(url, { signal: operationSignal(options) }),
+    evaluate: <T>(expression: string, options?: { signal?: AbortSignal }) =>
+      context.evaluate<T>(expression, { signal: operationSignal(options) }),
+    screenshot: (options?: { signal?: AbortSignal }) => context.screenshot({ signal: operationSignal(options) }),
   };
   for await (const frame of captureCompositionFrames(boundedContext, { ...plan, frameStride }))
     await send(frame.frame, frame.png);

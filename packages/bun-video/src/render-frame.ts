@@ -1,11 +1,15 @@
 import { captureNativeWebViewFrames, type NativeWebViewContext } from "./hyperframes-native";
-import type { FramePlan } from "./frame-plan";
+import { frameOperationSignal, validateFramePlan, type FramePlan } from "./frame-plan";
+import { prepareRemotionContext, captureRemotionContextFrame } from "./remotion-frame";
 
 export async function* captureCompositionFrames(
   context: NativeWebViewContext,
-  plan: FramePlan & { frameStride?: number },
+  input: FramePlan & { frameStride?: number; signal?: AbortSignal },
 ): AsyncGenerator<{ frame: number; png: Uint8Array }> {
-  const stride = plan.frameStride ?? 1;
+  const plan = validateFramePlan(input);
+  const stride = input.frameStride ?? 1;
+  if (!Number.isSafeInteger(stride) || stride < 1) throw new RangeError("Invalid frame stride");
+  input.signal?.throwIfAborted();
   if (plan.kind === "hyperframes") {
     yield* captureNativeWebViewFrames(context, {
       url: plan.compositionUrl,
@@ -13,21 +17,14 @@ export async function* captureCompositionFrames(
       startFrame: plan.startFrame,
       endFrame: plan.endFrame,
       frameStride: stride,
+      signal: input.signal,
+      timeoutMs: plan.timeoutMs,
     });
     return;
   }
-  await context.navigate(plan.compositionUrl);
+  const operationSignal = () => frameOperationSignal(plan.timeoutMs, input.signal);
+  await prepareRemotionContext(context, plan.compositionUrl, operationSignal());
   for (let frame = plan.startFrame; frame < plan.endFrame; frame += stride) {
-    await context.evaluate(`window.remotion_setFrame(${frame}, ${JSON.stringify(plan.composition)}, 0)`);
-    for (;;) {
-      const state = await context.evaluate<{ ready: boolean; error: string | null }>(
-        "({ready: window.remotion_renderReady === true, error: window.remotion_cancelledError ?? null})",
-      );
-      if (state.error !== null) throw new Error(state.error);
-      if (state.ready) break;
-      await Bun.sleep(10);
-    }
-    await context.evaluate("document.fonts.ready.then(() => true)");
-    yield { frame, png: await context.screenshot() };
+    yield { frame, png: await captureRemotionContextFrame(context, plan.composition!, frame, operationSignal()) };
   }
 }
