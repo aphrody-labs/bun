@@ -46,6 +46,7 @@ export const zones = ["aphrody.app", "aphrody.com", "dragonballfr.com", "rosegri
 export const cdn: { bucket: string; domain: string; channels?: boolean }[] = [
   { bucket: "aphrody-assets", domain: "assets.aphrody.app" },
   { bucket: "aphrody-dist", domain: "dist.aphrody.app", channels: true },
+  { bucket: "bun-lib", domain: "bun-lib.aphrody.app" },
 ];
 export const corsOrigins = [
   "https://aphrody.app",
