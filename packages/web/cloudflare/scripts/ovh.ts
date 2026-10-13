@@ -19,7 +19,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { connect } from "node:tls";
-import { wrangler } from "../../src/wrangler.ts";
+import { wrangler } from "../../../bun-cloudflare/src/wrangler.ts";
 import { envFile, parseEnv } from "./deploy.ts";
 
 export const domains = [

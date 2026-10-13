@@ -1,7 +1,7 @@
-# Republie aphrody.app quand origin/main d'aphrody-labs/bun, la dernière release ou le dernier run aphrody-perf change.
+# Republie aphrody.app quand origin/main ou les reçus natifs mesurés changent.
 # Installation (VPS, utilisateur ubuntu) : voir packages/web/site/systemd/aphrody-site-publish.timer.
 [Unit]
-Description=Publication du site aphrody.app (si origin/main, release ou perf ont changé)
+Description=Publication du site Bun, graphe et Neon depuis origin/main
 After=network-online.target
 
 [Service]

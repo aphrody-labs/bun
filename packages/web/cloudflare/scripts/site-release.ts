@@ -5,7 +5,7 @@ import { parseArgs } from "node:util";
 import { wrangler } from "../../../bun-cloudflare/src/wrangler";
 import { envFile, parseEnv, prepareAssets } from "./deploy";
 
-async function readProtected(path: string) {
+export async function readProtected(path: string) {
   if (!isAbsolute(path)) throw new TypeError("Protected reference must be absolute");
   const metadata = lstatSync(path);
   if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.size < 1 || metadata.size > 8192)
@@ -28,7 +28,7 @@ export async function releaseSite(options: {
   if (new Bun.CryptoHasher("sha256").update(provenance).digest("hex") !== site.home.provenance.sha256)
     throw new Error("Homepage provenance differs");
   await prepareAssets(options.assets);
-  const env = { ...parseEnv(await Bun.file(envFile()).text()), WRANGLER_SEND_METRICS: "false" };
+  const env: Record<string, string> = { ...parseEnv(await Bun.file(envFile()).text()), WRANGLER_SEND_METRICS: "false" };
   if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_API_TOKEN) throw new Error("Cloudflare credentials unavailable");
   const secrets = {
     NEON_DATABASE_URL: await readProtected(options.connectionFile),
@@ -45,6 +45,7 @@ export async function releaseSite(options: {
   const logs: string[] = [];
   const run = async (args: string[], input?: string) => {
     const child = wrangler(args, { cwd: app, env, stdio: "pipe", input });
+    if (!child.stdout || !child.stderr) throw new Error("Site release requires captured Wrangler diagnostics");
     const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
     let log = stdout + "\n" + stderr;
     for (const value of [

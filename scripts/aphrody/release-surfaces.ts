@@ -8,7 +8,7 @@ import { moduleNames } from "./fork-capabilities.ts";
 import { buildReleaseGraph } from "./release-graph.ts";
 import { completeReleaseKnowledge } from "./release-knowledge.ts";
 import { writeGraphView } from "./site-mirror/graph-view.ts";
-import { build, type Release } from "../../packages/web/site/build.ts";
+import { build, parseHomeBuildOptions, type HomeBuildOptions, type Release } from "../../packages/web/site/build.ts";
 import { collect, GitTree } from "../../packages/web/site/collect.ts";
 import { generateSourceMarkdown } from "./source-markdown.ts";
 
@@ -183,6 +183,7 @@ export async function regenerate(
   repo: string,
   offline: boolean,
   resume = false,
+  home?: HomeBuildOptions,
 ) {
   const tree = new GitTree(root, ref);
   if (existsSync(join(out, "manifest.json")))
@@ -267,6 +268,7 @@ export async function regenerate(
     releases,
     data,
     now,
+    ...(home ? { home: { ...home, graphFile: home.graphFile ?? join(out, "graph-summary.json") } } : {}),
   });
   cpSync(join(out, "graph-docs"), join(out, "site", "graph", "domains"), { recursive: true });
   cpSync(join(out, "graph.json"), join(out, "site", "graph", "graph.json"));
@@ -323,6 +325,7 @@ if (import.meta.main) {
       option("--repo", "aphrody-labs/bun"),
       args.includes("--offline"),
       args.includes("--resume"),
+      parseHomeBuildOptions(args),
     );
     if (args.includes("--apply")) {
       writeFileSync(join(root, "README.md"), result.readme);
