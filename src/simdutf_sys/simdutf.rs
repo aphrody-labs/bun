@@ -240,7 +240,7 @@ pub mod base64 {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn maximal_binary_length(input_len: usize) -> usize {
-        input_len / 4 * 3 + (input_len % 4 * 3 + 3) / 4
+        input_len / 4 * 3 + (input_len % 4 * 3).div_ceil(4)
     }
 
     #[cfg(not(target_arch = "wasm32"))]

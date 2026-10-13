@@ -87,12 +87,13 @@ const rustIdentifierPaths: Record<string, string> = {
   "linux/reap.rs": "runtime/linux/reap.rs",
   "linux/seccomp.rs": "runtime/linux/seccomp.rs",
   "linux/sysctl.rs": "runtime/linux/sysctl.rs",
-  "graph_native.rs": "runtime/graph_native.rs",
   "windows/com.rs": "runtime/windows/com.rs",
   "windows/host.rs": "runtime/windows/host.rs",
   "dotnet/host.rs": "runtime/dotnet/host.rs",
   "memory_pressure.rs": "runtime/node/memory_pressure.rs",
   "mysql.rs": "sql_jsc/mysql.rs",
+  "nginx/bindings.rs": "runtime/nginx/bindings.rs",
+  "yolo.rs": "runtime/yolo/bindings.rs",
   "napi_body.rs": "runtime/napi/napi_body.rs",
   "node_assert_binding.rs": "runtime/node/node_assert_binding.rs",
   "node_cluster_binding.rs": "runtime/node/node_cluster_binding.rs",
@@ -238,16 +239,17 @@ export function getJS2NativeCPP() {
 
   const wrapperCallStrings = wrapperCalls.map(x => {
     if (x.wrap_kind === "new-function") {
+      if (x.type === "rust") {
+        externs.push(
+          `BUN_DECLARE_HOST_FUNCTION(${symbol({
+            type: "rust",
+            symbol: x.symbol_target,
+            filename: x.filename,
+          })});`,
+        );
+      }
       return [
-        (x.type === "rust" &&
-          externs.push(
-            `BUN_DECLARE_HOST_FUNCTION(${symbol({
-              type: "rust",
-              symbol: x.symbol_target,
-              filename: x.filename,
-            })});`,
-          ),
-        "") || "",
+        "",
         `static JSC::JSValue ${x.symbol_generated}(Zig::GlobalObject* globalObject) {`,
         `  return js2nativeNewFunction(globalObject, ${x.call_length}, ${JSON.stringify(x.display_name)}_s, ${symbol({
           type: x.type,
@@ -334,7 +336,7 @@ export function getJS2NativeRust() {
     s
       .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
       .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")
-      .replace(/[.\-]/g, "_")
+      .replace(/[.-]/g, "_")
       .toLowerCase();
 
   // `src/runtime/node/node_util_binding.rs` + `parseEnv`

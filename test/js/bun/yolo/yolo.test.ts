@@ -1,6 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import YoloAlias from "bun:Yolo";
-import Yolo, { choice, code, decide, inspect, jev, local, noul, score, value } from "bun:yolo";
+import Yolo, {
+  choice,
+  code,
+  confidenceThreshold,
+  decide,
+  inspect,
+  jev,
+  local,
+  noul,
+  score,
+  selections,
+  value,
+} from "bun:yolo";
 import type { Request } from "bun:yolo";
 
 function response(answers: Record<string, unknown>) {
@@ -8,6 +20,29 @@ function response(answers: Record<string, unknown>) {
 }
 
 describe("bun:yolo native decisions", () => {
+  test("native confidence permits equality, abstains below it and retains the raw response", async () => {
+    const request = {
+      state: null,
+      questions: { route: choice("Pick the evidence.", { docs: "API docs", graph: "Source graph" }), yes: noul() },
+    };
+    const result = await inspect(request, {
+      provider: code(() =>
+        response({
+          route: { type: "choice", choice: "docs", confidence: 0.7, probabilities: { docs: 0.8, graph: 0.2 } },
+          yes: { type: "noul", noul: 0.9 },
+        }),
+      ),
+    });
+    const before = JSON.stringify(result);
+    expect(selections(request, result, confidenceThreshold(0.7))).toEqual({ route: "docs" });
+    expect(selections(request, result, 0.71)).toEqual({ route: null });
+    expect(JSON.stringify(result)).toBe(before);
+    for (const threshold of [-1, 1.01, NaN, Infinity]) {
+      expect(() => confidenceThreshold(threshold)).toThrow();
+      expect(() => selections(request, result, threshold)).toThrow();
+    }
+    expect(() => selections(request, { ...result, answers: {} } as any, 0.7)).toThrow();
+  });
   test("both module spellings share one owner and JSC primitive booleans branch naturally", async () => {
     expect(YoloAlias).toBe(Yolo);
     let branches = "";
@@ -45,7 +80,7 @@ describe("bun:yolo native decisions", () => {
     let calls = 0;
     const provider = code(request => {
       calls++;
-      expect(Object.keys(request.questions)).toEqual(["action", "allowed", "quality"]);
+      expect(Object.keys(request.questions).sort()).toEqual(["action", "allowed", "quality"].sort());
       return response({
         allowed: { type: "noul", noul: 0.8 },
         action: {

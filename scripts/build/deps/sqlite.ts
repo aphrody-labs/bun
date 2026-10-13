@@ -16,7 +16,7 @@
 import type { Dependency } from "../source.ts";
 
 export const sqlite: Dependency = {
-  name: "sqlite",
+  name: "sqlite3",
 
   enabled: cfg => cfg.staticSqlite,
 

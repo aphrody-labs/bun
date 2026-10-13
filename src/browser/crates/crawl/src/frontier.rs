@@ -12,6 +12,16 @@ use crate::revisit::{
 };
 use crate::scoring::{anchor_relevance, frontier_score};
 
+fn sqlite_usize(row: &rusqlite::Row<'_>, index: usize) -> rusqlite::Result<usize> {
+    usize::try_from(row.get::<_, i64>(index)?).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(
+            index,
+            rusqlite::types::Type::Integer,
+            Box::new(error),
+        )
+    })
+}
+
 const SCHEMA: &str = "
 PRAGMA journal_mode=WAL;
 CREATE TABLE IF NOT EXISTS requests (
@@ -672,7 +682,7 @@ impl Frontier {
     }
 
     pub fn sitemap_hosts_pending_count(&self, scope: &str) -> rusqlite::Result<usize> {
-        self.db.query_row("SELECT COUNT(DISTINCT host) FROM requests WHERE NOT EXISTS (SELECT 1 FROM sitemap_discovered_hosts AS seen WHERE seen.scope=?1 AND seen.host=requests.host)", [scope], |row| row.get(0))
+        self.db.query_row("SELECT COUNT(DISTINCT host) FROM requests WHERE NOT EXISTS (SELECT 1 FROM sitemap_discovered_hosts AS seen WHERE seen.scope=?1 AND seen.host=requests.host)", [scope], |row| sqlite_usize(row, 0))
     }
 
     pub fn enqueue_sitemap(&self, url: &Url) -> rusqlite::Result<()> {
@@ -688,11 +698,11 @@ impl Frontier {
         let limit_parameter = values.len() + 1;
         values.push(rusqlite::types::Value::Integer(limit.min(100) as i64));
         let mut statement = self.db.prepare(&format!("SELECT url,entry_offset,body_hash FROM sitemap_jobs WHERE complete=0 AND ({filter}) ORDER BY rowid LIMIT ?{limit_parameter}"))?;
-        statement.query_map(rusqlite::params_from_iter(values), |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?.collect()
+        statement.query_map(rusqlite::params_from_iter(values), |row| Ok((row.get(0)?, sqlite_usize(row, 1)?, row.get(2)?)))?.collect()
     }
 
     pub fn sitemap_job(&self, url: &Url) -> rusqlite::Result<Option<(usize, bool, Option<String>)>> {
-        self.db.query_row("SELECT entry_offset,complete,body_hash FROM sitemap_jobs WHERE url=?1", [url.as_str()], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))).optional()
+        self.db.query_row("SELECT entry_offset,complete,body_hash FROM sitemap_jobs WHERE url=?1", [url.as_str()], |row| Ok((sqlite_usize(row, 0)?, row.get(1)?, row.get(2)?))).optional()
     }
 
     pub fn advance_sitemap(&self, url: &Url, next_offset: Option<usize>, body_hash: &str) -> rusqlite::Result<()> {
@@ -708,7 +718,7 @@ impl Frontier {
 
     pub fn sitemap_pending_count(&self, allowed: &HashSet<String>) -> rusqlite::Result<usize> {
         let (filter, values) = sitemap_host_filter(allowed);
-        self.db.query_row(&format!("SELECT COUNT(*) FROM sitemap_jobs WHERE complete=0 AND ({filter})"), rusqlite::params_from_iter(values), |row| row.get(0))
+        self.db.query_row(&format!("SELECT COUNT(*) FROM sitemap_jobs WHERE complete=0 AND ({filter})"), rusqlite::params_from_iter(values), |row| sqlite_usize(row, 0))
     }
 
     pub fn known_urls(&self) -> rusqlite::Result<HashSet<String>> {

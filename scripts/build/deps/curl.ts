@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import type { Dependency } from "../source.ts";
 import { depBuildDir, depSourceDir } from "../source.ts";
 
-export const CURL_COMMIT = "d0386aa3e805543ce464c993e1eb31b4d92c6356";
+export const CURL_TAG = "d0386aa3e805543ce464c993e1eb31b4d92c6356";
+export const CURL_COMMIT = "01346829096c61b372692f6dc43ffa778c6caccd";
 
 export const curl: Dependency = {
   name: "curl",

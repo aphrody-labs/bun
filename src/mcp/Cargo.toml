@@ -13,6 +13,8 @@ path = "lib.rs"
 workspace = true
 
 [dependencies]
+aphrody-jev = { workspace = true, features = ["client"] }
+tokio = { workspace = true, features = ["rt", "time"] }
 bun_agent_tools.workspace = true
 bun_core.workspace = true
 bun_css.workspace = true

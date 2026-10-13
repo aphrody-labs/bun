@@ -3,6 +3,7 @@
 # toolchain can build); feature unification is unchanged.
 resolver = "3"
 members = [
+  "crates/aphrody-jev",
   "src/browser/crates/api",
   "src/browser/crates/browser",
   "src/browser/crates/cdp",
@@ -382,6 +383,8 @@ new_ret_no_self = "allow"
 map_identity = "allow"
 
 [workspace.dependencies]
+aphrody-jev = { path = "crates/aphrody-jev", version = "1.4.4", default-features = false }
+axum = "=0.8.9"
 bun_graph = { path = "src/graph" }
 bun_workspace = { path = "src/workspace" }
 # Shared browser dependencies; existing Bun declarations/pins remain authoritative.
@@ -426,7 +429,7 @@ bun_workspace = { path = "src/workspace" }
 "image" = "0.25.10"
 "memmap2" = "0.9.11"
 "parking_lot" = "0.12.5"
-"rusqlite" = { "version" = "0.40", "features" = ["bundled"] }
+"rusqlite" = { "version" = "0.40" }
 "webp" = { "version" = "0.3.1" }
 "fs4" = "1.1.0"
 "bun_browser_service" = { "path" = "src/browser/crates/service", "version" = "1.4.4" }

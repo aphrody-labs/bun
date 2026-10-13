@@ -1,4 +1,4 @@
-use bun_jsc::{CallFrame, JSGlobalObject, JSValue, JsResult};
+use bun_jsc::{CallFrame, JSGlobalObject, JSValue, JsResult, StringJsc as _};
 use serde_json::Value;
 
 pub(crate) fn js_yolo(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
@@ -15,6 +15,28 @@ pub(crate) fn js_yolo(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JS
             b"request" => {
                 super::request(&value)?;
                 Ok(value)
+            }
+            b"confidence" => {
+                let threshold = value
+                    .as_f64()
+                    .ok_or("Confidence threshold must be a number")?;
+                aphrody_jev::validate_confidence_threshold(threshold)
+                    .map_err(|error| error.to_string())?;
+                Ok(value)
+            }
+            b"selections" => {
+                let descriptor = super::parse(&descriptor)?;
+                let request: aphrody_jev::Request =
+                    serde_json::from_value(descriptor["request"].clone())
+                        .map_err(|error| error.to_string())?;
+                let response: aphrody_jev::Response =
+                    serde_json::from_value(value).map_err(|error| error.to_string())?;
+                let threshold = descriptor["minimumConfidence"]
+                    .as_f64()
+                    .ok_or("Confidence threshold must be a number")?;
+                let selected = aphrody_jev::confident_choices(&request, &response, threshold)
+                    .map_err(|error| error.to_string())?;
+                serde_json::to_value(selected).map_err(|error| error.to_string())
             }
             b"response" | b"values" => {
                 let descriptor = super::parse(&descriptor)?;

@@ -469,7 +469,7 @@ export type DepName =
   | "oxc"
   | "picohttpparser"
   | "rust-argon2"
-  | "sqlite"
+  | "sqlite3"
   | "tinycc"
   | "uutils"
   | "uv"
@@ -1747,7 +1747,7 @@ function emitDirect(
   // archive. With cfg.archiveDeps the old per-dep .a is produced instead
   // (useful for bisecting duplicate-symbol issues, since a .a only
   // contributes members the linker actually pulls).
-  if (spec.archive ?? cfg.archiveDeps) {
+  if (objects.length > 0 && (spec.archive ?? cfg.archiveDeps)) {
     // ar's output dir + the per-source obj dirs both need pre-creating —
     // configure.ts:mkdirAll only sees `output.objects`, which is empty
     // in this branch.

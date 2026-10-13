@@ -84,6 +84,17 @@ declare module "bun:yolo" {
   /** One provider request for the whole named batch; validates every answer in Rust. */
   export function inspect<const Q extends Questions>(request: Request<Q>, options?: Options): Promise<Result<Q>>;
   export const systemOne: typeof inspect;
+  /** Validate a confidence threshold natively before starting a provider request. */
+  export function confidenceThreshold(value: number): number;
+  export type Selections<Q extends Questions> = {
+    readonly [K in keyof Q as Q[K] extends ChoiceQuestion ? K : never]: ValueFor<Q[K]> | null;
+  };
+  /** Choice winners at or above the threshold; null means abstention. Raw answers stay unchanged. */
+  export function selections<const Q extends Questions>(
+    request: Request<Q>,
+    result: Result<Q>,
+    minimumConfidence: number,
+  ): Selections<Q>;
   export function decide<const Q extends Questions>(
     request: Request<Q>,
     options?: Options,
@@ -128,6 +139,8 @@ declare module "bun:yolo" {
     readonly jev: typeof jev;
     readonly code: typeof code;
     readonly local: typeof local;
+    readonly confidenceThreshold: typeof confidenceThreshold;
+    readonly selections: typeof selections;
   };
   export default Yolo;
 }

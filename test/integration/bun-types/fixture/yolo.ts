@@ -1,4 +1,14 @@
-import Yolo, { choice, code, decide, inspect, noul, score, type Provider } from "bun:yolo";
+import Yolo, {
+  choice,
+  code,
+  confidenceThreshold,
+  decide,
+  inspect,
+  noul,
+  score,
+  selections,
+  type Provider,
+} from "bun:yolo";
 import YoloAlias from "bun:Yolo";
 import { expectTypeOf } from "bun:test";
 
@@ -16,6 +26,10 @@ expectTypeOf(await Yolo(null, questions.allowed, { provider })).toEqualTypeOf<bo
 expectTypeOf(YoloAlias).toEqualTypeOf<typeof Yolo>();
 const inspected = await inspect({ state: null, questions }, { provider });
 expectTypeOf(inspected.answers.route.choice).toEqualTypeOf<"docs" | "graph" | "none">();
+const selected = selections({ state: null, questions }, inspected, confidenceThreshold(0.7));
+expectTypeOf(selected.route).toEqualTypeOf<"docs" | "graph" | "none" | null>();
+// @ts-expect-error selections contains only Choice questions
+selected.allowed;
 // @ts-expect-error choice keys remain the declared enum
 const unknown: "missing" = result.route;
 // @ts-expect-error score requires at least two ordered criteria

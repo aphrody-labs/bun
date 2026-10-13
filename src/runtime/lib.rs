@@ -80,6 +80,8 @@ pub(crate) mod image;
 pub(crate) mod video;
 pub(crate) mod curl;
 pub(crate) mod crawl;
+pub(crate) mod nginx;
+pub(crate) mod yolo;
 pub(crate) mod test_runner;
 pub(crate) mod valkey_jsc;
 

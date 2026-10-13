@@ -116,7 +116,7 @@ mod native {
             })());
             Some(done)
         }
-        fn then(this: Self, js: Js, cx: &jsc::JsThread<'_>) -> JsResult<()> {
+        fn then(this: Self, mut js: Js, cx: &jsc::JsThread<'_>) -> JsResult<()> {
             let global = cx.global();
             match this.result.expect("completed Crawl job") {
                 Ok(json) => match bun_core::String::from_bytes(json.as_bytes())

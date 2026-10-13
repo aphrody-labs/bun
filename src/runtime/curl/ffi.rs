@@ -33,18 +33,18 @@ pub(crate) fn initialize() -> c_int {
 }
 
 unsafe extern "C" {
-    pub fn curl_global_init(flags: c_long) -> c_int;
-    pub fn curl_easy_init() -> *mut c_void;
-    pub fn curl_easy_cleanup(handle: *mut c_void);
-    pub fn curl_easy_setopt(handle: *mut c_void, option: c_int, ...) -> c_int;
-    pub fn curl_easy_getinfo(handle: *mut c_void, info: c_int, ...) -> c_int;
-    pub fn curl_easy_perform(handle: *mut c_void) -> c_int;
-    pub fn curl_slist_append(list: *mut Slist, value: *const c_char) -> *mut Slist;
-    pub fn curl_slist_free_all(list: *mut Slist);
-    pub fn curl_version_info(age: c_int) -> *const VersionInfo;
-    pub fn curl_easy_option_by_name(name: *const c_char) -> *const EasyOption;
+    pub(super) fn curl_global_init(flags: c_long) -> c_int;
+    pub(super) fn curl_easy_init() -> *mut c_void;
+    pub(super) fn curl_easy_cleanup(handle: *mut c_void);
+    pub(super) fn curl_easy_setopt(handle: *mut c_void, option: c_int, ...) -> c_int;
+    pub(super) fn curl_easy_getinfo(handle: *mut c_void, info: c_int, ...) -> c_int;
+    pub(super) fn curl_easy_perform(handle: *mut c_void) -> c_int;
+    pub(super) fn curl_slist_append(list: *mut Slist, value: *const c_char) -> *mut Slist;
+    pub(super) fn curl_slist_free_all(list: *mut Slist);
+    pub(super) fn curl_version_info(age: c_int) -> *const VersionInfo;
+    pub(super) fn curl_easy_option_by_name(name: *const c_char) -> *const EasyOption;
     #[cfg(not(windows))]
-    pub fn BunCurlMain(argc: c_int, argv: *mut *mut c_char) -> c_int;
+    pub(super) fn BunCurlMain(argc: c_int, argv: *mut *mut c_char) -> c_int;
     #[cfg(windows)]
-    pub fn BunCurlMain(argc: c_int, argv: *mut *mut u16) -> c_int;
+    pub(super) fn BunCurlMain(argc: c_int, argv: *mut *mut u16) -> c_int;
 }

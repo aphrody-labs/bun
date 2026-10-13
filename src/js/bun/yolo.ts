@@ -62,7 +62,7 @@ function modelName(value: unknown): string {
   return value;
 }
 
-export function noul(instructions: Entry = null, criteria?: import("bun:yolo").NoulQuestion["criteria"]) {
+function noul(instructions: Entry = null, criteria?: import("bun:yolo").NoulQuestion["criteria"]) {
   return __nativeYolo(
     "question",
     json({ type: "noul", instructions, ...(criteria === undefined ? {} : { criteria }) }),
@@ -70,21 +70,21 @@ export function noul(instructions: Entry = null, criteria?: import("bun:yolo").N
   );
 }
 
-export function choice<const C extends import("bun:yolo").ChoiceCriteria>(
+function choice<const C extends import("bun:yolo").ChoiceCriteria>(
   instructions: Entry,
   criteria: C,
 ): import("bun:yolo").ChoiceQuestion<C> {
   return __nativeYolo("question", json({ type: "choice", instructions, criteria }), "");
 }
 
-export function score<const C extends import("bun:yolo").ScoreCriteria>(
+function score<const C extends import("bun:yolo").ScoreCriteria>(
   instructions: Entry,
   criteria: C,
 ): import("bun:yolo").ScoreQuestion<C> {
   return __nativeYolo("question", json({ type: "score", instructions, criteria }), "");
 }
 
-export function value<const Q extends Question>(answer: AnswerFor<Q>, question: Q, threshold?: number): ValueFor<Q> {
+function value<const Q extends Question>(answer: AnswerFor<Q>, question: Q, threshold?: number): ValueFor<Q> {
   return __nativeYolo("primitive", json(answer), json({ question, threshold: probability(threshold) }));
 }
 
@@ -100,10 +100,7 @@ async function cancellable<T>(task: PromiseLike<T>, signal: AbortSignal): Promis
   }
 }
 
-export async function inspect<const Q extends Questions>(
-  request: Request<Q>,
-  options: Options = {},
-): Promise<Result<Q>> {
+async function inspect<const Q extends Questions>(request: Request<Q>, options: Options = {}): Promise<Result<Q>> {
   if (!$isObject(options) || $isJSArray(options)) throw $ERR_INVALID_ARG_TYPE("options", "object", options);
   const timeout = bound("timeout", options.timeout, 10_000, 120_000, 1);
   const maxRetries = bound("maxRetries", options.maxRetries, 0, 3);
@@ -136,9 +133,9 @@ export async function inspect<const Q extends Questions>(
   }
 }
 
-export const systemOne = inspect;
+const systemOne = inspect;
 
-export async function decide<const Q extends Questions>(
+async function decide<const Q extends Questions>(
   request: Request<Q>,
   options: Options = {},
 ): Promise<{ readonly [K in keyof Q]: ValueFor<Q[K]> }> {
@@ -148,11 +145,7 @@ export async function decide<const Q extends Questions>(
   return __nativeYolo("values", json(response), descriptor);
 }
 
-export async function ask<const Q extends Question>(
-  state: Entry,
-  question: Q,
-  options: Options = {},
-): Promise<ValueFor<Q>> {
+async function ask<const Q extends Question>(state: Entry, question: Q, options: Options = {}): Promise<ValueFor<Q>> {
   const normalized: Q = __nativeYolo("question", json(question), "");
   const threshold = probability(options.threshold);
   const result = await inspect({ state, questions: { answer: normalized } }, options);
@@ -181,7 +174,7 @@ async function readResponse(response: Response, signal: AbortSignal): Promise<st
   }
 }
 
-export function jev(options: import("bun:yolo").JevOptions = {}): Provider {
+function jev(options: import("bun:yolo").JevOptions = {}): Provider {
   if (!$isObject(options) || $isJSArray(options)) throw $ERR_INVALID_ARG_TYPE("options", "object", options);
   if (options.client !== undefined) {
     const client = options.client;
@@ -242,9 +235,7 @@ export function jev(options: import("bun:yolo").JevOptions = {}): Provider {
   };
 }
 
-export function code(
-  evaluate: (request: Request, options: ProviderOptions) => unknown | PromiseLike<unknown>,
-): Provider {
+function code(evaluate: (request: Request, options: ProviderOptions) => unknown | PromiseLike<unknown>): Provider {
   if (typeof evaluate !== "function") throw $ERR_INVALID_ARG_TYPE("evaluate", "function", evaluate);
   return {
     async systemOne(request, options) {
@@ -255,7 +246,7 @@ export function code(
   };
 }
 
-export function local(options: import("bun:yolo").LocalOptions): Provider {
+function local(options: import("bun:yolo").LocalOptions): Provider {
   if (!$isObject(options) || typeof options.context?.complete !== "function")
     throw $ERR_INVALID_ARG_TYPE("context.complete", "function", options?.context?.complete);
   const model = modelName(options.model);
@@ -282,5 +273,33 @@ export function local(options: import("bun:yolo").LocalOptions): Provider {
   };
 }
 
-export const Yolo = nativeAssign(ask, { decide, inspect, systemOne, noul, choice, score, value, jev, code, local });
-export default Yolo;
+function confidenceThreshold(value: number): number {
+  return __nativeYolo("confidence", json(value), "");
+}
+
+function selections<const Q extends Questions>(
+  request: Request<Q>,
+  result: Result<Q>,
+  minimumConfidence: number,
+): import("bun:yolo").Selections<Q> {
+  const threshold = confidenceThreshold(minimumConfidence);
+  return __nativeYolo("selections", json(result), json({ request, minimumConfidence: threshold }));
+}
+
+const Yolo = nativeAssign(ask, {
+  ask,
+  decide,
+  inspect,
+  systemOne,
+  noul,
+  choice,
+  score,
+  value,
+  jev,
+  code,
+  local,
+  confidenceThreshold,
+  selections,
+});
+
+export default nativeAssign(Yolo, { Yolo });

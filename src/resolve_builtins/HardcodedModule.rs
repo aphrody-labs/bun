@@ -33,6 +33,10 @@ pub enum HardcodedModule {
     BunGraphIndex,
     #[strum(serialize = "bun:graphx")]
     BunGraphx,
+    #[strum(serialize = "bun:nginx")]
+    BunNginx,
+    #[strum(serialize = "bun:yolo")]
+    BunYolo,
     #[strum(serialize = "bun:python")]
     BunPython,
     #[strum(serialize = "bun:jsc")]
@@ -267,6 +271,8 @@ bun_core::comptime_string_map! {
         b"bun:graph-native" => HardcodedModule::BunGraphNative,
         b"bun:graph-index" => HardcodedModule::BunGraphIndex,
         b"bun:graphx" => HardcodedModule::BunGraphx,
+        b"bun:nginx" => HardcodedModule::BunNginx,
+        b"bun:yolo" => HardcodedModule::BunYolo,
         b"bun:python" => HardcodedModule::BunPython,
         b"bun:jsc" => HardcodedModule::BunJsc,
         b"bun:linux" => HardcodedModule::BunLinux,
@@ -812,6 +818,26 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("bun:graph-native"),
     entry!("bun:graph-index"),
     entry!("bun:graphx"),
+    entry!("bun:nginx"),
+    entry!("bun:yolo"),
+    (
+        b"bun:Nginixx",
+        Alias {
+            path: zstr!("bun:nginx"),
+            tag: import_record::Tag::Builtin,
+            node_builtin: false,
+            node_only_prefix: false,
+        },
+    ),
+    (
+        b"bun:Yolo",
+        Alias {
+            path: zstr!("bun:yolo"),
+            tag: import_record::Tag::Builtin,
+            node_builtin: false,
+            node_only_prefix: false,
+        },
+    ),
     entry!("bun:python"),
     (
         b"buv:python",
