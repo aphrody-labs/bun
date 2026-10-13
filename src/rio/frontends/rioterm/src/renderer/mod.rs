@@ -35,14 +35,12 @@ use rio_backend::sugarloaf::Sugarloaf;
 
 // Hint tooltip: browser-style status pill showing where the hovered
 // link goes. Shares the overlay draw order with search / palette.
-const TOOLTIP_FONT_SIZE: f32 = 12.0;
+const TOOLTIP_FONT_SIZE: f32 = 18.0;
 const TOOLTIP_PADDING_X: f32 = 9.0;
 const TOOLTIP_PADDING_Y: f32 = 5.0;
 const TOOLTIP_MARGIN: f32 = 6.0;
 const TOOLTIP_CORNER_RADIUS: f32 = 5.0;
 const TOOLTIP_MAX_WIDTH_RATIO: f32 = 0.6;
-const TOOLTIP_BG_COLOR: [f32; 4] = [0.12, 0.12, 0.12, 0.96];
-const TOOLTIP_TEXT_COLOR: [u8; 4] = [237, 237, 237, 255];
 const TOOLTIP_DEPTH_BG: f32 = 0.1;
 const TOOLTIP_ORDER: u8 = 20;
 
@@ -89,13 +87,15 @@ fn draw_hint_tooltip(
     text: &str,
     window_size: (f32, f32),
     scale_factor: f32,
+    background: [f32; 4],
 ) {
     let logical_width = window_size.0 / scale_factor;
     let logical_height = window_size.1 / scale_factor;
 
+    let colors = rio_backend::config::theme::MaterialColors::for_background(background);
     let opts = DrawOpts {
         font_size: TOOLTIP_FONT_SIZE,
-        color: TOOLTIP_TEXT_COLOR,
+        color: colors.on_surface.map(|c| (c * 255.0) as u8),
         ..DrawOpts::default()
     };
 
@@ -117,7 +117,7 @@ fn draw_hint_tooltip(
         y,
         width,
         height,
-        TOOLTIP_BG_COLOR,
+        colors.surface_container_high,
         TOOLTIP_DEPTH_BG,
         TOOLTIP_CORNER_RADIUS,
         TOOLTIP_ORDER,
@@ -811,27 +811,32 @@ impl Renderer {
             }
         }
 
-        if let Some(island) = &mut self.island {
-            let island_bg = self
-                .last_window_bg
-                .map(|c| [c.r as f32, c.g as f32, c.b as f32, c.a as f32])
-                .unwrap_or(self.named_colors.background.0);
-            island.render(
-                sugarloaf,
-                (window_size.width, window_size.height, scale_factor),
-                context_manager,
-                island_bg,
-            );
+        // UI glyphs share one text pass, so tab titles must not bleed through an overlay.
+        if self.hint_click_would_land() {
+            if let Some(island) = &mut self.island {
+                let island_bg = self
+                    .last_window_bg
+                    .map(|c| [c.r as f32, c.g as f32, c.b as f32, c.a as f32])
+                    .unwrap_or(self.named_colors.background.0);
+                island.render(
+                    sugarloaf,
+                    (window_size.width, window_size.height, scale_factor),
+                    context_manager,
+                    island_bg,
+                );
+            }
         }
 
         self.assistant.render(
             sugarloaf,
             (window_size.width, window_size.height, scale_factor),
+            self.named_colors.background.0,
         );
 
         self.search.render(
             sugarloaf,
             (window_size.width, window_size.height, scale_factor),
+            self.named_colors.background.0,
         );
 
         // The hint borrow (context_manager) and the draw target
@@ -849,17 +854,20 @@ impl Renderer {
                 &hint.text,
                 (window_size.width, window_size.height),
                 scale_factor,
+                self.named_colors.background.0,
             );
         }
 
         self.command_palette.render(
             sugarloaf,
             (window_size.width, window_size.height, scale_factor),
+            self.named_colors.background.0,
         );
 
         self.confirm_quit.render(
             sugarloaf,
             (window_size.width, window_size.height, scale_factor),
+            self.named_colors.background.0,
         );
 
         // Render scrollbars for each panel

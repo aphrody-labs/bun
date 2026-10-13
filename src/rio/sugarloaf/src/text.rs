@@ -47,7 +47,7 @@ pub struct DrawOpts {
 impl Default for DrawOpts {
     fn default() -> Self {
         Self {
-            font_size: 14.0,
+            font_size: crate::font::fonts::default_font_size(),
             color: [255, 255, 255, 255],
             bold: false,
             italic: false,

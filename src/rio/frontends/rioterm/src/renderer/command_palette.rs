@@ -4,8 +4,10 @@
 // LICENSE file in the root directory of this source tree.
 
 use crate::renderer::scrollbar;
+use rio_backend::config::theme::MaterialColors;
 use rio_backend::sugarloaf::text::DrawOpts;
 use rio_backend::sugarloaf::Sugarloaf;
+use std::borrow::Cow;
 use std::time::Instant;
 
 /// Convert `[f32; 4]` colour to `[u8; 4]` for the `Text` API (the
@@ -21,18 +23,18 @@ fn color_u8(c: [f32; 4]) -> [u8; 4] {
 }
 
 // Layout
-const PALETTE_WIDTH: f32 = 480.0;
-const PALETTE_CORNER_RADIUS: f32 = 8.0;
+const PALETTE_WIDTH: f32 = 640.0;
+const PALETTE_CORNER_RADIUS: f32 = 16.0;
 const PALETTE_MARGIN_TOP: f32 = 80.0;
 const PALETTE_PADDING: f32 = 4.0;
 
-const INPUT_HEIGHT: f32 = 40.0;
-const INPUT_FONT_SIZE: f32 = 14.0;
+const INPUT_HEIGHT: f32 = 48.0;
+const INPUT_FONT_SIZE: f32 = 18.0;
 const INPUT_PADDING_X: f32 = 14.0;
 
-const RESULT_ITEM_HEIGHT: f32 = 32.0;
-const RESULT_FONT_SIZE: f32 = 13.0;
-const SHORTCUT_FONT_SIZE: f32 = 11.0;
+const RESULT_ITEM_HEIGHT: f32 = 48.0;
+const RESULT_FONT_SIZE: f32 = 18.0;
+const SHORTCUT_FONT_SIZE: f32 = 18.0;
 const MAX_VISIBLE_RESULTS: usize = 8;
 
 // Copy icon (two overlapping page outlines with rounded corners,
@@ -53,12 +55,6 @@ const CARET_BLINK_MS: u128 = 500;
 
 // Colors — dark minimalist
 const BACKDROP_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.50];
-const BG_COLOR: [f32; 4] = [0.08, 0.08, 0.08, 0.98];
-const SELECTED_BG_COLOR: [f32; 4] = [0.15, 0.15, 0.15, 1.0];
-const TEXT_COLOR: [f32; 4] = [0.85, 0.85, 0.85, 1.0];
-const DIM_TEXT_COLOR: [f32; 4] = [0.35, 0.35, 0.35, 1.0];
-const SHORTCUT_TEXT_COLOR: [f32; 4] = [0.30, 0.30, 0.32, 1.0];
-const SEPARATOR_COLOR: [f32; 4] = [0.15, 0.15, 0.15, 1.0];
 
 // Depth / order
 const DEPTH_BACKDROP: f32 = 0.0;
@@ -272,6 +268,29 @@ impl<'a> PaletteRow<'a> {
     }
 
     fn shortcut(&self) -> &'a str {
+        #[cfg(not(target_os = "macos"))]
+        if let PaletteRow::Command { action, .. } = *self {
+            return match action {
+                PaletteAction::TabCreate => "Ctrl+Shift+T",
+                PaletteAction::TabClose | PaletteAction::CloseCurrentSplitOrTab => {
+                    "Ctrl+Shift+W"
+                }
+                PaletteAction::SplitRight => "Ctrl+Shift+R",
+                PaletteAction::SplitDown => "Ctrl+Shift+D",
+                PaletteAction::ConfigEditor => "Ctrl+Shift+,",
+                PaletteAction::WindowCreateNew => "Ctrl+Shift+N",
+                PaletteAction::IncreaseFontSize => "Ctrl++",
+                PaletteAction::DecreaseFontSize => "Ctrl+-",
+                PaletteAction::ResetFontSize => "Ctrl+0",
+                PaletteAction::Copy => "Ctrl+Shift+C",
+                PaletteAction::Paste => "Ctrl+Shift+V",
+                PaletteAction::SearchForward => "Ctrl+Shift+F",
+                PaletteAction::SearchBackward => "Ctrl+Shift+B",
+                PaletteAction::SelectNextTab => "Ctrl+Tab",
+                PaletteAction::SelectPrevTab => "Ctrl+Shift+Tab",
+                _ => "",
+            };
+        }
         match *self {
             PaletteRow::Command { shortcut, .. } => shortcut,
             PaletteRow::Font { .. } => "",
@@ -284,6 +303,55 @@ impl<'a> PaletteRow<'a> {
             PaletteRow::Font { .. } => None,
         }
     }
+}
+
+fn fit_text<'a>(
+    text: &'a str,
+    max_width: f32,
+    keep_tail: bool,
+    mut measure: impl FnMut(&str) -> f32,
+) -> Cow<'a, str> {
+    if measure(text) <= max_width {
+        return Cow::Borrowed(text);
+    }
+    if max_width <= 0.0 {
+        return Cow::Borrowed("");
+    }
+    let boundaries: Vec<usize> = text
+        .char_indices()
+        .map(|(i, _)| i)
+        .chain(std::iter::once(text.len()))
+        .collect();
+    let mut low = 0;
+    let mut high = boundaries.len() - 1;
+    while low < high {
+        let mid = if keep_tail {
+            (low + high) / 2
+        } else {
+            (low + high + 1) / 2
+        };
+        let candidate = if keep_tail {
+            &text[boundaries[mid]..]
+        } else {
+            &text[..boundaries[mid]]
+        };
+        if keep_tail {
+            if measure(candidate) > max_width {
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
+        } else if measure(candidate) > max_width {
+            high = mid - 1;
+        } else {
+            low = mid;
+        }
+    }
+    Cow::Borrowed(if keep_tail {
+        &text[boundaries[low]..]
+    } else {
+        &text[..boundaries[low]]
+    })
 }
 
 /// Paint a rounded-rect outline by layering two filled rounded rects:
@@ -438,6 +506,8 @@ pub struct CommandPalette {
     pub query: String,
     pub selected_index: usize,
     scroll_offset: usize,
+    visible_results: usize,
+    viewport_height: f32,
     pub has_adaptive_theme: bool,
     /// Which list the palette is showing (commands or fonts).
     mode: PaletteMode,
@@ -458,6 +528,8 @@ impl Default for CommandPalette {
             query: String::new(),
             selected_index: 0,
             scroll_offset: 0,
+            visible_results: MAX_VISIBLE_RESULTS,
+            viewport_height: f32::INFINITY,
             has_adaptive_theme: false,
             mode: PaletteMode::Commands,
             caret_blink_start: Instant::now(),
@@ -543,10 +615,25 @@ impl CommandPalette {
         let count = self.filtered_rows().len();
         if self.selected_index < count.saturating_sub(1) {
             self.selected_index += 1;
-            if self.selected_index >= self.scroll_offset + MAX_VISIBLE_RESULTS {
-                self.scroll_offset = self.selected_index - MAX_VISIBLE_RESULTS + 1;
+            if self.selected_index >= self.scroll_offset + self.visible_results {
+                self.scroll_offset = self.selected_index - self.visible_results + 1;
                 self.last_scroll_time = Some(Instant::now());
             }
+        }
+    }
+
+    fn set_viewport_height(&mut self, height: f32) {
+        self.viewport_height = height;
+        let fixed_height =
+            PALETTE_PADDING * 2.0 + INPUT_HEIGHT + SEPARATOR_HEIGHT + RESULTS_MARGIN_TOP;
+        self.visible_results = (((height - 16.0 - fixed_height) / RESULT_ITEM_HEIGHT)
+            .floor()
+            .max(1.0) as usize)
+            .min(MAX_VISIBLE_RESULTS);
+        if self.selected_index < self.scroll_offset {
+            self.scroll_offset = self.selected_index;
+        } else if self.selected_index >= self.scroll_offset + self.visible_results {
+            self.scroll_offset = self.selected_index - self.visible_results + 1;
         }
     }
 
@@ -612,15 +699,17 @@ impl CommandPalette {
 
     /// Returns the palette geometry (x, y, width, height) for hit-testing.
     fn palette_rect(&self, window_width: f32, scale_factor: f32) -> (f32, f32, f32, f32) {
-        let px = (window_width / scale_factor - PALETTE_WIDTH) / 2.0;
-        let py = PALETTE_MARGIN_TOP;
+        let logical_width = window_width / scale_factor;
+        let width = PALETTE_WIDTH.min((logical_width - 16.0).max(0.0));
+        let px = (logical_width - width) / 2.0;
         let h = PALETTE_PADDING
             + INPUT_HEIGHT
             + SEPARATOR_HEIGHT
             + RESULTS_MARGIN_TOP
-            + RESULT_ITEM_HEIGHT * MAX_VISIBLE_RESULTS as f32
+            + RESULT_ITEM_HEIGHT * self.visible_results as f32
             + PALETTE_PADDING;
-        (px, py, PALETTE_WIDTH, h)
+        let py = PALETTE_MARGIN_TOP.min(((self.viewport_height - h) / 2.0).max(0.0));
+        (px, py, width, h)
     }
 
     /// Hit-test a mouse click. Returns Some(index) if a result row was clicked,
@@ -652,7 +741,7 @@ impl CommandPalette {
         let filtered_count = self.filtered_rows().len();
         let actual_index = self.scroll_offset + row;
 
-        if actual_index < filtered_count {
+        if row < self.visible_results && actual_index < filtered_count {
             Ok(Some(actual_index))
         } else {
             Ok(None)
@@ -678,13 +767,20 @@ impl CommandPalette {
         false
     }
 
-    pub fn render(&mut self, sugarloaf: &mut Sugarloaf, dimensions: (f32, f32, f32)) {
+    pub fn render(
+        &mut self,
+        sugarloaf: &mut Sugarloaf,
+        dimensions: (f32, f32, f32),
+        background: [f32; 4],
+    ) {
         if !self.enabled {
             // Immediate mode: not drawing == not visible.
             return;
         }
 
         let (window_width, window_height, scale_factor) = dimensions;
+        self.set_viewport_height(window_height / scale_factor);
+        let colors = MaterialColors::for_background(background);
 
         let (palette_x, palette_y, palette_width, palette_height) =
             self.palette_rect(window_width, scale_factor);
@@ -706,7 +802,7 @@ impl CommandPalette {
             palette_y,
             palette_width,
             palette_height,
-            BG_COLOR,
+            colors.surface_container,
             DEPTH_BG,
             PALETTE_CORNER_RADIUS,
             ORDER,
@@ -728,9 +824,9 @@ impl CommandPalette {
             self.query.as_str()
         };
         let text_color = if self.query.is_empty() {
-            DIM_TEXT_COLOR
+            colors.on_surface_variant
         } else {
-            TEXT_COLOR
+            colors.on_surface
         };
 
         let text_x = input_x + INPUT_PADDING_X;
@@ -740,10 +836,16 @@ impl CommandPalette {
             color: color_u8(text_color),
             ..DrawOpts::default()
         };
+        let display_text = fit_text(
+            display_text,
+            (input_width - INPUT_PADDING_X * 2.0 - CARET_WIDTH).max(0.0),
+            true,
+            |text| sugarloaf.text_mut().measure(text, &input_opts),
+        );
         let input_rendered_width =
             sugarloaf
                 .text_mut()
-                .draw(text_x, text_y, display_text, &input_opts);
+                .draw(text_x, text_y, &display_text, &input_opts);
 
         let elapsed_ms = self.caret_blink_start.elapsed().as_millis();
         let caret_visible = (elapsed_ms / CARET_BLINK_MS).is_multiple_of(2);
@@ -765,7 +867,7 @@ impl CommandPalette {
                 caret_y,
                 CARET_WIDTH,
                 caret_height,
-                TEXT_COLOR,
+                colors.on_surface,
                 DEPTH_ELEMENT,
                 ORDER,
             );
@@ -778,7 +880,7 @@ impl CommandPalette {
             sep_y,
             palette_width - PALETTE_PADDING * 2.0,
             SEPARATOR_HEIGHT,
-            SEPARATOR_COLOR,
+            colors.outline_variant,
             DEPTH_ELEMENT,
             ORDER,
         );
@@ -788,14 +890,14 @@ impl CommandPalette {
 
         let shortcut_opts = DrawOpts {
             font_size: SHORTCUT_FONT_SIZE,
-            color: color_u8(SHORTCUT_TEXT_COLOR),
+            color: color_u8(colors.on_surface_variant),
             ..DrawOpts::default()
         };
 
         for (display_i, (_, row)) in filtered
             .iter()
             .skip(self.scroll_offset)
-            .take(MAX_VISIBLE_RESULTS)
+            .take(self.visible_results)
             .enumerate()
         {
             let actual_index = self.scroll_offset + display_i;
@@ -810,7 +912,7 @@ impl CommandPalette {
                     item_y,
                     input_width,
                     RESULT_ITEM_HEIGHT,
-                    SELECTED_BG_COLOR,
+                    colors.primary_container,
                     DEPTH_ELEMENT,
                     4.0,
                     ORDER,
@@ -820,23 +922,46 @@ impl CommandPalette {
             let result_opts = DrawOpts {
                 font_size: RESULT_FONT_SIZE,
                 color: color_u8(if is_selected {
-                    TEXT_COLOR
+                    colors.on_primary_container
                 } else {
-                    [0.55, 0.55, 0.55, 1.0]
+                    colors.on_surface_variant
                 }),
                 ..DrawOpts::default()
             };
             let row_text_x = input_x + INPUT_PADDING_X;
             let row_text_y = item_y + (RESULT_ITEM_HEIGHT - RESULT_FONT_SIZE) / 2.0;
+            let shortcut = row.shortcut();
+            let hint_width = if shortcut.is_empty() {
+                if matches!(row, PaletteRow::Font { .. }) {
+                    COPY_ICON_W
+                } else {
+                    0.0
+                }
+            } else {
+                sugarloaf.text_mut().measure(shortcut, &shortcut_opts)
+            };
+            let title = fit_text(
+                row.title(),
+                (input_width - INPUT_PADDING_X * 2.0 - hint_width - 12.0).max(0.0),
+                false,
+                |text| sugarloaf.text_mut().measure(text, &result_opts),
+            );
             sugarloaf
                 .text_mut()
-                .draw(row_text_x, row_text_y, row.title(), &result_opts);
+                .draw(row_text_x, row_text_y, &title, &result_opts);
 
             // Right-side hint: shortcut for commands, copy icon for
             // font rows (signals "Enter copies this to clipboard").
-            let shortcut = row.shortcut();
             let is_font_row = matches!(row, PaletteRow::Font { .. });
             if !shortcut.is_empty() {
+                let shortcut_opts = DrawOpts {
+                    color: color_u8(if is_selected {
+                        colors.on_primary_container
+                    } else {
+                        colors.on_surface_variant
+                    }),
+                    ..shortcut_opts
+                };
                 let ui = sugarloaf.text_mut();
                 let shortcut_width = ui.measure(shortcut, &shortcut_opts);
                 let shortcut_x = input_x + input_width - INPUT_PADDING_X - shortcut_width;
@@ -846,17 +971,17 @@ impl CommandPalette {
 
             if is_font_row {
                 let stroke_color = if is_selected {
-                    TEXT_COLOR
+                    colors.on_primary_container
                 } else {
-                    SHORTCUT_TEXT_COLOR
+                    colors.on_surface_variant
                 };
                 // Cutout inside each page uses the row's own background
                 // so the border reads as a clean outline on either
                 // palette-bg (idle) or selection-highlight-bg (hovered).
                 let row_fill_color = if is_selected {
-                    SELECTED_BG_COLOR
+                    colors.primary_container
                 } else {
-                    BG_COLOR
+                    colors.surface_container
                 };
                 let icon_x = input_x + input_width - INPUT_PADDING_X - COPY_ICON_W;
                 let icon_y = item_y + (RESULT_ITEM_HEIGHT - COPY_ICON_H) / 2.0;
@@ -878,14 +1003,14 @@ impl CommandPalette {
         // Drawn only when the palette has actually been scrolled —
         // hidden on first open, faded out 2.3 s after the last scroll.
         let total = filtered.len();
-        let track_height = MAX_VISIBLE_RESULTS as f32 * RESULT_ITEM_HEIGHT;
-        let normalized = if total > MAX_VISIBLE_RESULTS {
-            self.scroll_offset as f32 / (total - MAX_VISIBLE_RESULTS) as f32
+        let track_height = self.visible_results as f32 * RESULT_ITEM_HEIGHT;
+        let normalized = if total > self.visible_results {
+            self.scroll_offset as f32 / (total - self.visible_results) as f32
         } else {
             0.0
         };
         if let Some((thumb_y, thumb_height)) = scrollbar::compute_thumb(
-            MAX_VISIBLE_RESULTS,
+            self.visible_results,
             total,
             results_y,
             track_height,
@@ -920,6 +1045,41 @@ impl CommandPalette {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compact_palette_keeps_keyboard_selection_clickable() {
+        let mut palette = CommandPalette::new();
+        palette.set_viewport_height(240.0);
+        let (x, y, width, height) = palette.palette_rect(640.0, 2.0);
+        assert!(x >= 0.0 && x + width <= 320.0);
+        assert!(y >= 0.0 && y + height <= 240.0);
+        for _ in 0..10 {
+            palette.move_selection_down();
+        }
+        let row = palette.selected_index - palette.scroll_offset;
+        let row_y = y
+            + PALETTE_PADDING
+            + INPUT_HEIGHT
+            + SEPARATOR_HEIGHT
+            + RESULTS_MARGIN_TOP
+            + RESULT_ITEM_HEIGHT * (row as f32 + 0.5);
+        assert_eq!(
+            palette.hit_test(x + 20.0, row_y, 640.0, 2.0),
+            Ok(Some(palette.selected_index))
+        );
+        assert_eq!(
+            palette.hit_test(x + 20.0, y + height - 1.0, 640.0, 2.0),
+            Ok(None)
+        );
+    }
+
+    #[test]
+    fn fit_text_preserves_unicode_boundaries_and_input_tail() {
+        let measure = |text: &str| text.chars().count() as f32;
+        assert_eq!(fit_text("é漢🙂abc", 3.0, false, measure), "é漢🙂");
+        assert_eq!(fit_text("é漢🙂abc", 3.0, true, measure), "abc");
+        assert_eq!(fit_text("é漢🙂abc", 0.0, true, measure), "");
+    }
 
     #[test]
     fn test_set_enabled_resets_state() {

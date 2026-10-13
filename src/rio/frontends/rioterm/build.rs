@@ -32,10 +32,8 @@ fn main() {
     load_app_icon();
 }
 
-// The exe resource Explorer and the taskbar read; the same image the
-// runtime window icon uses (router::window::LOGO_ICON). cfg(windows) in
-// a build script is the host, so cross-compiles from a windows host to
-// another os must still skip via the target check.
+// Explorer embeds ICO; the window uses its matching Material Terminal PNG.
+// cfg(windows) here refers to the host, so other targets must skip resources.
 #[cfg(windows)]
 fn load_app_icon() {
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("windows") {

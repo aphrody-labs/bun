@@ -23,6 +23,9 @@ pub struct WindowOptions {
 
 #[derive(Serialize, Deserialize, Args, Default, Debug, Clone, PartialEq, Eq)]
 pub struct TerminalOptions {
+    /// Enable optional native interactions and cursor effects. Renderer selection remains unchanged.
+    #[clap(long)]
+    pub all_features: bool,
     /// Command and args to execute (must be last argument).
     #[clap(short = 'e', long, allow_hyphen_values = true, num_args = 1..)]
     pub command: Vec<String>,

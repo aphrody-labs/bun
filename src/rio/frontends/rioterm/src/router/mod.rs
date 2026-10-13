@@ -318,11 +318,19 @@ impl Route<'_> {
                             self.request_overlay_redraw();
                         }
                         Key::Named(NamedKey::Tab) => {
-                            self.window
-                                .screen
-                                .renderer
-                                .command_palette
-                                .move_selection_down();
+                            if self.window.screen.modifiers.state().shift_key() {
+                                self.window
+                                    .screen
+                                    .renderer
+                                    .command_palette
+                                    .move_selection_up();
+                            } else {
+                                self.window
+                                    .screen
+                                    .renderer
+                                    .command_palette
+                                    .move_selection_down();
+                            }
                             self.request_overlay_redraw();
                         }
                         Key::Named(NamedKey::Enter) => {

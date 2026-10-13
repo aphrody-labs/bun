@@ -8,6 +8,7 @@
 
 use crate::context::ContextManager;
 use crate::renderer::helpers::spring::Spring;
+use rio_backend::config::theme::MaterialColors;
 use rio_backend::event::{EventProxy, ProgressReport, ProgressState};
 use rio_backend::sugarloaf::text::DrawOpts;
 use rio_backend::sugarloaf::{Attributes, Sugarloaf};
@@ -15,16 +16,16 @@ use rustc_hash::FxHashMap;
 use std::borrow::Cow;
 use std::time::Instant;
 
-pub const ISLAND_HEIGHT: f32 = 38.0;
+pub const ISLAND_HEIGHT: f32 = 56.0;
 const PROGRESS_BAR_HEIGHT: f32 = 3.0;
 
 const PROGRESS_BAR_TIMEOUT_SECS: u64 = 15;
-const TITLE_FONT_SIZE: f32 = 12.0;
+const TITLE_FONT_SIZE: f32 = 18.0;
 
 const TAB_PADDING_X: f32 = 27.0;
 const TAB_GAP: f32 = 6.0;
-const TAB_INSET_Y: f32 = 7.0;
-const TAB_RADIUS: f32 = 6.0;
+const TAB_INSET_Y: f32 = 4.0;
+const TAB_RADIUS: f32 = 12.0;
 const TITLE_ELLIPSIS: char = '…';
 /// Bell dot for tabs that rang while in the background, and the gap
 /// between it and the tab title. A dot, not a glyph: the UI text layer
@@ -46,7 +47,7 @@ const PICKER_SWATCH_SIZE: f32 = 18.0;
 const PICKER_SWATCH_GAP: f32 = 4.0;
 const PICKER_PADDING: f32 = 6.0;
 const PICKER_INPUT_HEIGHT: f32 = 26.0;
-const PICKER_INPUT_FONT_SIZE: f32 = 12.0;
+const PICKER_INPUT_FONT_SIZE: f32 = 18.0;
 const PICKER_INPUT_MARGIN_TOP: f32 = 8.0;
 const PICKER_TOP_PADDING: f32 = 4.0;
 const PICKER_HEIGHT: f32 = PICKER_TOP_PADDING
@@ -176,21 +177,12 @@ struct IslandFills {
 }
 
 fn island_fills(bg: [f32; 4]) -> IslandFills {
-    let luminance = 0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2];
-    if luminance > 0.5 {
-        IslandFills {
-            inactive: [0.0, 0.0, 0.0, 0.05],
-            active: [1.0, 1.0, 1.0, 0.92],
-            outline: Some([0.0, 0.0, 0.0, 0.14]),
-            close_hover: [0.0, 0.0, 0.0, 0.09],
-        }
-    } else {
-        IslandFills {
-            inactive: [1.0, 1.0, 1.0, 0.05],
-            active: [1.0, 1.0, 1.0, 0.18],
-            outline: None,
-            close_hover: [1.0, 1.0, 1.0, 0.14],
-        }
+    let colors = MaterialColors::for_background(bg);
+    IslandFills {
+        inactive: colors.surface_container,
+        active: colors.primary_container,
+        outline: Some(colors.outline_variant),
+        close_hover: colors.surface_container_high,
     }
 }
 
@@ -816,6 +808,7 @@ impl Island {
         // strip itself keeps the plain window background — the islands
         // float directly on it, with no strip tint or border lines.
         let fills = island_fills(bg_color);
+        let colors = MaterialColors::for_background(bg_color);
 
         // Render each tab
         for tab_index in 0..num_tabs {
@@ -855,12 +848,12 @@ impl Island {
                         custom[3] = 1.0;
                         custom
                     }
-                    None => self.active_text_color,
+                    None => colors.on_surface,
                 }
             } else if is_active {
-                self.active_text_color
+                colors.on_primary_container
             } else {
-                self.inactive_text_color
+                colors.on_surface_variant
             };
 
             let title_opts = DrawOpts {
@@ -991,7 +984,11 @@ impl Island {
                     draw_close_button(
                         sugarloaf,
                         cx,
-                        self.active_text_color,
+                        if self.close_hover {
+                            colors.on_surface
+                        } else {
+                            colors.on_primary_container
+                        },
                         self.close_hover,
                         2,
                     );
@@ -1031,6 +1028,11 @@ impl Island {
                     over(base, fills.active)
                 }
             };
+            let floating_text = if context_manager.custom_color(drag_idx).is_some() {
+                MaterialColors::for_background(fill).on_surface
+            } else {
+                colors.on_primary_container
+            };
             draw_island(
                 sugarloaf,
                 ix,
@@ -1045,7 +1047,7 @@ impl Island {
             );
 
             if let Some(cx) = close_button_center(ix, iw) {
-                draw_close_button(sugarloaf, cx, self.active_text_color, false, 12);
+                draw_close_button(sugarloaf, cx, floating_text, false, 12);
             }
 
             let raw_title = self.get_title_for_tab(context_manager, drag_idx);
@@ -1054,7 +1056,7 @@ impl Island {
                 let title = fit_title_to_width(sugarloaf, &raw_title, max_text_width);
                 let title_opts = DrawOpts {
                     font_size: TITLE_FONT_SIZE,
-                    color: color_u8(self.active_text_color),
+                    color: color_u8(floating_text),
                     ..DrawOpts::default()
                 };
                 let ui = sugarloaf.text_mut();
@@ -1070,7 +1072,13 @@ impl Island {
             if picker_tab < num_tabs {
                 let picker_tab_x = left_margin + picker_tab as f32 * tab_width;
                 let selected = context_manager.custom_color(picker_tab);
-                self.render_color_picker(sugarloaf, picker_tab_x, tab_width, selected);
+                self.render_color_picker(
+                    sugarloaf,
+                    picker_tab_x,
+                    tab_width,
+                    selected,
+                    colors,
+                );
             }
         }
 
@@ -1267,6 +1275,7 @@ impl Island {
         tab_x: f32,
         tab_width: f32,
         selected_color: Option<[f32; 4]>,
+        colors: MaterialColors,
     ) {
         let padding = PICKER_PADDING;
         let bg_y = ISLAND_HEIGHT;
@@ -1288,7 +1297,7 @@ impl Island {
             bg_y,
             bg_width,
             PICKER_HEIGHT,
-            [0.15, 0.15, 0.15, 1.0],
+            colors.surface_container,
             0.0,
             4.0,
             10,
@@ -1309,7 +1318,7 @@ impl Island {
                     swatch_y - border,
                     PICKER_SWATCH_SIZE + border * 2.0,
                     PICKER_SWATCH_SIZE + border * 2.0,
-                    [1.0, 1.0, 1.0, 1.0],
+                    colors.primary,
                     0.0,
                     4.0,
                     10,
@@ -1341,7 +1350,7 @@ impl Island {
                 swatch_y - border,
                 PICKER_SWATCH_SIZE + border * 2.0,
                 PICKER_SWATCH_SIZE + border * 2.0,
-                [1.0, 1.0, 1.0, 1.0],
+                colors.primary,
                 0.0,
                 4.0,
                 10,
@@ -1353,7 +1362,7 @@ impl Island {
             swatch_y,
             PICKER_SWATCH_SIZE,
             PICKER_SWATCH_SIZE,
-            [0.22, 0.22, 0.22, 1.0],
+            colors.surface_container_high,
             0.0,
             3.0,
             10,
@@ -1382,7 +1391,7 @@ impl Island {
             input_y,
             input_width,
             PICKER_INPUT_HEIGHT,
-            [0.10, 0.10, 0.10, 1.0],
+            colors.surface_container_high,
             0.0,
             3.0,
             10,
@@ -1394,9 +1403,9 @@ impl Island {
         let text_y = input_y + (PICKER_INPUT_HEIGHT - PICKER_INPUT_FONT_SIZE) / 2.0;
 
         let text_color = if self.rename_input.is_empty() {
-            [0.45, 0.45, 0.45, 1.0]
+            colors.on_surface_variant
         } else {
-            [0.93, 0.93, 0.93, 1.0]
+            colors.on_surface
         };
         let rename_opts = DrawOpts {
             font_size: PICKER_INPUT_FONT_SIZE,
@@ -1453,7 +1462,7 @@ impl Island {
                     input_y + 4.0,
                     1.5,
                     PICKER_INPUT_HEIGHT - 8.0,
-                    [0.93, 0.93, 0.93, 1.0],
+                    colors.on_surface,
                     0.0,
                     10,
                 );
@@ -1575,24 +1584,13 @@ mod tests {
     fn island_fills_adapt_to_background_luminance() {
         let dark = island_fills([0.06, 0.05, 0.06, 1.0]);
         let light = island_fills([0.98, 0.98, 0.97, 1.0]);
-        // Dark themes lighten the islands (white overlays); light
-        // themes recess inactive cards (black overlay) and elevate the
-        // active one (near-opaque white).
-        assert_eq!(dark.inactive[0], 1.0);
-        assert_eq!(light.inactive[0], 0.0);
-        // The active step must stay well above the inactive step —
-        // sub-10% deltas disappear on laptop panels.
-        assert!(dark.active[3] >= dark.inactive[3] + 0.1);
-        // On light themes the active island must read as the brighter,
-        // elevated card: a strong white overlay against the recessed
-        // black-tinted inactive fill.
-        assert_eq!(light.active[0], 1.0);
-        assert!(light.active[3] >= 0.8);
-        // White overlays can't brighten a near-white bg, so light
-        // themes must carry the card silhouette with an outline ring;
-        // dark themes get by on shade steps alone.
+        assert_ne!(dark.inactive, light.inactive);
+        assert_ne!(dark.active, dark.inactive);
+        assert_ne!(light.active, light.inactive);
+        assert_eq!(dark.active[3], 1.0);
+        assert_eq!(light.active[3], 1.0);
         assert!(light.outline.is_some());
-        assert!(dark.outline.is_none());
+        assert!(dark.outline.is_some());
     }
 
     #[test]

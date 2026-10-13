@@ -102,7 +102,7 @@ workspace = true
 features = ["wgpu"]
 
 [features]
-default = ["wayland", "x11"]
+default = ["wayland", "x11", "audio", "wgpu"]
 audio = ["cpal"]
 x11 = [
     "rio-backend/x11",

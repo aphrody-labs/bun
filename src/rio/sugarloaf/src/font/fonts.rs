@@ -108,7 +108,7 @@ impl SugarloafFont {
 
 #[inline]
 pub fn default_font_size() -> f32 {
-    14.
+    18.
 }
 
 #[inline]

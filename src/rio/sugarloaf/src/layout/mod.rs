@@ -187,7 +187,7 @@ impl Default for RootStyle {
         Self {
             line_height: 1.0,
             scale_factor: 1.0,
-            font_size: 14.,
+            font_size: crate::font::fonts::default_font_size(),
         }
     }
 }

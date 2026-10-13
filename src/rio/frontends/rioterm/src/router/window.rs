@@ -4,10 +4,28 @@ use rio_window::window::{
     CursorIcon, Fullscreen, Icon, ImePurpose, Window, WindowAttributes,
 };
 
-pub const LOGO_ICON: &[u8; 410598] = include_bytes!("./resources/images/rio-logo.ico");
+pub const LOGO_ICON: &[u8] = include_bytes!("./resources/images/rio-logo.png");
 // Terminal W/H constraints
 pub const DEFAULT_MINIMUM_WINDOW_HEIGHT: i32 = 200;
 pub const DEFAULT_MINIMUM_WINDOW_WIDTH: i32 = 300;
+
+#[cfg(test)]
+mod icon_tests {
+    use super::*;
+
+    #[test]
+    fn native_shell_icon_matches_executable_and_runtime_images() {
+        let runtime = image_rs::load_from_memory(LOGO_ICON).unwrap().to_rgba8();
+        let executable =
+            image_rs::load_from_memory(include_bytes!("./resources/images/rio-logo.ico"))
+                .unwrap()
+                .to_rgba8();
+        assert_eq!(runtime.dimensions(), (256, 256));
+        assert_eq!(runtime, executable);
+        assert_eq!(runtime.get_pixel(0, 0).0[3], 0);
+        assert!(Icon::from_rgba(runtime.into_raw(), 256, 256).is_ok());
+    }
+}
 
 #[cfg(all(
     any(feature = "wayland", feature = "x11"),

@@ -98,6 +98,8 @@ impl Default for Developer {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Config {
+    #[serde(default, rename = "enable-all-features")]
+    pub enable_all_features: bool,
     #[serde(default)]
     pub cursor: CursorConfig,
     #[serde(default = "Navigation::default")]
@@ -123,7 +125,7 @@ pub struct Config {
     pub working_dir: Option<String>,
     #[serde(rename = "line-height", default = "default_line_height")]
     pub line_height: f32,
-    #[serde(default = "String::default")]
+    #[serde(default = "theme::default_native_theme")]
     pub theme: String,
     #[serde(default = "Scroll::default")]
     pub scroll: Scroll,
@@ -146,7 +148,7 @@ pub struct Config {
     pub env_vars: Vec<String>,
     #[serde(default = "default_option_as_alt", rename = "option-as-alt")]
     pub option_as_alt: String,
-    #[serde(default = "Colors::default", skip_serializing)]
+    #[serde(default = "theme::default_native_colors", skip_serializing)]
     pub colors: Colors,
     #[serde(default = "Option::default", skip_serializing)]
     pub adaptive_colors: Option<AdaptiveColors>,
@@ -297,6 +299,85 @@ pub fn create_config_file(path: Option<PathBuf>) {
 }
 
 impl Config {
+    pub fn resolve_native_shell(&mut self) {
+        if self.shell.program.as_deref() != Some("rio-shell") {
+            return;
+        }
+        if let Ok(program) = std::env::var("RIO_BUN_SHELL") {
+            if !program.is_empty() {
+                self.shell.program = Some(program);
+                return;
+            }
+        }
+        if let Ok(executable) = std::env::current_exe() {
+            if let Some(directory) = executable.parent() {
+                let shell = directory.join(if cfg!(windows) {
+                    "rio-shell.exe"
+                } else {
+                    "rio-shell"
+                });
+                if shell.is_file() {
+                    self.shell.program = Some(shell.to_string_lossy().into_owned());
+                }
+            }
+        }
+    }
+
+    pub fn activate_all_features(&mut self) {
+        self.shell_integration = true;
+        self.grapheme_clustering = true;
+        self.enable_scroll_bar = true;
+        self.copy_on_select = true;
+        self.draw_bold_text_with_light_colors = true;
+        self.navigation.clickable = true;
+        self.navigation.mode = navigation::NavigationMode::Tab;
+        self.navigation.current_working_directory = true;
+        self.navigation.use_terminal_title = true;
+        self.navigation.use_split = true;
+        self.navigation.open_config_with_split = true;
+        self.navigation.hide_if_single = false;
+        self.keyboard.ime_cursor_positioning = true;
+        if self.hints.rules.is_empty() {
+            self.hints = Hints::default();
+        }
+        for hint in &mut self.hints.rules {
+            hint.hyperlinks = true;
+        }
+        self.bell.audio = true;
+        self.bell.tab_indicator = true;
+        self.effects.custom_mouse_cursor = true;
+        self.effects.trail_cursor = true;
+    }
+
+    fn apply_builtin_theme(&mut self) -> bool {
+        if self.enable_all_features {
+            self.activate_all_features();
+        }
+        let dark = match self.theme.as_str() {
+            "m3" | "m3-dark" => true,
+            "m3-light" => false,
+            _ => return false,
+        };
+        if self.theme == "m3" && self.colors != theme::default_native_colors() {
+            return true;
+        }
+        self.colors = theme::MaterialColors::terminal(dark);
+        if self.theme != "m3" && self.force_theme.is_none() {
+            self.force_theme = Some(if dark {
+                AppearanceTheme::Dark
+            } else {
+                AppearanceTheme::Light
+            });
+        }
+        if self.theme == "m3" && self.adaptive_theme.is_none() {
+            self.adaptive_colors = Some(AdaptiveColors {
+                dark: Some(theme::MaterialColors::terminal(true)),
+                light: Some(theme::MaterialColors::terminal(false)),
+            });
+        }
+        true
+    }
+
     #[cfg(test)]
     fn load_from_path(path: &PathBuf) -> Self {
         if path.exists() {
@@ -314,6 +395,10 @@ impl Config {
             let content = std::fs::read_to_string(path).unwrap();
             match toml::from_str::<Config>(&content) {
                 Ok(mut decoded) => {
+                    let builtin = decoded.apply_builtin_theme();
+                    if builtin && decoded.adaptive_theme.is_none() {
+                        return Ok(decoded);
+                    }
                     let theme = &decoded.theme;
                     if theme.is_empty() {
                         return Ok(decoded);
@@ -321,10 +406,12 @@ impl Config {
 
                     let tmp = std::env::temp_dir();
                     let path = tmp.join(theme).with_extension("toml");
-                    if let Ok(loaded_theme) = Config::load_theme(&path) {
-                        decoded.colors = loaded_theme.colors;
-                    } else {
-                        warn!("failed to load theme: {}", theme);
+                    if !builtin {
+                        if let Ok(loaded_theme) = Config::load_theme(&path) {
+                            decoded.colors = loaded_theme.colors;
+                        } else {
+                            warn!("failed to load theme: {}", theme);
+                        }
                     }
 
                     if let Some(adaptive_theme) = &decoded.adaptive_theme {
@@ -388,6 +475,10 @@ impl Config {
             let content = std::fs::read_to_string(path).unwrap();
             match toml::from_str::<Config>(&content) {
                 Ok(mut decoded) => {
+                    let builtin = decoded.apply_builtin_theme();
+                    if builtin && decoded.adaptive_theme.is_none() {
+                        return decoded;
+                    }
                     let theme = &decoded.theme;
                     if theme.is_empty() {
                         return decoded;
@@ -397,10 +488,12 @@ impl Config {
                         .join("themes")
                         .join(theme)
                         .with_extension("toml");
-                    if let Ok(loaded_theme) = Config::load_theme(&path) {
-                        decoded.colors = loaded_theme.colors;
-                    } else {
-                        warn!("failed to load theme: {}", theme);
+                    if !builtin {
+                        if let Ok(loaded_theme) = Config::load_theme(&path) {
+                            decoded.colors = loaded_theme.colors;
+                        } else {
+                            warn!("failed to load theme: {}", theme);
+                        }
                     }
 
                     decoded
@@ -421,9 +514,10 @@ impl Config {
             match std::fs::read_to_string(path) {
                 Ok(content) => match toml::from_str::<Config>(&content) {
                     Ok(mut decoded) => {
+                        let builtin = decoded.apply_builtin_theme();
                         let theme = &decoded.theme;
                         let theme_path = config_dir_path().join("themes");
-                        if !theme.is_empty() {
+                        if !builtin && !theme.is_empty() {
                             let path = theme_path.join(theme).with_extension("toml");
                             match Config::load_theme(&path) {
                                 Ok(loaded_theme) => {
@@ -659,13 +753,17 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
+            enable_all_features: false,
             cursor: CursorConfig::default(),
             editor: default_editor(),
             adaptive_theme: None,
-            adaptive_colors: None,
+            adaptive_colors: Some(AdaptiveColors {
+                dark: Some(theme::MaterialColors::terminal(true)),
+                light: Some(theme::MaterialColors::terminal(false)),
+            }),
             force_theme: None,
             bindings: Bindings::default(),
-            colors: Colors::default(),
+            colors: theme::default_native_colors(),
             scroll: Scroll::default(),
             keyboard: Keyboard::default(),
             title: Title::default(),
@@ -681,7 +779,7 @@ impl Default for Config {
             renderer: Renderer::default(),
             shell: default_shell(),
             platform: Platform::default(),
-            theme: String::default(),
+            theme: theme::default_native_theme(),
             use_fork: default_use_fork(),
             shell_integration: true,
             window: Window::default(),
@@ -750,7 +848,7 @@ mod tests {
     #[test]
     fn test_filepath_does_not_exist_with_fallback() {
         let config = Config::load_from_path(&tmp_dir().join("it-should-never-exist"));
-        assert_eq!(config.theme, String::default());
+        assert_eq!(config.theme, theme::default_native_theme());
         assert_eq!(config.cursor.shape, default_cursor());
     }
 
@@ -766,14 +864,57 @@ mod tests {
         assert!(!result.renderer.disable_unfocused_render);
 
         assert_eq!(result.fonts, SugarloafFonts::default());
-        assert_eq!(result.theme, String::default());
+        assert_eq!(result.theme, theme::default_native_theme());
 
         // Colors
-        assert_eq!(result.colors, Colors::default());
+        assert_eq!(result.colors, theme::default_native_colors());
 
         // Developer
         assert_eq!(result.developer.log_level, default_log_level());
         assert!(!result.developer.enable_fps_counter);
+    }
+
+    #[test]
+    fn native_material_defaults_and_explicit_overrides() {
+        let config = create_temporary_config("native-material", "");
+        assert_eq!(config.fonts.size, 18.0);
+        assert_eq!(config.line_height, 1.2);
+        assert!(!config.cursor.blinking);
+        let adaptive = config.adaptive_colors.unwrap();
+        assert_ne!(
+            adaptive.light.unwrap().background,
+            adaptive.dark.unwrap().background
+        );
+
+        let config = create_temporary_config(
+            "native-material-light",
+            "theme = 'm3-light'\n[fonts]\nsize = 22\n",
+        );
+        assert_eq!(config.fonts.size, 22.0);
+        assert_eq!(config.colors, theme::MaterialColors::terminal(false));
+        assert_eq!(config.force_theme, Some(AppearanceTheme::Light));
+        assert!(config.adaptive_colors.is_none());
+
+        let config = create_temporary_config(
+            "native-material-custom",
+            "[colors]\nforeground = '#000000'\n",
+        );
+        assert_eq!(config.colors.foreground, [0.0, 0.0, 0.0, 1.0]);
+        assert!(config.adaptive_colors.is_none());
+    }
+
+    #[test]
+    fn full_native_features_preserve_the_selected_renderer_and_theme() {
+        let config = create_temporary_config("native-features", "enable-all-features = true\ntheme = 'm3-light'\n[renderer]\nuse-cpu = false\n");
+        assert!(config.enable_all_features);
+        assert!(config.effects.custom_mouse_cursor && config.effects.trail_cursor);
+        assert!(config.navigation.clickable && !config.navigation.hide_if_single);
+        assert!(config.copy_on_select && config.keyboard.ime_cursor_positioning);
+        assert!(config.bell.audio && config.bell.tab_indicator);
+        assert!(!config.renderer.use_cpu);
+        assert_eq!(config.colors, theme::MaterialColors::terminal(false));
+        assert!(!config.cursor.blinking);
+        assert!(!config.developer.enable_fps_counter);
     }
 
     #[test]
@@ -783,7 +924,7 @@ mod tests {
         let env_vars: Vec<String> = vec![];
         assert_eq!(result.env_vars, env_vars);
         assert_eq!(result.cursor.shape, default_cursor());
-        assert_eq!(result.theme, String::default());
+        assert_eq!(result.theme, theme::default_native_theme());
         assert_eq!(result.cursor.shape, default_cursor());
         assert_eq!(result.fonts, SugarloafFonts::default());
         assert_eq!(result.shell, default_shell());
@@ -792,7 +933,7 @@ mod tests {
         assert_eq!(result.line_height, default_line_height());
 
         // Colors
-        assert_eq!(result.colors, Colors::default());
+        assert_eq!(result.colors, theme::default_native_colors());
         // Developer
         assert_eq!(result.developer, Developer::default());
         assert_eq!(result.bindings, Bindings::default());
@@ -815,12 +956,21 @@ mod tests {
         let result = Config::load_from_path(&file_name);
 
         assert_eq!(result.fonts, SugarloafFonts::default());
-        assert_eq!(result.theme, String::default());
+        assert_eq!(result.theme, theme::default_native_theme());
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]
@@ -836,12 +986,21 @@ mod tests {
 
         assert_eq!(result.renderer.backend, renderer::Backend::Vulkan);
         assert_eq!(result.fonts, SugarloafFonts::default());
-        assert_eq!(result.theme, String::default());
+        assert_eq!(result.theme, theme::default_native_theme());
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]
@@ -856,12 +1015,21 @@ mod tests {
 
         assert!(!result.renderer.disable_occluded_render);
         assert_eq!(result.fonts, SugarloafFonts::default());
-        assert_eq!(result.theme, String::default());
+        assert_eq!(result.theme, theme::default_native_theme());
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]
@@ -876,20 +1044,29 @@ mod tests {
         assert_eq!(result.env_vars, [String::from("A=5"), String::from("B=8")]);
         assert_eq!(result.cursor.shape, default_cursor());
         assert_eq!(result.fonts, SugarloafFonts::default());
-        assert_eq!(result.theme, String::default());
+        assert_eq!(result.theme, theme::default_native_theme());
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
         assert_eq!(
             result.colors.selection_background,
-            colors::defaults::selection_background()
+            theme::default_native_colors().selection_background
         );
         assert_eq!(
             result.colors.selection_foreground,
-            colors::defaults::selection_foreground()
+            theme::default_native_colors().selection_foreground
         );
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]
@@ -904,12 +1081,21 @@ mod tests {
 
         assert_eq!(result.cursor.shape, CursorShape::Underline);
         assert_eq!(result.fonts, SugarloafFonts::default());
-        assert_eq!(result.theme, String::default());
+        assert_eq!(result.theme, theme::default_native_theme());
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]
@@ -923,12 +1109,21 @@ mod tests {
 
         assert_eq!(result.option_as_alt, String::from("Both"));
         assert_eq!(result.fonts, SugarloafFonts::default());
-        assert_eq!(result.theme, String::default());
+        assert_eq!(result.theme, theme::default_native_theme());
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]
@@ -942,12 +1137,21 @@ mod tests {
         );
 
         assert_eq!(result.fonts, SugarloafFonts::default());
-        assert_eq!(result.theme, String::default());
+        assert_eq!(result.theme, theme::default_native_theme());
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]
@@ -963,7 +1167,7 @@ mod tests {
         );
 
         assert_eq!(result.fonts, SugarloafFonts::default());
-        assert_eq!(result.theme, String::default());
+        assert_eq!(result.theme, theme::default_native_theme());
         // Bindings
         assert_eq!(result.bindings.keys[0].key, "Q");
         assert_eq!(result.bindings.keys[0].with, "super");
@@ -1008,10 +1212,19 @@ mod tests {
             })
         );
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]
@@ -1026,10 +1239,19 @@ mod tests {
         assert_eq!(result.fonts, SugarloafFonts::default());
         assert_eq!(result.theme, "lucario");
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]
@@ -1168,10 +1390,19 @@ mod tests {
         assert!(result.use_fork);
 
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]
@@ -1234,10 +1465,19 @@ mod tests {
         assert!(result.developer.enable_fps_counter);
 
         // Colors
-        assert_eq!(result.colors.background, colors::defaults::background());
-        assert_eq!(result.colors.foreground, colors::defaults::foreground());
-        assert_eq!(result.colors.tabs_active, colors::defaults::tabs_active());
-        assert_eq!(result.colors.cursor, colors::defaults::cursor());
+        assert_eq!(
+            result.colors.background,
+            theme::default_native_colors().background
+        );
+        assert_eq!(
+            result.colors.foreground,
+            theme::default_native_colors().foreground
+        );
+        assert_eq!(
+            result.colors.tabs_active,
+            theme::default_native_colors().tabs_active
+        );
+        assert_eq!(result.colors.cursor, theme::default_native_colors().cursor);
     }
 
     #[test]

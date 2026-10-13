@@ -18,8 +18,8 @@ Cargo's unified lockfile resolves shared dependencies once.
 
 On 2026-10-13, the live GitHub `main` branch still resolved to the imported
 commit above. Its complete recursive tree contains 620 blobs. All are present
-locally; 607 match upstream and 13 carry Bun's manifest, SIMDUTF, grid and memory
-accounting adaptations. Eight upstream-identical files were excluded from Git
+locally; 588 match upstream and 32 carry Bun's manifest, SIMDUTF, grid, memory
+accounting and native Material 3 adaptations. Eight upstream-identical files were excluded from Git
 by the root `.cargo`, `.envrc` and `core` ignore patterns: Rio's Cargo/direnv
 configuration and the six `sugarloaf/src/components/core` source files. These
 files are now explicitly tracked so source archives and fresh clones retain
@@ -27,6 +27,10 @@ the full snapshot. The Cargo configuration belongs to standalone Rio builds;
 the direnv file is opt-in and does not launch Nix in Bun's native Windows build.
 See the immutable GitHub tree and per-file hashes in
 [`rio-upstream-source.json`](rio-upstream-source.json).
+
+The native desktop now uses size 18 and Material's Rust high-contrast theme
+export. Its full-feature profile and separate native build are documented in
+[`Native Rio`](rio-native-material.md).
 
 The hosted documentation website is a separate repository,
 `https://github.com/raphamorim/rioterm.com`. Its web-only content is not part of

@@ -172,6 +172,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // windows.shell.program = "pwsh"
     // windows.shell.args = ["-l"]
     config.overwrite_based_on_platform();
+    if config.enable_all_features || args.window_options.terminal_options.all_features {
+        config.activate_all_features();
+    }
 
     {
         let log_to_file = args.window_options.terminal_options.enable_log_file;
@@ -232,6 +235,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    config.resolve_native_shell();
     setup_environment_variables(&config);
 
     let window_event_loop =

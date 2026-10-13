@@ -7,7 +7,7 @@ pub fn default_bool_true() -> bool {
 
 #[inline]
 pub fn default_line_height() -> f32 {
-    1.0
+    1.2
 }
 
 #[inline]
@@ -41,20 +41,9 @@ pub fn default_margin() -> crate::config::layout::Margin {
 
 #[inline]
 pub fn default_shell() -> crate::config::Shell {
-    #[cfg(not(target_os = "windows"))]
-    {
-        crate::config::Shell {
-            program: None,
-            args: vec![String::from("--login")],
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        crate::config::Shell {
-            program: Some(String::from("powershell")),
-            args: vec![],
-        }
+    crate::config::Shell {
+        program: Some(String::from("rio-shell")),
+        args: vec![],
     }
 }
 

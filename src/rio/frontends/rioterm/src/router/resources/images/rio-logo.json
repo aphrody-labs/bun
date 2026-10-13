@@ -1,0 +1,59 @@
+{
+  "symbol": "terminal",
+  "codepoint": "EB8E",
+  "style": "rounded",
+  "weight": 400,
+  "source": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/terminal/default/24px.svg",
+  "source_sha256": "ba924a0c39561794685040e624daa32ac86a130323eeec67093611518cf03560",
+  "catalogue_sha256": "503e16477c276367f3d45625b854068422a95148c6938a87db68bcbd4a964fa3",
+  "license": "Apache-2.0",
+  "theme_sha256": "2f17fd17d092450321395c154c7753d2de45b7592a0d8da2398a9d28844267b3",
+  "seed": "#8c6c88",
+  "contrast": 1,
+  "background": "#ebb0e5",
+  "foreground": "#1c001e",
+  "rasterizer": "tauri-cli 3.0.0-alpha.4",
+  "assets": {
+    "svg_sha256": "c8b702f3b49e2b26f61cd57cdd257df70b188c1584ba4360ca13ef275bb9ee1e",
+    "ico_sha256": "7ec272c60aaf8c10c38ef10a6a5b92d965f92f262c60411acd510d8fbf12a81c",
+    "png_sha256": "b2b12f590414ce39b11ba4d1ede6011eaaef27f026ff8efcfa47db4eaafef7e6"
+  },
+  "ico_entries": [
+    {
+      "width": 16,
+      "height": 16,
+      "bits": 32,
+      "png": true
+    },
+    {
+      "width": 24,
+      "height": 24,
+      "bits": 32,
+      "png": true
+    },
+    {
+      "width": 32,
+      "height": 32,
+      "bits": 32,
+      "png": true
+    },
+    {
+      "width": 48,
+      "height": 48,
+      "bits": 32,
+      "png": true
+    },
+    {
+      "width": 64,
+      "height": 64,
+      "bits": 32,
+      "png": true
+    },
+    {
+      "width": 256,
+      "height": 256,
+      "bits": 32,
+      "png": true
+    }
+  ]
+}

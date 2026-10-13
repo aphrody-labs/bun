@@ -3,6 +3,7 @@
 // This source code is licensed under the MIT license found in the
 // LICENSE file in the root directory of this source tree.
 
+use rio_backend::config::theme::MaterialColors;
 use rio_backend::sugarloaf::text::DrawOpts;
 use rio_backend::sugarloaf::Sugarloaf;
 use std::time::Instant;
@@ -20,17 +21,17 @@ fn color_u8(c: [f32; 4]) -> [u8; 4] {
 }
 
 // Layout
-const OVERLAY_WIDTH: f32 = 320.0;
-const OVERLAY_HEIGHT: f32 = 36.0;
-const OVERLAY_CORNER_RADIUS: f32 = 8.0;
+const OVERLAY_WIDTH: f32 = 480.0;
+const OVERLAY_HEIGHT: f32 = 64.0;
+const OVERLAY_CORNER_RADIUS: f32 = 16.0;
 const OVERLAY_MARGIN_TOP: f32 = 8.0;
 const OVERLAY_MARGIN_RIGHT: f32 = 8.0;
 const OVERLAY_PADDING_X: f32 = 10.0;
 
-const INPUT_FONT_SIZE: f32 = 13.0;
-const BUTTON_FONT_SIZE: f32 = 14.0;
+const INPUT_FONT_SIZE: f32 = 18.0;
+const BUTTON_FONT_SIZE: f32 = 18.0;
 
-const BUTTON_SIZE: f32 = 24.0;
+const BUTTON_SIZE: f32 = 48.0;
 const BUTTON_CORNER_RADIUS: f32 = 4.0;
 const BUTTON_GAP: f32 = 2.0;
 const BUTTONS_AREA_WIDTH: f32 = BUTTON_SIZE * 3.0 + BUTTON_GAP * 2.0;
@@ -39,12 +40,6 @@ const CARET_WIDTH: f32 = 1.5;
 const CARET_BLINK_MS: u128 = 500;
 
 // Colors
-const BG_COLOR: [f32; 4] = [0.12, 0.12, 0.12, 0.98];
-const INPUT_BG_COLOR: [f32; 4] = [0.16, 0.16, 0.16, 1.0];
-const TEXT_COLOR: [f32; 4] = [0.93, 0.93, 0.93, 1.0];
-const DIM_TEXT_COLOR: [f32; 4] = [0.50, 0.50, 0.50, 1.0];
-const BUTTON_TEXT_COLOR: [f32; 4] = [0.70, 0.70, 0.70, 1.0];
-const BUTTON_HOVER_BG: [f32; 4] = [0.25, 0.25, 0.28, 1.0];
 
 // Depth / order
 const DEPTH_BG: f32 = 0.1;
@@ -93,9 +88,11 @@ impl SearchOverlay {
     /// Returns (overlay_x, overlay_y, overlay_width, overlay_height) in logical coords.
     fn overlay_rect(&self, window_width: f32, scale_factor: f32) -> (f32, f32, f32, f32) {
         let logical_width = window_width / scale_factor;
-        let x = logical_width - OVERLAY_WIDTH - OVERLAY_MARGIN_RIGHT;
+        let width =
+            OVERLAY_WIDTH.min((logical_width - OVERLAY_MARGIN_RIGHT * 2.0).max(0.0));
+        let x = logical_width - width - OVERLAY_MARGIN_RIGHT;
         let y = OVERLAY_MARGIN_TOP;
-        (x, y, OVERLAY_WIDTH, OVERLAY_HEIGHT)
+        (x, y, width, OVERLAY_HEIGHT)
     }
 
     /// Returns the rect for each button: (prev, next, close).
@@ -106,18 +103,21 @@ impl SearchOverlay {
         overlay_width: f32,
         overlay_height: f32,
     ) -> [(f32, f32, f32, f32); 3] {
-        let buttons_x =
-            overlay_x + overlay_width - OVERLAY_PADDING_X - BUTTONS_AREA_WIDTH;
-        let button_y = overlay_y + (overlay_height - BUTTON_SIZE) / 2.0;
+        let button_size = BUTTON_SIZE.min(
+            ((overlay_width - OVERLAY_PADDING_X * 2.0 - BUTTON_GAP * 2.0) / 3.0).max(0.0),
+        );
+        let buttons_width = button_size * 3.0 + BUTTON_GAP * 2.0;
+        let buttons_x = overlay_x + overlay_width - OVERLAY_PADDING_X - buttons_width;
+        let button_y = overlay_y + (overlay_height - button_size) / 2.0;
 
         let prev_x = buttons_x;
-        let next_x = buttons_x + BUTTON_SIZE + BUTTON_GAP;
-        let close_x = buttons_x + (BUTTON_SIZE + BUTTON_GAP) * 2.0;
+        let next_x = buttons_x + button_size + BUTTON_GAP;
+        let close_x = buttons_x + (button_size + BUTTON_GAP) * 2.0;
 
         [
-            (prev_x, button_y, BUTTON_SIZE, BUTTON_SIZE),
-            (next_x, button_y, BUTTON_SIZE, BUTTON_SIZE),
-            (close_x, button_y, BUTTON_SIZE, BUTTON_SIZE),
+            (prev_x, button_y, button_size, button_size),
+            (next_x, button_y, button_size, button_size),
+            (close_x, button_y, button_size, button_size),
         ]
     }
 
@@ -199,7 +199,12 @@ impl SearchOverlay {
         false
     }
 
-    pub fn render(&mut self, sugarloaf: &mut Sugarloaf, dimensions: (f32, f32, f32)) {
+    pub fn render(
+        &mut self,
+        sugarloaf: &mut Sugarloaf,
+        dimensions: (f32, f32, f32),
+        background: [f32; 4],
+    ) {
         if !self.is_active() {
             // Immediate mode: not drawing == not visible. No cleanup
             // needed — previous frame's instances were cleared at
@@ -208,6 +213,7 @@ impl SearchOverlay {
         }
 
         let (window_width, _window_height, scale_factor) = dimensions;
+        let colors = MaterialColors::for_background(background);
 
         let (ox, oy, ow, oh) = self.overlay_rect(window_width, scale_factor);
 
@@ -218,7 +224,7 @@ impl SearchOverlay {
             oy,
             ow,
             oh,
-            BG_COLOR,
+            colors.surface_container,
             DEPTH_BG,
             OVERLAY_CORNER_RADIUS,
             ORDER,
@@ -226,7 +232,8 @@ impl SearchOverlay {
 
         // Input area background
         let input_x = ox + OVERLAY_PADDING_X;
-        let input_width = ow - OVERLAY_PADDING_X * 2.0 - BUTTONS_AREA_WIDTH - 8.0;
+        let input_width =
+            (ow - OVERLAY_PADDING_X * 2.0 - BUTTONS_AREA_WIDTH - 8.0).max(0.0);
         let input_y = oy + 6.0;
         let input_height = oh - 12.0;
 
@@ -236,7 +243,7 @@ impl SearchOverlay {
             input_y,
             input_width,
             input_height,
-            INPUT_BG_COLOR,
+            colors.surface_container_high,
             DEPTH_ELEMENT,
             4.0,
             ORDER,
@@ -246,12 +253,12 @@ impl SearchOverlay {
         let active_search = self.active_search.clone().unwrap_or_default();
         let text_x = input_x + 6.0;
         let text_y = input_y + (input_height - INPUT_FONT_SIZE) / 2.0;
-        let max_text_width = input_width - 12.0;
+        let max_text_width = (input_width - 12.0).max(0.0);
 
         let text_color = if active_search.is_empty() {
-            DIM_TEXT_COLOR
+            colors.on_surface_variant
         } else {
-            TEXT_COLOR
+            colors.on_surface
         };
 
         let input_opts = DrawOpts {
@@ -310,7 +317,7 @@ impl SearchOverlay {
                 caret_y,
                 CARET_WIDTH,
                 INPUT_FONT_SIZE,
-                TEXT_COLOR,
+                colors.on_surface,
                 DEPTH_ELEMENT,
                 ORDER,
             );
@@ -318,7 +325,7 @@ impl SearchOverlay {
 
         // Buttons: prev (↑), next (↓), close (✕)
         let button_rects = self.button_rects(ox, oy, ow, oh);
-        let labels = ["\u{2191}", "\u{2193}", "\u{2022}"];
+        let labels = ["\u{2191}", "\u{2193}", "\u{00d7}"];
         let actions = [
             SearchOverlayAction::Previous,
             SearchOverlayAction::Next,
@@ -327,12 +334,20 @@ impl SearchOverlay {
 
         let btn_opts = DrawOpts {
             font_size: BUTTON_FONT_SIZE,
-            color: color_u8(BUTTON_TEXT_COLOR),
+            color: color_u8(colors.on_surface),
             ..DrawOpts::default()
         };
 
         for (i, (bx, by, bw, bh)) in button_rects.iter().enumerate() {
             let is_hovered = self.hovered_button == Some(actions[i]);
+            let btn_opts = DrawOpts {
+                color: color_u8(if is_hovered {
+                    colors.on_primary_container
+                } else {
+                    colors.on_surface
+                }),
+                ..btn_opts
+            };
 
             if is_hovered {
                 sugarloaf.rounded_rect(
@@ -341,7 +356,7 @@ impl SearchOverlay {
                     *by,
                     *bw,
                     *bh,
-                    BUTTON_HOVER_BG,
+                    colors.primary_container,
                     DEPTH_ELEMENT,
                     BUTTON_CORNER_RADIUS,
                     ORDER,
@@ -356,6 +371,43 @@ impl SearchOverlay {
             let label_x = bx + (bw - label_w) / 2.0;
             let label_y = by + (bh - BUTTON_FONT_SIZE) / 2.0;
             ui.draw(label_x, label_y, labels[i], &btn_opts);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compact_search_buttons_stay_visible_and_clickable() {
+        let mut overlay = SearchOverlay::default();
+        overlay.set_active_search(Some("query".into()));
+        for logical_width in [160.0, 320.0, 640.0] {
+            let (x, y, width, height) = overlay.overlay_rect(logical_width * 2.0, 2.0);
+            assert!(x >= 0.0 && x + width <= logical_width);
+            let buttons = overlay.button_rects(x, y, width, height);
+            for (index, (bx, by, bw, bh)) in buttons.into_iter().enumerate() {
+                assert!(bx >= x && bx + bw <= x + width);
+                if logical_width >= 320.0 {
+                    assert!(bw >= 48.0 && bh >= 48.0);
+                }
+                assert_eq!(
+                    overlay.hit_test(
+                        bx + bw / 2.0,
+                        by + bh / 2.0,
+                        logical_width * 2.0,
+                        2.0
+                    ),
+                    Ok(Some(
+                        [
+                            SearchOverlayAction::Previous,
+                            SearchOverlayAction::Next,
+                            SearchOverlayAction::Close
+                        ][index]
+                    ))
+                );
+            }
         }
     }
 }
