@@ -29,6 +29,13 @@ than `threshold`, which defaults to `0.5`; equality returns false. Score can
 be fractional. Clients must not rebuild these conversions or silently accept
 unknown answers, enum keys, distributions or legends.
 
+Choice abstention is a separate native operation. Validate the minimum with
+`confidenceThreshold(minimum)` before starting the provider, then call
+`selections(request, result, minimum)` on an inspected response. It returns
+only Choice entries: the winning key at or above the minimum confidence,
+otherwise `null`. Answers, distributions, model and usage stay unchanged.
+This confidence minimum is distinct from the strict Noul probability threshold.
+
 ## Providers and boundaries
 
 `jev()` uses Bun HTTP and `TYPESAFE_API_KEY` from the process environment. The
@@ -57,6 +64,10 @@ from `packages/bun-runtime-sdk/python/ctypes`. It has no Python HTTP or model
 engine. Each call sends a private JSON envelope over stdin to a Bun worker,
 which calls `bun:yolo.inspect`, `decide` or `value`. Structured descriptions
 are preserved. Converted values return as Python `bool`, `str` or `float`.
+`client.inspect`/`system_one(..., minimum_confidence=0.8)` returns the same raw
+`model`, `answers` and `usage`, plus Rust-computed `selections`. Python never
+compares the confidence itself. `inspect_async` provides the same cancellation
+and lifetime behavior as `decide_async`.
 
 ```python
 import os

@@ -99,6 +99,32 @@ class Supervisor:
 
 
 class ClientTransport(unittest.TestCase):
+    def test_inspected_selection_is_native_and_raw_response_is_preserved(self):
+        raw = {
+            "model": "fixture",
+            "answers": {
+                "action": {
+                    "type": "choice",
+                    "choice": "read",
+                    "confidence": 0.6,
+                    "probabilities": {"read": 0.6, "search": 0.4},
+                }
+            },
+            "usage": {"input_tokens": 12, "output_tokens": 3},
+            "selections": {"action": None},
+        }
+        output = json.dumps({"protocol": PROTOCOL, "ok": True, "result": raw}).encode()
+        process = Process(output)
+        client = Yolo(Supervisor(process), sys.executable)
+        result = client.system_one(
+            "fixture",
+            {"action": choice("Choose?", {"read": "Read", "search": "Search"})},
+            minimum_confidence=0.8,
+        )
+        self.assertEqual(result, raw)
+        self.assertEqual(json.loads(process.data)["minimumConfidence"], 0.8)
+        self.assertNotIn("threshold", json.loads(process.data)["options"])
+
     def test_private_input_only_uses_stdin_and_false_stays_false(self):
         runtime = Supervisor()
         client = Yolo(
@@ -228,6 +254,41 @@ class NativeBridge(unittest.TestCase):
                 },
             )
             self.assertEqual(result, {"flag": False, "route": "docs", "amount": 1.25})
+
+    def test_choice_abstention_and_invalid_confidence_use_native_core(self):
+        with Runtime() as runtime:
+            client = Yolo(runtime, os.environ["BUN_YOLO_EXECUTABLE"])
+            questions = {
+                "action": choice("Choose?", {"read": "Read", "search": "Search"})
+            }
+            raw = {
+                "model": "fixture",
+                "answers": {
+                    "action": {
+                        "type": "choice",
+                        "choice": "read",
+                        "confidence": 0.6,
+                        "probabilities": {"read": 0.6, "search": 0.4},
+                    }
+                },
+                "usage": {"input_tokens": 12, "output_tokens": 3},
+            }
+            provider = {"kind": "code", "response": raw}
+            abstained = client.inspect(
+                "fixture", questions, provider=provider, minimum_confidence=0.8
+            )
+            self.assertEqual(abstained, {**raw, "selections": {"action": None}})
+            selected = client.inspect(
+                "fixture", questions, provider=provider, minimum_confidence=0.6
+            )
+            self.assertEqual(selected["selections"], {"action": "read"})
+            with self.assertRaises(YoloError):
+                client.inspect(
+                    "fixture",
+                    questions,
+                    provider={"kind": "jev"},
+                    minimum_confidence=-1,
+                )
 
 
 if __name__ == "__main__":

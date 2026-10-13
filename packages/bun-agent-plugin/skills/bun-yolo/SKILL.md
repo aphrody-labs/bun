@@ -27,6 +27,12 @@ between zero and the final criterion index. Never rebuild these conversions or
 confidence policies in a client. `inspect`/`systemOne` returns the validated
 response; `decide` returns one primitive per named question.
 
+For Choice abstention, call `confidenceThreshold(minimum)` before inference
+and `selections(request, inspectedResult, minimum)` afterward. Rust returns
+only Choice entries, with the winning key at or above the minimum and `null`
+below it; raw answers, model and usage remain unchanged. This minimum is
+separate from Noul's strict probability threshold.
+
 One batch shares one provider request: 1–64 questions, 2–255 Choice options,
 2–10 Score criteria and 1 MiB per request/response. `timeout` bounds the full
 operation (1–120000 ms); `maxRetries` is 0–3. Use a caller `AbortSignal` for
@@ -49,6 +55,10 @@ only through stdin; credentials stay in process environment. The Runtime owns
 bounded pipes, wait, cancellation and child-group teardown. Python descriptor
 builders do not validate or infer; model values come back from Rust. Old SDKs
 are refused before spawning, with no argv, temporary-file or polling fallback.
+`inspect`/`system_one(..., minimum_confidence=...)` also returns native Choice
+`selections`. Its async form is `inspect_async`; Python never reconstructs
+abstention. Inject the borrowed client through the application's optional
+`aphrody.decision.bun_transport.BunTransport` only after its native gates pass.
 
 Read `docs/runtime/yolo.mdx`, `docs/runtime/jev.mdx` and
 `packages/bun-types/yolo.d.ts` before changing a contract. Source owners are

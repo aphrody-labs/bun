@@ -2,7 +2,10 @@
 /** Private stdio adapter. All question, answer and primitive validation belongs to bun:yolo. */
 const PROTOCOL = "bun.yolo/1";
 const MAX_BYTES = 1024 * 1024;
-type YoloAPI = Pick<typeof import("bun:yolo"), "inspect" | "decide" | "value" | "jev" | "code">;
+type YoloAPI = Pick<
+  typeof import("bun:yolo"),
+  "inspect" | "decide" | "value" | "jev" | "code" | "confidenceThreshold" | "selections"
+>;
 type Envelope = {
   protocol: typeof PROTOCOL;
   operation: "inspect" | "decide" | "value";
@@ -10,6 +13,7 @@ type Envelope = {
   answer?: import("bun:yolo").AnswerFor<import("bun:yolo").Question>;
   question?: import("bun:yolo").Question;
   options?: Pick<import("bun:yolo").Options, "timeout" | "maxRetries" | "threshold">;
+  minimumConfidence?: number;
   provider?: { kind: "jev"; baseURL?: string; model?: string } | { kind: "code"; response: unknown };
 };
 
@@ -18,6 +22,10 @@ export async function applyYoloEnvelope(input: unknown, api?: YoloAPI) {
   if (!envelope || envelope.protocol !== PROTOCOL || !["inspect", "decide", "value"].includes(envelope.operation))
     throw new Error("Invalid Yolo bridge operation");
   const owner = api ?? (await import("bun:yolo"));
+  const minimumConfidence =
+    envelope.minimumConfidence === undefined ? undefined : owner.confidenceThreshold(envelope.minimumConfidence);
+  if (minimumConfidence !== undefined && envelope.operation !== "inspect")
+    throw new Error("Choice selections require an inspected result");
   if (envelope.operation === "value")
     return owner.value(envelope.answer!, envelope.question!, envelope.options?.threshold);
   const options: import("bun:yolo").Options = envelope.options ?? {};
@@ -28,6 +36,10 @@ export async function applyYoloEnvelope(input: unknown, api?: YoloAPI) {
       const response = envelope.provider.response;
       options.provider = owner.code(() => response);
     } else throw new Error("Unknown Yolo bridge provider");
+  }
+  if (envelope.operation === "inspect" && minimumConfidence !== undefined) {
+    const result = await owner.inspect(envelope.request!, options);
+    return { ...result, selections: owner.selections(envelope.request!, result, minimumConfidence) };
   }
   return owner[envelope.operation](envelope.request!, options);
 }

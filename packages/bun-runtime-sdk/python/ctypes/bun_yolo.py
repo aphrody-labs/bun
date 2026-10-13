@@ -13,7 +13,7 @@ import os
 import re
 import threading
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 from yolo_runtime import Runtime
 from yolo_runtime import RuntimeError as NativeError
@@ -53,6 +53,7 @@ class Result(TypedDict):
     model: str
     answers: dict[str, dict[str, Any]]
     usage: dict[str, int] | None
+    selections: NotRequired[dict[str, str | None]]
 
 
 class YoloError(Exception):
@@ -223,15 +224,24 @@ class Yolo:
         model: str | None = None,
         options: Options | None = None,
         provider: dict[str, Any] | None = None,
+        minimum_confidence: float | None = None,
+        _cancel: threading.Event | None = None,
     ) -> Result:
         request = {"state": state, "questions": questions}
         if model is not None:
             request["model"] = model
+        selection = (
+            {}
+            if minimum_confidence is None
+            else {"minimumConfidence": minimum_confidence}
+        )
         return self._call(
             "inspect",
             request=request,
             options=options if options is not None else {},
             provider=provider,
+            _cancel=_cancel,
+            **selection,
         )
 
     system_one = inspect
@@ -267,9 +277,17 @@ class Yolo:
     async def decide_async(
         self, *args: Any, **kwargs: Any
     ) -> dict[str, bool | str | float]:
+        return await self._async_call(self.decide, args, kwargs)
+
+    async def inspect_async(self, *args: Any, **kwargs: Any) -> Result:
+        return await self._async_call(self.inspect, args, kwargs)
+
+    async def _async_call(
+        self, method: Any, args: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> Any:
         cancellation = threading.Event()
         task = asyncio.create_task(
-            asyncio.to_thread(self.decide, *args, **kwargs, _cancel=cancellation)
+            asyncio.to_thread(method, *args, **kwargs, _cancel=cancellation)
         )
         try:
             return await asyncio.shield(task)

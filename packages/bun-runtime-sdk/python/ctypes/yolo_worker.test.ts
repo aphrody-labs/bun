@@ -80,6 +80,53 @@ test("private stdio is byte bounded and native diagnostics never reveal state or
   ).not.toContain("fixture-key");
 });
 
+test("abstention validates confidence before provider and keeps inspected answers unchanged", async () => {
+  const events: string[] = [];
+  const request = {
+    state: "fixture",
+    questions: { action: { type: "choice", instructions: "Select?", criteria: { read: "Read", search: "Search" } } },
+  };
+  const raw = {
+    model: "fixture",
+    answers: { action: { type: "choice", choice: "read", confidence: 0.6, probabilities: { read: 0.6, search: 0.4 } } },
+    usage: { input_tokens: 12, output_tokens: 3 },
+  };
+  const api = {
+    confidenceThreshold: (value: number) => {
+      events.push("threshold");
+      if (value === -1) throw new RangeError("native fixture rejection");
+      return value;
+    },
+    jev: () => {
+      events.push("provider");
+      return {};
+    },
+    inspect: async () => {
+      events.push("inspect");
+      return raw;
+    },
+    selections: (input: unknown, response: unknown, minimum: number) => {
+      events.push("selections");
+      expect(input).toBe(request);
+      expect(response).toBe(raw);
+      expect(minimum).toBe(0.8);
+      return { action: null };
+    },
+  } as unknown as Parameters<typeof applyYoloEnvelope>[1];
+  const envelope = { protocol, operation: "inspect", request, minimumConfidence: 0.8, provider: { kind: "jev" } };
+  const result = (await applyYoloEnvelope(envelope, api)) as typeof raw & { selections: { action: null } };
+  expect(result.answers).toBe(raw.answers);
+  expect(result.usage).toBe(raw.usage);
+  expect(result.model).toBe(raw.model);
+  expect(result.selections).toEqual({ action: null });
+  expect(events).toEqual(["threshold", "provider", "inspect", "selections"]);
+  events.length = 0;
+  await expect(applyYoloEnvelope({ ...envelope, minimumConfidence: -1 }, api)).rejects.toThrow(
+    "native fixture rejection",
+  );
+  expect(events).toEqual(["threshold"]);
+});
+
 test.skipIf(!process.env.BUN_YOLO_NATIVE_GATE)(
   "native Yolo owns all three primitives and rejects invalid provider answers",
   async () => {
@@ -109,6 +156,35 @@ test.skipIf(!process.env.BUN_YOLO_NATIVE_GATE)(
     const envelope = { protocol, operation: "decide", request, provider: { kind: "code", response } };
     expect(await applyYoloEnvelope(envelope)).toEqual({ flag: false, route: "docs", amount: 1.25 });
     expect(await applyYoloEnvelope({ ...envelope, operation: "inspect" })).toEqual(response);
+    const abstained = (await applyYoloEnvelope({ ...envelope, operation: "inspect", minimumConfidence: 0.900001 })) as {
+      model: string;
+      answers: unknown;
+      usage: unknown;
+      selections: Record<string, string | null>;
+    };
+    expect(abstained.selections).toEqual({ route: null });
+    expect(abstained.answers).toEqual(response.answers);
+    expect(abstained.usage).toBeNull();
+    expect(abstained.model).toBe(response.model);
+    const selected = (await applyYoloEnvelope({ ...envelope, operation: "inspect", minimumConfidence: 0.9 })) as {
+      selections: Record<string, string | null>;
+    };
+    expect(selected.selections).toEqual({ route: "docs" });
+    const api = await import("bun:yolo");
+    let providers = 0;
+    await expect(
+      applyYoloEnvelope(
+        { ...envelope, operation: "inspect", minimumConfidence: -1, provider: { kind: "jev" } },
+        {
+          ...api,
+          jev: options => {
+            providers++;
+            return api.jev(options);
+          },
+        },
+      ),
+    ).rejects.toThrow();
+    expect(providers).toBe(0);
     await expect(
       applyYoloEnvelope({
         ...envelope,
