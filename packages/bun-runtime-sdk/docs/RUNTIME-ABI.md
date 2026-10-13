@@ -1,144 +1,136 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Runtime C ABI (slice R0, ABI 1.4)
+# Runtime C ABI 1.6
 
-First vertical slice of [PLAN.md](../../../PLAN.md) phase R0: one capability family behind a versioned
-C ABI, a precompiled artifact and a light TypeScript consumer. Nothing here qualifies later
-phases.
+The standalone `buv-runtime` artifact exposes a versioned C ABI. Canonical
+`buv_*` and compatible `yolo_*` names share the same handles, registry and
+process owner. This source contract does not qualify every native target.
 
-| Piece                      | Path                                                                                                                                  |
-| :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
-| Library (cdylib + rlib)    | `crates/engine/yolo-runtime`                                                                                                          |
-| C header                   | `crates/interop/ffi/include/aphrody.h` (canonical main header of `aphrody_ffi`; packaged `yolo_runtime.h` is a compatibility include) |
-| TypeScript SDK (`bun:ffi`) | `packages/engine/runtime`                                                                                                             |
-| Artifact packaging         | `scripts/release/runtime_artifact.ts` → `dist/runtime/<target>/`                                                                      |
-| Tests                      | `cargo test -p yolo-runtime`, `test/runtime_sdk.test.ts`                                                                              |
+| Piece | Canonical path in Bun |
+| --- | --- |
+| Library (cdylib + rlib) | `packages/bun-runtime-sdk/crates/yolo-runtime` |
+| C headers | `packages/bun-runtime-sdk/include/buv_runtime.h`, `yolo_runtime.h` |
+| TypeScript SDK (`bun:ffi`) | `packages/bun-runtime-sdk/src` |
+| Python ctypes | `packages/bun-runtime-sdk/python/ctypes` |
+| Artifact staging | `packages/bun-runtime-sdk/scripts/stage.ts` |
 
-The main header merges the former `yolo_runtime.h` declarations. Optional feature
-interfaces remain in `crates/interop/ffi/include/aphrody-tooling.h`,
-`crates/interop/ffi/include/aphrody-inference.h` and
-`crates/interop/ffi/include/aphrody-web-pipeline.h`. A single main header does not
-establish complete CLI/FFI/MCP/kernel parity, runtime availability, installation
-or qualification on every platform.
-
-```bash
-just runtime-build      # cargo build --profile runtime -p aphrody-ffi --features browser,tooling
-just runtime-package    # library + header + manifest.json (target, toolchain, ABI, revisions, hashes)
-just runtime-test       # Rust unit tests + Bun SDK tests
-bun run packages/runtime/examples/stats.ts
+```sh
+bun scripts/build/rust/cargo-serial.ts build --manifest-path packages/bun-runtime-sdk/Cargo.toml --profile runtime -p yolo-runtime --jobs 1
+bun scripts/build/rust/cargo-serial.ts test --manifest-path packages/bun-runtime-sdk/Cargo.toml -p yolo-runtime --lib --jobs 1 -- --test-threads=1
+bun packages/bun-runtime-sdk/scripts/stage.ts
 ```
 
-## Capabilities
+On Windows, the serialized Cargo wrapper accepts `--msvc` before the Cargo
+command. Staging selects `target/runtime` and writes
+`target/artifact/<target>/current` with the library, headers and manifest.
+The manifest records target, ABI, source revision, profile and checksums.
+The compiled library's build info identifies the selected native revision.
 
-| Id              | Entry points                                             | Backed by                                  |
-| :-------------- | :------------------------------------------------------- | :----------------------------------------- |
-| `system.stats`  | `yolo_system_stats`                                      | `yolo_core::current_system_stats`          |
-| `bench.compute` | `yolo_bench_start`, `yolo_operation_wait/cancel/release` | `yolo_core::compute_benchmark_cancellable` |
+## Core capabilities
 
-| `process.supervise` | `yolo_process_spawn/status/read/stop/release` | `std::process` with Unix process-group shutdown; direct-child shutdown on Windows |
-| `http.probe` | `yolo_http_probe_start` (an operation: the caller is never blocked) | `std::net`, HTTP/1.0 `GET` |
+The table uses compatible `yolo_*` names; matching `buv_*` entry points
+forward to the same owner.
 
-`system.stats` and `bench.compute` were picked because they already existed and need no engine.
-`process.supervise` and `http.probe` are the first real shared service (decision D10 in
-[DECISIONS](../../decisions/runtime/DECISIONS.md)); the TypeScript surface is `runtime:system` and `runtime:process`, loaded
-by the preload plugin of `packages/engine/runtime`.
+| Capability | Entry points | Owner |
+| --- | --- | --- |
+| `system.stats` | `yolo_system_stats` | `yolo_core` system statistics |
+| `bench.compute` | `yolo_bench_start`, operation wait/cancel/release | cancellable native benchmark |
+| `process.supervise` | process spawn/status/read/stop/release | Unix process group or Windows Job |
+| `process.stdin` | process stdin_write/stdin_close | bounded owned pipe writer |
+| `process.wait` | process wait_start, operation wait/cancel/release | same process owner, exit and capture completion |
+| `http.probe` | `yolo_http_probe_start` | bounded HTTP/1.0 probe |
 
-## Contract
+Browser and GPU symbols remain optional feature extensions. Declarations do
+not establish availability; negotiate capabilities before resolving symbols.
+SDK preload modules reuse this C ABI without a second native supervisor.
 
-- **Versioning.** `yolo_abi_version()` returns `(major << 16) | minor`. A consumer calls it first
-  and refuses another major before any other call (the SDK does). `yolo_runtime_create` receives
-  `struct_size`, `abi_major`, `abi_minor`: a different major or a newer minor is `ABI_MISMATCH`, a
-  caller built against a smaller structure is accepted with defaults for the missing fields.
-- **Handles.** Objects are opaque 64-bit handles (slot index + generation). A destroyed or
-  recycled handle is rejected with `INVALID_HANDLE`; a runtime handle is not valid where an
-  operation handle is expected. No raw pointer to library state leaves the library.
-- **Buffers.** Returned buffers (`YoloBuffer`: data, len, cap) belong to the library. The caller
-  reads only `len` initialized bytes and preserves all three fields until `yolo_buffer_free`,
-  which uses the library's allocator and zeroes the struct (a second call is a no-op).
-  The native transfer retains the original allocation without shrinking or copying; `cap` may
-  exceed `len`, and that capacity remains allocated until release, even when `len` is zero.
-  The Bun SDK still copies bytes before freeing them; this does not make JS reads zero-copy.
-  The library never frees caller memory and never keeps a pointer to it.
-- **Errors.** Every function returns a `YoloStatus`. Details of the last failure of the calling
-  thread are available as JSON through `yolo_last_error`. Structured control data (build info,
-  capabilities, stats) is JSON; high-volume data paths will use dedicated buffers when they exist.
-- **Panics.** Every entry point catches panics and returns `PANIC`, and worker threads report a
-  failed operation instead of dying silently. This requires unwinding: the artifact is built with the
-  dedicated `runtime` profile (`inherits = "release"`, `panic = "unwind"`) and
-  `build_info().panic_recovery` tells the consumer which behavior it got. The plain release profile
-  (`panic = "abort"`) is not used for this artifact; the profile is a per-artifact decision, not a
-  per-package override.
-- **Threads and lifetime.** Operations run on bounded worker threads (`max_operations`, default 4,
-  at most 64; `BUSY` beyond). `wait` takes a timeout (`TIMEOUT` leaves the operation valid),
-  `cancel` is idempotent and polled by the worker, `release` cancels, joins and invalidates.
-  `yolo_runtime_destroy` cancels and joins every operation of the runtime before it invalidates it,
-  so unloading the library after destroy cannot leave a running worker.
-  Processes count against the same limit and are stopped (group SIGTERM, 500 ms grace, SIGKILL)
-  when their runtime is destroyed. Capture workers are also joined before stop/release/destroy
-  returns. Unix shutdown signals surviving group members even after the leader exits. Windows
-  currently stops the direct child; process-tree ownership through Job Objects is not qualified.
-  SDK process and operation handles reject calls after runtime close without entering the
-  unloaded library. Handles are thread-safe: any thread may call any function.
-- **Versioning policy.** ABI 1.x is additive only (D1): 1.0 is the core, 1.1 added the process and
-  probe functions, 1.2 the bounded stdout/stderr capture (`YOLO_SPAWN_CAPTURE`, `yolo_process_read`: the
-  last 64 KiB of each stream, drained or peeked). `yolo_process_stop_start` (1.3) is the non-blocking stop. An older library is refused by the SDK with an ABI error before any symbol other
-  than `yolo_abi_version` is bound.
-  ABI 1.4 adds lossless byte capture, an optional per-stream budget and output completion.
+## ABI and ownership
 
-## What the light consumer needs
+`yolo_abi_version()` returns `(major << 16) | minor`. Another major or a newer
+requested minor is rejected. ABI 1.x remains additive: 1.1 introduced process
+supervision, 1.2 bounded capture, 1.3 asynchronous stop, 1.4 lossless capture,
+1.5 optional GPU calls and 1.6 stdin/completion wait. Original spawn structures
+and ABI 1.4 flags keep their layout and behavior.
 
-`packages/engine/runtime/src/index.ts` and the prebuilt artifact. `cargo tree -p yolo-runtime` lists 13
-packages (serde, serde_json and their proc-macro chain, `yolo-core`, the crate itself); Tauri, wry,
-tao, WebKitGTK, Bun and Obscura are absent from the graph. On the development machine the artifact
-is about 410 KB and one incremental build took 3 s; no comparison with the desktop stack has been
-measured, so no saving is claimed.
+Handles are opaque 64-bit slot/generation IDs. Released handles are rejected;
+no raw state pointer leaves the library. Returned `YoloBuffer` allocations
+belong to the library: preserve data/len/cap and free them with
+`yolo_buffer_free`. The library copies input before returning and retains no
+caller pointer. Consumers copy output before freeing it.
 
-## Not claimed
+Every entry point returns `YoloStatus`; `yolo_last_error` returns the failure
+message for the calling thread. Worker failures propagate through operation
+wait. The artifact uses the `runtime` profile with panic unwinding;
+`build_info.panic_recovery` records whether panic containment is available.
 
-- The R1 host is the SDK preload (`bun:ffi` + `Bun.plugin`), by decision D5; the Bun fork is not
-  modified.
-- R2 is limited as stated in D11: the consumer's supervision code is retired, the Obscura binary is
-  not (R4).
-- Only Linux x64 runtime behavior and packaging are qualified by this batch. Windows x64,
-  macOS x64/ARM64 and Linux ARM64 pass metadata checks; execution, signing and complete
-  distribution on those targets remain open. Artifact install/rollback is covered by release tests;
-  `manifest.json` alone does not qualify an artifact.
+Operations and processes share the runtime capacity, default 4 and at most 64.
+A completion wait uses the existing process slot; cleanup operations do not
+consume another slot. Release each operation and process handle normally.
 
-## ABI 1.4: complete binary output
+Blocking operation wait clones its Arc before releasing the registry lock.
+Cancel, process release and runtime close may run concurrently without
+retaining foreign memory. Runtime destroy invalidates handles, cancels all
+waiters first, then stops processes and joins workers outside that lock.
+The caller must let concurrent foreign calls return before unloading the
+dynamic library. A binding must not hold its mutation lock through blocking
+wait if another thread needs to cancel it.
 
-`YOLO_SPAWN_CAPTURE` retains its bounded 64 KiB diagnostic tail. Select
-`YOLO_SPAWN_CAPTURE_LOSSLESS` (flag 4) for full stdout/stderr bytes. The original
-40-byte `YoloSpawnInfo` remains accepted with a default 64 MiB budget per stream.
-`YoloSpawnInfoV14` appends a `capture_limit` u64: set `base.struct_size` to the
-extended size and pass `&info.base`. Zero selects the default; positive budgets
-must not exceed 64 MiB. A budget counts all bytes produced during the process
-lifetime, including bytes already drained.
+## Binary capture (ABI 1.4)
 
-An overflow is persistent `YOLO_OUTPUT_LIMIT` (status 9), never a successful
-truncated response. Workers continue draining after overflow so pipe pressure
-cannot deadlock the child. `yolo_process_output_complete` reports whether both
-readers finished; `yolo_process_read` still reports any output-limit or I/O error.
-Returned bytes use the existing library-owned `YoloBuffer` and free contract.
+`YOLO_SPAWN_CAPTURE` keeps the last 64 KiB of each stream.
+`YOLO_SPAWN_CAPTURE_LOSSLESS` retains complete bytes up to the explicit
+per-stream budget, default/maximum 64 MiB, and reports `OUTPUT_LIMIT` instead
+of silently truncating. The optional appended capture budget preserves the
+original spawn structure. `process_output_complete` reports both reader EOFs;
+reading can still return a capture failure.
 
-The SDK exposes `takeStdoutBytes`, `takeStderrBytes`, `outputComplete` and
-`collectOutput`. Collection polls without blocking the JS event loop, copies
-buffers before freeing them, joins readers for the final drain, and stops the
-owned child before rejecting a timeout, abort or output error. The caller still
-owns the process handle and releases it. `capture-lossless` has an explicit
-64 MiB default per-stream ceiling; a product requiring larger payloads needs a
-separately qualified streaming contract.
+Unix readers use nonblocking descriptors. Windows readers use
+[PeekNamedPipe](https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-peeknamedpipe)
+before reading available bytes from the sole owned handle. Shutdown joins
+readers; an escaped descendant retaining output beyond the drain deadline
+produces an incomplete-output error. Escaped groups are outside the owned
+group and are not claimed terminated.
 
-Pipe readers use nonblocking descriptors on Unix. On Windows they use a sole
-reader and [PeekNamedPipe](https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-peeknamedpipe)
-before reading available bytes from the borrowed
-[AsRawHandle](https://doc.rust-lang.org/std/os/windows/io/trait.AsRawHandle.html).
-Cancellation bounds worker teardown even if an escaped descendant keeps a pipe
-open; a lossless reader then reports an incomplete-output error. Escaped process
-groups are outside the owned group and are not silently claimed terminated.
-Runtime execution on Windows/macOS/ARM remains separate from cross-target checks.
+## Stdin and completion (ABI 1.6)
 
-The producer packager selects `target/runtime/` (not in repo) (generated or machine-local artifact; availability depends on the build host) (or an explicit
-`YOLO_RUNTIME_LIB`), independently of the runtime installed by the developer.
-The `runtime-test` recipe uses that same build for SDK tests. Build provenance
-also tracks the current Git ref and packed refs, so a new commit on the same
-branch refreshes the embedded revision.
+Require ABI 1.6 plus `process.stdin` and `process.wait` before resolving the
+three added symbols. `YOLO_SPAWN_PIPE_STDIN` (flag 8) opts into a pipe and may
+combine with capture. It is incompatible with null stdio. Windows stdin
+spawning requires successful Job adoption; older non-stdin callers retain
+their existing direct-child fallback if adoption fails.
+
+`process_stdin_write` copies/enqueues at most 1 MiB cumulatively, with at most
+64 pending chunks. It performs no pipe I/O on the calling thread. A full
+chunk queue returns `BUSY`; excess bytes or write-after-close return
+`INVALID_ARGUMENT`. Zero bytes may use a null input pointer.
+`process_stdin_close` drains accepted bytes and then produces EOF; repeated
+close succeeds. Cancellation stops the writer and discards pending input.
+
+The unique writer belongs to the existing process state. Unix writes are
+nonblocking. Windows cancellation uses
+[CancelSynchronousIo](https://learn.microsoft.com/en-us/windows/win32/fileio/cancelsynchronousio-func)
+on that dedicated writer thread, checks cancellation between writes and
+rechecks completion to cover cancellation before a pending WriteFile call.
+No thread shared with unrelated operations is cancelled.
+
+`process_wait_start` returns one cancellable operation per process.
+`operation_wait` timeout leaves that operation running; cancel/release stops
+the owned process group or Job and joins pipe workers. A successful result
+is JSON:
+
+```json
+{"state":1,"pid":42,"exit_code":0,"signal":0,"output_complete":true,"stdin_complete":true}
+```
+
+Success follows child exit and full capture EOF. Capture overflow, pipe I/O
+failure or accepted stdin bytes left unwritten produce an error. Client
+payload travels through stdin, without process arguments or temporary files.
+Language clients wait through the native operation instead of polling status.
+
+## Qualification
+
+Native receipts identify the tested library, source, host and gates. A header
+or compilation does not qualify pipe cancellation, process behavior, ABI or
+packaging on every platform. Optional missing providers remain explicit.
+This supervisor is separate from Bun's NGINX controller and native inference;
+its process gates do not qualify a model or model weights.

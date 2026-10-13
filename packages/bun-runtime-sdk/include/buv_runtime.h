@@ -19,6 +19,8 @@
 #define BUV_SPAWN_NULL_STDIO YOLO_SPAWN_NULL_STDIO
 #define BUV_SPAWN_CAPTURE YOLO_SPAWN_CAPTURE
 #define BUV_SPAWN_CAPTURE_LOSSLESS YOLO_SPAWN_CAPTURE_LOSSLESS
+#define BUV_SPAWN_PIPE_STDIN YOLO_SPAWN_PIPE_STDIN
+#define BUV_STDIN_MAX_BYTES YOLO_STDIN_MAX_BYTES
 #define BUV_CAPTURE_MAX_BYTES YOLO_CAPTURE_MAX_BYTES
 #define BUV_STREAM_STDOUT YOLO_STREAM_STDOUT
 #define BUV_STREAM_STDERR YOLO_STREAM_STDERR
@@ -51,6 +53,10 @@ BuvStatus buv_process_read(BuvHandle process, uint32_t stream, uint32_t mode, Bu
 BuvStatus buv_process_stop(BuvHandle process, uint32_t grace_ms);
 BuvStatus buv_process_stop_start(BuvHandle process, uint32_t grace_ms, BuvHandle *out_operation);
 BuvStatus buv_process_output_complete(BuvHandle process, uint32_t *out);
+/* ABI1.6 contracts and limits are identical to yolo_process_* in the included header. */
+BuvStatus buv_process_stdin_write(BuvHandle process, const uint8_t *bytes, size_t len);
+BuvStatus buv_process_stdin_close(BuvHandle process);
+BuvStatus buv_process_wait_start(BuvHandle process, BuvHandle *out_operation);
 BuvStatus buv_process_release(BuvHandle process);
 BuvStatus buv_http_probe_start(BuvHandle runtime, const char *host, uint16_t port,
                               const char *path, uint32_t timeout_ms, BuvHandle *out_operation);

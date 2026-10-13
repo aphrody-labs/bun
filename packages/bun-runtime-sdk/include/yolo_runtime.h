@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 #define YOLO_ABI_MAJOR 1u
-#define YOLO_ABI_MINOR 5u
+#define YOLO_ABI_MINOR 6u
 #define YOLO_MAX_OPERATIONS_LIMIT 64u
 
 /* Opaque handle owned by the library; 0 is never valid. */
@@ -79,6 +79,8 @@ YoloStatus yolo_operation_release(YoloHandle operation);
 #define YOLO_SPAWN_NULL_STDIO 1u /* YoloSpawnInfo.flags: stdin/stdout/stderr -> null device */
 #define YOLO_SPAWN_CAPTURE 2u    /* flags (ABI 1.2): stdin null, stdout/stderr captured (last 64 KiB each) */
 #define YOLO_SPAWN_CAPTURE_LOSSLESS 4u /* ABI 1.4: complete bytes, error on budget overflow */
+#define YOLO_SPAWN_PIPE_STDIN 8u /* ABI 1.6: owned stdin pipe, may combine with capture */
+#define YOLO_STDIN_MAX_BYTES 1048576u /* cumulative accepted bytes per process */
 #define YOLO_CAPTURE_MAX_BYTES 67108864u /* default/maximum per stream */
 #define YOLO_STREAM_STDOUT 1u
 #define YOLO_STREAM_STDERR 2u
@@ -117,6 +119,18 @@ YoloStatus yolo_process_status(YoloHandle process, YoloProcessStatus *out); /* n
 YoloStatus yolo_process_read(YoloHandle process, uint32_t stream, uint32_t mode, YoloBuffer *out);
 /* ABI 1.4: 1 when both readers finished; read can still report OUTPUT_LIMIT or I/O failure. */
 YoloStatus yolo_process_output_complete(YoloHandle process, uint32_t *out);
+/* ABI 1.6, capabilities "process.stdin" and "process.wait". An ABI1.4 caller keeps the same
+ * structure/flags and behavior. Resolve these new symbols only after capability negotiation.
+ * stdin_write copies/enqueues (does not wait for pipe I/O), at most 1 MiB total and 64 queued
+ * chunks/process. NULL is allowed only for len=0. Write-after-close is INVALID_ARGUMENT.
+ * stdin_close drains accepted data then produces EOF; repeated close succeeds. */
+YoloStatus yolo_process_stdin_write(YoloHandle process, const uint8_t *bytes, size_t len);
+YoloStatus yolo_process_stdin_close(YoloHandle process);
+/* One operation per process; no extra max_operations slot. Cancel stops the owned tree;
+ * operation_wait Timeout leaves it running. OK yields JSON {"state":1,"pid":n,"exit_code":n,
+ * "signal":n,"output_complete":true,"stdin_complete":true} after child exit and full capture EOF.
+ * OUTPUT_LIMIT and I/O failures propagate. Release every returned operation normally. */
+YoloStatus yolo_process_wait_start(YoloHandle process, YoloHandle *out_operation);
 /* SIGTERM to the group, SIGKILL after grace_ms; waits. The handle stays valid (read the status). */
 YoloStatus yolo_process_stop(YoloHandle process, uint32_t grace_ms);
 /* ABI 1.3: asynchronous stop on a worker (not counted against max_operations). The operation yields

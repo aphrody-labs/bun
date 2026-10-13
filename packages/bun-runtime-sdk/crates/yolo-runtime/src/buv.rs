@@ -148,6 +148,34 @@ pub unsafe extern "C" fn buv_process_output_complete(
   unsafe { yolo_process_output_complete(process, out) }
 }
 
+/// # Safety
+/// Pointer arguments follow the corresponding yolo compatibility function's contract.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn buv_process_stdin_write(
+  process: YoloHandle,
+  bytes: *const u8,
+  len: usize,
+) -> YoloStatus {
+  // SAFETY: the caller retains the readable input required by the shared owner.
+  unsafe { yolo_process_stdin_write(process, bytes, len) }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn buv_process_stdin_close(process: YoloHandle) -> YoloStatus {
+  yolo_process_stdin_close(process)
+}
+
+/// # Safety
+/// Pointer arguments follow the corresponding yolo compatibility function's contract.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn buv_process_wait_start(
+  process: YoloHandle,
+  out: *mut YoloHandle,
+) -> YoloStatus {
+  // SAFETY: the caller provides the writable output required by the shared owner.
+  unsafe { yolo_process_wait_start(process, out) }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn buv_process_release(process: YoloHandle) -> YoloStatus {
   yolo_process_release(process)

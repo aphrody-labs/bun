@@ -37,7 +37,7 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 pub const ABI_MAJOR: u32 = 1;
-pub const ABI_MINOR: u32 = 5;
+pub const ABI_MINOR: u32 = 6;
 /// Upper bound for `max_operations`.
 pub const MAX_OPERATIONS_LIMIT: u32 = 64;
 const DEFAULT_MAX_OPERATIONS: u32 = 4;
@@ -173,10 +173,12 @@ pub(crate) enum OpResult {
   Done(String),
   Cancelled,
   Failed(String),
+  Status(YoloStatus, String),
 }
 
 #[derive(Debug)]
 pub(crate) struct OpState {
+  counted: bool,
   cancel: AtomicBool,
   result: Mutex<Option<OpResult>>,
   done: Condvar,
@@ -288,6 +290,22 @@ impl Registry {
       })
       .collect()
   }
+
+  pub(crate) fn capacity_used_by(&self, owner: YoloHandle) -> usize {
+    self
+      .slots
+      .iter()
+      .filter(|slot| match &slot.entry {
+        Some(Entry::Operation { owner: entry_owner, state, .. }) => {
+          *entry_owner == owner && state.counted
+        }
+        Some(Entry::Process { owner: entry_owner, .. }) => *entry_owner == owner,
+        #[cfg(feature = "browser")]
+        Some(Entry::Browser { owner: entry_owner, .. }) => *entry_owner == owner,
+        _ => false,
+      })
+      .count()
+  }
 }
 
 pub(crate) fn runtime_limit(reg: &Registry, runtime: YoloHandle) -> Result<u32, YoloStatus> {
@@ -390,6 +408,13 @@ pub extern "C" fn yolo_runtime_destroy(runtime: YoloHandle) -> YoloStatus {
       reg.remove(runtime);
       operations
     };
+    // Cancel every waiter before stopping processes, so registry order cannot publish a
+    // successful wait during runtime teardown. Arc-owning concurrent callers remain valid.
+    for entry in &removed {
+      if let Entry::Operation { state, .. } = entry {
+        state.cancel.store(true, Ordering::SeqCst);
+      }
+    }
     removed.into_iter().for_each(stop_operation);
     YoloStatus::Ok
   })
@@ -453,6 +478,8 @@ pub unsafe extern "C" fn yolo_runtime_capabilities(
         "bench.compute",
         "process.supervise",
         "http.probe",
+        "process.stdin",
+        "process.wait",
         #[cfg(feature = "browser")]
         "browser.navigate",
         #[cfg(feature = "browser")]
@@ -503,13 +530,14 @@ pub(crate) fn start_operation(
   work: impl FnOnce(&AtomicBool) -> OpResult + Send + 'static,
 ) -> Result<YoloHandle, YoloStatus> {
   let state = Arc::new(OpState {
+    counted: bounded,
     cancel: AtomicBool::new(false),
     result: Mutex::new(None),
     done: Condvar::new(),
   });
   let mut reg = lock(registry());
   let limit = runtime_limit(&reg, runtime)?;
-  if bounded && reg.operations_of(runtime).len() as u32 >= limit {
+  if bounded && reg.capacity_used_by(runtime) as u32 >= limit {
     return Err(set_error(YoloStatus::Busy, format!("{limit} operations already running")));
   }
   let worker_state = Arc::clone(&state);
@@ -579,6 +607,9 @@ pub unsafe extern "C" fn yolo_operation_wait(
   out: *mut YoloBuffer,
 ) -> YoloStatus {
   guard(|| {
+    if out.is_null() {
+      return set_error(YoloStatus::InvalidArgument, "null output buffer");
+    }
     let state = match operation_state(operation) {
       Ok(state) => state,
       Err(status) => return status,
@@ -593,6 +624,7 @@ pub unsafe extern "C" fn yolo_operation_wait(
       Some(OpResult::Done(json)) => write_buffer(out, json.clone().into_bytes()),
       Some(OpResult::Cancelled) => set_error(YoloStatus::Cancelled, "operation cancelled"),
       Some(OpResult::Failed(message)) => set_error(YoloStatus::Internal, message.clone()),
+      Some(OpResult::Status(status, message)) => set_error(*status, message.clone()),
     }
   })
 }
