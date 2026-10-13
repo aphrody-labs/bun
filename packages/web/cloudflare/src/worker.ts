@@ -1,5 +1,7 @@
 import { bucketFor, buckets, isBucket } from "./buckets.ts";
 import type { IngestParams } from "./ingest.ts";
+import { createNeonHTTPClient } from "@aphrody/bun-plugin-neon/http";
+import { publicSiteAPI } from "../../site/site-api.ts";
 
 export { Ingest } from "./ingest.ts";
 export { Room } from "./room.ts";
@@ -152,6 +154,12 @@ async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<R
   const [section, name = "", ...rest] = parts;
 
   switch (section) {
+    case "site": {
+      const connectionString = (env as Env & { NEON_DATABASE_URL?: string }).NEON_DATABASE_URL;
+      if (!connectionString) return error(503, "public site database unavailable");
+      const sql = createNeonHTTPClient({ connectionString, expectedDatabase: "bun_site" });
+      return publicSiteAPI(request, sql);
+    }
     case "health":
       return json({ ok: true, version: env.VERSION.id, tag: env.VERSION.tag, buckets });
 

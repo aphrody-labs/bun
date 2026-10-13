@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "es2024",
     "lib": ["es2024"],
-    "typeRoots": ["../node_modules/@types", "../node_modules"],
+    "typeRoots": ["../node_modules/@types", "../node_modules", "../../bun-cloudflare/node_modules"],
     "module": "es2022",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

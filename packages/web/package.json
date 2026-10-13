@@ -1,8 +1,15 @@
 {
   "name": "@aphrody/web",
   "version": "1.4.4",
+  "exports": {
+    ".": "./src/index.ts",
+    "./domains": "./src/domains.ts",
+    "./site": "./src/site.ts"
+  },
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./domains": "./src/domains.ts", "./site": "./src/site.ts" },
-  "dependencies": {}
+  "dependencies": {
+    "@aphrody/bun-plugin-neon": "workspace:*",
+    "@typesafe-ai/sdk": "0.6.0"
+  }
 }

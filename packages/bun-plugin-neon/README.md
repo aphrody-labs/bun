@@ -48,7 +48,19 @@ try {
 Use the direct endpoint for migrations and session-dependent work. The helper
 keeps credentials out of its errors and never falls back to `DATABASE_URL`.
 For serverless and edge runtimes that need Neon HTTP or WebSocket transport,
-use Neon's official `@neondatabase/serverless` driver instead.
+use the separate HTTP entrypoint backed by Neon's official
+`@neondatabase/serverless` driver. It reuses the destination and TLS validation
+without importing Bun.SQL or the migration tooling:
+
+```ts
+import { createNeonHTTPClient } from "@aphrody/bun-plugin-neon/http";
+
+const sql = createNeonHTTPClient({
+  connectionString: env.NEON_DATABASE_URL,
+  expectedDatabase: "bun_site",
+});
+const rows = await sql.query("SELECT id FROM aphrody_site.snapshots WHERE id = $1", [id]);
+```
 
 ## Migrations
 

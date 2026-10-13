@@ -99,6 +99,19 @@
         "react-server-dom-parcel",
       ],
     },
+    "packages/bun-plugin-neon": {
+      "name": "@aphrody/bun-plugin-neon",
+      "version": "1.4.4",
+      "dependencies": {
+        "@neondatabase/serverless": "1.2.0",
+      },
+      "devDependencies": {
+        "@aphrody/bun-types": "workspace:*",
+      },
+      "peerDependencies": {
+        "@aphrody/bun-types": ">=1.4.4",
+      },
+    },
     "packages/bun-plugin-tailwind": {
       "name": "@aphrody/bun-plugin-tailwind",
       "version": "1.4.4",
@@ -148,6 +161,10 @@
     "packages/web": {
       "name": "@aphrody/web",
       "version": "1.4.4",
+      "dependencies": {
+        "@aphrody/bun-plugin-neon": "workspace:*",
+        "@typesafe-ai/sdk": "0.6.0",
+      },
     },
     "packages/web/rust/integrations/m3": {
       "name": "@aphrody/m3-bun-integration",
@@ -284,6 +301,8 @@
     "@aphrody/bun-google": ["@aphrody/bun-google@workspace:packages/bun-google"],
 
     "@aphrody/bun-m3": ["@aphrody/bun-m3@workspace:packages/bun-m3"],
+
+    "@aphrody/bun-plugin-neon": ["@aphrody/bun-plugin-neon@workspace:packages/bun-plugin-neon"],
 
     "@aphrody/bun-plugin-tailwind": ["@aphrody/bun-plugin-tailwind@workspace:packages/bun-plugin-tailwind"],
 
@@ -579,6 +598,8 @@
 
     "@napi-rs/canvas-win32-x64-msvc": ["@napi-rs/canvas-win32-x64-msvc@1.0.9", "", { "os": "win32", "cpu": "x64" }, "sha512-QlSYQdMQslB81nlABo9wNfQ6npFhE7/O+saCZdqVGueGanyRk4jCogD5EwQenfP3kIq9e+mm6GreQBjX5MrA8g=="],
 
+    "@neondatabase/serverless": ["@neondatabase/serverless@1.2.0", "", {}, "sha512-tnaqgixUengZQNd9ZrS3ytQfamJzLKY8QxgqWQTNHHtB+KrFQWk77JTbbpg4RD+J3qE4eO2lVytvGDX5Kj6FdQ=="],
+
     "@next/env": ["@next/env@16.4.0", "", {}, "sha512-pyLlT5oafGlX8X7xjgGNXz5dNIDSxREm+qD6i9VLSZiZFopA/XWl8NM/KPmLx/8EG/++c49iid3gNWSQW1+2dQ=="],
 
     "@next/swc-darwin-arm64": ["@next/swc-darwin-arm64@16.4.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-yyZ+9MgViAKLLb5l1gPBGjRwnq3teNLb5Zx6JEw8LzNSTjlsnp+baUHFxTgl7PpjCmKf48VQfyipG1eBflb48Q=="],
@@ -712,6 +733,8 @@
     "@types/whatwg-mimetype": ["@types/whatwg-mimetype@3.0.2", "", {}, "sha512-c2AKvDT8ToxLIOUlN51gTiHXflsfIFisS4pO7pDPoKouJCESkhZnEy623gwP9laCy5lnLDAw1vAzu2vM2YLOrA=="],
 
     "@types/ws": ["@types/ws@8.18.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-67MQl+fpWKVTT1NYdnmo3U4sc/xPo/zQBncVnI74qmQa0z/b+1g6iYqNmGCPbxO+zz2aklb08a0oHfegiVd0/w=="],
+
+    "@typesafe-ai/sdk": ["@typesafe-ai/sdk@0.6.0", "", {}, "sha512-IddX+Q0XM+VagOUZFeP7wZjaO4SHMdvnh2zEBdrZZnXedWI3BNK1lKhMx3ayrkFWvVLbVcUHJy6AVZlY+e6Jaw=="],
 
     "@typescript/typescript-aix-ppc64": ["@typescript/typescript-aix-ppc64@7.0.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ=="],
 

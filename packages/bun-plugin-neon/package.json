@@ -24,14 +24,22 @@
       "import": "./src/migrations.ts",
       "default": "./src/migrations.ts"
     },
+    "./http": {
+      "types": "./src/http.ts",
+      "import": "./src/http.ts",
+      "default": "./src/http.ts"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
     "test": "bun test ./test",
     "check:types": "tsc --noEmit"
   },
+  "dependencies": {
+    "@neondatabase/serverless": "1.2.0"
+  },
   "devDependencies": {
-    "@aphrody/bun-types": "file:../bun-types"
+    "@aphrody/bun-types": "workspace:*"
   },
   "peerDependencies": {
     "@aphrody/bun-types": ">=1.4.4"
