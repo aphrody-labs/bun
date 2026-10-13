@@ -174,6 +174,12 @@ export async function buildReleaseGraph(tree: GitTree, snapshot: string, out: st
   const paths = [...tree.files.keys()].sort();
   let readable = 0;
   let excludedInvalidUtf8Files = 0;
+  const progress = (stage: string, files: number) => {
+    if (process.env.BUN_DEBUG_RELEASE_GRAPH === "1")
+      console.error(
+        JSON.stringify({ stage, files, total: paths.length, source: tree.sha, memory: process.memoryUsage() }),
+      );
+  };
   if (hasCatalog) {
     ({ readable, excludedInvalidUtf8Files } = await verifyReleaseCatalog(db, tree, snapshot));
     db.transaction(() => db.exec("DELETE FROM release_domains; DELETE FROM release_links"))();
@@ -196,12 +202,14 @@ export async function buildReleaseGraph(tree: GitTree, snapshot: string, out: st
           if (content !== null) readable++;
         }
       })();
+      if (start % 1024 === 0) progress("catalog", Math.min(start + batch.length, paths.length));
       await Bun.sleep(0);
     }
   }
   db.exec("INSERT INTO release_domains SELECT domain,count(*) FROM release_files GROUP BY domain");
   const available = new Set(paths);
   writeRelativeReferences(db, available);
+  progress("native-index", paths.length);
   const native = await indexDetachedRelease(registry, snapshot, tree.sha, out);
   const documents: { domain: string; directory: string }[] = [];
   for (const domain of native.domains) {
