@@ -134,4 +134,8 @@ else
   exit 2
 fi
 normalize
+runtime_license=${BUN_MEDIA_GCC_RUNTIME_LICENSE:-$sysroot/usr/share/doc/gcc-13-base/copyright}
+[[ -f $runtime_license ]] || { echo 'Provide the target GCC runtime license owner via BUN_MEDIA_GCC_RUNTIME_LICENSE' >&2; exit 1; }
+mkdir -p "$prefix/share/licenses/gcc-runtime"
+cp "$runtime_license" "$prefix/share/licenses/gcc-runtime/"
 printf '%s\n' build-complete-awaiting-elf-functional-license-gates > "$owner/build-status.txt"
