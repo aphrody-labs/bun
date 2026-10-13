@@ -1,84 +1,64 @@
 ---
 title: "Formatting"
-description: "Format JavaScript, TypeScript, JSON, CSS, Markdown and more with bun fmt"
+description: "Format source with Bun's embedded native OXC core"
 ---
 
-`bun fmt` formats JavaScript, TypeScript, JSX, JSON, CSS, Markdown, YAML, TOML and more with [oxfmt](https://oxc.rs/docs/guide/usage/formatter), a Prettier-compatible formatter.
+`bun fmt` uses the native OXC formatter embedded in Bun. It does not install an
+npm package or launch a formatter subprocess. JavaScript, TypeScript, JSX and
+JSON use the selected native formatters. A format requiring an unavailable
+plugin fails explicitly.
 
-```bash terminal icon="terminal"
-bun fmt
+```sh
+bun fmt src
+bun fmt --check src
+bun fmt --write src
+bun fmt --ignore-pattern 'fixtures/**' src
 ```
 
-With no paths, oxfmt formats the working directory. Pass files, directories or globs to format only those. A path starting with `!` excludes files.
+With no filesystem operands, Bun examines the working directory. `--check`
+writes nothing and exits with code `1` when formatting differs. Without
+`--check`, it writes formatted files. Filesystem discovery excludes generated
+dependency directories and protected stores; explicit protected or
+parent-traversing paths are rejected.
 
-```bash terminal icon="terminal"
-bun fmt src 'test/**/*.ts' '!test/fixtures'
+## Format standard input
+
+`--stdin-filepath` supplies a virtual name to select the parser. Bun reads UTF-8
+source from standard input and writes formatted source to standard output. It
+never opens or writes the virtual file. Input is bounded to 8 MiB.
+
+```sh
+printf 'const answer=42' | bun fmt --stdin-filepath input.ts
+printf 'const answer=42' | bun fmt --stdin-filepath input.ts --check
 ```
 
-## Check formatting in CI
+In this mode `--check` produces no source output and returns `1` on a difference.
+Filesystem operands, `--write` and repeated virtual-name options are rejected.
+Invalid UTF-8, syntax, unsupported formats and invalid options return code `2`.
+Configuration discovery is disabled for stdin. Pass `--config` explicitly to
+apply project formatting options.
 
-`--check` writes nothing and exits with code `1` when a file is not formatted. `--list-different` prints those files.
+## Configuration
 
-```bash terminal icon="terminal"
-bun fmt --check
-```
+Filesystem formatting discovers `.oxfmtrc.json` or `.oxfmtrc.jsonc` and
+`.editorconfig` through the native formatter. `-c` or `--config` selects an
+explicit configuration.
 
-## How oxfmt is installed
-
-oxfmt is not part of the `bun` binary. The first `bun fmt` downloads a pinned version with [`bun x`](/pm/bunx) and caches it. `bun fmt` uses `node_modules/.bin/oxfmt` instead when the project installs oxfmt itself.
-
-## Changed files and workspaces
-
-```bash terminal icon="terminal"
-# files changed since a git ref, plus staged, unstaged and untracked files
-bun fmt --since=main
-
-# every workspace package, or the ones matching a filter
-bun fmt --workspaces
-bun fmt --filter 'packages/*'
-```
-
-## Configure
-
-`bun fmt` reads `.oxfmtrc.json` the same way oxfmt does. See the [oxfmt configuration reference](https://oxc.rs/docs/guide/usage/formatter/config).
-
-```json .oxfmtrc.json icon="file-json"
+```json
 {
   "printWidth": 120,
   "semi": true,
-  "ignorePatterns": ["dist/**"]
+  "singleQuote": false
 }
 ```
 
-Project defaults go in the `[fmt]` section of [`bunfig.toml`](/runtime/bunfig).
-
-```toml bunfig.toml icon="settings"
-[fmt]
-# oxfmt configuration file
-config = ".oxfmtrc.json"
-# paths formatted when none are given
-paths = ["src", "test"]
-# glob patterns to skip
-ignore = ["dist/**"]
-# more oxfmt arguments
-args = []
-# oxfmt version to download
-version = "0.72.0"
+```sh
+bun fmt --config .oxfmtrc.json src
 ```
 
-## Flags
+The native CLI accepts `--check`, `--write`, `--stdin-filepath`, `--config` and
+`--ignore-pattern`. Other native options fail explicitly. Workspace selection,
+Git-ref selection and external formatter options are not inferred from these
+flags.
 
-| Flag                    | Description                                         |
-| ----------------------- | --------------------------------------------------- |
-| `--check`               | Write nothing; exit with `1` if a file is not formatted |
-| `--list-different`      | Print the files that are not formatted              |
-| `--since=<ref>`         | Only files changed since a git ref                  |
-| `--workspaces`          | Format every workspace package                      |
-| `--filter=<pattern>`    | Format the workspace packages whose name or path matches |
-| `-c`, `--config=<path>` | oxfmt configuration file                            |
-
-Every other flag goes to oxfmt.
-
-If `package.json` has a `fmt` script, `bun fmt` runs that script. Inside the script, `bun fmt` is the command.
-
-To lint code, use [`bun lint`](/runtime/lint).
+Use [`bun lint`](/runtime/lint) for lint diagnostics and fixes.

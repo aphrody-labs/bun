@@ -14,11 +14,7 @@ const env = {
   BUN_CREATE_APHRODY_DIR: undefined,
 };
 
-async function run(
-  args: string[],
-  cwd?: string,
-  extraEnv: Record<string, string | undefined> = {},
-) {
+async function run(args: string[], cwd?: string, extraEnv: Record<string, string | undefined> = {}) {
   if ((extraEnv.BUN_OXLINT || extraEnv.BUN_OXFMT) && (args[0] === "lint" || args[0] === "fmt")) {
     args = [args[0], "--external-backend", ...args.slice(1)];
   }
@@ -29,15 +25,43 @@ async function run(
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   return { stdout, stderr, exitCode };
 }
 
 describe("embedded quality backend", () => {
+  test("stdin formatting shares the native core without opening a virtual file", async () => {
+    using dir = tempDir("native-fmt-stdin", {
+      "virtual.ts": "This file must remain untouched.\n",
+      "config.json": JSON.stringify({ singleQuote: true }),
+    });
+    const format = async (source: string | Uint8Array, args: string[] = []) => {
+      await using child = Bun.spawn([bunExe(), "fmt", "--stdin-filepath", "virtual.ts", ...args], {
+        cwd: String(dir),
+        env,
+        stdin: new Blob([source]),
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: 5000,
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+      return { stdout, stderr, exitCode };
+    };
+    const input = 'const value="hello"';
+    const result = await format(input, ["--config", "config.json"]);
+    expect(result).toEqual({ stdout: "const value = 'hello';\n", stderr: "", exitCode: 0 });
+    expect(await format(input, ["--check"])).toEqual({ stdout: "", stderr: "", exitCode: 1 });
+    expect(await format('const value = "hello";\n', ["--check"])).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    for (const args of [["--write"], ["virtual.ts"], ["--stdin-filepath", "other.ts"]]) {
+      const invalid = await format(input, args);
+      expect(invalid.stdout).toBe("");
+      expect(invalid.exitCode).toBe(2);
+    }
+    expect((await format(Uint8Array.of(0xff))).exitCode).toBe(2);
+    expect((await format("let = ;")).exitCode).toBe(2);
+    expect((await format(" ".repeat(8 * 1024 * 1024 + 1))).exitCode).toBe(2);
+    expect(await Bun.file(join(String(dir), "virtual.ts")).text()).toBe("This file must remain untouched.\n");
+  });
   test("native rule options preserve objects and reject invalid nested arrays", async () => {
     using dir = tempDir("native-rule-options", {
       "a.ts": "const _unused = 1; export {};\n",
@@ -73,61 +97,41 @@ describe("embedded quality backend", () => {
     );
     expect(builtin.stderr).toBe("");
     expect(
-      JSON.parse(builtin.stdout).diagnostics.filter(
-        (item: any) => item.code === "eslint(no-unused-expressions)",
-      ),
+      JSON.parse(builtin.stdout).diagnostics.filter((item: any) => item.code === "eslint(no-unused-expressions)"),
     ).toHaveLength(1);
     expect(builtin.exitCode).toBe(1);
-    const ordinary = await run(
-      ["lint", "--config", "lint.json", "--format=json", "ordinary.ts"],
-      String(dir),
-    );
+    const ordinary = await run(["lint", "--config", "lint.json", "--format=json", "ordinary.ts"], String(dir));
     expect(ordinary.stderr).toBe("");
     expect(
-      JSON.parse(ordinary.stdout).diagnostics.filter(
-        (item: any) => item.code === "eslint(no-unused-expressions)",
-      ),
+      JSON.parse(ordinary.stdout).diagnostics.filter((item: any) => item.code === "eslint(no-unused-expressions)"),
     ).toHaveLength(4);
     expect(ordinary.exitCode).toBe(1);
   });
 
   test("custom rule respects parsed comment scopes and ignores strings or unrelated rules", async () => {
     const rule = "bun/no-duplicate-conditional-property-access";
-    const plugin = await Bun.file(
-      new URL("../../../scripts/oxlint-plugins/bun.js", import.meta.url),
-    ).text();
+    const plugin = await Bun.file(new URL("../../../scripts/oxlint-plugins/bun.js", import.meta.url)).text();
     using dir = tempDir("native-rule-comments", {
       "plugin.js": plugin,
       "lint.json": JSON.stringify({ jsPlugins: ["./plugin.js"], rules: { [rule]: "error" } }),
       "a.ts": `// oxlint-disable-next-line ${rule}\nif (obj.a) use(obj.a);\n/* oxlint-disable-next-line ${rule} */\nif (obj.b) use(obj.b);\nif (obj.c) use(obj.c); // oxlint-disable-line ${rule}\n/* oxlint-disable ${rule} */\nif (obj.d) use(obj.d);\n/* oxlint-enable ${rule} */\nif (obj.e) use(obj.e);\n// oxlint-disable-next-line no-debugger\nif (obj.f) use(obj.f);\nconst text = "oxlint-disable-next-line ${rule}";\nif (obj.g) use(obj.g);\n`,
     });
-    const result = await run(
-      ["lint", "--config", "lint.json", "--format=json", "a.ts"],
-      String(dir),
-    );
+    const result = await run(["lint", "--config", "lint.json", "--format=json", "a.ts"], String(dir));
     expect(result.stderr).toBe("");
-    expect(
-      JSON.parse(result.stdout).diagnostics.filter((item: any) => item.code === rule),
-    ).toHaveLength(3);
+    expect(JSON.parse(result.stdout).diagnostics.filter((item: any) => item.code === rule)).toHaveLength(3);
     expect(result.exitCode).toBe(1);
   });
   test("compiled Bun getter rule preserves caching, writes and receiver semantics", async () => {
-    const plugin = await Bun.file(
-      new URL("../../../scripts/oxlint-plugins/bun.js", import.meta.url),
-    ).text();
+    const plugin = await Bun.file(new URL("../../../scripts/oxlint-plugins/bun.js", import.meta.url)).text();
     using dir = tempDir("native-bun-rule", {
       "plugin.js": plugin,
-      "a.ts":
-        "if (obj.x) use(obj.x);\nif (obj.x) obj.x++;\nif (obj.x) obj.x();\nif (local = obj.x) use(obj.x);\n",
+      "a.ts": "if (obj.x) use(obj.x);\nif (obj.x) obj.x++;\nif (obj.x) obj.x();\nif (local = obj.x) use(obj.x);\n",
       "lint.json": JSON.stringify({
         jsPlugins: ["./plugin.js"],
         rules: { "bun/no-duplicate-conditional-property-access": "error" },
       }),
     });
-    const checked = await run(
-      ["lint", "--config", "lint.json", "--format=json", "a.ts"],
-      String(dir),
-    );
+    const checked = await run(["lint", "--config", "lint.json", "--format=json", "a.ts"], String(dir));
     expect(checked.stderr).toBe("");
     const findings = JSON.parse(checked.stdout).diagnostics.filter(
       (diagnostic: any) => diagnostic.code === "bun/no-duplicate-conditional-property-access",
@@ -152,9 +156,7 @@ describe("embedded quality backend", () => {
     const stdout = await proc.stdout.text();
     expect(await proc.stderr.text()).toBe("");
     const result = JSON.parse(stdout);
-    expect(result.diagnostics.some((diagnostic: any) => diagnostic.severity === "error")).toBe(
-      true,
-    );
+    expect(result.diagnostics.some((diagnostic: any) => diagnostic.severity === "error")).toBe(true);
     expect(await proc.exited).toBe(1);
   });
 
@@ -294,11 +296,7 @@ describe("bun lint", () => {
       "a.ts": `readFileSync("x");\n`,
       "bunfig.toml": `[lint]\nconfig = "lint.json"\nignore = ["dist/**"]\nargs = ["-D", "correctness"]\n`,
     });
-    const { stdout, exitCode } = await run(
-      ["lint", "-A", "no-console", "src"],
-      String(dir),
-      tools(String(dir)),
-    );
+    const { stdout, exitCode } = await run(["lint", "-A", "no-console", "src"], String(dir), tools(String(dir)));
     expect(normalizeBunSnapshot(stdout, dir)).toMatchInlineSnapshot(`
       "oxlint ["--config","lint.json","--ignore-pattern","dist/**","-D","correctness","-A","no-console","src"]
       a.ts:1:1 warning n2b(node-fs-readfile) Use Bun.file().text()
@@ -312,11 +310,7 @@ describe("bun lint", () => {
 
   test.concurrent("--format=json merges the n2b findings into oxlint's diagnostics", async () => {
     using dir = tempDir("toolchain-lint-json", { ...toolFiles, "a.ts": `readFileSync("x");\n` });
-    const { stdout, exitCode } = await run(
-      ["lint", "--format=json", "--fix"],
-      String(dir),
-      tools(String(dir)),
-    );
+    const { stdout, exitCode } = await run(["lint", "--format=json", "--fix"], String(dir), tools(String(dir)));
     const out = JSON.parse(stdout);
     expect(out.args).toEqual(["--fix", "--format=json"]);
     expect(out.diagnostics).toEqual([
@@ -332,11 +326,7 @@ describe("bun lint", () => {
 
   test.concurrent("--format=sarif adds an n2b run", async () => {
     using dir = tempDir("toolchain-lint-sarif", { ...toolFiles, "a.ts": `readFileSync("x");\n` });
-    const { stdout, exitCode } = await run(
-      ["lint", "--format=sarif", "--n2b-only"],
-      String(dir),
-      tools(String(dir)),
-    );
+    const { stdout, exitCode } = await run(["lint", "--format=sarif", "--n2b-only"], String(dir), tools(String(dir)));
     const out = JSON.parse(stdout);
     expect(out.version).toBe("2.1.0");
     expect(out.runs.map((r: any) => r.tool.driver.name)).toEqual(["n2b"]);
@@ -346,11 +336,7 @@ describe("bun lint", () => {
 
   test.concurrent("--deny-warnings fails on n2b warnings", async () => {
     using dir = tempDir("toolchain-lint-deny", { ...toolFiles, "a.ts": `readFileSync("x");\n` });
-    const { stdout, exitCode } = await run(
-      ["lint", "--deny-warnings", "--n2b-only"],
-      String(dir),
-      tools(String(dir)),
-    );
+    const { stdout, exitCode } = await run(["lint", "--deny-warnings", "--n2b-only"], String(dir), tools(String(dir)));
     expect(stdout).toContain("n2b: 0 error(s), 1 warning(s)");
     expect(exitCode).toBe(1);
   });
@@ -427,18 +413,13 @@ describe("bun create aphrody/<template>", () => {
     expect(await Bun.file(join(app, ".gitignore")).text()).toBe("node_modules\n");
     const pkg = await Bun.file(join(app, "package.json")).json();
     expect(pkg.name).toBe("my-app");
-    expect(pkg.dependencies["@aphrody/runtime-sdk"]).toMatch(
-      /^file:.*\/aphrody\/packages\/engine\/runtime$/,
-    );
+    expect(pkg.dependencies["@aphrody/runtime-sdk"]).toMatch(/^file:.*\/aphrody\/packages\/engine\/runtime$/);
     expect(exitCode).toBe(0);
   });
 
   test.concurrent("finds the templates of the checkout around the working directory", async () => {
     using dir = tempDir("toolchain-create-checkout", stack);
-    const { stdout, exitCode } = await run(
-      ["create", "aphrody/react", "app"],
-      join(String(dir), "aphrody"),
-    );
+    const { stdout, exitCode } = await run(["create", "aphrody/react", "app"], join(String(dir), "aphrody"));
     expect(stdout).toContain("Created app (4 files: base, react)");
     const pkg = await Bun.file(join(String(dir), "aphrody", "app", "package.json")).json();
     expect(pkg.dependencies.react).toBe("19.3.0");
@@ -447,20 +428,14 @@ describe("bun create aphrody/<template>", () => {
 
   test.concurrent("rejects two templates of one exclusive group", async () => {
     using dir = tempDir("toolchain-create-exclusive", stack);
-    const { stderr, exitCode } = await run(
-      ["create", "aphrody/web+react", "app"],
-      join(String(dir), "aphrody"),
-    );
+    const { stderr, exitCode } = await run(["create", "aphrody/web+react", "app"], join(String(dir), "aphrody"));
     expect(stderr).toContain("Choose one frontend template: web or react");
     expect(exitCode).toBe(1);
   });
 
   test.concurrent("bun create aphrody --list lists the templates", async () => {
     using dir = tempDir("toolchain-create-list", stack);
-    const { stdout, exitCode } = await run(
-      ["create", "aphrody", "--list"],
-      join(String(dir), "aphrody"),
-    );
+    const { stdout, exitCode } = await run(["create", "aphrody", "--list"], join(String(dir), "aphrody"));
     const row = (id: string, always: boolean, description: string) =>
       `  ${id.padEnd(8)} ${always ? "(always) " : "         "}${description}`;
     expect(stdout.split("\n").slice(1)).toEqual([
@@ -535,10 +510,7 @@ console.log(bytes);
 `,
     });
     const fake = join(String(dir), "fake-cargo.js");
-    const cli = await run(
-      ["wasm", "build", "add", "--no-opt", `--cargo="${bunExe()}" "${fake}"`],
-      String(dir),
-    );
+    const cli = await run(["wasm", "build", "add", "--no-opt", `--cargo="${bunExe()}" "${fake}"`], String(dir));
     expect(cli.stdout).toContain("built add");
     expect(cli.exitCode).toBe(0);
     const api = await run(["api.ts"], String(dir));

@@ -5,7 +5,52 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const HELP: &str = "Usage: bun lint|fmt [options] [files or directories]\nEmbedded OXC; no package installation or subprocess backend.\n  -c, --config PATH  Native JSON/JSONC configuration\n  --ignore-pattern GLOB  Exclude matching paths\n  --fix             Apply safe lint fixes\n  --check           Check formatting without writing\n  --write           Write formatted files\n  --format json|github|default  Lint diagnostic format\n  --deny-warnings   Treat lint warnings as failure\n  --no-n2b          Compatibility flag; native lint runs OXC rules only\nUnsupported JS plugins and embedded Prettier formatting fail explicitly.\n";
+const HELP: &str = "Usage: bun lint|fmt [options] [files or directories]\nEmbedded OXC; no package installation or subprocess backend.\n  -c, --config PATH  Native JSON/JSONC configuration\n  --ignore-pattern GLOB  Exclude matching paths\n  --fix             Apply safe lint fixes\n  --check           Check formatting without writing\n  --write           Write formatted files\n  --stdin-filepath NAME  Format UTF-8 stdin as a virtual file (fmt only; maximum 8 MiB)\n  --format json|github|default  Lint diagnostic format\n  --deny-warnings   Treat lint warnings as failure\n  --no-n2b          Compatibility flag; native lint runs OXC rules only\nUnsupported JS plugins and embedded Prettier formatting fail explicitly.\n";
+
+fn format_stdin(
+    filename: &str,
+    cwd: PathBuf,
+    config: Option<PathBuf>,
+    check: bool,
+) -> Result<u8, String> {
+    if filename.is_empty() || filename.as_bytes().contains(&0) {
+        return Err("--stdin-filepath needs a virtual file name".into());
+    }
+    let mut source = Vec::new();
+    let stdin = bun_sys::File::stdin();
+    let mut buffer = [0_u8; 8192];
+    loop {
+        let count = stdin
+            .read(&mut buffer)
+            .map_err(|error| format!("stdin: {error:?}"))?;
+        if count == 0 {
+            break;
+        }
+        if source.len() + count > 8 * 1024 * 1024 {
+            return Err("formatter stdin exceeds 8 MiB".into());
+        }
+        source.extend_from_slice(&buffer[..count]);
+    }
+    let source = std::str::from_utf8(&source).map_err(|_| "formatter stdin must be UTF-8")?;
+    let formatted = aphrody_oxc_tools::format(
+        source,
+        filename,
+        &FormatOptions {
+            cwd: Some(cwd),
+            config_path: config,
+            discover_config: false,
+            ..Default::default()
+        },
+    )
+    .map_err(|error| error.to_string())?;
+    if check {
+        return Ok(u8::from(formatted != source));
+    }
+    bun_sys::File::stdout()
+        .write_all(formatted.as_bytes())
+        .map_err(|error| format!("stdout: {error:?}"))?;
+    Ok(0)
+}
 
 pub(crate) fn exec_if_selected() -> Option<u8> {
     let argv = bun_core::argv().into_iter().collect::<Vec<_>>();
@@ -315,6 +360,8 @@ fn run(lint: bool, args: &[String]) -> Result<u8, String> {
     let (mut config, mut fix, mut check, mut deny, mut format) =
         (None, FixMode::None, false, false, "default".to_owned());
     let mut roots = Vec::new();
+    let mut stdin_filename = None;
+    let mut write_requested = false;
     let mut ignores = globset::GlobSetBuilder::new();
     let mut args = args.iter();
     while let Some(arg) = args.next() {
@@ -328,7 +375,16 @@ fn run(lint: bool, args: &[String]) -> Result<u8, String> {
             "--fix-suggestions" if lint => fix = FixMode::Suggestions,
             "--fix-dangerously" if lint => fix = FixMode::Dangerous,
             "--check" if !lint => check = true,
-            "--write" if !lint => check = false,
+            "--write" if !lint => {
+                check = false;
+                write_requested = true;
+            }
+            "--stdin-filepath" if !lint => {
+                if stdin_filename.is_some() {
+                    return Err("--stdin-filepath may be provided only once".into());
+                }
+                stdin_filename = Some(args.next().ok_or("--stdin-filepath needs a name")?.clone());
+            }
             "--deny-warnings" if lint => deny = true,
             "--config" | "-c" => {
                 config = Some(cwd.join(args.next().ok_or("--config needs a path")?))
@@ -350,6 +406,14 @@ fn run(lint: bool, args: &[String]) -> Result<u8, String> {
     }
     if !matches!(format.as_str(), "default" | "json" | "github") {
         return Err(format!("unsupported diagnostic format: {format}"));
+    }
+    if let Some(filename) = stdin_filename {
+        if write_requested || !roots.is_empty() {
+            return Err(
+                "formatter stdin cannot be combined with --write or filesystem operands".into(),
+            );
+        }
+        return format_stdin(&filename, cwd, config, check);
     }
     if roots.is_empty() {
         roots.push(".".into());
