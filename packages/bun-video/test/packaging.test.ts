@@ -39,25 +39,42 @@ describe("standalone source package", () => {
     for (const entry of Object.values(manifest.bin) as string[]) {
       expect((await Bun.file(resolve(root, entry)).text()).startsWith("#!/usr/bin/env bun")).toBe(true);
     }
-    expect(manifest.files).toEqual([
+    expect(manifest.files.filter((entry: string) => !entry.startsWith("!"))).toEqual([
       "src",
       "umbrella-src",
-      "packages/remotion",
-      "packages/hyperframes",
+      "packages/remotion/.aphrody",
+      "packages/remotion/LICENSE.md",
+      "packages/remotion/package.json",
+      "packages/remotion/packages/*/src",
+      "packages/remotion/packages/*/package.json",
+      "packages/hyperframes/aphrody",
+      "packages/hyperframes/LICENSE*",
+      "packages/hyperframes/package.json",
+      "packages/hyperframes/packages/*/src",
+      "packages/hyperframes/packages/*/package.json",
       "native",
       "infra",
       "plugin",
       "scripts",
-      "video-benchmark",
       "docs",
       "labs",
       "assets",
-      "packages/mediabunny",
-      "packages/yt-dlp",
+      "packages/mediabunny/src",
+      "packages/mediabunny/LICENSE*",
+      "packages/mediabunny/package.json",
+      "packages/yt-dlp/yt_dlp",
+      "packages/yt-dlp/LICENSE*",
+      "packages/yt-dlp/README.md",
+      "packages/yt-dlp/pyproject.toml",
+      "packages/yt-dlp/public.key",
       "README.md",
       "LICENSE",
       "THIRD_PARTY_NOTICES.md",
     ]);
+    const exclusions = manifest.files.filter((entry: string) => entry.startsWith("!"));
+    expect(exclusions).toContain("!**/.env*");
+    expect(exclusions).toContain("!**/cookies/**");
+    expect(exclusions).toContain("!packages/yt-dlp/test/testdata/certificate/**");
   });
 
   test("direct engine exports resolve to the absorbed source", async () => {
