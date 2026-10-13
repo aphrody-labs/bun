@@ -1,8 +1,11 @@
-import { mkdir, realpath } from "node:fs/promises";
+import { mkdir, realpath, rm } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { extractMediaSDKArchive, hashSDKFile } from "../../bun-video/src/sdk";
 
 const version = "1.31.6";
+// Official repository release tag, resolved independently from the signed binary release.
+const sourceRevision = "0a5db852e18d1c22c62a5ede1412ac3f416111a0";
+const sourceTagObject = "45a318d05a0fd23f57ffe9579f7f0969c0fe402a";
 const keys = ["arut", "pluknet", "sb", "thresh"] as const;
 const upstream = "https://nginx.org";
 const maxArchiveBytes = 32 << 20;
@@ -51,6 +54,9 @@ export async function prepareWindowsProvider(directory: string, gpg: string) {
   const signature = archive + ".asc";
   const keyHome = join(store, "public-keyring");
   await mkdir(keyHome, { recursive: true });
+  const actualKeyHome = await realpath(keyHome);
+  if (relative(store, actualKeyHome).startsWith("..") || isAbsolute(relative(store, actualKeyHome)))
+    throw new Error("NGINX public keyring escaped its owned SDK store");
   const assets = await Promise.all([
     download(`${upstream}/download/nginx-${version}.zip`, archive, maxArchiveBytes),
     download(`${upstream}/download/nginx-${version}.zip.asc`, signature, 64 << 10),
@@ -79,6 +85,7 @@ export async function prepareWindowsProvider(directory: string, gpg: string) {
   if (!valid || /\b(?:BADSIG|ERRSIG|EXPSIG|EXPKEYSIG|REVKEYSIG)\b/.test(verified.stdout))
     throw new Error("NGINX release signature was not valid with the official public keys");
   await Bun.write(join(store, "signature-verification.log"), verified.stdout + verified.stderr);
+  await rm(join(keyHome, "upstream-public.gpg~"), { force: true });
   const members = await new Bun.Archive(await Bun.file(archive).bytes()).files();
   if (members.size > 4096 || [...members.values()].reduce((sum, file) => sum + file.size, 0) > 128 << 20)
     throw new Error("NGINX ZIP expanded layout exceeds its bound");
@@ -133,7 +140,12 @@ export async function prepareWindowsProvider(directory: string, gpg: string) {
     version,
     sourceRepository: "https://github.com/nginx/nginx",
     sourceRelease: `release-${version}`,
-    provenance: "official signed Windows release; source commit and native Bun controller are separate gates",
+    sourceRevision,
+    sourceTagObject,
+    sourceTagSigned: false,
+    sourceTagReference: `https://api.github.com/repos/nginx/nginx/git/tags/${sourceTagObject}`,
+    provenance:
+      "official signed Windows release; repository release tag pinned independently; binary reproducibility and native Bun controller are separate gates",
     upstreamRelease: `${upstream}/en/download.html`,
     signature: { valid: true, fingerprint: valid[1], details: valid[2], publicKeys: `${upstream}/en/pgp_keys.html` },
     assets,
