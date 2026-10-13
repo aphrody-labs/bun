@@ -71,9 +71,13 @@ The git-ignored inventory has 1448 aggregated file/directory entries, including
 1130 vendor and 290 package entries. Ignored does not imply disposable: native
 sources, registries, cookies and current work remain protected. A modified media
 clone, recent CEF/build outputs and rename journals were retained.
-Five old Rust logs, two Git logs, an empty temporary directory and two clean
-temporary clones were inventoried for removal. Execution policy rejected their
-deletion; no cleanup is claimed. The empty embedded-plugin extraction cache is
+Five old Rust logs, two Git logs and an empty temporary directory were removed
+using separate non-recursive native operations, freeing 51930 bytes. Their
+absence was verified. Recursive deletion of the clean temporary media clones
+remains rejected before Windows execution; elevation cannot resolve that policy
+decision. The modified media clone and concurrent sources remain untouched.
+`sudo.exe` is available in inline mode; these successful deletions needed no
+elevation. The empty embedded-plugin extraction cache is
 also unchanged after a rejected deletion. Its incomplete-cache recovery bug is
 still present in the native launcher source and requires a changed-binary gate.
 
