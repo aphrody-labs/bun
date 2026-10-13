@@ -51,6 +51,12 @@ synthétique, ensuite supprimée.
 La bascule exige encore de figer les writers SQLite, importer un dernier snapshot,
 vérifier les comptages et l'empreinte, poser le marqueur de cutover et relancer
 les consommateurs avec le fichier de connexion Neon.
+`bun scripts/aphrody/bun-video-neon-cutover.ts` contrôle la destination vide et
+le snapshot sans écrire. Après arrêt vérifié de tous les writers SQLite,
+`BUN_VIDEO_WRITERS_STOPPED=1 bun scripts/aphrody/bun-video-neon-cutover.ts --apply`
+maintient un verrou d'écriture SQLite pendant l'import transactionnel et la
+création du marqueur. Une erreur avant le marqueur déclenche le nettoyage du
+schéma Neon importé ; inspecter la destination si ce nettoyage échoue.
 La seule copie SQLite conservée ensuite serait la sauvegarde qualifiée. Copier
 le catalogue maintenant créerait deux sources de vérité divergentes. Le site
 public `aphrody.app` présente Bun Video, mais son Worker n'accède pas à ce
