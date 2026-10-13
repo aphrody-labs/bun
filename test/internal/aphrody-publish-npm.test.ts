@@ -98,6 +98,27 @@ const spec = (dir: string) => PACKAGES.find(p => p.dir === dir)!;
 test("publication requires matching public package, version and uploaded archive integrity", async () => {
   const expected = { name: "@aphrody/fixture", version: "1.2.3", integrity: "sha512-qualified" };
   await expect(publicationStatus(new Response(null, { status: 404 }), expected)).resolves.toBe("pending");
+  await expect(publicationStatus(Response.json({ name: expected.name, versions: {} }), expected)).resolves.toBe(
+    "pending",
+  );
+  await expect(
+    publicationStatus(
+      Response.json({
+        name: expected.name,
+        versions: { [expected.version]: { ...expected, dist: { integrity: expected.integrity } } },
+      }),
+      expected,
+    ),
+  ).resolves.toBe("published");
+  await expect(
+    publicationStatus(
+      Response.json({
+        name: expected.name,
+        versions: { [expected.version]: { ...expected, dist: { integrity: "sha512-other" } } },
+      }),
+      expected,
+    ),
+  ).rejects.toThrow("integrity differs");
   await expect(
     publicationStatus(Response.json({ ...expected, dist: { integrity: expected.integrity } }), expected),
   ).resolves.toBe("published");

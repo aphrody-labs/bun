@@ -620,7 +620,13 @@ export async function publicationStatus(
   if (response.status === 404) return "pending";
   if (!response.ok)
     throw new Error(`${expected.name}@${expected.version}: public verification HTTP ${response.status}`);
-  const record = await response.json();
+  let record = await response.json();
+  if (isRecord(record) && isRecord(record.versions)) {
+    if (record.name !== expected.name)
+      throw new Error(`${expected.name}@${expected.version}: registry returned a different package or version`);
+    if (!(expected.version in record.versions)) return "pending";
+    record = record.versions[expected.version];
+  }
   if (!isRecord(record) || record.name !== expected.name || record.version !== expected.version) {
     throw new Error(`${expected.name}@${expected.version}: registry returned a different package or version`);
   }
@@ -786,8 +792,8 @@ export async function publishAll(opts: {
       ],
       staging,
     );
-    const response = await fetch(`${registry}/${name.replace("/", "%2f")}/${next}`, {
-      headers: { "cache-control": "no-cache" },
+    const response = await fetch(`${registry}/${name.replace("/", "%2f")}`, {
+      headers: { accept: "application/json", "cache-control": "no-cache" },
     });
     const integrity = `sha512-${new Bun.CryptoHasher("sha512").update(await Bun.file(tgz).bytes()).digest("base64")}`;
     const action = await publicationStatus(response, { name, version: next, integrity });
