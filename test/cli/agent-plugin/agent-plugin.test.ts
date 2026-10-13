@@ -100,6 +100,11 @@ describe("generate", () => {
         command: "bun",
         args: ["mcp"],
       });
+      if (t === "codex") {
+        expect(files.has("codex/hooks/hooks.json")).toBe(false);
+        expect(codex.hooks).toBeUndefined();
+        continue;
+      }
       const hooks = json(`${t}/hooks/hooks.json`).hooks;
       expect(Object.keys(hooks).sort()).toEqual(["PostToolUse", "PreToolUse", "SessionStart", "UserPromptSubmit"]);
       expect(hooks.PreToolUse[0].matcher).toBe(

@@ -14,6 +14,11 @@ directory containing `SKILL.md` with YAML `name` and `description`; use lowercas
 names matching their directory. Clients load skill bodies on demand. Instructions
 are guidance; loading them does not enforce code language or resource limits.
 
+Codex receives skills, AGENTS.md and MCP only. The Bun adapter does not ship
+lifecycle hook files or register a hooks manifest. The owner's user configuration
+disables the optional Codex hooks feature; active-session state can require a
+restart before the disabled feature takes effect. Execution policy is separate.
+
 Gemini CLI and OpenCode both discover project `.agents/skills/` and user
 `~/.agents/skills/`. Gemini gives this alias precedence over `.gemini/skills/`
 within the same scope. OpenCode additionally supports `.opencode/skills/` and

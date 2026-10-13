@@ -5,6 +5,9 @@ description: The Aphrody runtime for Claude Code, Codex, Gemini CLI, OpenCode an
 
 `bun agent-plugin` integrates the Aphrody runtime with Claude Code, Codex, Gemini CLI, OpenCode and local-model harnesses. Rules, skills and command rewriting have one source; each harness gets its native configuration and event protocol. Antigravity (`agy`) remains a separate adapter.
 
+Codex receives MCP, skills and `AGENTS.md`. Its Bun plugin ships no lifecycle hooks
+and performs no automatic shell-command rewriting.
+
 - the runtime's MCP server, `bun mcp`, over stdio;
 - hooks that run `bun`, `bunx` and `bun uv` instead of `node`, `npm`, `npx`, `yarn`, `pnpm`, `pip` and `python`, and `bun bd test` instead of `bun test` inside a Bun checkout;
 - skills for building, testing and navigating Bun, generated from the repository.

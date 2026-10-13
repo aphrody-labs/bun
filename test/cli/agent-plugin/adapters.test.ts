@@ -23,7 +23,8 @@ test("adapters share skills but use native harness schemas", () => {
   expect(files.has("opencode/hooks/hooks.json")).toBe(false);
   expect(files.has("local/hooks/hooks.json")).toBe(false);
   expect(String(files.get("opencode/plugins/bun.ts"))).toContain('"../hooks/rewrite.ts"');
-  expect(json("codex/hooks/hooks.json").hooks.SessionStart[0].matcher).toBeUndefined();
+  expect([...files.keys()].some(path => path.startsWith("codex/hooks/"))).toBe(false);
+  expect(json("codex/.codex-plugin/plugin.json").hooks).toBeUndefined();
 });
 
 test("OpenCode native callback delegates rewriting and preserves unrelated arguments", async () => {

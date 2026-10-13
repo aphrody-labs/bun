@@ -21,6 +21,10 @@ raw sessions, cookies, datasets or model weights belong in this fiche.
   registers adapters without changing the selected provider/model.
 - `src/hooks/rewrite.ts` owns command conversion. OpenCode delegates via its
   native callback; command-hook clients delegate via `src/hooks/pre-tool-use.ts`.
+- The owner removed Codex lifecycle hooks. The repository has no `.codex/hooks.json`
+  or formatter hook, and the Codex plugin ships no hooks directory or manifest
+  registration. User hook state was removed and `features.hooks` disabled.
+  This is independent of the tool's execution-policy rejection of recursive deletion.
 - Antigravity (`agy`) is distinct from Gemini CLI (`gemini`): native plugin.json,
   hook groups and camelCase toolCall inputs vs a Gemini extension and BeforeTool.
   Do not use GEMINI.md or a Gemini manifest to qualify Antigravity.
@@ -48,7 +52,8 @@ declaration gate still checks the real compiler contract.
   during this batch; runtime behavior is a separate changed-binary qualification.
 - Native plugin adapters have local generation, hook, install/uninstall and ownership
   tests. The OpenCode callback has a direct behavioral test using the shared engine.
-  The final scoped pass has 36 passing plugin tests, including eight adapter tests.
+  The adapter batch passed 36 plugin tests. The subsequent removal of Codex hooks
+  passed 14 focused generation/adapter tests; no runtime or type source changed.
 - The installed runtime's embedded agent-plugin launcher has a missing module.
   Use the checkout's plugin CLI for this batch; do not claim embedded-launcher repair.
 - A build launched by automatic command rewriting encountered a missing sccache

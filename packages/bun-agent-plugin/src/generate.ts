@@ -537,7 +537,10 @@ export function generate(options: GenerateOptions): Files {
   const hook = (script: string, t: string, root: string) =>
     `bun --no-install --no-env-file "${root}/hooks/${script}.ts" ${t}`;
   for (const t of TARGETS) {
-    for (const [rel, content] of common) files.set(`${t}/${rel}`, content);
+    for (const [rel, content] of common) {
+      if (t === "codex" && rel.startsWith("hooks/")) continue;
+      files.set(`${t}/${rel}`, content);
+    }
     files.set(`${t}/meta.json`, meta);
   }
 
@@ -621,17 +624,15 @@ export function generate(options: GenerateOptions): Files {
       keywords,
       interface: {
         displayName: DISPLAY_NAME,
-        shortDescription: "Aphrody: MCP, hooks, skills",
+        shortDescription: "Aphrody: MCP, skills",
         developerName: AUTHOR.name,
         category: "Developer Tools",
       },
       skills: "./skills/",
       mcpServers: "./.mcp.json",
-      hooks: "./hooks/hooks.json",
     }),
   );
   files.set("codex/.mcp.json", json(mcp));
-  files.set("codex/hooks/hooks.json", json(commandHooks("codex", "${PLUGIN_ROOT}")));
   files.set("codex/AGENTS.md", instructions);
   files.set(
     "codex/config.toml",

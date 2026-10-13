@@ -24,6 +24,8 @@ Package-owned skills take precedence. Neutral repository skill directories are r
 
 ## Installation boundaries
 
+Codex receives no lifecycle hooks: its adapter contains MCP, skills and AGENTS.md.
+
 The generated bundle lives in `$BUN_INSTALL/agent-plugin`. Codex and Claude retain native marketplace registration. OpenCode merges its own MCP schema and installs a native callback delegating to the shared rewriting engine. Gemini uses a native extension; Antigravity uses its own plugin. Existing providers, authentication, raw sessions and unrelated configuration remain in their isolated stores.
 
 Uninstall removes owned integrations while retaining modified OpenCode skills and other MCP servers. Installation refuses conflicting OpenCode ownership or an ambiguous JSONC configuration. CLI registration failures are reported; generating a valid bundle does not prove execution in every installed client.
