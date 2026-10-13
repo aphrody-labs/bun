@@ -2,6 +2,8 @@ import site from "../labs/video-data-site.html";
 import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { VideoCatalog, defaultVideoCatalogPath } from "./video-catalog";
+import { NeonVideoCatalog } from "./video-neon-catalog";
+import { openConfiguredVideoCatalog } from "./video-neon-runtime";
 import { UnifiedVideoPipeline } from "./video-workflow";
 import { importCapturedVideoNetwork } from "./video-capture";
 import {
@@ -14,7 +16,7 @@ import { validateVideoTask, type VideoRenderTask } from "./video-worker-task";
 import type { VideoWorkerPoolOptions } from "./video-workers";
 
 export interface VideoDataSiteOptions {
-  catalog?: VideoCatalog;
+  catalog?: VideoCatalog | NeonVideoCatalog;
   dbPath?: string;
   port?: number;
   privateRoot?: string;
@@ -62,9 +64,10 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
   mkdirSync(privateRoot, { recursive: true });
   mkdirSync(rawRoot, { recursive: true });
   const ownsCatalog = !options.catalog;
-  const catalog = options.catalog ?? new VideoCatalog(options.dbPath);
+  const catalog = options.catalog ?? (await openConfiguredVideoCatalog({ sqlitePath: options.dbPath }));
+  const queryCatalog = (query: VideoDatasetQuery) =>
+    catalog instanceof NeonVideoCatalog ? queryVideoDataset(catalog, query) : queryVideoDataset(catalog, query);
   let mutationEpoch = 0;
-  let acceptingIDs: string[] | undefined;
   const pipeline = new UnifiedVideoPipeline({
     catalog,
     workers: options.workers ?? 2,
@@ -73,7 +76,7 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
     runner: options.runner,
     onEvent(event) {
       mutationEpoch++;
-      if (event.type === "queued") acceptingIDs?.push(event.jobId);
+      void event;
     },
   });
   const cache = createVideoDatasetCache({ sqlitePath: join(privateRoot, "cache.sqlite"), redisURL: options.redisURL });
@@ -82,13 +85,14 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
   try {
     if (options.initialize !== false) await pipeline.initialize();
     await cache.probe();
-    catalog.db.exec(
-      "CREATE TABLE IF NOT EXISTS video_site_exports(id TEXT PRIMARY KEY,format TEXT NOT NULL,path TEXT NOT NULL,createdAt INTEGER NOT NULL,documents INTEGER NOT NULL,records INTEGER NOT NULL,bytes INTEGER NOT NULL,sha256 TEXT NOT NULL)",
-    );
+    if (catalog instanceof VideoCatalog)
+      catalog.db.exec(
+        "CREATE TABLE IF NOT EXISTS video_site_exports(id TEXT PRIMARY KEY,format TEXT NOT NULL,path TEXT NOT NULL,createdAt INTEGER NOT NULL,documents INTEGER NOT NULL,records INTEGER NOT NULL,bytes INTEGER NOT NULL,sha256 TEXT NOT NULL)",
+      );
   } catch (error) {
     cache.close();
     await pipeline.close();
-    if (ownsCatalog) catalog.close();
+    if (ownsCatalog) await catalog.close();
     throw error;
   }
   let server: Bun.Server<undefined>;
@@ -103,10 +107,10 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
     try {
       if (url.pathname === "/api/overview") {
         if (request.method !== "GET") return httpError(405);
-        const sources = queryVideoDataset(catalog, { table: "sources", limit: 1 }).total;
-        const entries = queryVideoDataset(catalog, { table: "capture_entries", limit: 1 }).total;
-        const resources = queryVideoDataset(catalog, { table: "captured_resources", limit: 1 }).total;
-        const jobs = queryVideoDataset(catalog, { table: "jobs", limit: 1 }).total;
+        const sources = (await queryCatalog({ table: "sources", limit: 1 })).total;
+        const entries = (await queryCatalog({ table: "capture_entries", limit: 1 })).total;
+        const resources = (await queryCatalog({ table: "captured_resources", limit: 1 })).total;
+        const jobs = (await queryCatalog({ table: "jobs", limit: 1 })).total;
         return json({
           sources,
           entries,
@@ -122,7 +126,8 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
         if (Number(request.headers.get("content-length") ?? 0) > 4 * 1024 * 1024) return httpError(413);
         const query = (await request.json()) as VideoDatasetQuery;
         // Validate before lookup; a cached entry can never widen the SQL allowlist.
-        const result = queryVideoDataset(catalog, query);
+        const result = await queryCatalog(query);
+        if (catalog instanceof NeonVideoCatalog) return json(result);
         const version = catalog.db.query<{ data_version: number }, []>("PRAGMA data_version").get()?.data_version ?? 0;
         const key = JSON.stringify({ query, mutationEpoch, version });
         try {
@@ -182,18 +187,29 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
           includeText: input.includeText,
           sourceId: input.sourceId,
         });
-        catalog.db
-          .query("INSERT INTO video_site_exports VALUES(?,?,?,?,?,?,?,?)")
-          .run(
+        if (catalog instanceof NeonVideoCatalog)
+          await catalog.recordSiteExport({
             id,
-            input.format,
-            output,
-            Date.now(),
-            exported.documents,
-            exported.records,
-            exported.bytes,
-            exported.sha256,
-          );
+            format: input.format,
+            path: output,
+            documents: exported.documents,
+            records: exported.records,
+            bytes: exported.bytes,
+            sha256: exported.sha256,
+          });
+        else
+          catalog.db
+            .query("INSERT INTO video_site_exports VALUES(?,?,?,?,?,?,?,?)")
+            .run(
+              id,
+              input.format,
+              output,
+              Date.now(),
+              exported.documents,
+              exported.records,
+              exported.bytes,
+              exported.sha256,
+            );
         return json(
           {
             id,
@@ -211,19 +227,23 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
         if (!["GET", "HEAD"].includes(request.method)) return httpError(405);
         const id = url.pathname.slice("/api/exports/".length);
         if (!uuidPattern.test(id)) return httpError(404);
-        const record = catalog.db
-          .query<{ format: keyof typeof formats; path: string }, [string]>(
-            "SELECT format,path FROM video_site_exports WHERE id=?",
-          )
-          .get(id);
+        const record =
+          catalog instanceof NeonVideoCatalog
+            ? await catalog.getSiteExport(id)
+            : catalog.db
+                .query<{ format: keyof typeof formats; path: string }, [string]>(
+                  "SELECT format,path FROM video_site_exports WHERE id=?",
+                )
+                .get(id);
         if (!record || !Object.hasOwn(formats, record.format)) return httpError(404);
+        const format = record.format as keyof typeof formats;
         const inside = relative(join(privateRoot, "exports"), resolve(record.path));
         if (inside.startsWith("..") || isAbsolute(inside) || !(await Bun.file(record.path).exists()))
           return httpError(404);
         return new Response(request.method === "HEAD" ? null : Bun.file(record.path), {
           headers: {
-            "content-type": formats[record.format].mime,
-            "content-disposition": `attachment; filename="dataset-${id}.${formats[record.format].extension}"`,
+            "content-type": formats[format].mime,
+            "content-disposition": `attachment; filename="dataset-${id}.${formats[format].extension}"`,
             "cache-control": "no-store",
             "x-content-type-options": "nosniff",
           },
@@ -243,20 +263,17 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
         if (!Array.isArray(jobs) || !jobs.length || jobs.length > 1000) return httpError(400);
         for (const job of jobs) validateVideoTask(job);
         const ids: string[] = [];
-        acceptingIDs = ids;
-        try {
-          for (const job of jobs) {
-            const promise = pipeline.render(job);
-            const tracked = promise
-              .then(
-                () => undefined,
-                () => undefined,
-              )
-              .finally(() => active.delete(tracked));
-            active.add(tracked);
-          }
-        } finally {
-          acceptingIDs = undefined;
+        for (const job of jobs) {
+          const receipt = pipeline.workers.enqueue(job);
+          const tracked = receipt.result
+            .then(
+              () => undefined,
+              () => undefined,
+            )
+            .finally(() => active.delete(tracked));
+          active.add(tracked);
+          await receipt.accepted;
+          ids.push(receipt.id);
         }
         mutationEpoch++;
         return json({ accepted: jobs.length, ids }, 202);
@@ -288,7 +305,7 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
   } catch (error) {
     cache.close();
     await pipeline.close();
-    if (ownsCatalog) catalog.close();
+    if (ownsCatalog) await catalog.close();
     throw error;
   }
   const close = async () => {
@@ -298,7 +315,7 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
     await pipeline.close();
     await Promise.allSettled(active);
     cache.close();
-    if (ownsCatalog) catalog.close();
+    if (ownsCatalog) await catalog.close();
   };
   return {
     server,

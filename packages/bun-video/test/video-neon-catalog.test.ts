@@ -1,10 +1,15 @@
 import { expect, test } from "bun:test";
+import { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createNeonClient } from "../../bun-plugin-neon/src";
+import { registerObservedCrunchyrollWatchlist } from "../src/crunchyroll-watchlist";
 import { VideoCatalog } from "../src/video-catalog";
 import { importCapturedVideoNetwork } from "../src/video-capture";
+import { exportVideoDataset, queryVideoDataset } from "../src/video-dataset";
+import { createVideoDataSite } from "../src/video-data-site";
+import { exportPublicVideoCatalog } from "../src/video-publish";
 import { NeonVideoCatalog } from "../src/video-neon-catalog";
 import { importVideoCatalog, snapshotVideoCatalog } from "../src/video-neon-migrate";
 import { VideoWorkerPool } from "../src/video-workers";
@@ -94,6 +99,47 @@ test.skipIf(!connectionString)(
         expect(JSON.stringify(entries)).not.toContain("private-cookie");
         expect(JSON.stringify(entries)).not.toContain("signed=private");
         expect((await catalog.listSources()).length).toBe(2);
+        const observed = await registerObservedCrunchyrollWatchlist(catalog, [
+          { url: "https://www.crunchyroll.com/watch/G6W4Z0EGR?private=discarded" },
+        ]);
+        expect(observed.addedSources).toBe(1);
+        expect(
+          (
+            await registerObservedCrunchyrollWatchlist(catalog, [
+              { url: "https://www.crunchyroll.com/watch/G6W4Z0EGR" },
+            ])
+          ).existingSources,
+        ).toBe(1);
+        expect((await catalog.listSources()).length).toBe(3);
+        const publicSources = await queryVideoDataset(catalog, { table: "sources", limit: 10 });
+        expect(publicSources.total).toBe(3);
+        expect(JSON.stringify(publicSources)).not.toContain("privateRef");
+        const exported = await exportVideoDataset(catalog, {
+          format: "json",
+          output: join(directory, "dataset.json"),
+          includeText: true,
+        });
+        expect(exported.records).toBeGreaterThan(0);
+        expect(await Bun.file(exported.output).text()).not.toContain("private-cookie");
+        const publication = await exportPublicVideoCatalog(catalog, join(directory, "public.sqlite"));
+        expect(publication.records).toBeGreaterThan(0);
+        using publicCatalog = new Database(publication.output, { readonly: true });
+        expect(publicCatalog.query("SELECT * FROM sources LIMIT 1").get()).not.toHaveProperty("privateRef");
+        const site = await createVideoDataSite({ catalog, privateRoot: join(directory, "site") });
+        try {
+          const overview = await fetch(new URL("api/overview", site.url));
+          expect(overview.status).toBe(200);
+          expect((await overview.json()).sources).toBe(3);
+          const response = await fetch(new URL("api/query", site.url), {
+            method: "POST",
+            headers: { "content-type": "application/json", origin: new URL(site.url).origin },
+            body: JSON.stringify({ table: "sources", limit: 10 }),
+          });
+          expect(response.status).toBe(200);
+          expect((await response.json()).total).toBe(3);
+        } finally {
+          await site.close();
+        }
       } finally {
         await sql.close();
       }
@@ -101,5 +147,5 @@ test.skipIf(!connectionString)(
       rmSync(directory, { recursive: true, force: true });
     }
   },
-  30000,
+  60000,
 );

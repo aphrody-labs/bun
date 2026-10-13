@@ -1,7 +1,7 @@
 /// <reference path="./media-runtime.d.ts" />
 import { Database } from "bun:sqlite";
 import { dirname, join, resolve, relative } from "node:path";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 
 export type VideoJobStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
 export type QualificationStatus = "passed" | "failed" | "blocked" | "not_tested";
@@ -86,6 +86,12 @@ export class VideoCatalog {
   readonly db: Database;
 
   constructor(path: string = defaultVideoCatalogPath()) {
+    if (
+      path !== ":memory:" &&
+      (Bun.env.BUN_VIDEO_CATALOG_BACKEND === "neon" ||
+        existsSync(join(dirname(dirname(dirname(defaultVideoCatalogPath()))), "config", "bun-video-neon.active")))
+    )
+      throw new Error("Bun Video Neon cutover forbids SQLite writers");
     if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
     this.db = new Database(path, { create: true, strict: true });
     this.db.exec("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;");

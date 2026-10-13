@@ -4,10 +4,12 @@ import type {
   VideoJob,
   VideoJobStatus,
   VideoProvider,
+  VideoQualification,
   VideoSource,
 } from "./video-catalog";
 import { join } from "node:path";
 import type { NormalizedCapturedRequest } from "./video-capture";
+import type { VideoDatasetQueryResult, VideoDatasetTable } from "./video-dataset";
 
 type Row = Record<string, unknown>;
 
@@ -50,6 +52,81 @@ export class NeonVideoCatalog {
     return new NeonVideoCatalog(sql);
   }
 
+  async transaction<T>(callback: (catalog: NeonVideoCatalog) => Promise<T>): Promise<T> {
+    return this.#sql.begin(async tx => {
+      await tx.unsafe("SELECT pg_advisory_xact_lock(hashtext('bun_video_catalog'))");
+      return callback(new NeonVideoCatalog(tx as Bun.SQL));
+    });
+  }
+
+  async selectPublicDataset(plan: {
+    table: VideoDatasetTable;
+    columns: string[];
+    values: (string | number | null)[];
+    conditions: string[];
+    limit: number;
+    offset: number;
+  }): Promise<VideoDatasetQueryResult> {
+    const clause = plan.conditions.length ? ` WHERE ${plan.conditions.join(" AND ")}` : "";
+    let parameter = 0;
+    const boundClause = clause.replaceAll("?", () => `$${++parameter}`);
+    const rows = await this.#sql.unsafe<{ total: number }[]>(
+      `SELECT COUNT(*)::integer AS total FROM bun_video."${plan.table}"${boundClause}`,
+      plan.values,
+    );
+    const data = await this.#sql.unsafe<Record<string, unknown>[]>(
+      `SELECT ${plan.columns.map(column => `"${column}"`).join(",")} FROM bun_video."${plan.table}"${boundClause} ORDER BY "id" LIMIT $${parameter + 1} OFFSET $${parameter + 2}`,
+      [...plan.values, plan.limit, plan.offset],
+    );
+    return {
+      table: plan.table,
+      columns: plan.columns,
+      rows: data,
+      total: rows[0]?.total ?? 0,
+      limit: plan.limit,
+      offset: plan.offset,
+    };
+  }
+
+  async listDocumentResources(sourceId?: string): Promise<
+    {
+      sourceId: string;
+      entryIndex: number;
+      kind: string;
+      bodyRef: string;
+      bytes: number;
+      privateRef: string;
+    }[]
+  > {
+    return this.#sql.unsafe(
+      'SELECT r."sourceId",r."entryIndex",r."kind",r."bodyRef",r."bytes",s."privateRef" FROM bun_video.captured_resources r JOIN bun_video.sources s ON s."id"=r."sourceId" WHERE ($1::text IS NULL OR r."sourceId"=$1) ORDER BY r."sourceId",r."entryIndex"',
+      [sourceId ?? null],
+    );
+  }
+
+  async recordSiteExport(input: {
+    id: string;
+    format: string;
+    path: string;
+    documents: number;
+    records: number;
+    bytes: number;
+    sha256: string;
+  }): Promise<void> {
+    await this.#sql.unsafe(
+      'INSERT INTO bun_video.video_site_exports ("id","format","path","createdAt","documents","records","bytes","sha256") VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+      [input.id, input.format, input.path, Date.now(), input.documents, input.records, input.bytes, input.sha256],
+    );
+  }
+
+  async getSiteExport(id: string): Promise<{ format: string; path: string } | null> {
+    const rows = await this.#sql.unsafe<{ format: string; path: string }[]>(
+      'SELECT "format","path" FROM bun_video.video_site_exports WHERE "id"=$1',
+      [id],
+    );
+    return rows[0] ?? null;
+  }
+
   async registerProvider(
     input: Omit<VideoProvider, "status" | "sourceRef"> & Partial<Pick<VideoProvider, "status" | "sourceRef">>,
   ): Promise<VideoProvider> {
@@ -62,6 +139,15 @@ export class NeonVideoCatalog {
 
   async listProviders(): Promise<VideoProvider[]> {
     return this.#sql.unsafe<VideoProvider[]>('SELECT * FROM bun_video.providers ORDER BY "id"');
+  }
+
+  async listQualifications(sourceId?: string): Promise<VideoQualification[]> {
+    return sourceId
+      ? this.#sql.unsafe<VideoQualification[]>(
+          'SELECT * FROM bun_video.qualifications WHERE "sourceId"=$1 ORDER BY "createdAt","id"',
+          [sourceId],
+        )
+      : this.#sql.unsafe<VideoQualification[]>('SELECT * FROM bun_video.qualifications ORDER BY "createdAt","id"');
   }
 
   async registerSource(input: {

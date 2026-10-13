@@ -1,5 +1,7 @@
 import { join, dirname } from "node:path";
 import { VideoCatalog, defaultVideoCatalogPath, type QualificationStatus } from "./video-catalog";
+import { NeonVideoCatalog } from "./video-neon-catalog";
+import { openConfiguredVideoCatalog } from "./video-neon-runtime";
 import { describeVideoAPIs, loadVideoAPI, type VideoAPIFamily } from "./video-api";
 import { VideoWorkerPool, type VideoWorkerPoolOptions } from "./video-workers";
 import type { VideoRenderTask } from "./video-worker-task";
@@ -10,15 +12,48 @@ import type { VideoDataSiteOptions } from "./video-data-site";
 
 /** Canonical application workflow; libraries keep their native implementation owners. */
 export class UnifiedVideoPipeline {
-  readonly catalog: VideoCatalog;
+  readonly catalog: VideoCatalog | NeonVideoCatalog;
   readonly workers: VideoWorkerPool;
   readonly #ownsCatalog: boolean;
-  constructor(options: Omit<VideoWorkerPoolOptions, "catalog"> & { catalog?: VideoCatalog; dbPath?: string } = {}) {
-    this.#ownsCatalog = !options.catalog;
+  constructor(
+    options: Omit<VideoWorkerPoolOptions, "catalog"> & {
+      catalog?: VideoCatalog | NeonVideoCatalog;
+      dbPath?: string;
+      closeCatalog?: boolean;
+    } = {},
+  ) {
+    this.#ownsCatalog = options.closeCatalog ?? !options.catalog;
     this.catalog = options.catalog ?? new VideoCatalog(options.dbPath);
     this.workers = new VideoWorkerPool({ ...options, catalog: this.catalog });
   }
   async initialize() {
+    if (this.catalog instanceof NeonVideoCatalog) {
+      const [capabilities, providers] = await Promise.all([
+        this.catalog.selectPublicDataset({
+          table: "capabilities",
+          columns: ["id"],
+          values: [],
+          conditions: [],
+          limit: 1,
+          offset: 0,
+        }),
+        this.catalog.selectPublicDataset({
+          table: "providers",
+          columns: ["id"],
+          values: [],
+          conditions: [],
+          limit: 1,
+          offset: 0,
+        }),
+      ]);
+      return {
+        database: "bun_video",
+        capabilities: capabilities.total,
+        providers: providers.total,
+        apiFamilies: describeVideoAPIs().length,
+        qualification: "catalog-only" as const,
+      };
+    }
     const capabilities = await this.catalog.seedCapabilities();
     const providers = await this.catalog.importYtDlpProviders();
     return {
@@ -62,7 +97,7 @@ export class UnifiedVideoPipeline {
     const { loadVideoCookies, describeVideoCookies } = await import("./video-cookies");
     const cookies = await loadVideoCookies(privatePath);
     const summary = describeVideoCookies(cookies, url);
-    const source = this.catalog.registerSource({
+    const source = await this.catalog.registerSource({
       privateRef: privatePath,
       kind: "capture",
       title: "Private Crunchyroll cookie input",
@@ -79,7 +114,9 @@ export class UnifiedVideoPipeline {
   }
   async queryDataset(request: VideoDatasetQuery) {
     const { queryVideoDataset } = await import("./video-dataset");
-    return queryVideoDataset(this.catalog, request);
+    return this.catalog instanceof NeonVideoCatalog
+      ? queryVideoDataset(this.catalog, request)
+      : queryVideoDataset(this.catalog, request);
   }
   async exportDataset(options: Parameters<typeof exportVideoDataset>[1]) {
     const { exportVideoDataset } = await import("./video-dataset");
@@ -102,7 +139,7 @@ export class UnifiedVideoPipeline {
         /(^|\.)(example\.(com|org|net)|localhost)$/.test(url.hostname)
       )
         throw new TypeError("Real HTTP(S) site URL without credentials required");
-      const source = this.catalog.registerSource({
+      const source = await this.catalog.registerSource({
         privateRef: join(directory, "sources.json"),
         kind: "url",
         title: `Site ${index + 1}`,
@@ -127,7 +164,7 @@ export class UnifiedVideoPipeline {
           }),
         );
       }
-      this.catalog.recordQualification({
+      await this.catalog.recordQualification({
         sourceId: source.id,
         status,
         evidenceRef,
@@ -139,7 +176,7 @@ export class UnifiedVideoPipeline {
   }
   async close() {
     await this.workers.close();
-    if (this.#ownsCatalog) this.catalog.close();
+    if (this.#ownsCatalog) await this.catalog.close();
   }
   async [Symbol.asyncDispose]() {
     await this.close();
@@ -147,7 +184,18 @@ export class UnifiedVideoPipeline {
 }
 
 export function createUnifiedVideoPipeline(
-  options: Omit<VideoWorkerPoolOptions, "catalog"> & { catalog?: VideoCatalog; dbPath?: string } = {},
+  options: Omit<VideoWorkerPoolOptions, "catalog"> & {
+    catalog?: VideoCatalog | NeonVideoCatalog;
+    dbPath?: string;
+    closeCatalog?: boolean;
+  } = {},
 ) {
   return new UnifiedVideoPipeline(options);
+}
+
+export async function openConfiguredUnifiedVideoPipeline(
+  options: Omit<VideoWorkerPoolOptions, "catalog"> & { dbPath?: string } = {},
+) {
+  const catalog = await openConfiguredVideoCatalog({ sqlitePath: options.dbPath });
+  return new UnifiedVideoPipeline({ ...options, catalog, closeCatalog: true });
 }

@@ -2,6 +2,7 @@ import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import type { VideoCatalog } from "./video-catalog";
+import { NeonVideoCatalog } from "./video-neon-catalog";
 import { exportVideoDataset, queryVideoDataset, type VideoDatasetTable } from "./video-dataset";
 
 const tables: VideoDatasetTable[] = [
@@ -66,9 +67,19 @@ export function validateVideoPublicationTarget(bucket: string, prefix: string, p
 }
 
 /** Builds a fresh portable database from the public SELECT allowlist, never copying the private catalog. */
-export function exportPublicVideoCatalog(catalog: VideoCatalog, output: string) {
+export function exportPublicVideoCatalog(catalog: VideoCatalog, output: string): { output: string; records: number };
+export function exportPublicVideoCatalog(
+  catalog: NeonVideoCatalog,
+  output: string,
+): Promise<{ output: string; records: number }>;
+export function exportPublicVideoCatalog(
+  catalog: VideoCatalog | NeonVideoCatalog,
+  output: string,
+): { output: string; records: number } | Promise<{ output: string; records: number }>;
+export function exportPublicVideoCatalog(catalog: VideoCatalog | NeonVideoCatalog, output: string) {
   if (!isAbsolute(output) || output.includes("\0") || existsSync(output))
     throw new TypeError("Fresh absolute SQLite output required");
+  if (catalog instanceof NeonVideoCatalog) return exportPublicVideoCatalogNeon(catalog, output);
   const db = new Database(output, { create: true });
   let records = 0;
   try {
@@ -96,9 +107,37 @@ export function exportPublicVideoCatalog(catalog: VideoCatalog, output: string) 
   return { output, records };
 }
 
+async function exportPublicVideoCatalogNeon(catalog: NeonVideoCatalog, output: string) {
+  const db = new Database(output, { create: true });
+  let records = 0;
+  try {
+    db.exec(
+      "PRAGMA journal_mode=DELETE; CREATE TABLE publication_metadata(format TEXT NOT NULL,generatedAt TEXT NOT NULL); INSERT INTO publication_metadata VALUES('bun-video-public-catalog-v1',datetime('now'));",
+    );
+    for (const table of tables) {
+      const first = await queryVideoDataset(catalog, { table, limit: 1000 });
+      if (first.total > 1000000) throw new RangeError("Catalog exceeds publication bounds");
+      db.exec(`CREATE TABLE "${table}" (${first.columns.map(column => `"${column}"`).join(",")});`);
+      const insert = db.query(`INSERT INTO "${table}" VALUES(${first.columns.map(() => "?").join(",")})`);
+      for (let offset = 0; offset < first.total; offset += 1000) {
+        const page = offset === 0 ? first : await queryVideoDataset(catalog, { table, limit: 1000, offset });
+        db.transaction(() => {
+          for (const row of page.rows) {
+            insert.run(...first.columns.map(column => row[column] as string | number | null));
+            records++;
+          }
+        })();
+      }
+    }
+  } finally {
+    db.close();
+  }
+  return { output, records };
+}
+
 /** Generates curated exports itself; arbitrary local files, raw HARs and secret databases cannot enter this API. */
 export async function publishBunVideoExports(
-  catalog: VideoCatalog,
+  catalog: VideoCatalog | NeonVideoCatalog,
   options: {
     outputDirectory: string;
     bucket?: string;
@@ -116,7 +155,7 @@ export async function publishBunVideoExports(
   const { createR2Client, loadCloudflareEnvironment } = await import("@aphrody/bun-cloudflare/api");
   const work = join(options.outputDirectory, crypto.randomUUID());
   mkdirSync(work, { recursive: true });
-  const snapshot = exportPublicVideoCatalog(catalog, join(work, "catalog.sqlite"));
+  const snapshot = await exportPublicVideoCatalog(catalog, join(work, "catalog.sqlite"));
   const generated: { name: string; path: string; type: string }[] = [
     { name: "catalog.sqlite", path: snapshot.output, type: "application/vnd.sqlite3" },
   ];

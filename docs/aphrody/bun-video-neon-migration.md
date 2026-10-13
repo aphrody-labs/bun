@@ -37,10 +37,20 @@ en ne conservant que l'hôte, les comptages et les chemins privés vers les corp
 Une branche synthétique a validé cette écriture et l'absence des cookies et
 paramètres d'URL signés dans les lignes SQL ; elle a été supprimée.
 
-La bascule exige de convertir les writers et lecteurs de `VideoCatalog`,
-actuellement synchrones sur `bun:sqlite`, vers des opérations `Bun.SQL`
-asynchrones, puis de figer les writers SQLite, importer un dernier snapshot,
-vérifier les comptages et l'empreinte, et déployer les consommateurs sur Neon.
+La watchlist, les requêtes/exportations filtrées, la publication dérivée et le
+site local loopback acceptent désormais le catalogue Neon. Les CLI de la
+watchlist et des workers lisent le backend canonique par
+`openConfiguredVideoCatalog` ; `BUN_VIDEO_CATALOG_BACKEND=neon` et le fichier
+privé de connexion sélectionnent Neon. Le marqueur privé
+`$APHRODY_HOME/config/bun-video-neon.active`, à poser uniquement après le
+dernier import vérifié, interdit ensuite la création implicite de SQLite.
+`VideoCatalog` refuse aussi toute nouvelle ouverture disque dans ce mode.
+Le site local et les exports ont passé un essai HTTP sur une branche Neon
+synthétique, ensuite supprimée.
+
+La bascule exige encore de figer les writers SQLite, importer un dernier snapshot,
+vérifier les comptages et l'empreinte, poser le marqueur de cutover et relancer
+les consommateurs avec le fichier de connexion Neon.
 La seule copie SQLite conservée ensuite serait la sauvegarde qualifiée. Copier
 le catalogue maintenant créerait deux sources de vérité divergentes. Le site
 public `aphrody.app` présente Bun Video, mais son Worker n'accède pas à ce

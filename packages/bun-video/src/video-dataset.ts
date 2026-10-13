@@ -1,9 +1,10 @@
 import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import type { VideoCatalog } from "./video-catalog";
+import { VideoCatalog } from "./video-catalog";
+import { NeonVideoCatalog } from "./video-neon-catalog";
 import { CrawlerCache } from "./cache";
 
-const columnsByTable = {
+export const columnsByTable = {
   sources: ["id", "providerId", "kind"],
   providers: ["id", "name", "family", "status"],
   capabilities: ["id", "family", "exportName", "status"],
@@ -70,7 +71,7 @@ export interface VideoDatasetExportResult {
 const tableExists = (catalog: VideoCatalog, table: string) =>
   !!catalog.db.query("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table);
 /** Public metadata SELECT only. Values use bindings; table and column identifiers are a closed allowlist. */
-export function queryVideoDataset(catalog: VideoCatalog, request: VideoDatasetQuery): VideoDatasetQueryResult {
+export function prepareVideoDatasetQuery(request: VideoDatasetQuery) {
   if (!Object.hasOwn(columnsByTable, request.table)) throw new TypeError("Unknown dataset table");
   const allowed: readonly string[] = columnsByTable[request.table];
   const columns = [...(request.columns ?? allowed)];
@@ -101,7 +102,22 @@ export function queryVideoDataset(catalog: VideoCatalog, request: VideoDatasetQu
     values.push(typeof value === "boolean" ? Number(value) : value);
     return `"${column}" = ?`;
   });
-  const result: VideoDatasetQueryResult = { table: request.table, columns, rows: [], total: 0, limit, offset };
+  return { table: request.table, columns, values, conditions, limit, offset };
+}
+
+export function queryVideoDataset(catalog: VideoCatalog, request: VideoDatasetQuery): VideoDatasetQueryResult;
+export function queryVideoDataset(
+  catalog: NeonVideoCatalog,
+  request: VideoDatasetQuery,
+): Promise<VideoDatasetQueryResult>;
+export function queryVideoDataset(
+  catalog: VideoCatalog | NeonVideoCatalog,
+  request: VideoDatasetQuery,
+): VideoDatasetQueryResult | Promise<VideoDatasetQueryResult> {
+  const { table, columns, values, conditions, limit, offset } = prepareVideoDatasetQuery(request);
+  if (catalog instanceof NeonVideoCatalog)
+    return catalog.selectPublicDataset({ table, columns, values, conditions, limit, offset });
+  const result: VideoDatasetQueryResult = { table, columns, rows: [], total: 0, limit, offset };
   if (!tableExists(catalog, request.table)) return result;
   const clause = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
   result.total = catalog.db
@@ -242,19 +258,23 @@ async function extractArticle(
 }
 
 async function documentsForCatalog(
-  catalog: VideoCatalog,
+  catalog: VideoCatalog | NeonVideoCatalog,
   includeText: boolean,
   sourceId?: string,
 ): Promise<{ documents: CuratedVideoDocument[]; excludedResources: number }> {
-  if (!includeText || !tableExists(catalog, "captured_resources")) return { documents: [], excludedResources: 0 };
-  const resources = catalog.db
-    .query<
-      { sourceId: string; entryIndex: number; kind: string; bodyRef: string; bytes: number; privateRef: string },
-      [string | null, string | null]
-    >(
-      `SELECT r.sourceId,r.entryIndex,r.kind,r.bodyRef,r.bytes,s.privateRef FROM captured_resources r JOIN sources s ON s.id=r.sourceId WHERE (? IS NULL OR r.sourceId=?) ORDER BY r.sourceId,r.entryIndex`,
-    )
-    .all(sourceId ?? null, sourceId ?? null);
+  if (!includeText || (catalog instanceof VideoCatalog && !tableExists(catalog, "captured_resources")))
+    return { documents: [], excludedResources: 0 };
+  const resources =
+    catalog instanceof NeonVideoCatalog
+      ? await catalog.listDocumentResources(sourceId)
+      : catalog.db
+          .query<
+            { sourceId: string; entryIndex: number; kind: string; bodyRef: string; bytes: number; privateRef: string },
+            [string | null, string | null]
+          >(
+            `SELECT r.sourceId,r.entryIndex,r.kind,r.bodyRef,r.bytes,s.privateRef FROM captured_resources r JOIN sources s ON s.id=r.sourceId WHERE (? IS NULL OR r.sourceId=?) ORDER BY r.sourceId,r.entryIndex`,
+          )
+          .all(sourceId ?? null, sourceId ?? null);
   const indexCache = new Map<
     string,
     {
@@ -332,7 +352,7 @@ async function documentsForCatalog(
 
 const sqlLiteral = (value: string) => `'${value.replaceAll("'", "''")}'`;
 export async function exportVideoDataset(
-  catalog: VideoCatalog,
+  catalog: VideoCatalog | NeonVideoCatalog,
   options: { format: "json" | "jsonl" | "sql" | "wiki"; output: string; includeText?: boolean; sourceId?: string },
 ): Promise<VideoDatasetExportResult> {
   if (
@@ -353,7 +373,10 @@ export async function exportVideoDataset(
           ? { id: options.sourceId }
           : undefined;
     for (let offset = 0; offset <= 1000000; offset += 1000) {
-      const page = queryVideoDataset(catalog, { table, where, limit: 1000, offset });
+      const page =
+        catalog instanceof NeonVideoCatalog
+          ? await queryVideoDataset(catalog, { table, where, limit: 1000, offset })
+          : queryVideoDataset(catalog, { table, where, limit: 1000, offset });
       if (page.total > 1000000) throw new RangeError("Dataset export exceeds the one-million-record limit");
       rows.push(...page.rows);
       if (rows.length >= page.total || !page.rows.length) break;

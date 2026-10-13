@@ -7,7 +7,7 @@ import {
   registerObservedCrunchyrollWatchlist,
   type CrunchyrollWatchlistEntry,
 } from "./crunchyroll-watchlist";
-import { VideoCatalog } from "./video-catalog";
+import { openConfiguredVideoCatalog } from "./video-neon-runtime";
 
 export const CRUNCHYROLL_CLI_HELP = `Usage: bun-video-crunchyroll help|watch <official URL>|serve [--hostname <host>] [--port <0..65535>]
        bun-video-crunchyroll watchlist metadata|import <observed.json> [--catalog <path>] [--timeout <1..300000 ms>]
@@ -82,9 +82,9 @@ if (import.meta.main) {
       const bytes = await file.bytes();
       if (bytes.length > 4 * 1024 * 1024) throw new RangeError("Observed references exceed 4 MiB");
       const entries: CrunchyrollWatchlistEntry[] = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-      using catalog = new VideoCatalog(options.catalogPath);
+      await using catalog = await openConfiguredVideoCatalog({ sqlitePath: options.catalogPath });
       if (options.operation === "metadata")
-        console.log(JSON.stringify(registerObservedCrunchyrollWatchlist(catalog, entries)));
+        console.log(JSON.stringify(await registerObservedCrunchyrollWatchlist(catalog, entries)));
       else {
         const accessToken = process.env.BUN_VIDEO_CRUNCHYROLL_ACCESS_TOKEN;
         if (!accessToken) throw new TypeError("Import requires an explicitly configured upstream access token");

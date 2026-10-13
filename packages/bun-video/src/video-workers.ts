@@ -144,6 +144,19 @@ export class VideoWorkerPool {
   }
 
   submit(input: VideoRenderTask, signal?: AbortSignal): Promise<VideoRenderResult> {
+    const receipt = this.enqueue(input, signal);
+    void receipt.accepted.catch(() => {});
+    return receipt.result;
+  }
+
+  enqueue(
+    input: VideoRenderTask,
+    signal?: AbortSignal,
+  ): {
+    id: string;
+    accepted: Promise<void>;
+    result: Promise<VideoRenderResult>;
+  } {
     if (this.#closed) throw new Error("Video worker pool is closed");
     signal?.throwIfAborted();
     const task = validateVideoTask(structuredClone(input));
@@ -152,8 +165,9 @@ export class VideoWorkerPool {
     const id = crypto.randomUUID();
     const workRoot = this.#options.workRoot ?? join(dirname(defaultVideoCatalogPath()), "jobs");
     const directory = join(resolve(workRoot), id);
+    const acceptance = Promise.withResolvers<void>();
     this.#initializing++;
-    const result = this.#submitStored(task, id, directory, signal);
+    const result = this.#submitStored(task, id, directory, acceptance, signal);
     void result.then(
       () => {
         this.#initializing--;
@@ -164,36 +178,42 @@ export class VideoWorkerPool {
         this.#notifyIdle();
       },
     );
-    return result;
+    return { id, accepted: acceptance.promise, result };
   }
 
   async #submitStored(
     task: VideoRenderTask,
     id: string,
     directory: string,
+    acceptance: PromiseWithResolvers<void>,
     signal?: AbortSignal,
   ): Promise<VideoRenderResult> {
     // Full URLs, headers and acquired media stay in the private request file.
-    const source = await this.catalog.registerSource({
-      privateRef: join(directory, "request.json"),
-      kind: task.source.kind === "file" ? "file" : task.source.kind === "capture" ? "capture" : "url",
-    });
-    await this.catalog.addJob({
-      id,
-      sourceId: source.id,
-      engine: task.engine,
-      config: {
-        width: task.width,
-        height: task.height,
-        fps: task.fps,
-        durationFrames: task.durationFrames,
-        frameWorkers: task.frameWorkers ?? 1,
-        requestRef: source.privateRef,
-      },
-    });
-    if (this.#closed || signal?.aborted) {
-      await this.catalog.updateJob(id, { status: "cancelled", error: "Cancelled before execution" });
-      throw new Error("Video job cancelled");
+    try {
+      const source = await this.catalog.registerSource({
+        privateRef: join(directory, "request.json"),
+        kind: task.source.kind === "file" ? "file" : task.source.kind === "capture" ? "capture" : "url",
+      });
+      await this.catalog.addJob({
+        id,
+        sourceId: source.id,
+        engine: task.engine,
+        config: {
+          width: task.width,
+          height: task.height,
+          fps: task.fps,
+          durationFrames: task.durationFrames,
+          frameWorkers: task.frameWorkers ?? 1,
+          requestRef: source.privateRef,
+        },
+      });
+      if (this.#closed || signal?.aborted) {
+        await this.catalog.updateJob(id, { status: "cancelled", error: "Cancelled before execution" });
+        throw new Error("Video job cancelled");
+      }
+    } catch (error) {
+      acceptance.reject(error);
+      throw error;
     }
     const controller = new AbortController();
     const abort = () => {
@@ -226,6 +246,7 @@ export class VideoWorkerPool {
       });
     });
     this.#emit({ type: "queued", jobId: id });
+    acceptance.resolve();
     this.#pump();
     return promise;
   }

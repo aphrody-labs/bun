@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { createUnifiedVideoPipeline } from "../src/video-workflow";
+import { openConfiguredUnifiedVideoPipeline } from "../src/video-workflow";
 import { inspectVideoAPI, type VideoAPIFamily } from "../src/video-api";
 import type { VideoRenderTask } from "../src/video-worker-task";
 import type { VideoDatasetExportResult } from "../src/video-dataset";
@@ -49,7 +49,7 @@ export async function videoWorkersMain(args = Bun.argv.slice(2)) {
     );
     return;
   }
-  await using pipeline = createUnifiedVideoPipeline({
+  await using pipeline = await openConfiguredUnifiedVideoPipeline({
     dbPath: values.get("--db"),
     workers: Number(values.get("--workers") ?? 2),
     timeoutMs: Number(values.get("--timeout-ms") ?? 300000),
@@ -61,9 +61,9 @@ export async function videoWorkersMain(args = Bun.argv.slice(2)) {
     case "sources":
       console.log(
         JSON.stringify({
-          sources: pipeline.catalog.listSources(),
-          jobs: pipeline.catalog.listJobs(),
-          qualifications: pipeline.catalog.listQualifications(),
+          sources: await pipeline.catalog.listSources(),
+          jobs: await pipeline.catalog.listJobs(),
+          qualifications: await pipeline.catalog.listQualifications(),
         }),
       );
       break;

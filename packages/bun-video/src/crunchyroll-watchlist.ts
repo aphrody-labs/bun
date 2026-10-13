@@ -6,7 +6,8 @@ import {
 } from "./crunchyroll";
 import { awaitCrunchyrollOperation } from "./crunchyroll-api";
 import { frameOperationSignal } from "./frame-plan";
-import { VideoCatalog } from "./video-catalog";
+import { VideoCatalog, type VideoSource } from "./video-catalog";
+import { NeonVideoCatalog } from "./video-neon-catalog";
 
 export interface CrunchyrollWatchlistEntry {
   /** Official series or watch URL observed in the owner's authenticated watchlist. */
@@ -122,81 +123,126 @@ interface SourceCandidate {
   title: string | null;
 }
 
-/** One insertion owner: existing source identities, private references and jobs stay intact. */
-function registerSources(catalog: VideoCatalog, candidates: readonly SourceCandidate[]) {
+/** Resolve historical source identities before inserting new observations. */
+function planSources(existing: readonly VideoSource[], candidates: readonly SourceCandidate[]) {
   let addedSources = 0,
     existingSources = 0;
   const sourceIds = new Map<string, string>();
-  catalog.db.transaction(() => {
+  const insert: SourceCandidate[] = [];
+  const byId = new Map(existing.map(source => [source.id, source]));
+  const byReference = new Map<string, (typeof existing)[number]>();
+  for (const source of existing) {
+    if (!source.url || source.providerId !== "crunchyroll") continue;
+    try {
+      const reference = observedReferences([{ url: source.url }])[0]!;
+      if (!byReference.has(reference.sourceId)) byReference.set(reference.sourceId, source);
+    } catch {
+      /* Other provider-owned source URLs are outside the observed reference contract. */
+    }
+  }
+  for (const candidate of new Map(candidates.map(source => [source.id, source])).values()) {
+    const contentId = candidate.id.split(":").at(-1)!;
+    const prior =
+      byId.get(candidate.id) ??
+      (candidate.id.startsWith("crunchyroll:video:")
+        ? (byId.get(`crunchyroll:episode:${contentId}`) ?? byId.get(`crunchyroll:movie:${contentId}`))
+        : undefined) ??
+      byReference.get(candidate.id);
+    if (prior) {
+      sourceIds.set(candidate.id, prior.id);
+      existingSources++;
+      continue;
+    }
+    const source: VideoSource = {
+      id: candidate.id,
+      url: candidate.url,
+      privateRef: null,
+      providerId: "crunchyroll",
+      kind: "url",
+      title: candidate.title,
+    };
+    insert.push(candidate);
+    byId.set(source.id, source);
+    byReference.set(candidate.id, source);
+    sourceIds.set(candidate.id, source.id);
+    addedSources++;
+  }
+  return { addedSources, existingSources, sourceIds, insert };
+}
+
+/** One insertion owner: existing source identities, private references and jobs stay intact. */
+function registerSources(catalog: VideoCatalog, candidates: readonly SourceCandidate[]) {
+  return catalog.db.transaction(() => {
     if (!catalog.listProviders().some(provider => provider.id === "crunchyroll"))
       catalog.registerProvider({ id: "crunchyroll", name: "Crunchyroll", family: "video" });
-    const existing = catalog.listSources();
-    const byId = new Map(existing.map(source => [source.id, source]));
-    const byReference = new Map<string, (typeof existing)[number]>();
-    for (const source of existing) {
-      if (!source.url || source.providerId !== "crunchyroll") continue;
-      try {
-        const reference = observedReferences([{ url: source.url }])[0]!;
-        if (!byReference.has(reference.sourceId)) byReference.set(reference.sourceId, source);
-      } catch {
-        /* Other provider-owned source URLs are outside the observed reference contract. */
-      }
-    }
-    for (const candidate of new Map(candidates.map(source => [source.id, source])).values()) {
-      const contentId = candidate.id.split(":").at(-1)!;
-      const prior =
-        byId.get(candidate.id) ??
-        (candidate.id.startsWith("crunchyroll:video:")
-          ? (byId.get(`crunchyroll:episode:${contentId}`) ?? byId.get(`crunchyroll:movie:${contentId}`))
-          : undefined) ??
-        byReference.get(candidate.id);
-      if (prior) {
-        sourceIds.set(candidate.id, prior.id);
-        existingSources++;
-        continue;
-      }
-      const source = catalog.registerSource({
+    const plan = planSources(catalog.listSources(), candidates);
+    for (const candidate of plan.insert)
+      catalog.registerSource({
         id: candidate.id,
         url: candidate.url,
         ...(candidate.title ? { title: candidate.title } : {}),
         providerId: "crunchyroll",
         kind: "url",
       });
-      byId.set(source.id, source);
-      byReference.set(candidate.id, source);
-      sourceIds.set(candidate.id, source.id);
-      addedSources++;
-    }
+    return plan;
   })();
-  return { addedSources, existingSources, sourceIds };
+}
+
+async function registerSourcesNeon(catalog: NeonVideoCatalog, candidates: readonly SourceCandidate[]) {
+  return catalog.transaction(async tx => {
+    if (!(await tx.listProviders()).some(provider => provider.id === "crunchyroll"))
+      await tx.registerProvider({ id: "crunchyroll", name: "Crunchyroll", family: "video" });
+    const plan = planSources(await tx.listSources(), candidates);
+    for (const candidate of plan.insert)
+      await tx.registerSource({
+        id: candidate.id,
+        url: candidate.url,
+        ...(candidate.title ? { title: candidate.title } : {}),
+        providerId: "crunchyroll",
+        kind: "url",
+      });
+    return plan;
+  });
 }
 
 /** Registers supplied observations only; performs no network, authentication or playback operation. */
 export function registerObservedCrunchyrollWatchlist(
   catalog: VideoCatalog,
   entries: readonly CrunchyrollWatchlistEntry[],
-): ObservedCrunchyrollWatchlist {
+): ObservedCrunchyrollWatchlist;
+export function registerObservedCrunchyrollWatchlist(
+  catalog: NeonVideoCatalog,
+  entries: readonly CrunchyrollWatchlistEntry[],
+): Promise<ObservedCrunchyrollWatchlist>;
+export function registerObservedCrunchyrollWatchlist(
+  catalog: VideoCatalog | NeonVideoCatalog,
+  entries: readonly CrunchyrollWatchlistEntry[],
+): ObservedCrunchyrollWatchlist | Promise<ObservedCrunchyrollWatchlist>;
+export function registerObservedCrunchyrollWatchlist(
+  catalog: VideoCatalog | NeonVideoCatalog,
+  entries: readonly CrunchyrollWatchlistEntry[],
+): ObservedCrunchyrollWatchlist | Promise<ObservedCrunchyrollWatchlist> {
   const references = observedReferences(entries);
-  const result = registerSources(
-    catalog,
-    references.map(reference => ({
-      id: reference.sourceId,
-      url: reference.url,
-      title: reference.title,
-    })),
-  );
-  return {
+  const candidates = references.map(reference => ({
+    id: reference.sourceId,
+    url: reference.url,
+    title: reference.title,
+  }));
+  const format = (result: ReturnType<typeof planSources>): ObservedCrunchyrollWatchlist => ({
     references: references.map(reference => ({ ...reference, sourceId: result.sourceIds.get(reference.sourceId)! })),
     addedSources: result.addedSources,
     existingSources: result.existingSources,
     scope: "supplied-observed-references",
     expansion: "pending",
-  };
+  });
+  return catalog instanceof NeonVideoCatalog
+    ? registerSourcesNeon(catalog, candidates).then(format)
+    : format(registerSources(catalog, candidates));
 }
 
 /** Imports metadata through the existing client; observation and playback remain owned by their providers. */
 export async function importCrunchyrollWatchlist(
-  catalog: VideoCatalog,
+  catalog: VideoCatalog | NeonVideoCatalog,
   entries: readonly CrunchyrollWatchlistEntry[],
   options: {
     clientFactory: (signal: AbortSignal) => CrunchyrollWatchlistClient | Promise<CrunchyrollWatchlistClient>;
@@ -276,14 +322,18 @@ export async function importCrunchyrollWatchlist(
     }
   }
   signal.throwIfAborted();
-  const result = registerSources(catalog, [
+  const candidates = [
     ...sources,
     ...[...episodes.values()].map(episode => ({
       id: episode.sourceId,
       url: episode.url,
       title: episode.title,
     })),
-  ]);
+  ];
+  const result =
+    catalog instanceof NeonVideoCatalog
+      ? await registerSourcesNeon(catalog, candidates)
+      : registerSources(catalog, candidates);
   return {
     series: seriesIds.size,
     seasons: seasons.size,

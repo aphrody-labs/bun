@@ -9,7 +9,20 @@ test("actual loopback HTTP exposes allowlisted rows and blocks cross-origin writ
   const root = mkdtempSync(join(tmpdir(), "video-data-site-"));
   using catalog = new VideoCatalog(":memory:");
   catalog.registerSource({ id: "public-source", privateRef: join(root, "private-cookie.har") });
-  const site = await createVideoDataSite({ catalog, privateRoot: root, initialize: false });
+  const site = await createVideoDataSite({
+    catalog,
+    privateRoot: root,
+    initialize: false,
+    runner: async input => ({
+      output: input.output,
+      engine: input.engine,
+      sourcePath: input.source.value,
+      compositionEntry: input.source.value,
+      frames: 1,
+      sha256: "00".repeat(32),
+      bytes: 1,
+    }),
+  });
   try {
     const overview = await fetch(new URL("api/overview", site.url));
     expect(overview.status).toBe(200);
@@ -49,6 +62,28 @@ test("actual loopback HTTP exposes allowlisted rows and blocks cross-origin writ
     expect(download.status).toBe(200);
     expect(download.headers.get("content-disposition")).toContain("attachment");
     expect(await download.text()).not.toContain("private-cookie");
+    const queued = await fetch(new URL("api/jobs", site.url), {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: new URL(site.url).origin },
+      body: JSON.stringify({
+        jobs: [
+          {
+            source: { kind: "file", value: join(root, "fixture.mp4") },
+            engine: "remotion",
+            output: join(root, "render.mp4"),
+            width: 320,
+            height: 180,
+            fps: 30,
+            durationFrames: 1,
+            frameWorkers: 1,
+          },
+        ],
+      }),
+    });
+    expect(queued.status).toBe(202);
+    const receipt = await queued.json();
+    expect(receipt.ids).toHaveLength(1);
+    expect(catalog.getJob(receipt.ids[0])).not.toBeNull();
   } finally {
     await site.close();
     rmSync(root, { recursive: true, force: true });
