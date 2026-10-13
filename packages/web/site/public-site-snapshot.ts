@@ -1,3 +1,5 @@
+import type { PublicNativeGraph } from "./site-native-graph";
+
 export type PublicSiteDocument = {
   path: string;
   title: string;
@@ -15,6 +17,7 @@ export type PublicSiteSnapshot = {
   documents: PublicSiteDocument[];
   domains: { name: string; files: number }[];
   links: { source: string; target: string; references_count: number }[];
+  nativeGraph?: PublicNativeGraph;
   releases: {
     tag: string;
     name: string;
@@ -87,6 +90,44 @@ export function validatePublicSiteSnapshot(value: PublicSiteSnapshot): void {
       link.references_count < 1
     )
       throw new TypeError("Invalid public graph relation");
+  if (value.nativeGraph) {
+    const native = value.nativeGraph,
+      sourceDomains = new Set(native.sources.map(source => source.domain)),
+      nodeIds = new Set<string>();
+    if (native.nodes.length > 40000 || native.edges.length > 80000 || sourceDomains.size !== native.sources.length)
+      throw new RangeError("Native graph projection exceeds its bound");
+    for (const source of native.sources)
+      if (
+        !publicSourcePath(source.domain) ||
+        source.revision !== value.source ||
+        !/^[a-f0-9]{64}$/.test(source.graph_sha256) ||
+        !/^[a-f0-9]{64}$/.test(source.producer_sha256)
+      )
+        throw new TypeError("Invalid native graph source");
+    for (const node of native.nodes) {
+      if (
+        !sourceDomains.has(node.domain) ||
+        !publicSourcePath(node.path) ||
+        !/^[a-f0-9]{64}$/.test(node.id) ||
+        nodeIds.has(node.id) ||
+        node.provenance !== "EXTRACTED" ||
+        !/^[a-f0-9]{64}$/.test(node.file_sha256) ||
+        Buffer.byteLength(node.label) > 16384 ||
+        (node.line !== null && (!Number.isSafeInteger(node.line) || node.line < 1))
+      )
+        throw new TypeError("Invalid public native graph node");
+      nodeIds.add(node.id);
+    }
+    for (const edge of native.edges)
+      if (
+        !nodeIds.has(edge.source) ||
+        !nodeIds.has(edge.target) ||
+        !Number.isFinite(edge.confidence) ||
+        edge.confidence < 0 ||
+        edge.confidence > 1
+      )
+        throw new TypeError("Invalid public native graph edge");
+  }
   function publicURL(value: string): boolean {
     try {
       const url = new URL(value);

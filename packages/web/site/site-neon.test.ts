@@ -7,6 +7,7 @@ import { readPublicSiteSnapshot, publishPublicSiteSnapshot } from "./site-neon-i
 import { publicSiteAPI } from "./site-api";
 import { searchPublicSiteDocs, type SiteQuery } from "./site-neon";
 import { createNeonHTTPClient } from "../../bun-plugin-neon/src/http";
+import { readPublicNativeGraph } from "./site-native-graph";
 
 const hash = (value: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(value).digest("hex");
 async function fixture() {
@@ -128,5 +129,66 @@ test("publication rejects stale or altered chunks before advancing the current p
     await expect(publishPublicSiteSnapshot(tx, snapshot)).rejects.toThrow("hash differs");
   } finally {
     rmSync(input.directory, { recursive: true, force: true });
+  }
+});
+
+test("native graph export verifies profile, revision, namespace and public extracted endpoints", () => {
+  const db = new Database(":memory:"),
+    revision = "a".repeat(40),
+    graphSHA = "b".repeat(64),
+    producerSHA = "c".repeat(64),
+    repository = "native-runtime",
+    namespace = `${repository}:graph:${graphSHA}:`;
+  try {
+    db.exec(`CREATE TABLE repositories(id TEXT,revision TEXT,metadata TEXT); CREATE TABLE graph_snapshots(id TEXT,repository_id TEXT,sha256 TEXT,revision TEXT,metadata TEXT);
+      CREATE TABLE nodes(id TEXT,repository_id TEXT,kind TEXT,label TEXT,file TEXT,line INTEGER,provenance TEXT); CREATE TABLE release_files(path TEXT,sha256 TEXT);
+      CREATE TABLE edges(id TEXT,repository_id TEXT,source TEXT,target TEXT,kind TEXT,provenance TEXT,confidence REAL);`);
+    db.prepare("INSERT INTO repositories VALUES(?,?,?)").run(
+      repository,
+      revision,
+      JSON.stringify({ profile: "bun", domain: "src/runtime", source: "graph:bun:src:runtime" }),
+    );
+    db.prepare("INSERT INTO graph_snapshots VALUES(?,?,?,?,?)").run(
+      "selected",
+      repository,
+      graphSHA,
+      revision,
+      JSON.stringify({
+        namespace,
+        nodes: 3,
+        edges: 2,
+        graph: {
+          domain: "src/runtime",
+          scope: { profile: "bun", source: "graph:bun:src:runtime" },
+          producerSHA256: producerSHA,
+        },
+      }),
+    );
+    db.prepare("INSERT INTO release_files VALUES(?,?)").run("src/runtime/video.rs", "d".repeat(64));
+    const node = db.prepare("INSERT INTO nodes VALUES(?,?,?,?,?,?,?)");
+    node.run(namespace + "frame", repository, "code", "BunVideo.frame", "src/runtime/video.rs", 12, "EXTRACTED");
+    node.run(namespace + "resize", repository, "code", "resize", "src/runtime/video.rs", 21, "EXTRACTED");
+    node.run(namespace + "unknown", repository, "unresolved", "unknown", "src/runtime/video.rs", null, "UNRESOLVED");
+    const edge = db.prepare("INSERT INTO edges VALUES(?,?,?,?,?,?,?)");
+    edge.run(namespace + "edge:1", repository, namespace + "frame", namespace + "resize", "calls", "EXTRACTED", 1);
+    edge.run(namespace + "edge:2", repository, namespace + "frame", namespace + "unknown", "calls", "UNRESOLVED", 0);
+    const index = {
+      profile: "bun",
+      namespace: "bun",
+      producerSHA256: producerSHA,
+      revision,
+      domains: [{ domain: "src/runtime", repository, snapshot: "selected", sha256: graphSHA }],
+    };
+    const result = readPublicNativeGraph(db, revision, index);
+    expect(result.nodes.map(node => node.label)).toEqual(["BunVideo.frame", "resize"]);
+    expect(result.edges).toHaveLength(1);
+    expect(result.edges[0].provenance).toBe("EXTRACTED");
+    expect(result.coverage.truncated).toBe(true);
+    expect(() => readPublicNativeGraph(db, revision, { ...index, profile: "dbfr" })).toThrow("Bun source");
+    expect(() => readPublicNativeGraph(db, revision, { ...index, producerSHA256: "e".repeat(64) })).toThrow(
+      "producer hash",
+    );
+  } finally {
+    db.close(true);
   }
 });

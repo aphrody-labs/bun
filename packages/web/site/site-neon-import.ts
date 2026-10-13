@@ -3,6 +3,7 @@ import { lstat, open, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 import { parseFrontmatter } from "./mdx";
 import { publicSourcePath, validatePublicSiteSnapshot, type PublicSiteSnapshot } from "./public-site-snapshot";
+import { readPublicNativeGraph } from "./site-native-graph";
 
 const sha256 = (body: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(body).digest("hex");
 async function hashFile(path: string) {
@@ -92,6 +93,11 @@ export async function readPublicSiteSnapshot(directory: string, manifestSHA256: 
     const releases = await Bun.file(
       await member("releases.json", manifest.artifacts["releases.json"], 16 * 1024 * 1024),
     ).json();
+    const native = manifest.artifacts["graph.json"]
+      ? await Bun.file(await member("graph.json", manifest.artifacts["graph.json"], 16 * 1024 * 1024)).json()
+      : undefined;
+    if (native && native.source !== manifest.source)
+      throw new Error("Public native graph differs from the manifest source");
     const snapshot: PublicSiteSnapshot = {
       schema: 1,
       profile: "bun",
@@ -102,6 +108,7 @@ export async function readPublicSiteSnapshot(directory: string, manifestSHA256: 
       documents,
       domains,
       links,
+      ...(native?.native ? { nativeGraph: readPublicNativeGraph(db, manifest.source, native.native) } : {}),
       releases: releases.map((row: PublicSiteSnapshot["releases"][number]) => ({
         tag: row.tag,
         name: row.name,
@@ -137,6 +144,10 @@ export async function publishPublicSiteSnapshot(sql: PublisherSQL, snapshot: Pub
     domains: snapshot.domains.length,
     links: snapshot.links.length,
     releases: snapshot.releases.length,
+    nativeNodes: snapshot.nativeGraph?.nodes.length ?? 0,
+    nativeEdges: snapshot.nativeGraph?.edges.length ?? 0,
+    nativeSourceNodes: snapshot.nativeGraph?.coverage.sourceNodes ?? 0,
+    nativeSourceEdges: snapshot.nativeGraph?.coverage.sourceEdges ?? 0,
   };
   await sql.begin(async tx => {
     await tx.unsafe("SELECT pg_advisory_xact_lock(hashtext('aphrody_site:bun'))");
@@ -190,6 +201,26 @@ export async function publishPublicSiteSnapshot(sql: PublisherSQL, snapshot: Pub
       "tag text,facts jsonb",
       snapshot.releases.map(facts => ({ tag: facts.tag, facts })),
     );
+    if (snapshot.nativeGraph) {
+      await batch(
+        "native_graph_sources",
+        "domain,graph_sha256,revision,producer_sha256",
+        "domain text,graph_sha256 text,revision text,producer_sha256 text",
+        snapshot.nativeGraph.sources,
+      );
+      await batch(
+        "native_graph_nodes(snapshot_id,id,domain,kind,label,path,line,file_sha256,provenance)",
+        "id,domain,kind,label,path,line,file_sha256,provenance",
+        "id text,domain text,kind text,label text,path text,line integer,file_sha256 text,provenance text",
+        snapshot.nativeGraph.nodes,
+      );
+      await batch(
+        "native_graph_edges",
+        "source,target,kind,provenance,confidence",
+        "source text,target text,kind text,provenance text,confidence real",
+        snapshot.nativeGraph.edges,
+      );
+    }
     await tx.unsafe(
       "INSERT INTO aphrody_site.current_snapshots(profile,snapshot_id) VALUES ('bun',$1) ON CONFLICT (profile) DO UPDATE SET snapshot_id=EXCLUDED.snapshot_id",
       [id],

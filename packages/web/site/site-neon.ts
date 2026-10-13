@@ -24,6 +24,11 @@ export type SiteGraphResult = {
   domains: Record<string, unknown>[];
   links: Record<string, unknown>[];
   qualification?: string;
+  native?: {
+    nodes: Record<string, unknown>[];
+    edges: Record<string, unknown>[];
+    coverage: { nodes: number; edges: number; sourceNodes: number; sourceEdges: number; truncated: boolean };
+  };
 };
 export async function getPublicSiteSnapshot(sql: SiteQuery, id?: string): Promise<SiteSnapshotInfo | null> {
   if (id !== undefined && !/^[a-f0-9]{64}$/.test(id)) throw new TypeError("Invalid public snapshot identifier");
@@ -93,7 +98,7 @@ export async function getPublicSiteDocument(sql: SiteQuery, path: string, snapsh
 }
 export async function getPublicSiteGraph(
   sql: SiteQuery,
-  options: { domain?: string; limit?: number; snapshotId?: string } = {},
+  options: { domain?: string; query?: string; limit?: number; snapshotId?: string } = {},
 ): Promise<SiteGraphResult> {
   const limit = options.limit ?? 100;
   if (
@@ -103,8 +108,10 @@ export async function getPublicSiteGraph(
     (options.domain !== undefined && !/^(?:src|packages|docs|scripts)(?:\/[\w.-]+)*$/.test(options.domain))
   )
     throw new TypeError("Invalid public graph query");
+  if (options.query !== undefined && options.query.length > 500) throw new TypeError("Invalid native symbol query");
   const snapshot = await getPublicSiteSnapshot(sql, options.snapshotId);
-  const qualification = "Source domain counts and resolved relative references; no measured runtime call graph";
+  const qualification =
+    "Source domain references and bounded native extracted symbols and relations; provenance retained, no measured runtime call graph";
   if (!snapshot) return { snapshot, domains: [], links: [], qualification };
   const domains = await sql.query(
     `SELECT name,files FROM aphrody_site.graph_domains WHERE snapshot_id=$1 AND ($2::text IS NULL OR name=$2) ORDER BY name LIMIT $3`,
@@ -114,7 +121,46 @@ export async function getPublicSiteGraph(
     `SELECT source,target,references_count FROM aphrody_site.graph_links WHERE snapshot_id=$1 AND ($2::text IS NULL OR source=$2 OR target=$2) ORDER BY references_count DESC,source,target LIMIT $3`,
     [snapshot.id, options.domain ?? null, limit],
   );
-  return { snapshot, domains, links, qualification };
+  const words = options.query
+    ?.match(/[\p{L}\p{N}]+/gu)
+    ?.filter(word => word.length > 1)
+    .slice(0, 32);
+  const symbolQuery = words?.map(word => `"${word}"`).join(" OR ") || null;
+  const nodes = await sql.query(
+    `SELECT id,domain,kind,left(label,256) AS label,length(label)>256 AS label_truncated,path,line,file_sha256,provenance FROM aphrody_site.native_graph_nodes
+    WHERE snapshot_id=$1 AND ($2::text IS NULL OR domain=$2) AND ($3::text IS NULL OR search @@ websearch_to_tsquery('simple',$3))
+    ORDER BY CASE WHEN $3::text IS NULL THEN 0 ELSE ts_rank_cd(search,websearch_to_tsquery('simple',$3)) END DESC,id LIMIT $4`,
+    [snapshot.id, options.domain ?? null, symbolQuery, Math.min(limit, 32)],
+  );
+  const nodeIds = nodes.map(node => node.id);
+  const edges = nodeIds.length
+    ? await sql.query(
+        `SELECT source,target,kind,provenance,confidence FROM aphrody_site.native_graph_edges
+        WHERE snapshot_id=$1 AND (source IN (SELECT jsonb_array_elements_text($2::jsonb)) OR target IN (SELECT jsonb_array_elements_text($2::jsonb))) ORDER BY confidence DESC,source,target LIMIT $3`,
+        [snapshot.id, JSON.stringify(nodeIds), Math.min(limit, 64)],
+      )
+    : [];
+  const neighbors = [...new Set(edges.flatMap(edge => [edge.source, edge.target]))]
+    .filter(id => !nodeIds.includes(id))
+    .slice(0, 32);
+  if (neighbors.length)
+    nodes.push(
+      ...(await sql.query(
+        `SELECT id,domain,kind,left(label,256) AS label,length(label)>256 AS label_truncated,path,line,file_sha256,provenance FROM aphrody_site.native_graph_nodes
+        WHERE snapshot_id=$1 AND id IN (SELECT jsonb_array_elements_text($2::jsonb)) ORDER BY id`,
+        [snapshot.id, JSON.stringify(neighbors)],
+      )),
+    );
+  const coverage = {
+    nodes: snapshot.counts.nativeNodes ?? 0,
+    edges: snapshot.counts.nativeEdges ?? 0,
+    sourceNodes: snapshot.counts.nativeSourceNodes ?? 0,
+    sourceEdges: snapshot.counts.nativeSourceEdges ?? 0,
+    truncated:
+      (snapshot.counts.nativeNodes ?? 0) < (snapshot.counts.nativeSourceNodes ?? 0) ||
+      (snapshot.counts.nativeEdges ?? 0) < (snapshot.counts.nativeSourceEdges ?? 0),
+  };
+  return { snapshot, domains, links, qualification, native: { nodes, edges, coverage } };
 }
 export async function getPublicSiteReleases(sql: SiteQuery, snapshotId?: string) {
   const snapshot = await getPublicSiteSnapshot(sql, snapshotId);

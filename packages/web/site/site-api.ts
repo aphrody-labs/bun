@@ -54,6 +54,7 @@ export async function publicSiteAPI(
       case "/api/site/graph":
         value = await getPublicSiteGraph(sql, {
           domain: query.get("domain") ?? undefined,
+          query: query.get("q") ?? undefined,
           limit: query.has("limit") ? Number(query.get("limit")) : undefined,
           snapshotId,
         });
