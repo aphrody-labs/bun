@@ -11,6 +11,9 @@
     macro(FileSystemRouter) \
     macro(Glob) \
     macro(Image) \
+    macro(Video) \
+    macro(Curl) \
+    macro(Crawl) \
     macro(JSON5) \
     macro(JSONC) \
     macro(MD4) \

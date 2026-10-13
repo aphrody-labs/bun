@@ -442,6 +442,8 @@ where
     pub title: String,
     damage: TermDamageState,
     pub graphics: Graphics,
+    #[cfg(feature = "native-ui")]
+    pub native_ui: Option<std::sync::Arc<crate::ansi::native_ui::Frame>>,
     /// Per-session registry of glyphs registered over Glyph Protocol
     /// (APC `25a1`). `None` until a program in this session actually
     /// uses the protocol, so terminals that never see a Glyph
@@ -517,6 +519,18 @@ impl<U: EventListener> Crosswords<U> {
                 .saturating_add(name.capacity())
                 .saturating_add(value.capacity());
         }
+        #[cfg(feature = "native-ui")]
+        if let Some(frame) = &self.native_ui {
+            total = total
+                .saturating_add(std::mem::size_of::<crate::ansi::native_ui::Frame>())
+                .saturating_add(
+                    frame.nodes.capacity()
+                        * std::mem::size_of::<crate::ansi::native_ui::Node>(),
+                );
+            for node in &frame.nodes {
+                total = total.saturating_add(node.text.capacity());
+            }
+        }
         total
     }
 
@@ -562,6 +576,8 @@ impl<U: EventListener> Crosswords<U> {
             graphics: Graphics::new(&dimensions),
             #[cfg(feature = "graphics")]
             glyph_registry: None,
+            #[cfg(feature = "native-ui")]
+            native_ui: None,
             default_cursor_shape: cursor_shape,
             cursor_shape,
             blinking_cursor: false,
@@ -2776,6 +2792,22 @@ impl<U: EventListener> Crosswords<U> {
 }
 
 impl<U: EventListener> Handler for Crosswords<U> {
+    #[cfg(feature = "native-ui")]
+    fn native_ui_frame(&mut self, frame: crate::ansi::native_ui::Frame) {
+        if self
+            .native_ui
+            .as_ref()
+            .is_some_and(|old| frame.sequence <= old.sequence)
+        {
+            return;
+        }
+        self.native_ui = if frame.nodes.is_empty() {
+            None
+        } else {
+            Some(std::sync::Arc::new(frame))
+        };
+        self.mark_fully_damaged();
+    }
     #[inline]
     fn set_mode(&mut self, mode: AnsiMode) {
         let mode = match mode {
@@ -3373,6 +3405,10 @@ impl<U: EventListener> Handler for Crosswords<U> {
 
     #[inline]
     fn reset_state(&mut self) {
+        #[cfg(feature = "native-ui")]
+        {
+            self.native_ui = None;
+        }
         if self.mode.contains(Mode::ALT_SCREEN) {
             std::mem::swap(&mut self.grid, &mut self.inactive_grid);
         }
@@ -4099,6 +4135,10 @@ impl<U: EventListener> Handler for Crosswords<U> {
 
     #[inline]
     fn clear_screen(&mut self, mode: ClearMode) {
+        #[cfg(feature = "native-ui")]
+        if matches!(mode, ClearMode::All) {
+            self.native_ui = None;
+        }
         self.grid.sync_template_style();
         let bg = self.grid.template_style().bg;
         let blank = self.grid.blank_with_bg(bg);
@@ -5886,6 +5926,27 @@ mod tests {
         let size = CrosswordsSize::new(4, 4);
         let window_id = crate::event::WindowId::from(0);
         Crosswords::new(size, CursorShape::Block, VoidListener {}, window_id, 0, 10)
+    }
+
+    #[cfg(feature = "native-ui")]
+    #[test]
+    fn native_ui_keeps_latest_frame_and_clears_on_reset() {
+        let mut cw = make_crosswords();
+        let frame: crate::ansi::native_ui::Frame = serde_json::from_str(
+            r#"{"version":1,"sequence":1,"nodes":[{"id":1,"kind":"view"}]}"#,
+        )
+        .unwrap();
+        cw.native_ui_frame(frame.clone());
+        let mut next = frame.clone();
+        next.sequence = 2;
+        cw.native_ui_frame(next);
+        cw.native_ui_frame(frame.clone());
+        assert_eq!(cw.native_ui.as_ref().unwrap().sequence, 2);
+        cw.clear_screen(ClearMode::All);
+        assert!(cw.native_ui.is_none());
+        cw.native_ui_frame(frame);
+        cw.reset_state();
+        assert!(cw.native_ui.is_none());
     }
 
     #[test]

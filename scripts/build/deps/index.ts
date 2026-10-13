@@ -17,10 +17,12 @@ import { cares } from "./cares.ts";
 import { hdrhistogram } from "./hdrhistogram.ts";
 import { highway } from "./highway.ts";
 import { libarchive } from "./libarchive.ts";
+import { curl } from "./curl.ts";
 import { libdeflate } from "./libdeflate.ts";
 import { libjpegTurbo } from "./libjpeg-turbo.ts";
 import { libspng } from "./libspng.ts";
 import { libuv } from "./libuv.ts";
+import { winfw } from "./winfw.ts";
 import { libwebp } from "./libwebp.ts";
 import { lolhtml } from "./lolhtml.ts";
 import { lshpack } from "./lshpack.ts";
@@ -28,6 +30,7 @@ import { lsqpack } from "./lsqpack.ts";
 import { lsquic } from "./lsquic.ts";
 import { mimalloc } from "./mimalloc.ts";
 import { nodejsHeaders } from "./nodejs-headers.ts";
+import { oxc } from "./oxc.ts";
 import { picohttpparser } from "./picohttpparser.ts";
 import { rustArgon2 } from "./rust-argon2.ts";
 import { uutils } from "./uutils.ts";
@@ -49,6 +52,7 @@ export const allDeps: readonly Dependency[] = [
   // Header-only / source-only first — no link order concerns.
   picohttpparser,
   nodejsHeaders,
+  oxc,
 
   zlib,
   zstd,
@@ -63,6 +67,7 @@ export const allDeps: readonly Dependency[] = [
   hdrhistogram,
   highway,
   libuv,
+  winfw,
   lolhtml,
   rustArgon2,
   uutils,
@@ -73,6 +78,7 @@ export const allDeps: readonly Dependency[] = [
   sqlite,
   tinycc,
   boringssl,
+  curl,
   // lsquic after boringssl: needs ssl.h at compile time (fetchDeps), and as
   // a DirectBuild dep its .o files go straight on the link line so static
   // link order doesn't apply.
@@ -101,6 +107,7 @@ export {
   lsquic,
   mimalloc,
   nodejsHeaders,
+  oxc,
   picohttpparser,
   rustArgon2,
   sqlite,

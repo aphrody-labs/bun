@@ -47,6 +47,7 @@ const processTrimWorkingSetNative = $newRustFunction("windows/host.rs", "jsProce
 const jobCreateNative = $newRustFunction("windows/host.rs", "jsJobCreate", 1);
 const jobSetLimitsNative = $newRustFunction("windows/host.rs", "jsJobSetLimits", 6);
 const jobAssignNative = $newRustFunction("windows/host.rs", "jsJobAssign", 2);
+const jobSpawnNative = $newRustFunction("windows/host.rs", "jsJobSpawn", 3);
 const jobTerminateNative = $newRustFunction("windows/host.rs", "jsJobTerminate", 2);
 const jobInfoNative = $newRustFunction("windows/host.rs", "jsJobInfo", 1);
 const jobCloseNative = $newRustFunction("windows/host.rs", "jsJobClose", 1);
@@ -601,6 +602,10 @@ class Job {
 
   assign(target) {
     jobAssignNative(this.#handle(), pidOf(target, "pid"));
+  }
+
+  spawn(argvOrOptions, options) {
+    return jobSpawnNative(this.#handle(), argvOrOptions, options);
   }
 
   terminate(exitCode = 1) {

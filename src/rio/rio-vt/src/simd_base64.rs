@@ -85,8 +85,8 @@ mod tests {
     fn decode_round_trip_kitty_chunk() {
         // ~4 KB payload typical of kitty graphics.
         let bytes: Vec<u8> = (0..4096).map(|i| (i & 0xff) as u8).collect();
-        use base64::engine::general_purpose::STANDARD;
-        use base64::Engine;
+        use ::base64::engine::general_purpose::STANDARD;
+        use ::base64::Engine;
         let encoded = STANDARD.encode(&bytes);
         let decoded = decode(encoded.as_bytes()).unwrap();
         assert_eq!(decoded, bytes);

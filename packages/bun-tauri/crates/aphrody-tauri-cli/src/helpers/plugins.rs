@@ -19,11 +19,8 @@ pub fn known_plugins() -> HashMap<&'static str, PluginMetadata> {
 
   // desktop-only
   for p in [
-    "authenticator",
     "autostart",
-    "cli",
     "global-shortcut",
-    "positioner",
     "single-instance",
     "updater",
     "window-state",
@@ -31,20 +28,12 @@ pub fn known_plugins() -> HashMap<&'static str, PluginMetadata> {
     plugins.entry(p).or_default().desktop_only = true;
   }
 
-  // mobile-only
-  for p in ["barcode-scanner", "biometric", "nfc", "haptics"] {
-    plugins.entry(p).or_default().mobile_only = true;
-  }
-
   // uses builder pattern
   for p in [
     "autostart",
     "global-shortcut",
-    "localhost",
     "log",
-    "sql",
     "store",
-    "stronghold",
     "updater",
     "window-state",
   ] {
@@ -52,26 +41,22 @@ pub fn known_plugins() -> HashMap<&'static str, PluginMetadata> {
   }
 
   // rust-only
-  #[allow(clippy::single_element_loop)]
-  for p in ["localhost", "persisted-scope", "single-instance"] {
+  for p in ["single-instance", "wrap"] {
     plugins.entry(p).or_default().rust_only = true;
   }
 
   // known, but no particular config
   for p in [
-    "geolocation",
     "deep-link",
     "dialog",
     "fs",
-    "http",
     "notification",
     "os",
     "process",
-    "shell",
-    "upload",
-    "websocket",
     "opener",
     "clipboard-manager",
+    "mcp-bridge",
+    "aphrody",
   ] {
     plugins.entry(p).or_default();
   }
@@ -84,6 +69,36 @@ pub fn known_plugins() -> HashMap<&'static str, PluginMetadata> {
   plugins
 }
 
+pub fn plugin_features(plugin: &str) -> Vec<&str> {
+  match plugin {
+    "aphrody" => vec![],
+    "dialog" => vec!["dialog", "dialog-xdg-portal"],
+    "updater" => vec![
+      "updater",
+      "updater-rustls-tls",
+      "updater-system-proxy",
+      "updater-zip",
+    ],
+    _ => vec![plugin],
+  }
+}
+
+pub fn plugin_init(plugin: &str) -> String {
+  if plugin == "aphrody" {
+    return ".plugin(tauri_plugin_aphrody::init())".to_string();
+  }
+  let module = plugin.replace('-', "_");
+  let init = match plugin {
+    "autostart" | "global-shortcut" | "updater" => "Builder::new().build()",
+    "store" | "window-state" => "Builder::default().build()",
+    "log" => "Builder::new().level(tauri_plugin_aphrody::log::log::LevelFilter::Info).build()",
+    "single-instance" => "init(|_app, _args, _cwd| {})",
+    "wrap" => "init(include_str!(\"../wrap.json\"))",
+    _ => "init()",
+  };
+  format!(".plugin(tauri_plugin_aphrody::{module}::{init})")
+}
+
 fn version_req() -> String {
   env!("CARGO_PKG_VERSION").to_string()
 }
@@ -94,6 +109,32 @@ mod tests {
   fn owned_plugin_requirements_use_the_complete_product_release() {
     let plugins = super::known_plugins();
     assert_eq!(plugins["fs"].version_req.as_deref(), Some("1.4.4"));
-    assert_eq!(plugins["shell"].version_req.as_deref(), Some("1.4.4"));
+    assert_eq!(plugins["opener"].version_req.as_deref(), Some("1.4.4"));
+    assert!(!plugins.contains_key("shell"));
+  }
+
+  #[test]
+  fn consolidated_modules_keep_their_native_initializers() {
+    assert_eq!(
+      super::plugin_init("store"),
+      ".plugin(tauri_plugin_aphrody::store::Builder::default().build())"
+    );
+    assert_eq!(
+      super::plugin_init("opener"),
+      ".plugin(tauri_plugin_aphrody::opener::init())"
+    );
+    assert_eq!(
+      super::plugin_features("dialog"),
+      ["dialog", "dialog-xdg-portal"]
+    );
+    assert_eq!(
+      super::plugin_features("updater"),
+      [
+        "updater",
+        "updater-rustls-tls",
+        "updater-system-proxy",
+        "updater-zip"
+      ]
+    );
   }
 }

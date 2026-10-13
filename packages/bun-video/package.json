@@ -65,6 +65,7 @@
     "./crunchyroll": "./src/crunchyroll.ts",
     "./crunchyroll/api": "./src/crunchyroll-api.ts",
     "./crunchyroll/cli": "./src/crunchyroll-cli.ts",
+    "./crunchyroll/watchlist": "./src/crunchyroll-watchlist.ts",
     "./oauth": "./src/oauth.ts",
     "./secrets": "./src/secrets.ts",
     "./webgpu": "./src/webgpu.ts",
@@ -72,15 +73,22 @@
     "./ytdlp": "./src/ytdlp.ts",
     "./pipeline": "./src/pipeline.ts",
     "./image": "./src/image.ts",
+    "./frame-theme": "./src/frame-theme.ts",
+    "./frame-analysis": "./src/frame-analysis.ts",
+    "./episode-assets": "./src/episode-assets.ts",
+    "./episode-unpack": "./src/episode-unpack.ts",
+    "./episode-dataset": "./src/episode-dataset.ts",
+    "./pixel-svg": "./src/pixel-svg.ts",
+    "./shenron-episode": "./src/shenron-episode.ts",
     "./formats": "./src/formats.ts",
     "./source": "./src/source.ts",
     "./cache": "./src/cache.ts",
     "./archive": "./src/archive.ts",
     "./studio": "./src/studio.tsx",
     "./studio-remotion": "./src/studio-remotion.tsx",
-    "./engine": "./umbrella-src/index.ts",
-    "./encode": "./umbrella-src/encode.ts",
-    "./computer": "./umbrella-src/computer.ts",
+    "./engine": "./src/index.ts",
+    "./encode": "./src/encode.ts",
+    "./computer": "./src/computer.ts",
     "./ffmpeg": "./src/ffmpeg.ts",
     "./mpv": "./src/mpv.ts",
     "./remotion": "./packages/remotion/packages/core/src/index.ts",
@@ -102,6 +110,18 @@
   "publishConfig": {
     "access": "public",
     "tag": "next"
+  },
+  "peerDependencies": {
+    "@aphrody/bun-cloudflare": ">=1.4.4",
+    "@aphrody/m3-tokens": ">=3.3.3"
+  },
+  "peerDependenciesMeta": {
+    "@aphrody/bun-cloudflare": {
+      "optional": true
+    },
+    "@aphrody/m3-tokens": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@aphrody/bun-runtime-sdk": "1.4.4",

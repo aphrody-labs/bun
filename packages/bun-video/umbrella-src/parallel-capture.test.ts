@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
-import { captureParallelFrames, type CaptureWorker, type CaptureWorkerFactory } from "./parallel-capture";
-import type { FramePlan } from "./frame-plan";
-import { validateFramePlan } from "./frame-plan";
+import { captureParallelFrames, type CaptureWorker, type CaptureWorkerFactory } from "../src/parallel-capture";
+import type { FramePlan } from "../src/frame-plan";
+import { validateFramePlan } from "../src/frame-plan";
 
 const plan: FramePlan = {
   kind: "hyperframes",

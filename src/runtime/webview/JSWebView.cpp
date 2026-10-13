@@ -12,10 +12,12 @@
 #include "BunClientData.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptWrappableInlines.h"
+#include "../bindings/webcore/Event.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/LazyClassStructure.h>
 #include <JavaScriptCore/LazyClassStructureInlines.h>
 #include <JavaScriptCore/JSPromise.h>
+#include <JavaScriptCore/Strong.h>
 #include <JavaScriptCore/Weak.h>
 #include <JavaScriptCore/WeakInlines.h>
 #include <JavaScriptCore/WeakHandleOwner.h>
@@ -322,14 +324,25 @@ JSPromise* JSWebView::reload(JSGlobalObject* g)
 
 void JSWebView::doClose()
 {
+    if (m_closed) return;
+    Strong<JSWebView> protectedView(globalObject()->vm(), this);
     m_closed = true;
     if (m_backend == WebViewBackend::Chrome) {
         CDP::Ops::close(this);
-        return;
-    }
+    } else {
 #if OS(DARWIN)
-    WK::Ops::close(this);
+        WK::Ops::close(this);
 #endif
+    }
+    notifyClosed();
+}
+
+void JSWebView::notifyClosed()
+{
+    m_closed = true;
+    if (std::exchange(m_closeEventDispatched, true)) return;
+    Strong<JSWebView> protectedView(globalObject()->vm(), this);
+    wrapped().dispatchEvent(WebCore::Event::create("close"_s, WebCore::Event::CanBubble::No, WebCore::Event::IsCancelable::No));
 }
 
 // --- Factory entry ---------------------------------------------------------

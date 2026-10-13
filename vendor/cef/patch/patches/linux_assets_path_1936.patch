@@ -1,0 +1,39 @@
+diff --git content/browser/child_process_launcher_helper_linux.cc content/browser/child_process_launcher_helper_linux.cc
+index 230b4d7c7b5c74fe374e7e26bd4df4be2faaf7fa..d78b75691402597471a2d55fdc003061cfe606fd 100644
+--- content/browser/child_process_launcher_helper_linux.cc
++++ content/browser/child_process_launcher_helper_linux.cc
+@@ -193,7 +193,7 @@ ZygoteCommunication* ChildProcessLauncherHelper::GetZygoteForLaunch() {
+ base::File OpenFileToShare(const base::FilePath& path,
+                            base::MemoryMappedFile::Region* region) {
+   base::FilePath exe_dir;
+-  bool result = base::PathService::Get(base::BasePathKey::DIR_EXE, &exe_dir);
++  bool result = base::PathService::Get(base::BasePathKey::DIR_ASSETS, &exe_dir);
+   CHECK(result, base::NotFatalUntil::M159);
+   base::File file(exe_dir.Append(path),
+                   base::File::FLAG_OPEN | base::File::FLAG_READ);
+diff --git sandbox/linux/suid/client/setuid_sandbox_host.cc sandbox/linux/suid/client/setuid_sandbox_host.cc
+index baec9e404905d1ff058443689bf2b1e8fa308abf..752ca96c48b502d207d6ac40d4e823aa39c7cfb7 100644
+--- sandbox/linux/suid/client/setuid_sandbox_host.cc
++++ sandbox/linux/suid/client/setuid_sandbox_host.cc
+@@ -134,7 +134,7 @@ bool SetuidSandboxHost::IsDisabledViaEnvironment() {
+ base::FilePath SetuidSandboxHost::GetSandboxBinaryPath() {
+   base::FilePath sandbox_binary;
+   base::FilePath exe_dir;
+-  if (base::PathService::Get(base::DIR_EXE, &exe_dir)) {
++  if (base::PathService::Get(base::DIR_ASSETS, &exe_dir)) {
+     base::FilePath sandbox_candidate = exe_dir.AppendASCII("chrome-sandbox");
+     if (base::PathExists(sandbox_candidate))
+       sandbox_binary = sandbox_candidate;
+diff --git ui/ozone/common/egl_util.cc ui/ozone/common/egl_util.cc
+index e9102802316a8e2e0cce4d7c3db1c14cdb71648e..1a1ab8625a789c894acf27b5fcd1d32baa21ca2f 100644
+--- ui/ozone/common/egl_util.cc
++++ ui/ozone/common/egl_util.cc
+@@ -154,7 +154,7 @@ bool LoadDefaultEGLGLES2Bindings(
+ 
+     base::FilePath module_path;
+ #if !BUILDFLAG(IS_FUCHSIA)
+-    if (!base::PathService::Get(base::DIR_MODULE, &module_path)) {
++    if (!base::PathService::Get(base::DIR_ASSETS, &module_path)) {
+       return false;
+     }
+ #endif

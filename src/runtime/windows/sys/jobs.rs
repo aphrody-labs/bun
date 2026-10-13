@@ -101,6 +101,34 @@ struct Registry {
 
 static JOBS: Guarded<Option<Registry>> = Guarded::new(None);
 
+pub(crate) fn duplicate(id: u32) -> WinResult<OwnedHandle> {
+    let guard = JOBS.lock();
+    let handle = guard
+        .as_ref()
+        .and_then(|r| r.jobs.get(&id).copied())
+        .ok_or(WinErr {
+            code: ERROR_INVALID_HANDLE,
+            call: "JobObject",
+        })?;
+    let mut duplicate = core::ptr::null_mut();
+    // SAFETY: the registry lock retains the source; the output handle is owned by the caller.
+    let success = unsafe {
+        bun_sys::windows::DuplicateHandle(
+            bun_sys::windows::GetCurrentProcess(),
+            handle as HANDLE,
+            bun_sys::windows::GetCurrentProcess(),
+            &mut duplicate,
+            0,
+            0,
+            bun_sys::windows::DUPLICATE_SAME_ACCESS,
+        )
+    };
+    if success == 0 {
+        return Err(WinErr::last("DuplicateHandle"));
+    }
+    Ok(OwnedHandle(duplicate))
+}
+
 fn with_job<T>(id: u32, f: impl FnOnce(HANDLE) -> WinResult<T>) -> WinResult<T> {
     let handle = {
         let guard = JOBS.lock();

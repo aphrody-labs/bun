@@ -208,6 +208,14 @@ impl Drop for ProcessHandle {
 }
 
 impl Process {
+    #[cfg(target_os = "linux")]
+    pub fn duplicate_pidfd(&self) -> Option<bun_sys::Result<Fd>> {
+        if self.has_exited() || self.pidfd <= 0 || self.pidfd == Fd::INVALID.native() {
+            return None;
+        }
+        Some(bun_sys::dup_at_least(Fd::from_native(self.pidfd), 3))
+    }
+
     pub fn memory_cost(&self) -> usize {
         core::mem::size_of::<Self>()
     }
@@ -1612,6 +1620,8 @@ pub struct WindowsSpawnOptions {
     /// Windows ConPTY handle. When set, the child is attached to the
     /// pseudoconsole and stdin/stdout/stderr are provided by ConPTY.
     pub pseudoconsole: Option<bun_sys::windows::HPCON>,
+    /// Borrowed duplicate retained by the caller until `uv_spawn_with_job` returns.
+    pub job_handle: Option<bun_sys::windows::HANDLE>,
 }
 
 #[cfg(windows)]
@@ -1636,6 +1646,7 @@ impl Default for WindowsSpawnOptions {
             new_process_group: false,
             pty_slave_fd: (),
             pseudoconsole: None,
+            job_handle: None,
         }
     }
 }
@@ -2202,7 +2213,7 @@ mod spawn_process_body {
                 unreachable!()
             };
             uv_proc
-                .spawn(loop_, &mut uv_process_options)
+                .spawn_with_job(loop_, &mut uv_process_options, options.job_handle.unwrap_or(core::ptr::null_mut()))
                 .to_error(bun_sys::Tag::uv_spawn)
         };
         if let Some(err) = spawn_err {

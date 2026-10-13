@@ -13,6 +13,7 @@ for await (const name of new Bun.Glob("*.dll").scan(source)) names.push(name);
 for (const required of [
   "mpv-2.dll",
   "bun_video_native.dll",
+  "zlib1.dll",
   "avcodec-63.dll",
   "avformat-63.dll",
   "avutil-61.dll",

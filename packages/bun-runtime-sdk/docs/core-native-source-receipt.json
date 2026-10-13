@@ -1,0 +1,22 @@
+{
+  "schema": "bun-core-native-source/1",
+  "sourceRepository": "https://github.com/aphrody-labs/aphrody",
+  "sourceRevision": "bf395a25873a78b3a06f214da38932dc8187fe8d",
+  "sources": [
+    {
+      "path": "packages/engine/core/src/sys/stats.ts",
+      "sha256": "89fc26da818c8705f67c087765ab87985948102bef53e43d05328c44ca58b116",
+      "owner": "packages/bun-runtime-sdk/src/system.ts",
+      "operation": "transfer Bun platform statistics contract"
+    },
+    {
+      "path": "packages/engine/core/src/runtime/client.ts",
+      "sha256": "20f155530f590dbd33d246d120eb093ce66400f5ae56c8102ba5bf210b966444",
+      "owner": "packages/bun-runtime-sdk/src/system.ts",
+      "operation": "replace external native runtime system/process calls with Bun APIs"
+    }
+  ],
+  "nativeOwners": ["Bun.spawn", "bun:windows.Job", "Bun native node:os", "fetch"],
+  "qualification": "source only; native gate pending",
+  "protectedDataTransferred": false
+}

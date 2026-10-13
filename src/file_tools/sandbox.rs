@@ -99,7 +99,10 @@ impl Sandbox {
                         return Err(WorkspaceError::Sandbox(path.display().to_string()));
                     }
                     #[cfg(windows)]
-                    if bun_core::strings::contains_char(bytes, b':') || bytes.ends_with(b".") || bytes.ends_with(b" ") {
+                    if bun_core::strings::contains_char(bytes, b':')
+                        || bytes.ends_with(b".")
+                        || bytes.ends_with(b" ")
+                    {
                         return Err(WorkspaceError::Sandbox(path.display().to_string()));
                     }
                     parts.push(bytes);

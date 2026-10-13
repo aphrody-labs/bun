@@ -63,6 +63,61 @@ async function closeObservingServer() {
 }
 
 describe("Bun.FetchSession", () => {
+  test("records native fetch HAR without credentials or consuming the response", async () => {
+    using server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        return new Response("body stays readable", {
+          headers: { "set-cookie": "secret-cookie=private", "x-secret": "private" },
+        });
+      },
+    });
+    using session = new Bun.FetchSession({ har: true });
+    const response = await fetch(`${server.url}resource?token=private`, {
+      session,
+      headers: { authorization: "Bearer private", "x-secret": "private" },
+    });
+    expect(response.bodyUsed).toBe(false);
+    expect(await response.text()).toBe("body stays readable");
+    const serialized = session.exportHAR();
+    expect(serialized).not.toContain("private");
+    const har = JSON.parse(serialized);
+    expect(har.log.version).toBe("1.2");
+    expect(har.log.entries).toHaveLength(1);
+    expect(har.log.entries[0].response.status).toBe(200);
+    expect(har.log.entries[0].request.url).toBe(`${server.url}resource`);
+    expect(har.log.entries[0].request.headers).toContainEqual({ name: "authorization", value: "[redacted]" });
+    session.clearHAR();
+    expect(JSON.parse(session.exportHAR()).log.entries).toEqual([]);
+  });
+
+  test("HAR recording is opt-in and validates its option", () => {
+    using session = new Bun.FetchSession();
+    expect(() => session.exportHAR()).toThrow("HAR recording is disabled");
+    // @ts-expect-error Invalid values must also fail at runtime.
+    expect(() => new Bun.FetchSession({ har: "yes" })).toThrow("'har' must be a boolean");
+  });
+
+  test("HAR records failed native requests", async () => {
+    using dead = await deadPort();
+    using session = new Bun.FetchSession({ har: true });
+    await expect(session.fetch(`http://127.0.0.1:${dead.port}/`, { proxy: false })).rejects.toThrow();
+    expect(JSON.parse(session.exportHAR()).log.entries[0].response.status).toBe(0);
+  });
+
+  test("HAR evicts old exchanges instead of growing without a bound", async () => {
+    using server = Bun.serve({ port: 0, fetch: () => new Response("ok") });
+    using session = new Bun.FetchSession({ har: true });
+    for (let batch = 0; batch < 13; batch++) {
+      await Promise.all(Array.from({ length: 20 }, (_, index) =>
+        session.fetch(`${server.url}${batch * 20 + index}`).then(response => response.text())));
+    }
+    const log = JSON.parse(session.exportHAR()).log;
+    expect(log.entries).toHaveLength(256);
+    expect(log._droppedEntries).toBe(4);
+    expect(log.entries.filter(entry => Number(new URL(entry.request.url).pathname.slice(1)) < 20)).toHaveLength(16);
+    expect(log.entries.some(entry => entry.request.url === `${server.url}259`)).toBe(true);
+  });
   test("owns its connection pool", async () => {
     const counting = connectionCountingServer();
     const port = await counting.listen();

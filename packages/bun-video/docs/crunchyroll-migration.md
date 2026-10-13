@@ -1,5 +1,47 @@
 # Crunchyroll client migration
 
+## Observed watchlist metadata
+
+`src/crunchyroll-watchlist.ts` accepts official series and watch URLs observed in
+the owner's authenticated watchlist, including movie cards. The synchronous
+`registerObservedCrunchyrollWatchlist(catalog, entries)` registers public metadata
+without network access or authentication. Its scope is only the supplied observed
+references; expansion remains pending. Titles are optional observations, not a
+claim of complete account inventory. Query strings, fragments and slugs are omitted
+from canonical stored URLs.
+
+`importCrunchyrollWatchlist(catalog, entries,
+{ clientFactory })` reuses `getAnime`, `getSeasons` and `getEpisodes`; the factory
+can reuse `crunchyrollClientFactory`. No watchlist or individual movie/episode
+metadata endpoint is assumed. Watch references remain in the catalog and in the
+returned `pendingVideos`; their presence does not qualify playable media.
+
+The import validates the complete supplied metadata before one transaction in
+`VideoCatalog`. Stable source IDs prevent duplicate imports and preserve private
+media references, provider qualification and existing jobs. Series use
+`crunchyroll:series:<id>` and watch references use `crunchyroll:video:<id>`;
+historical episode/movie identities and matching provider URL identities are
+retained. Both registration paths share one insertion owner. Responses with missing totals or incomplete
+item lists require verified provider pagination. Returned episode IDs and
+official URLs can feed the existing episode workflow; metadata import does not
+establish playable media, subtitles or CDN publication.
+
+The existing `bun-video-crunchyroll` CLI accepts:
+
+```text
+bun-video-crunchyroll watchlist metadata observed.json --catalog <catalog.sqlite>
+bun-video-crunchyroll watchlist import observed.json --catalog <catalog.sqlite> --timeout 300000
+```
+
+Input is a UTF-8 JSON array of `{ "url": "official URL", "title": "optional observed title" }`,
+limited to 4 MiB and 10000 entries. The catalog defaults to the existing private
+`VideoCatalog` location. `metadata` needs no private configuration. `import` uses
+the existing `BUN_VIDEO_CRUNCHYROLL_ACCESS_TOKEN`, account and locale configuration;
+credentials are never CLI arguments. Import validates all responses before its
+transaction. A provider authentication failure does not remove observations
+registered earlier with `metadata`. No jobs, media extraction or uploads are
+started by either command.
+
 ## Stateless metadata API and CLI
 
 `@aphrody/bun-video/crunchyroll/api` exports `createCrunchyrollApi`, a Fetch

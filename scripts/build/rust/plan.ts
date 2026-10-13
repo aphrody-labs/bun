@@ -26,6 +26,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { BuildError } from "../error.ts";
 import { writeIfChanged } from "../fs.ts";
+import { withoutMissingRustWrappers } from "./environment.ts";
 import { parseToml, type TomlTable, type TomlValue } from "./toml.ts";
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -173,7 +174,30 @@ export interface RustPlan {
   target: RustcTargetInfo;
 }
 
-export const PLAN_VERSION = 5;
+export const PLAN_VERSION = 6;
+
+/** Metadata must resolve the same optional dependencies as the unit graph. */
+export function metadataFeatureArgs(args: readonly string[]): string[] {
+  const selected: string[] = [];
+  const features: string[] = [];
+  const flags: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "-p" || arg === "--package") selected.push(args[++i]);
+    else if (arg.startsWith("--package=")) selected.push(arg.slice(10));
+    else if (arg.startsWith("-p") && arg.length > 2) selected.push(arg.slice(2));
+    else if (arg === "--features" || arg === "-F") features.push(args[++i]);
+    else if (arg.startsWith("--features=")) features.push(arg.slice(11));
+    else if (arg.startsWith("-F") && arg.length > 2) features.push(arg.slice(2));
+    else if (arg === "--all-features" || arg === "--no-default-features") flags.push(arg);
+  }
+  // Unlike build, metadata has no package selector. Qualify features for the selected crate.
+  const pkg = selected.length === 1 ? selected[0].split("@")[0] : undefined;
+  const qualified = features
+    .flatMap(value => value.split(/[\s,]+/).filter(Boolean))
+    .map(feature => (pkg && !feature.includes("/") ? `${pkg}/${feature}` : feature));
+  return qualified.length ? [...flags, "--features", qualified.join(",")] : flags;
+}
 
 /** `dir`: the graph's directory under the build directory — `rust-target/` for bun_runtime, `rust-target/shim/` for the Windows shim. */
 export function planPath(dir: string): string {
@@ -219,7 +243,7 @@ function run(
     encoding: "utf8",
     maxBuffer: 1 << 30,
     stdio: ["ignore", "pipe", opts.inheritStderr ? "inherit" : "pipe"],
-    env: { ...process.env, ...opts.env },
+    env: withoutMissingRustWrappers({ ...process.env, ...opts.env }),
   });
   if (r.error) throw new BuildError(`failed to run ${cmd}`, { cause: r.error });
   if (r.status !== 0) {
@@ -266,26 +290,46 @@ function targetInfo(rustc: string, triple: string, rustflags: string[], sysroot:
 }
 
 /**
- * The `[workspace]` manifest a package inherits from (cargo `find_workspace_root`): `package.workspace` if given,
+ * The path of the `[workspace]` manifest a package inherits from (cargo `find_workspace_root`): `package.workspace` if given,
  * else the package's own manifest if it has `[workspace]`, else the nearest ancestor directory's `Cargo.toml` that does.
  * A vendored crate with its own workspace table (lol-html) inherits from that, not from bun's root.
  */
-function workspaceManifestOf(manifest: TomlTable, manifestPath: string): TomlTable {
+function workspaceManifestPathOf(manifest: TomlTable, manifestPath: string, required = true): string {
   const explicit = (manifest.package as TomlTable | undefined)?.workspace;
   if (typeof explicit === "string") {
     const p = join(resolve(dirname(manifestPath), explicit), "Cargo.toml");
-    return parseToml(readFileSync(p, "utf8"), p);
+    return p;
   }
-  if (manifest.workspace !== undefined) return manifest;
+  if (manifest.workspace !== undefined) return manifestPath;
   for (let dir = dirname(dirname(manifestPath)); ; dir = dirname(dir)) {
     const p = join(dir, "Cargo.toml");
     if (existsSync(p)) {
       const m = parseToml(readFileSync(p, "utf8"), p);
-      if (m.workspace !== undefined) return m;
+      if (m.workspace !== undefined) return p;
     }
-    if (dirname(dir) === dir)
+    if (dirname(dir) === dir) {
+      if (!required) return manifestPath;
       throw new BuildError(`${manifestPath}: lints.workspace = true but no workspace manifest found above it`);
+    }
   }
+}
+
+function workspaceManifestOf(manifest: TomlTable, manifestPath: string): TomlTable {
+  const path = workspaceManifestPathOf(manifest, manifestPath);
+  return parseToml(readFileSync(path, "utf8"), path);
+}
+
+/** Path dependencies outside the source glob still inherit package facts and lints from their workspace. */
+export function manifestInputPaths(packages: Iterable<Pick<MetadataPackage, "source" | "manifest_path">>): string[] {
+  const paths = new Set<string>();
+  for (const pkg of packages) {
+    if (pkg.source !== null) continue;
+    const path = pkg.manifest_path;
+    paths.add(path);
+    const manifest = parseToml(readFileSync(path, "utf8"), path);
+    paths.add(workspaceManifestPathOf(manifest, path, false));
+  }
+  return [...paths].sort();
 }
 
 /**
@@ -363,7 +407,9 @@ function main(): void {
   const platforms = [...new Set([host, triple])].flatMap(t => ["--filter-platform", t]);
   const packages: Record<string, MetadataPackage> = {};
   const meta = JSON.parse(
-    run(cargo, ["metadata", "--format-version=1", "--locked", ...platforms], { inheritStderr: true }),
+    run(cargo, ["metadata", "--format-version=1", "--locked", ...platforms, ...metadataFeatureArgs(cargoArgs)], {
+      inheritStderr: true,
+    }),
   ) as {
     packages: MetadataPackage[];
     workspace_root: string;

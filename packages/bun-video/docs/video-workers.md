@@ -172,6 +172,18 @@ manifestes peuvent demander cookies, CORS ou DRM. Les catalogues de yt-dlp
 
 Le contrat de capture existant est `FramePlan`, dans `src/frame-plan.ts` :
 
+`src/hyperframes-native.ts` possède la capture HyperFrames et la validation des
+PNG ; l'export du moteur absorbé réutilise cette même fonction. Le rendu Remotion,
+les workers et les captures HyperFrames partagent les délais et l'annulation de
+`src/frame-plan.ts`. Les exports `/engine`, `/encode` et `/computer` pointent
+directement vers leurs propriétaires sous `src/`.
+
+Le générateur historique `scripts/owned-paths.ts` a été retiré : ses manifestes
+`remotion/UPSTREAM.json` et `hyperframes/UPSTREAM.json` ne correspondent plus
+aux sources absorbées sous `packages/`, et son parcours global incluait les
+assets privés de `.local`. Les assets d'épisode sont recensés et empaquetés par
+`scripts/episode-package.ts` depuis leur manifeste dédié.
+
 ```ts
 import { captureParallelFrames } from "@aphrody/bun-video";
 
@@ -272,6 +284,11 @@ par défaut et doivent être explicites pour une comparaison tolérante. `exact`
 indique zéro différence, tandis que `passed` peut simplement satisfaire les
 seuils. Le résultat porte sur `selected-reference-frames` ; il ne prouve pas
 les frames non mesurées, le déchiffrement ni la qualité audio.
+
+Les fichiers image sont décodés avec `Bun.Image.rgba()` et les fichiers vidéo
+avec `Bun.Video.frame(0).rgba()`, sans redimensionnement. Les paramètres historiques
+des exécutables média sont facultatifs et ignorés. Le délai borne l'attente du
+résultat ; une opération native déjà lancée termine dans son worker.
 
 Les fixtures déterministes servent uniquement aux tests unitaires et de protocoles.
 La qualification d'un site utilise de vrais sites choisis par l'utilisateur,

@@ -126,7 +126,7 @@ export async function normalizeMediaSDK(
     expanded += info.size;
     if (++count > 100_000 || expanded > 2 * 1024 * 1024 * 1024) throw new Error("SDK expanded file budget exceeded");
     const normalized = name.replaceAll("\\", "/");
-    entries[normalized] = { data: Bun.file(path), mode: info.mode & 0o777, mtime: 0 };
+    entries[normalized] = { data: await Bun.file(path).bytes(), mode: info.mode & 0o777, mtime: 0 };
     fileHashes[normalized] = await hashSDKFile(path);
   }
   const filename = `${component}-${plan.version}-${target}-sdk.zip`;

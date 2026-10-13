@@ -492,6 +492,9 @@ pub trait Handler {
 
     // Set SCP control.
     fn set_scp(&mut self, _char_path: ScpCharPath, _update_mode: ScpUpdateMode) {}
+
+    #[cfg(feature = "native-ui")]
+    fn native_ui_frame(&mut self, _frame: crate::ansi::native_ui::Frame) {}
 }
 
 #[derive(Debug, Default)]
@@ -537,6 +540,36 @@ struct ApcState {
     /// Buffer for accumulating APC data.
     /// Pre-allocated to a reasonable size for Kitty graphics chunks.
     buffer: Vec<u8>,
+    #[cfg(feature = "native-ui")]
+    overflow: bool,
+}
+
+impl ApcState {
+    fn append(&mut self, bytes: &[u8]) {
+        #[cfg(feature = "native-ui")]
+        {
+            use crate::ansi::native_ui::{MAX_ENCODED_BYTES, PREFIX};
+            if self.overflow {
+                return;
+            }
+            let native = self
+                .buffer
+                .iter()
+                .chain(bytes.iter())
+                .take(PREFIX.len())
+                .zip(PREFIX)
+                .all(|(left, right)| left == right);
+            if native
+                && self.buffer.len().saturating_add(bytes.len())
+                    > MAX_ENCODED_BYTES + PREFIX.len() + 2
+            {
+                self.buffer.clear();
+                self.overflow = true;
+                return;
+            }
+        }
+        self.buffer.extend_from_slice(bytes);
+    }
 }
 
 impl Default for SyncState {
@@ -790,6 +823,14 @@ impl<'a, H: Handler + 'a> Performer<'a, H> {
         } else {
             buffer.as_slice()
         };
+
+        #[cfg(feature = "native-ui")]
+        if data.starts_with(crate::ansi::native_ui::PREFIX) {
+            if let Some(frame) = crate::ansi::native_ui::parse(data) {
+                self.handler.native_ui_frame(frame);
+            }
+            return;
+        }
 
         debug!(
             "[process_apc_buffer] Processing {} bytes (stripped to {}), starts with: {}",
@@ -1617,6 +1658,10 @@ impl<U: Handler> Perform for Performer<'_, U> {
     fn apc_start(&mut self) {
         debug!("[apc_start] Beginning APC accumulation");
         self.state.apc_state.buffer.clear();
+        #[cfg(feature = "native-ui")]
+        {
+            self.state.apc_state.overflow = false;
+        }
         // Pre-allocate reasonable size for Kitty graphics chunks (typically 4KB)
         self.state.apc_state.buffer.reserve(4096);
     }
@@ -1626,11 +1671,32 @@ impl<U: Handler> Perform for Performer<'_, U> {
     /// We accumulate all bytes here to handle large sequences that exceed Copa's
     /// default OSC buffer size (1024 bytes).
     fn apc_put(&mut self, byte: u8) {
-        self.state.apc_state.buffer.push(byte);
+        self.state.apc_state.append(&[byte]);
     }
 
     fn apc_put_slice(&mut self, bytes: &[u8]) {
-        self.state.apc_state.buffer.extend_from_slice(bytes);
+        self.state.apc_state.append(bytes);
+    }
+
+    #[cfg(feature = "native-ui")]
+    fn apc_requires_st(&self) -> bool {
+        self.state.apc_state.overflow
+            || self
+                .state
+                .apc_state
+                .buffer
+                .starts_with(crate::ansi::native_ui::PREFIX)
+    }
+
+    #[cfg(feature = "native-ui")]
+    fn apc_discarding(&self) -> bool {
+        self.state.apc_state.overflow
+    }
+
+    #[cfg(feature = "native-ui")]
+    fn apc_abort(&mut self) {
+        self.state.apc_state.buffer.clear();
+        self.state.apc_state.overflow = false;
     }
 
     /// Called when the APC sequence ends. Processes the accumulated APC data.
@@ -2275,6 +2341,52 @@ mod tests {
     #[derive(Default)]
     struct SyncHandler {
         printed: String,
+    }
+
+    #[cfg(feature = "native-ui")]
+    #[test]
+    fn native_ui_multipart_and_bounded_apc() {
+        use crate::ansi::native_ui::{Frame, MAX_ENCODED_BYTES};
+        use base64::Engine;
+        #[derive(Default)]
+        struct NativeHandler {
+            frames: Vec<Frame>,
+            printed: String,
+        }
+        impl Handler for NativeHandler {
+            fn native_ui_frame(&mut self, frame: Frame) {
+                self.frames.push(frame);
+            }
+            fn input(&mut self, c: char) {
+                self.printed.push(c);
+            }
+        }
+        let body = base64::engine::general_purpose::STANDARD
+            .encode(r#"{"version":1,"sequence":7,"nodes":[]}"#);
+        let wire = format!("\x1b_RioUI;{body}\x1b\\");
+        let mut processor = Processor::default();
+        let mut handler = NativeHandler::default();
+        for byte in wire.as_bytes() {
+            processor.advance(&mut handler, &[*byte]);
+        }
+        assert_eq!(handler.frames.len(), 1);
+        assert_eq!(handler.frames[0].sequence, 7);
+        processor.advance(&mut handler, b"\x1b_RioUI;");
+        let capacity = processor.state.apc_state.buffer.capacity();
+        processor.advance(&mut handler, &vec![b'A'; MAX_ENCODED_BYTES + 100]);
+        assert!(processor.state.apc_state.overflow);
+        assert_eq!(processor.state.apc_state.buffer.capacity(), capacity);
+        processor.advance(&mut handler, b"\x07\x1b[ignored\x18more\x1b");
+        assert!(handler.printed.is_empty());
+        processor.advance(&mut handler, b"\\after");
+        assert_eq!(handler.printed, "after");
+        assert_eq!(handler.frames.len(), 1);
+        processor.advance(&mut handler, format!("\x1b_RioUI;{body}\x1b").as_bytes());
+        assert_eq!(handler.frames.len(), 1);
+        processor.advance(&mut handler, b"\\");
+        assert_eq!(handler.frames.len(), 2);
+        processor.advance(&mut handler, format!("\x1b_RioUI;{body}\x18").as_bytes());
+        assert_eq!(handler.frames.len(), 2);
     }
 
     impl Handler for SyncHandler {

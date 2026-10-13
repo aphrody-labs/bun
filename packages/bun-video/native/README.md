@@ -47,7 +47,8 @@ Linux parent-death signals are not inherited by arbitrary grandchildren; other
 Unix hosts currently provide graceful RAII cleanup only. These are separate
 qualification scopes, not interchangeable whole-tree guarantees.
 `args` gives a caller a validated literal argv. The optional `libav` feature
-integrates `ffmpeg-next` 8.1.0 through `libav_encoder_present`; it requires the
+integrates registry `ffmpeg-sys-next =9.0.1` through first-party codec/AVIO owners;
+it requires an explicit qualified `FFMPEG_DIR`, its SDK receipt and the
 matching libav headers, libraries and bindgen toolchain. Encoder registration is
 separate from hardware readiness. No root Cargo workspace changes are needed.
 `probe_media` returns FFprobe stream/container JSON; set `BUN_VIDEO_FFPROBE` for
@@ -87,9 +88,9 @@ include FFmpeg, ffprobe and its Rust compositor;
 [HyperFrames producer](https://github.com/heygen-com/hyperframes/blob/main/packages/producer/README.md)
 captures browser frames then encodes/mixes with FFmpeg.
 
-[ffmpeg-next](https://github.com/zmwangx/rust-ffmpeg) provides established libav
-bindings; its published API reviewed here is
-[8.1.0 encoder discovery](https://docs.rs/ffmpeg-next/8.1.0/ffmpeg_next/codec/encoder/fn.find_by_name.html).
+[ffmpeg-sys-next](https://crates.io/crates/ffmpeg-sys-next/9.0.1) provides the
+registry bindings. Native code uses `avcodec_find_encoder_by_name` and
+`avcodec_get_name` directly, without the wrapper's exhaustive Rust ID conversions.
 Repository master version and published version can differ. Pinning avoids
 guessing SDK compatibility. The process path works without linking an SDK and
 shares the already used codec infrastructure. Optional bindings establish a

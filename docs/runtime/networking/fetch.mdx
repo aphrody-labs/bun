@@ -503,6 +503,31 @@ Bun rounds `idleTimeout` up to its socket timer, which moves in 4 second steps u
 
 Without `maxIdleSockets` a session has no limit of its own. The idle connections of all sessions and of plain `fetch` share one bounded pool per kind. When that pool is full, Bun closes the longest-idle connection in it, whichever session it belongs to. A `maxIdleSockets` above the size of the pool has no effect.
 
+#### Recording a development HAR
+
+Enable recording on a fetch session and export its HAR 1.2 JSON:
+
+```ts
+using session = new Bun.FetchSession({ har: true });
+const response = await fetch("https://example.com/", { session });
+await Bun.write("network.har", session.exportHAR());
+session.clearHAR();
+```
+
+Recording retains at most 256 exchanges and 8 MiB, with at most 256 active
+captures. It records successful HTTP(S) response
+headers and failed requests without reading or buffering response bodies. URLs
+omit credentials, query values and fragments; cookies, authentication and custom
+headers are redacted. Request bodies are omitted. `_droppedEntries` counts evicted
+exchanges and requests skipped at the active capture limit. Header names and
+values are capped at 256 and 2,048 bytes; URLs are capped at 8,192 bytes and each
+header list at 128 entries. `clearHAR()` resets the log without closing the
+connection pool.
+
+Elapsed time ends at response headers. Individual transport phases, wire sizes,
+and redirect hops are unavailable; a followed redirect records the original
+request and final response. This log does not replay authenticated sessions.
+
 #### Connecting to a specific address
 
 To send a request for a hostname to an address you resolved and checked yourself, put the address in the URL and name the origin in the `Host` header and in `tls.serverName`. Bun dials the address, sends `Host` (as `:authority` over HTTP/2), uses `serverName` for SNI, and verifies the certificate against `serverName`.

@@ -22,13 +22,28 @@ export interface NativeCapturedFrame {
   png: Uint8Array;
 }
 
-export function validateNativePng(png: Uint8Array, frame: number): void {
+export function validateNativePng(
+  png: Uint8Array,
+  frame: number,
+  dimensions?: { width: number; height: number },
+): void {
   if (
     !(png instanceof Uint8Array) ||
     png.length < 8 ||
     ![137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => png[index] === byte)
   )
-    throw new Error(`Native screenshot did not return PNG bytes for frame ${frame}`);
+    throw new Error(
+      dimensions
+        ? "Capture worker did not return a PNG IHDR"
+        : `Native screenshot did not return PNG bytes for frame ${frame}`,
+    );
+  if (dimensions) {
+    if (png.length < 33 || ![0, 0, 0, 13, 73, 72, 68, 82].every((byte, index) => png[index + 8] === byte))
+      throw new Error("Capture worker did not return a PNG IHDR");
+    const header = new DataView(png.buffer, png.byteOffset, png.byteLength);
+    if (header.getUint32(16) !== dimensions.width || header.getUint32(20) !== dimensions.height)
+      throw new Error("Capture PNG dimensions do not match the plan");
+  }
 }
 
 /** The caller owns the context, viewport, origin allowlist and lifetime. */

@@ -173,3 +173,28 @@ Each dep becomes three ninja build statements, each with `restat = 1`:
 
 `restat` is what makes incremental builds fast — if step N was a no-op,
 ninja prunes everything after it.
+
+## Qualified native SDKs
+
+`scripts/build/native-sdk-index.json` owns immutable normalized ZIP assets. Its
+initial `assets` list is empty; no downloaded SDK or vendor replacement is yet
+qualified by that list. A supported direct C/C++ dependency prefers a matching
+asset in `BUN_NATIVE_SDK_MODE=auto` (the default). `source` explicitly uses the
+existing source build; `sdk` requires an indexed SDK. Automatic selection uses
+only an exact source/patch, compiler, target and build-option match; otherwise
+it continues through the source owner. Explicit SDK mode rejects mismatches.
+Local dependencies, Rust dependencies and unsupported build kinds retain their
+source owners.
+
+The factory and consumer share `computeNativeSDKABI` and
+`nativeSDKSourceIdentity`. Normalized dependency flags and specifications,
+compiler/linker identity files, sanitizer/LTO/CPU settings and toolchain headers
+participate in compatibility. The download checks its pinned byte count and
+SHA-256 while streaming. Every build verifies the installed receipt and member
+hashes; undeclared files and symbolic links are rejected. Cached SDKs live below
+the configured cache directory, with source-relative headers in `source/` and
+generated headers in `generated/`. Cross-dependency includes therefore retain
+paths such as BoringSSL's `include/` without reading a second vendor tree.
+
+Only a linked, tested factory receipt may enter the index. Source vendors remain
+until the published asset, consumer build and target runtime are qualified.

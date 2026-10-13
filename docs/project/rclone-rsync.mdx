@@ -3,7 +3,7 @@ title: rclone et rsync natifs
 description: rclone (CLI et librclone via bun:ffi) et rsync statique, forks aphrody-labs, intégrés au runtime Aphrody
 ---
 
-Les binaires viennent de la release `aphrody-tools-1` d'aphrody-labs/bun, construits depuis les forks `aphrody-labs/rclone` (branche `aphrody`) et `aphrody-labs/rsync`. Le paquet `packages/bun-tools` les télécharge, vérifie `SHA256SUMS.txt` et les met en cache (`APHRODY_TOOLS_DIR`).
+Le paquet `packages/bun-tools` utilise les assets `aphrody-tools-1` avec tailles et SHA-256 fixes. Leur révision source n'est pas établie : le descriptif de release indique les forks, sans commit. L'installation est explicite (`bun-host tool install rclone`, `librclone` ou `rsync`). Le répertoire unique est `dirname(process.execPath)/lib/tools`, sans dossier de version, avec `rclone(.exe)`, `librclone(.so/.dll)` et `rsync`. `BUN_TOOLS_DIR` permet de choisir un répertoire absolu ; `APHRODY_TOOLS_DIR` reste uniquement un override explicite. CLI et API utilisent ce même fournisseur, vérifient ses SHA-256 avant usage et ne téléchargent rien implicitement. Les exécutables configurés restent prioritaires, puis le SDK installé, puis les outils du PATH.
 
 | Asset | Contenu |
 | --- | --- |
@@ -12,13 +12,26 @@ Les binaires viennent de la release `aphrody-tools-1` d'aphrody-labs/bun, constr
 | `rsync-linux-x64-musl` | rsync statique (musl) |
 
 ```ts
-import { rclone, rcloneRpc, rsync } from "@aphrody/bun-tools";
+import { git, rclone, rcloneRpc, rsync, rsyncNative } from "@aphrody/bun-tools";
 
 await rclone(["lsd", "remote:"]);
 await rcloneRpc("core/version");
 await rsync(["-a", "src/", "host:/dst/"]);
+await git(["status", "--short"], { cwd: "/explicit/repository" });
+await rsyncNative("C:/explicit/archive.zip", "host:/explicit/archive.zip", "/absolute/remote/bun");
 ```
 
-Sous Windows, rsync s'exécute dans la distro WSL `AphrodyAlpine` (`/usr/local/bin/rsync`), les chemins `C:\…` étant convertis en `/mnt/c/…`. Variables : `APHRODY_RCLONE`, `APHRODY_LIBRCLONE`, `APHRODY_RSYNC`, `APHRODY_RSYNC_DISTRO`.
+`bun git` et `bun rclone` transmettent leurs arguments à l'exécutable backend, sans shell supplémentaire. Git utilise réellement Git ; le crate gix incomplet ne constitue pas un moteur natif qualifié. Variables : `BUN_GIT_BIN`, `BUN_RCLONE_BIN`, `BUN_RSYNC_BIN` ; les overrides de package `APHRODY_RCLONE`, `APHRODY_LIBRCLONE`, `APHRODY_RSYNC` restent disponibles. `--backend-info` affiche la sélection. Ces nouvelles commandes nécessitent un runtime construit avec leur dispatch ; leur présence dans les sources ne met pas à jour le Bun installé.
 
-Construction : `build-rsync.sh` (Alpine 3.24) et `build-rclone.sh` (Go + mingw) sur le vps.
+Sous Windows, aucun rsync GNU/MSYS ou WSL n'est lancé automatiquement. Le protocole natif fonctionne depuis un client Windows vers un Bun distant POSIX explicitement choisi :
+
+```sh
+bun rsync --native --remote-bun /absolute/remote/bun ./archive.zip host:/explicit/archive.zip
+bun ssh cp --native --delta --remote-bun /absolute/remote/bun ./archive.zip host:/explicit/archive.zip
+```
+
+Le pair négocie protocole/version/capacités, transmet des signatures puis des deltas de blocs de 2 Mio, et vérifie le SHA-256 final avant remplacement atomique. Il ne reçoit pas le fichier de base complet depuis SFTP. Limites : un fichier régulier par appel, upload seulement, pair distant POSIX, 1 Tio maximum, 30 secondes d'inactivité et 300 secondes par upload. Les métadonnées et identités du fichier sont revérifiées avant publication ; les modifications concurrentes détectées sont refusées. Un échec nettoie uniquement le staging créé pour cet appel. Les permissions du fichier cible existant sont conservées ; un nouveau fichier POSIX est créé privé. Aucun serveur ou Bun distant n'est installé implicitement.
+
+La bibliothèque [fast_rsync 0.2.0](https://docs.rs/fast_rsync/0.2.0/fast_rsync/) utilise des signatures MD4 ; son [propriétaire upstream](https://github.com/dropbox/fast_rsync) exige une vérification supplémentaire du résultat. Le SHA-256 final reste donc obligatoire, même quand toutes les opérations de reconstruction réussissent.
+
+L'API de processus capture au maximum 8 Mio de stdout/stderr cumulés et utilise un timeout de 120 secondes par défaut, configurables via `ToolRunOptions`. Le CLI natif conserve les flux standards pour les gros transferts. `rcloneRpc` appelle synchroniquement librclone : il borne les paramètres et le résultat retourné, mais ne peut interrompre ni borner les allocations internes du producteur natif. Pour les longues opérations, utiliser le CLI avec son timeout explicite.

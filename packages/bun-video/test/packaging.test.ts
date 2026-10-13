@@ -70,6 +70,35 @@ describe("standalone source package", () => {
     expect(manifest.dependencies["@hyperframes/core"]).toBeUndefined();
   });
 
+  test("public aliases resolve to their canonical implementation", async () => {
+    const main = await import("@aphrody/bun-video");
+    const engine = await import("@aphrody/bun-video/engine");
+    const encode = await import("@aphrody/bun-video/encode");
+    const computer = await import("@aphrody/bun-video/computer");
+    const hyperframes = await import("../packages/hyperframes/packages/engine/src/services/nativeWebViewCapture");
+    expect(engine).toBe(main);
+    expect(encode.encodeVideo).toBe(main.encodeVideo);
+    expect(computer.runBrowserTask).toBe(main.runBrowserTask);
+    expect(hyperframes.captureNativeWebViewFrames).toBe(main.captureNativeWebViewFrames);
+  });
+
+  test("the engine CLI retains its commands after entrypoint consolidation", async () => {
+    const child = Bun.spawn([process.execPath, resolve(root, manifest.bin["bun-video-engine"]), "--help"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [output, errors, exitCode] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+    expect(output).toContain("bun-video capabilities");
+    expect(output).toContain("bun-video mcp");
+    expect(output).toContain("bun-video encode");
+    expect(errors).toBe("");
+    expect(exitCode).toBe(0);
+  });
+
   test("absorbed Remotion core loads as Bun source without generated dist files", async () => {
     const core = await import(resolve(root, manifest.exports["./remotion"]));
     expect(typeof core.Composition).toBe("function");

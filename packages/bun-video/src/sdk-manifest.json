@@ -40,6 +40,7 @@
         "license": "bundle-notices-awaiting-verification",
         "status": "upstream-digest-pinned-awaiting-sdk-qualification",
         "apiMajor": 2,
+        "libraryName": "libmpv-2.dll",
         "assets": [],
         "upstreamAssets": [
           {
@@ -80,6 +81,7 @@
         "sourceRepository": "https://github.com/mpv-player/mpv",
         "license": "LGPL-2.1-or-later",
         "apiMajor": 2,
+        "libraryName": "libmpv.so.2",
         "status": "no-qualified-complete-prebuilt-sdk",
         "assets": [],
         "upstreamAssets": []

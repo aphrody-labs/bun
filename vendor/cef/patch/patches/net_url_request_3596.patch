@@ -1,0 +1,47 @@
+diff --git net/url_request/url_request_job.cc net/url_request/url_request_job.cc
+index 80a9c132c2939c1750ae5b1cb6832c095dd75272..6d4b9cef1a3627c87b6f02ad52d514f4ffe03c9c 100644
+--- net/url_request/url_request_job.cc
++++ net/url_request/url_request_job.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "net/url_request/url_request_job.h"
+ 
++#include <algorithm>
+ #include <optional>
+ #include <utility>
+ 
+@@ -42,6 +43,7 @@
+ #include "net/url_request/redirect_info.h"
+ #include "net/url_request/redirect_util.h"
+ #include "net/url_request/url_request_context.h"
++#include "url/url_util.h"
+ 
+ namespace net {
+ 
+@@ -62,6 +64,16 @@ const scoped_refptr<base::SingleThreadTaskRunner>& TaskRunner(
+   return base::SingleThreadTaskRunner::GetCurrentDefault();
+ }
+ 
++bool IsSecureScheme(const GURL& url) {
++  if (!url.has_scheme()) {
++    return false;
++  }
++  if (GURL::SchemeIsCryptographic(url.scheme())) {
++    return true;
++  }
++  return std::ranges::contains(url::GetSecureSchemes(), url.scheme());
++}
++
+ }  // namespace
+ 
+ // Each SourceStreams own the previous SourceStream in the chain, but the
+@@ -343,8 +355,7 @@ GURL URLRequestJob::ComputeReferrerForPolicy(
+     *same_origin_out_for_metrics = same_origin;
+ 
+   bool secure_referrer_but_insecure_destination =
+-      original_referrer.SchemeIsCryptographic() &&
+-      !destination.SchemeIsCryptographic();
++      IsSecureScheme(original_referrer) && !IsSecureScheme(destination);
+ 
+   switch (policy) {
+     case ReferrerPolicy::CLEAR_ON_TRANSITION_FROM_SECURE_TO_INSECURE:

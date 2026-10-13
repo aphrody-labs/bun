@@ -45,7 +45,7 @@ function authorized(request: Request, token: string): boolean {
   return timingSafeEqual(digest(bearer), digest(token));
 }
 
-async function bounded<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+export async function awaitCrunchyrollOperation<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) {
     void operation.catch(() => {});
     signal.throwIfAborted();
@@ -118,7 +118,7 @@ export function createCrunchyrollApi(options: CrunchyrollApiOptions = {}): (requ
     const signal = AbortSignal.any([request.signal, deadline]);
     try {
       signal.throwIfAborted();
-      const client = await bounded(Promise.resolve(options.clientFactory(signal)), signal);
+      const client = await awaitCrunchyrollOperation(Promise.resolve(options.clientFactory(signal)), signal);
       signal.throwIfAborted();
       const operation = search
         ? client.search(query!)
@@ -127,7 +127,7 @@ export function createCrunchyrollApi(options: CrunchyrollApiOptions = {}): (requ
           : resource![3] === "seasons"
             ? client.getSeasons(resource![2]!)
             : client.getAnime(resource![2]!);
-      return json(await bounded(operation, signal));
+      return json(await awaitCrunchyrollOperation(operation, signal));
     } catch (error) {
       if (deadline.aborted) return json({ error: "upstream_timeout" }, 504);
       if (request.signal.aborted) return json({ error: "request_aborted" }, 408);

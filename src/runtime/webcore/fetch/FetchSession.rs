@@ -1,7 +1,7 @@
 //! `Bun.FetchSession`: connection settings shared by the `fetch()` calls that
 //! name it (`fetch(url, { session })`), and the keep-alive pool they share.
 
-use core::cell::Cell;
+use core::cell::{Cell, RefCell};
 use core::sync::atomic::{AtomicU64, Ordering};
 
 use bun_core::Tag as BunStringTag;
@@ -160,6 +160,7 @@ static NEXT_POOL_ID: AtomicU64 = AtomicU64::new(1);
 
 #[bun_jsc::JsClass]
 pub(crate) struct FetchSession {
+    har: RefCell<Option<super::har::Recorder>>,
     pool: http::PoolOptions,
     keep_alive: bool,
     ssl_config: Option<http::ssl_config::SharedPtr>,
@@ -189,6 +190,43 @@ bun_jsc::impl_abort_handle_owner!(FetchSession, abort_handle, |this, _cause| {
 pub(crate) struct SessionHold(core::ptr::NonNull<FetchSession>);
 
 impl SessionHold {
+    pub(crate) fn start_har(
+        &self,
+        method: &str,
+        url: &[u8],
+        headers: &Headers,
+    ) -> Option<super::har::Request> {
+        self.session()
+            .har
+            .borrow_mut()
+            .as_mut()
+            .and_then(|recorder| {
+                use bun_http_types::ETag::HeaderEntryColumns;
+                let columns = headers.entries.slice();
+                let values = columns
+                    .items_name()
+                    .iter()
+                    .zip(columns.items_value())
+                    .take(128)
+                    .map(|(name, value)| {
+                        super::har::header(headers.as_str(*name), headers.as_str(*value))
+                    })
+                    .collect();
+                recorder.start(method, url, values)
+            })
+    }
+
+    pub(crate) fn finish_har(
+        &self,
+        request: super::har::Request,
+        status: u16,
+        headers: Vec<serde_json::Value>,
+    ) -> usize {
+        if let Some(recorder) = self.session().har.borrow_mut().as_mut() {
+            return recorder.finish(request, status, headers);
+        }
+        0
+    }
     pub(crate) fn from_js(global: &JSGlobalObject, value: JSValue) -> JsResult<SessionHold> {
         let Some(session) = FetchSession::from_js(value) else {
             return Err(global.throw_invalid_arguments(format_args!(
@@ -256,6 +294,16 @@ impl Drop for SessionHold {
 }
 
 impl FetchSession {
+    pub(crate) fn estimated_size(&self) -> usize {
+        std::mem::size_of::<Self>()
+            + self.unix.len()
+            + self
+                .har
+                .borrow()
+                .as_ref()
+                .map_or(0, super::har::Recorder::estimated_size)
+    }
+
     pub(crate) fn constructor(
         global: &JSGlobalObject,
         frame: &CallFrame,
@@ -264,6 +312,7 @@ impl FetchSession {
         let vm = global.bun_vm();
         let options = frame.argument(0);
         let mut this = Box::new(FetchSession {
+            har: RefCell::new(None),
             pool: http::PoolOptions {
                 id: NEXT_POOL_ID.fetch_add(1, Ordering::Relaxed),
                 idle_timeout_seconds: 0,
@@ -290,6 +339,17 @@ impl FetchSession {
         if !options.is_object() {
             return Err(global
                 .throw_invalid_arguments(format_args!("FetchSession: options must be an object")));
+        }
+
+        if let Some(har) = options.get(global, "har")? {
+            if !har.is_undefined_or_null() && har != JSValue::FALSE {
+                if har != JSValue::TRUE {
+                    return Err(global.throw_invalid_arguments(format_args!(
+                        "FetchSession: 'har' must be a boolean"
+                    )));
+                }
+                *this.har.get_mut() = Some(super::har::Recorder::new(256));
+            }
         }
 
         if let Some(tls) = options.get(global, "tls")? {
@@ -409,6 +469,33 @@ impl FetchSession {
         if self.used.get() && http::http_thread::is_initialized() {
             http::http_thread().schedule_pool_close(self.pool.id);
         }
+    }
+
+    #[bun_jsc::host_fn(method)]
+    pub(crate) fn export_har(
+        &self,
+        global: &JSGlobalObject,
+        _frame: &CallFrame,
+    ) -> JsResult<JSValue> {
+        use bun_jsc::StringJsc as _;
+        let recorder = self.har.borrow();
+        let Some(recorder) = recorder.as_ref() else {
+            return Err(global
+                .throw_invalid_arguments(format_args!("FetchSession: HAR recording is disabled")));
+        };
+        bun_core::String::clone_utf8(recorder.export().as_bytes()).to_js(global)
+    }
+
+    #[bun_jsc::host_fn(method)]
+    pub(crate) fn clear_har(
+        &self,
+        _global: &JSGlobalObject,
+        _frame: &CallFrame,
+    ) -> JsResult<JSValue> {
+        if let Some(recorder) = self.har.borrow_mut().as_mut() {
+            recorder.clear();
+        }
+        Ok(JSValue::UNDEFINED)
     }
 
     #[allow(

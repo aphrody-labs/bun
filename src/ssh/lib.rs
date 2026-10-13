@@ -29,6 +29,7 @@ pub mod keys;
 pub mod known_hosts;
 pub mod native;
 pub mod rsync;
+pub mod delta;
 pub mod server;
 pub mod system;
 pub mod term;

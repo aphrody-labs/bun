@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+export {};
 const [command, ...args] = Bun.argv.slice(2);
 switch (command) {
   case "site":
@@ -40,13 +41,13 @@ switch (command) {
     break;
   }
   case "capabilities":
-    console.log(JSON.stringify(await import("./capabilities").then(mod => mod.capabilities()), null, 2));
+    console.log(JSON.stringify(await import("../src/capabilities").then(mod => mod.capabilities()), null, 2));
     break;
   case "encode": {
     if (args.length !== 2) throw new Error("Usage: bun-video encode <frame-plan.json> <absolute-output.mkv>");
     const { mediaAssets } = await import("bun-video:media-runtime");
     const plan = await Bun.file(args[0]!).json();
-    const { encodeVideo } = await import("./encode");
+    const { encodeVideo } = await import("../src/encode");
     console.log(JSON.stringify(await encodeVideo(plan, { ...mediaAssets, output: args[1]! })));
     break;
   }
@@ -61,7 +62,7 @@ switch (command) {
     break;
   }
   case "mcp":
-    await import("./mcp").then(mod => mod.serveMcp());
+    await import("../src/mcp").then(mod => mod.serveMcp());
     break;
   case undefined:
   case "help":

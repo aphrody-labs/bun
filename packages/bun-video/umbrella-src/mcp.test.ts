@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
-import { callVideoTool, registerVideoTools, videoTools } from "./mcp";
+import { callVideoTool, registerVideoTools, videoTools } from "../src/mcp";
 
 test("MCP rejects cancelled calls and native-incompatible FPS before loading media", async () => {
   await expect(callVideoTool("video_capabilities", {}, AbortSignal.abort())).rejects.toThrow();
@@ -22,7 +22,7 @@ test("stdio protocol answers independent requests while an earlier tool awaits",
     : [
         executable,
         "-e",
-        `import {serveMcp} from ${JSON.stringify(fileURLToPath(new URL("./mcp.ts", import.meta.url)))}; await serveMcp();`,
+        `import {serveMcp} from ${JSON.stringify(fileURLToPath(new URL("../src/mcp.ts", import.meta.url)))}; await serveMcp();`,
       ];
   const child = Bun.spawn(args, { stdin: "pipe", stdout: "pipe", stderr: "pipe" });
   const output = new Response(child.stdout).text();

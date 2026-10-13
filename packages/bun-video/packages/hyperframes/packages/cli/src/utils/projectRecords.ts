@@ -41,7 +41,7 @@ export function readPlainFile(path: string, maxBytes: number): string {
     const length = Math.min(stats.size, maxBytes);
     const buffer = new Uint8Array(length);
     readSync(fd, buffer, 0, length, stats.size - length);
-    return buffer.toString("utf8");
+    return new TextDecoder().decode(buffer);
   } catch {
     return "";
   } finally {

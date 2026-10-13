@@ -116,6 +116,7 @@ use http::signals::BodyReceiveMode;
 
 #[derive(bun_ptr::ThreadSafeRefCounted)]
 pub struct FetchTasklet {
+    har_request: Option<super::har::Request>,
     // Heap-allocated `FetchRequestBodySink` (a `JSSink`). FetchTasklet owns the
     // allocation from `start_request_stream` until `clear_sink`; the JS
     // controller holds only a detachable back-pointer into it.
@@ -1335,6 +1336,12 @@ impl FetchTasklet {
     }
 
     fn on_reject(&mut self) -> BodyValueError {
+        if let (Some(request), Some(session)) =
+            (self.har_request.take(), self.fetch_session.as_ref())
+        {
+            let allocated = session.finish_har(request, 0, Vec::new());
+            self.global_this.vm().report_extra_memory(allocated);
+        }
         debug_assert!(self.result.fail.is_some());
         bun_output::scoped_log!(FetchTasklet, "onReject");
 
@@ -1899,6 +1906,19 @@ impl FetchTasklet {
         // at this point we always should have metadata
         let metadata = self.metadata.as_ref().unwrap();
         let http_response = &metadata.response;
+        if let (Some(request), Some(session)) =
+            (self.har_request.take(), self.fetch_session.as_ref())
+        {
+            let headers = http_response
+                .headers
+                .list
+                .iter()
+                .take(128)
+                .map(|header| super::har::header(header.name(), header.value()))
+                .collect();
+            let allocated = session.finish_har(request, http_response.status_code as u16, headers);
+            self.global_this.vm().report_extra_memory(allocated);
+        }
         // reshaped for borrowck — capture metadata fields before to_body_value() takes &mut self
         let headers = FetchHeaders::create_from_pico_headers(http_response.headers.list);
         let status_code = http_response.status_code as u16;
@@ -1987,7 +2007,15 @@ impl FetchTasklet {
         fetch_options: FetchOptions,
         promise: jsc::JSPromiseStrong,
     ) -> crate::Result<*mut FetchTasklet> {
+        let har_request = fetch_options.fetch_session.as_ref().and_then(|session| {
+            session.start_har(
+                fetch_options.method.as_str(),
+                fetch_options.url.href,
+                &fetch_options.headers,
+            )
+        });
         let mut fetch_tasklet = Box::new(FetchTasklet {
+            har_request,
             sink: None,
             // `AsyncHTTP` has no `Default`/zero-init; defer the Box until
             // `AsyncHTTP::init` produces the value.

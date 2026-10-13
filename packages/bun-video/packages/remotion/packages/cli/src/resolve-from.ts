@@ -1,6 +1,6 @@
 import fs from 'node:fs';
+import Module from 'node:module';
 import path from 'node:path';
-import Module = require('module');
 
 export const resolveFrom = (
 	fromDirectory: string,

@@ -23,7 +23,7 @@
   },
   "scripts": {
     "status": "bun src/cli.ts status",
-    "test": "cd ../.. && bun bd test ./packages/bun-chromium/test/sdk.test.ts"
+    "test": "cd ../.. && bun bd test --cwd ./packages/bun-chromium ./test"
   },
   "engines": {
     "bun": ">=1.4.4"

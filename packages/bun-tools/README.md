@@ -84,5 +84,16 @@ Event IDs retain 64-bit precision as decimal strings. Cross-site requests and
 non-loopback request authorities are rejected. `startTaskService` and
 `startSystemStream` return handles with `stop()` for embedding applications.
 
-The existing rclone/rsync asset APIs remain available from the root export.
+The root export includes `git`, `rclone`, `rcloneRpc`, `rsync` and `rsyncNative`.
+Git and rclone use configured/installed executable backends; no native gix engine
+is implied. Tool assets require explicit `bun-host tool install <tool>` before
+offline cache use, with immutable release SHA-256 and size checks. The
+installation is shared with the native CLI at `dirname(process.execPath)/lib/tools`;
+`BUN_TOOLS_DIR` selects another absolute directory. There are no version folders.
+The source revision is unknown. Capture has a shared stdout/stderr byte limit and an abort
+signal/timeout; no secret configuration is loaded by importing the package.
+`rsyncNative` selects a remote Bun explicitly and uploads one regular file using
+versioned 2 MiB delta frames and final SHA-256 verification. Windows clients do
+not start WSL; GNU rsync assets remain Linux-only. Remote Windows shell support,
+directory synchronization and implicit remote installation are not provided.
 See NOTICE and the source inventory for the preserved Omar provenance.

@@ -195,6 +195,7 @@
               "/runtime/jsonl",
               "/runtime/html-rewriter",
               "/runtime/image",
+              "/runtime/video",
               "/runtime/hashing",
               "/runtime/glob",
               "/runtime/semver",

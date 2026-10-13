@@ -3,6 +3,11 @@
 `@aphrody/bun-google` uses the built-in `bun:google` transport. It needs the
 fork containing that module. The package has no npm runtime dependencies.
 
+`@aphrody/bun-google/edge-proxy` owns the disk caching proxy used by Google
+Fonts. It uses Bun HTTP, file and compression APIs directly, with no Aphrody
+checkout, Yolo runtime or runtime SDK dependency. Its loopback tests cover cache
+fills, concurrent misses, Brotli variants, immutable assets and rejected routes.
+
 ```ts
 import { createGoogleServices } from "@aphrody/bun-google";
 
@@ -48,6 +53,9 @@ Drive reconciliation, resumable model uploads, Fonts proxy and Gemini Web
 adapters were transferred under `aphrody/`. Their complete engine and release
 qualification remains separate from this REST SDK.
 Protected credentials and cookie stores retain their original locations.
+The transferred `@aphrody/google` facade is a root Bun workspace package.
+Its Google transport resolves through `@aphrody/bun-google`; it does not depend
+on the location of a neighbouring Aphrody checkout.
 This package does not claim complete
 Google API or JSC/V8 compatibility. It performs no automatic retries of writes.
 

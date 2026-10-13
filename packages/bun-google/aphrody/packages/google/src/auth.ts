@@ -1,6 +1,9 @@
 import type { GoogleClientOptions } from "bun:google";
-import { createAntigravityCredentialProvider } from "../../../../src/credentials.ts";
-import { createAntigravityServices, type AntigravityServicesOptions } from "../../../../src/antigravity.ts";
+import {
+  createAntigravityCredentialProvider,
+  createAntigravityServices,
+  type AntigravityServicesOptions,
+} from "@aphrody/bun-google";
 
 export interface GoogleNativeAuthOptions {
   credentialProvider?: GoogleClientOptions["credentialProvider"];
@@ -29,16 +32,22 @@ export interface GoogleModel {
   capabilities?: unknown;
 }
 
-export function resolveGoogleBinary(): string {
+export function resolveGoogleCommand(which: typeof Bun.which = Bun.which): string[] {
   const configured = Bun.env.APHRODY_GOOGLE_BIN;
-  if (configured) return configured;
-  const binary = Bun.which("aphrody-google") ?? Bun.which("google");
-  if (!binary) throw new Error("aphrody-google binary not found; set APHRODY_GOOGLE_BIN or add it to PATH");
-  return binary;
+  if (configured) return [configured];
+  const owner = which("aphrody");
+  if (owner) return [owner, "google"];
+  const binary = which("aphrody-google") ?? which("google");
+  if (!binary) throw new Error("Google CLI not found; install aphrody or set APHRODY_GOOGLE_BIN");
+  return [binary];
+}
+
+export function resolveGoogleBinary(): string {
+  return resolveGoogleCommand()[0]!;
 }
 
 async function invoke<T>(...args: string[]): Promise<T> {
-  const child = Bun.spawn([resolveGoogleBinary(), ...args], {
+  const child = Bun.spawn([...resolveGoogleCommand(), ...args], {
     windowsHide: true,
     stdin: "ignore",
     stdout: "pipe",

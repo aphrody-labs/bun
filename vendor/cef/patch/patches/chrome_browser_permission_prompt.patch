@@ -1,0 +1,57 @@
+diff --git chrome/browser/ui/permission_bubble/permission_prompt.h chrome/browser/ui/permission_bubble/permission_prompt.h
+index 6e9bba3c993b0c3c3ce71851b45e4316c5673d77..26f4c4771f9b7817fdd92e42b410c7abc6a0b4ea 100644
+--- chrome/browser/ui/permission_bubble/permission_prompt.h
++++ chrome/browser/ui/permission_bubble/permission_prompt.h
+@@ -12,6 +12,13 @@ namespace content {
+ class WebContents;
+ }
+ 
++using CreatePermissionPromptFunctionPtr =
++    std::unique_ptr<permissions::PermissionPrompt> (*)(
++        content::WebContents* web_contents,
++        permissions::PermissionPrompt::Delegate* delegate,
++        bool* default_handling);
++void SetCreatePermissionPromptFunction(CreatePermissionPromptFunctionPtr);
++
+ // Factory function to create permission prompts for chrome.
+ std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
+     content::WebContents* web_contents,
+diff --git chrome/browser/ui/views/permissions/permission_prompt_factory.cc chrome/browser/ui/views/permissions/permission_prompt_factory.cc
+index 12bb0ac5fb39cbf8c67bf38586a84708e05f7cb7..a70d61f366d7b1332cb615569c9932fd89b9c0d5 100644
+--- chrome/browser/ui/views/permissions/permission_prompt_factory.cc
++++ chrome/browser/ui/views/permissions/permission_prompt_factory.cc
+@@ -258,6 +258,8 @@ std::unique_ptr<permissions::PermissionPrompt> CreateQuietPrompt(
+   }
+ }
+ 
++CreatePermissionPromptFunctionPtr g_create_permission_prompt_ptr = nullptr;
++
+ }  // namespace
+ 
+ bool ShouldShowPermissionPromptEvenIfOmniboxEditedOrEmpty(
+@@ -289,9 +291,25 @@ bool ShouldShowPermissionPromptEvenIfOmniboxEditedOrEmpty(
+   return false;
+ }
+ 
++void SetCreatePermissionPromptFunction(CreatePermissionPromptFunctionPtr ptr) {
++  g_create_permission_prompt_ptr = ptr;
++}
++
+ std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
+     content::WebContents* web_contents,
+     permissions::PermissionPrompt::Delegate* delegate) {
++  if (g_create_permission_prompt_ptr) {
++    bool default_handling = true;
++    auto prompt = g_create_permission_prompt_ptr(web_contents, delegate,
++                                                 &default_handling);
++    if (prompt) {
++      return prompt;
++    }
++    if (!default_handling) {
++      return nullptr;
++    }
++  }
++
+   if (delegate->ShouldDropCurrentRequestIfCannotShowQuietly() &&
+       IsFullScreenMode(web_contents)) {
+     return nullptr;

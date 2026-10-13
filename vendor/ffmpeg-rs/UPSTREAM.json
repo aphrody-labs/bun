@@ -2,5 +2,21 @@
   "repository": "https://github.com/zmwangx/rust-ffmpeg",
   "commit": "9b9c0b9ba061a019d03807d339fcdd85e3ea9c97",
   "archiveSha256": "7605ec102ecb1f9078c51f7089fe9aa50eb9f288c625e8de86d56f595b5ac194",
-  "role": "native API reference; not linked into Bun yet"
+  "role": "retained compatibility reference until the first-party registry-sys provider is qualified; not a provider dependency",
+  "registry": {
+    "package": "ffmpeg-next",
+    "version": "9.0.0",
+    "checksum": "6380599799e175191eb7ffe82c97f36a2a90a36cbc54c738a903e5287d7f516a",
+    "sourceCommit": "3751e2800d5d2f0215d69031285aadebac5db8fc",
+    "includesStreamIo": true
+  },
+  "localChangesFromPinnedCommit": [
+    "Cargo.toml",
+    "src/codec/id.rs",
+    "src/codec/packet/side_data.rs",
+    "src/util/format/pixel.rs",
+    "src/util/format/sample.rs",
+    "src/util/frame/side_data.rs"
+  ],
+  "registryReplacementQualified": false
 }

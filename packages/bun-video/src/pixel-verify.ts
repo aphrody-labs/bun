@@ -1,3 +1,5 @@
+import { frameOperationSignal } from "./frame-plan";
+
 export interface PixelComparison {
   width: number;
   height: number;
@@ -65,95 +67,61 @@ export function compareRGBAFrames(reference: Uint8Array, candidate: Uint8Array, 
   };
 }
 
+async function frameOperation<T>(operation: () => Promise<T>, signal: AbortSignal): Promise<T> {
+  signal.throwIfAborted();
+  let abort: (() => void) | undefined;
+  try {
+    return await Promise.race([
+      operation(),
+      new Promise<never>((_resolve, reject) => {
+        abort = () => reject(signal.reason);
+        signal.addEventListener("abort", abort, { once: true });
+      }),
+    ]);
+  } finally {
+    if (abort) signal.removeEventListener("abort", abort);
+  }
+}
+
 async function decodeFrame(
   path: string,
-  options: PixelLimits & {
-    ffmpegExecutable: string;
-    ffprobeExecutable: string;
-    signal?: AbortSignal;
-    timeoutMs?: number;
-  },
+  options: PixelLimits & { signal?: AbortSignal; timeoutMs?: number },
 ): Promise<Uint8Array> {
-  const signal = options.signal
-    ? AbortSignal.any([options.signal, AbortSignal.timeout(options.timeoutMs ?? 30000)])
-    : AbortSignal.timeout(options.timeoutMs ?? 30000);
-  signal.throwIfAborted();
-  const probe = Bun.spawn(
-    [
-      options.ffprobeExecutable,
-      "-v",
-      "error",
-      "-select_streams",
-      "v:0",
-      "-show_entries",
-      "stream=width,height",
-      "-of",
-      "json",
-      path,
-    ],
-    { stdin: "ignore", stdout: "pipe", stderr: "pipe" },
-  );
-  const abortProbe = () => probe.kill();
-  signal.addEventListener("abort", abortProbe, { once: true });
-  try {
-    const [text, error, code] = await Promise.all([probe.stdout.text(), probe.stderr.text(), probe.exited]);
-    signal.throwIfAborted();
-    if (code !== 0) throw new Error(`Frame probe failed (${code}): ${error}`);
-    const stream = JSON.parse(text).streams?.[0];
-    if (stream?.width !== options.width || stream?.height !== options.height)
-      throw new Error("Frame dimensions differ from the reference; resizing is not a pixel comparison");
-  } finally {
-    signal.removeEventListener("abort", abortProbe);
-    if (probe.exitCode === null) probe.kill();
-    await probe.exited;
-  }
-  const child = Bun.spawn(
-    [
-      options.ffmpegExecutable,
-      "-v",
-      "error",
-      "-i",
-      path,
-      "-frames:v",
-      "1",
-      "-f",
-      "rawvideo",
-      "-pix_fmt",
-      "rgba",
-      "pipe:1",
-    ],
-    { stdin: "ignore", stdout: "pipe", stderr: "pipe" },
-  );
-  const abort = () => child.kill();
-  signal.addEventListener("abort", abort, { once: true });
-  const diagnostics = child.stderr.text();
-  const bytes = new Uint8Array(options.width * options.height * 4);
-  let offset = 0;
-  try {
-    for await (const chunk of child.stdout) {
-      signal.throwIfAborted();
-      if (offset + chunk.length > bytes.length) throw new Error("Decoded frame exceeds declared RGBA bounds");
-      bytes.set(chunk, offset);
-      offset += chunk.length;
-    }
-    const code = await child.exited;
-    const error = await diagnostics;
-    signal.throwIfAborted();
-    if (code !== 0 || offset !== bytes.length) throw new Error(`RGBA frame decode failed (${code}): ${error}`);
-    return bytes;
-  } finally {
-    signal.removeEventListener("abort", abort);
-    if (child.exitCode === null) child.kill();
-    await child.exited;
-    await diagnostics;
-  }
+  const signal = frameOperationSignal(options.timeoutMs, options.signal);
+  const file = Bun.file(path);
+  const header = await frameOperation(() => file.slice(0, 16).bytes(), signal);
+  const brand = new TextDecoder("ascii").decode(header.subarray(8, 12));
+  const stillBrands = ["avif", "avis", "heic", "heix", "hevc", "hevx", "mif1", "msf1"];
+  const isVideo =
+    file.type.startsWith("video/") ||
+    (!file.type.startsWith("image/") &&
+      header.length >= 12 &&
+      new TextDecoder("ascii").decode(header.subarray(4, 8)) === "ftyp" &&
+      !stillBrands.includes(brand));
+  if (isVideo && typeof Bun.Video !== "function") throw new Error("Bun.Video is required to compare video frames");
+  const source = isVideo
+    ? new Bun.Video(path, { maxPixels: 7680 * 4320, autoOrient: false }).frame(0)
+    : new Bun.Image(path, { maxPixels: 7680 * 4320, autoOrient: false });
+  const metadata = await frameOperation<{ width: number; height: number }>(() => source.metadata(), signal);
+  if (metadata.width !== options.width || metadata.height !== options.height)
+    throw new Error("Frame dimensions differ from the reference; resizing is not a pixel comparison");
+  if (typeof source.rgba !== "function") throw new Error("Native rgba() is required to compare frame pixels");
+  const result = await frameOperation(() => source.rgba(), signal);
+  if (
+    result.width !== options.width ||
+    result.height !== options.height ||
+    result.channels !== 4 ||
+    result.data.length !== options.width * options.height * 4
+  )
+    throw new Error("Decoded frame exceeds declared RGBA bounds");
+  return result.data;
 }
 
 export async function verifyPixelFrames(
   input: PixelLimits & {
     frames: readonly { frame: number; reference: string; candidate: string }[];
-    ffmpegExecutable: string;
-    ffprobeExecutable: string;
+    ffmpegExecutable?: string;
+    ffprobeExecutable?: string;
     signal?: AbortSignal;
     timeoutMs?: number;
   },

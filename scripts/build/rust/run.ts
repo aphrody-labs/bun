@@ -30,6 +30,7 @@ import { BuildError } from "../error.ts";
 import { writeIfChanged } from "../fs.ts";
 import type { Phase } from "../timings.ts";
 import { type BuildScriptOutput, envify } from "./cargo-env.ts";
+import { withoutMissingRustWrappers } from "./environment.ts";
 import type { RustcUnitManifest, UnitManifest } from "./units.ts";
 
 // Guarded so the tests can import the pieces below without running a unit.
@@ -88,7 +89,7 @@ function usage(msg: string): never {
  * and a manifest that captured it would rebuild every crate whenever PATH changed.
  */
 function mergedEnv(unit: UnitManifest, ...layers: Record<string, string>[]): Record<string, string> {
-  const env = { ...process.env } as Record<string, string>;
+  const env = withoutMissingRustWrappers(process.env) as Record<string, string>;
   const keyOf = (k: string) =>
     process.platform === "win32" ? (Object.keys(env).find(e => e.toUpperCase() === k.toUpperCase()) ?? k) : k;
   const set = (k: string, v: string) => {

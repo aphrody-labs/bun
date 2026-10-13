@@ -58,8 +58,12 @@ pub fn run(options: Options, dirs: &Dirs) -> Result<()> {
     .unwrap_or_default();
 
   let plugin_snake_case = plugin.replace('-', "_");
-  let crate_name = format!("tauri-plugin-{plugin}");
-  let npm_name = format!("@aphrody/plugin-{plugin}");
+  let crate_name = if is_known {
+    "tauri-plugin-aphrody".to_string()
+  } else {
+    format!("tauri-plugin-{plugin}")
+  };
+  let npm_name = "@aphrody/tauri";
 
   let git_ref = git_ref(
     options.tag.as_deref(),
@@ -96,22 +100,23 @@ pub fn run(options: Options, dirs: &Dirs) -> Result<()> {
     version.or(metadata.version_req.as_deref())
   };
 
-  // Official plugins come from the Aphrody forks (`aphrody-tauri-plugin-x`) and keep the
-  // upstream dependency key so `tauri_plugin_x::init()` keeps working.
-  let package_name = if is_known {
-    format!("aphrody-{crate_name}")
+  let features = if is_known {
+    crate::helpers::plugins::plugin_features(plugin)
   } else {
-    crate_name.clone()
+    Vec::new()
   };
   cargo::install_one(cargo::CargoInstallOptions {
-    name: &package_name,
-    rename: is_known.then_some(crate_name.as_str()),
+    name: &crate_name,
+    rename: None,
     version: cargo_version_req,
     branch: options.branch.as_deref(),
     rev: options.rev.as_deref(),
     tag: options.tag.as_deref(),
     cwd: Some(dirs.tauri),
-    target: target_str,
+    target: if is_known { None } else { target_str },
+    features: &features,
+    no_default_features: is_known && !has_consolidated_dependency(dirs.tauri)?,
+    git_url: is_known.then_some("https://github.com/aphrody-labs/bun"),
   })?;
 
   if !metadata.rust_only {
@@ -122,15 +127,13 @@ pub fn run(options: Options, dirs: &Dirs) -> Result<()> {
         "If `{crate_name}` has JavaScript bindings, install them with your package manager, see the plugin's documentation for the package name."
       );
     } else if let Some(manager) = frontend_dir.map(PackageManager::from_project) {
-      let npm_spec = if let Some(git_ref) = git_ref {
-        format!("tauri-apps/tauri-plugin-{plugin}#{git_ref}")
-      } else if let Some(version_req) = version
+      let npm_spec = if let Some(version_req) = version
         .map(ToString::to_string)
         .or_else(|| metadata.version_req.as_ref().map(|v| format!("~{v}")))
       {
         format!("{npm_name}@{version_req}")
       } else {
-        npm_name
+        npm_name.to_string()
       };
       manager.install(&[npm_spec], dirs.frontend)?;
     }
@@ -151,6 +154,13 @@ pub fn run(options: Options, dirs: &Dirs) -> Result<()> {
     }
   }
 
+  if is_known && plugin == "wrap" && !dirs.tauri.join("wrap.json").is_file() {
+    log::info!(
+      "Added the wrap feature. Configure wrap.json before registering tauri_plugin_aphrody::wrap::init."
+    );
+    return Ok(());
+  }
+
   // add plugin init code to main.rs or lib.rs
   let plugin_init_fn = if plugin == "stronghold" {
     "Builder::new(|pass| todo!()).build()"
@@ -159,19 +169,26 @@ pub fn run(options: Options, dirs: &Dirs) -> Result<()> {
   } else if plugin == "single-instance" {
     "init(|app, args, cwd| {})"
   } else if plugin == "log" {
-    "Builder::new().level(tauri_plugin_log::log::LevelFilter::Info).build()"
+    "Builder::new().level(tauri_plugin_aphrody::log::log::LevelFilter::Info).build()"
   } else if metadata.builder {
     "Builder::new().build()"
   } else {
     "init()"
   };
-  let plugin_init = format!(".plugin(tauri_plugin_{plugin_snake_case}::{plugin_init_fn})");
+  let plugin_init = if is_known {
+    crate::helpers::plugins::plugin_init(plugin)
+  } else {
+    format!(".plugin(tauri_plugin_{plugin_snake_case}::{plugin_init_fn})")
+  };
 
   let re = Regex::new(r"(tauri\s*::\s*Builder\s*::\s*default\(\))(\s*)").unwrap();
   for file in [
     dirs.tauri.join("src/main.rs"),
     dirs.tauri.join("src/lib.rs"),
   ] {
+    if !file.exists() {
+      continue;
+    }
     let contents =
       std::fs::read_to_string(&file).fs_context("failed to read Rust entry point", file.clone())?;
 
@@ -202,7 +219,9 @@ pub fn run(options: Options, dirs: &Dirs) -> Result<()> {
     }
   }
 
-  let builder_code = if metadata.builder {
+  let builder_code = if is_known {
+    format!("+    {plugin_init}")
+  } else if metadata.builder {
     format!(r#"+    .plugin(tauri_plugin_{plugin_snake_case}::Builder::new().build())"#,)
   } else {
     format!(r#"+    .plugin(tauri_plugin_{plugin_snake_case}::init())"#)
@@ -229,6 +248,30 @@ pub fn run(options: Options, dirs: &Dirs) -> Result<()> {
   );
 
   Ok(())
+}
+
+fn has_consolidated_dependency(directory: &Path) -> Result<bool> {
+  let path = directory.join("Cargo.toml");
+  let contents = fs::read_to_string(&path).fs_context("failed to read Cargo manifest", path)?;
+  let manifest: toml_edit::DocumentMut =
+    contents.parse().context("failed to parse Cargo manifest")?;
+  Ok(
+    manifest
+      .get("dependencies")
+      .and_then(|deps| deps.get("tauri-plugin-aphrody"))
+      .is_some()
+      || manifest
+        .get("target")
+        .and_then(|targets| targets.as_table_like())
+        .is_some_and(|targets| {
+          targets.iter().any(|(_, target)| {
+            target
+              .get("dependencies")
+              .and_then(|deps| deps.get("tauri-plugin-aphrody"))
+              .is_some()
+          })
+        }),
+  )
 }
 
 /// Returns the single git ref given with `--tag`, `--rev` or `--branch`, if any.
@@ -311,7 +354,7 @@ fn set_require_signed_version(config: &mut JsonValue) -> bool {
 
 #[cfg(test)]
 mod tests {
-  use super::{git_ref, set_require_signed_version};
+  use super::{git_ref, has_consolidated_dependency, set_require_signed_version};
   use serde_json::json;
 
   #[test]
@@ -363,5 +406,20 @@ mod tests {
     assert!(git_ref(Some("v2"), Some("abc"), None).is_err());
     assert!(git_ref(Some("v2"), None, Some("dev")).is_err());
     assert!(git_ref(None, Some("abc"), Some("dev")).is_err());
+  }
+
+  #[test]
+  fn adding_a_module_keeps_existing_root_and_target_defaults() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("Cargo.toml");
+    for contents in [
+      "[dependencies]\ntauri-plugin-aphrody = \"=1.4.4\"\n",
+      "[target.'cfg(windows)'.dependencies]\ntauri-plugin-aphrody = { version = \"=1.4.4\", features = [\"store\"] }\n",
+    ] {
+      std::fs::write(&path, contents).unwrap();
+      assert!(has_consolidated_dependency(directory.path()).unwrap());
+    }
+    std::fs::write(&path, "[dependencies]\ntauri-plugin-foo = \"1\"\n").unwrap();
+    assert!(!has_consolidated_dependency(directory.path()).unwrap());
   }
 }

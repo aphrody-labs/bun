@@ -28,7 +28,7 @@ frame IDs and HLS/DASH manifests. A `blob:` URL is not a downloadable stream.
 Choose a variant explicitly and retain the source timestamps and aspect ratio.
 For a fractional-rate source, pass `fps: {num, den}` to the task CLI and retain
 reference timestamps. The task owner preserves the rate through renderer arguments
-and checks the produced file with FFprobe. Never silently round or substitute
+and checks the produced file with native `Bun.Video.metadata`. Never silently round or substitute
 resampling for an exact timing match; document resampling if it is requested.
 
 Use only authorized acquisition: a direct accessible file, selected yt-dlp
@@ -81,8 +81,9 @@ the selected Crunchyroll session, with actual availability and decoder results.
 Compare decoded RGBA frames to reference frames at identical timestamps,
 dimensions and color conversion. Save representative pairs and difference
 images; measure differing pixels, maximum channel error and mean channel error.
-Use the owner `src/pixel-verify.ts`: `compareRGBAFrames` for decoded bytes or
-`verifyPixelFrames` for selected frame files with explicit FFmpeg/FFprobe paths.
+Use `Bun.Image.rgba` for reference image files and `Bun.Video.frame(t).rgba` for
+media frames, then the owner `src/pixel-verify.ts` function `compareRGBAFrames`.
+The current workflow invokes no external media executable.
 The default comparison is exact; any tolerance must be explicit. Check `exact`
 separately from tolerance-based `passed` and retain the selected frame scope.
 Hash encoded PNGs only to check file identity, not perceptual or decoded-pixel
@@ -95,26 +96,65 @@ font rasterization, codecs or a browser differ, report the measured tolerance
 and the failed frames instead. A composition that merely embeds the input video
 is source placement, not a reconstructed scene.
 
-Use lossless FFV1 for exact RGBA verification. GPU H264 encoders require explicit
-lossy opt-in and qualified device support; they drop alpha and cannot substantiate
-a lossless claim. Verify the produced file's actual dimensions, frame count,
-duration and audio, then register the artifact and measurements in SQLite.
-The worker's `.mkv` output selects actual renderer PNG sequences followed by
-native FFmpeg FFV1 BGRA encoding. It validates complete consecutive frame files
-and preserves the renderer's composed audio; custom Remotion compositions may
-include an enforced silent audio track. This establishes lossless preservation
-of rendered pixels, not equality to reference pixels. Verify the decoded MKV
-against real reference frames with the default zero-difference threshold.
+For source preservation, use `Bun.Video.remux` and compare every decoded frame
+and PCM window with the native owner. For independent compositions, retain the
+PNG/WebP sequence and its measured receipt until a native sequence encoder is
+qualified. The current Bun.Video API has no arbitrary RGBA-video encoder;
+do not invent one or route a current job through the historical external encode
+path. Lossy H264/GIF outputs cannot establish exact RGBA preservation.
+Verify dimensions, frame count, duration and audio separately, then register
+the artifact and measurements in SQLite.
 
 Deliver the source composition, qualified output, SQLite receipt and short
 qualification result. Do not include protected source captures in Git. Native
 Windows is the workstation target; do not start WSL. On other qualified targets,
 probe their own browser/media providers and permissions separately.
 
-For FFV1 sources unsupported by the pinned Remotion compositor, use the worker's
-bounded native FFmpeg PNG decoding and real React `Img`/`useCurrentFrame`/
-`staticFile` composition. Preserve actual audio through native WAV decoding and
-`Audio` when present. Supported source codecs retain `OffthreadVideo`. Report
+For sources unsupported by the pinned compositor, use bounded native
+`Bun.Video.frames` and real React `Img`/`useCurrentFrame`/`staticFile` composition
+only when the native provider actually supports that source. Preserve audio
+through `Bun.Video.audio` WAV windows and `Audio` when present. Report
 source placement and sampled frames accurately; this is not creative scene
 reconstruction or proof of a complete movie. The qualified artwork source has
 no audio; zero RGBA differences apply only to its measured frames 0, 3 and 5.
+
+## Reproduce a complete local episode
+
+Read `docs/episode-pixel-perfect.md` from the resolved Bun Video package for the
+frame-by-frame workflow and the executable replay contract. Use
+`scripts/episode-assets.ts` for source analysis, frame extraction, compact
+zero-loss packet remuxing, GIF previews and evidence. Keep local episode assets
+in the package's ignored `.local/episodes/<id>/` directory; keep provider
+authentication in the protected Aphrody store. Retain every decoded frame at
+native dimensions with a manifest containing rational FPS, source frame count
+and independently measured audio/container duration.
+
+Use this skill's `scripts/episode-replay.ts` to preserve the original encoded
+source through `Bun.Video.remux` into MP4. It does not encode the PNG/WebP
+sequence or independently authored scenes. The selected native FilmCraft owner
+preserves access units and timing; no external command is invoked. Keep one
+native media operation at a time and run long commands in a background task with a
+bounded deadline. Start with a tiny fixture before the full episode.
+
+Distinguish an exact replay of extracted source pixels from authored scene
+reconstruction. Replaying the complete reference can preserve its decoded RGB
+pixels; independently generating its animation cannot be called pixel-perfect
+without the same measurements. A full reconstruction must replace reference
+frames with a deterministic composition using the existing Remotion/HyperFrames
+owner, then compare every output frame against the reference at identical
+timestamps. Preserve original audio, crop, colors and typography. Report edits
+such as new character artwork, subtitle overlays or retimed cuts as differences.
+
+Avoid burning another subtitle track over hardcoded source subtitles. Acquire
+provider subtitle sidecars only through a successfully authenticated authorized
+source; retain language, episode identity and timing evidence. Treat OCR as OCR,
+never as official Crunchyroll subtitles. GIFs reduce palette and often resolution
+and FPS; use them as previews, not evidence for exact reconstruction.
+
+Require a passing `verification/episode-replay.json` before claiming complete
+source/remux fidelity: every decoded RGBA frame equal, native resolution,
+consecutive frame count, rational FPS, complete native PCM16 WAV comparison,
+and measured timeline/duration bounds. The native remux guarantees access-unit
+preservation separately from measured PCM equality. Prior extraction by a
+different decoder is not automatically qualified by this proof. Keep the
+encoded source and existing qualified artifacts; never rewrite their provenance.

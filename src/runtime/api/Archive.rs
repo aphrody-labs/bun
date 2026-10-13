@@ -4,7 +4,9 @@ use std::ffi::CString;
 
 use crate::webcore::Blob;
 use crate::webcore::BlobExt as _;
-use crate::webcore::blob::Store;
+use crate::webcore::blob::store::Data;
+use crate::webcore::blob::{MAX_SIZE, Store};
+use crate::webcore::node_types::PathOrFileDescriptor;
 use bun_core::{self, EncodedSlice, Output, Utf8Bytes, ZBox, strings};
 use bun_glob as glob;
 use bun_jsc::{
@@ -54,16 +56,238 @@ pub(crate) struct GzipOptions {
 #[repr(C)]
 pub(crate) struct Archive {
     /// The underlying data for the archive - uses Blob.Store for thread-safe ref counting
-    store: RefPtr<Store>,
+    store: ArchiveSource,
     /// Compression settings for this archive
     compress: Compression,
 }
 
 impl Archive {
-    /// Borrow the backing `RefPtr<Store>`.
-    #[inline]
-    pub(crate) fn store_ref(&self) -> &RefPtr<Store> {
-        &self.store
+    pub(crate) fn to_blob(&self, global: &JSGlobalObject) -> Blob {
+        let blob = Blob::init_with_store(self.store.store.clone(), global);
+        blob.offset.set(self.store.offset);
+        blob.size.set(self.store.size);
+        blob
+    }
+
+    pub(crate) fn write_file_source(
+        &self,
+        cx: &bun_jsc::JsThread<'_>,
+        destination: Blob,
+        options: crate::webcore::blob::WriteFileOptions,
+    ) -> Option<JSValue> {
+        if !matches!(self.store.store.data, Data::File(_)) {
+            return None;
+        }
+        let promise = JSPromiseStrong::init(cx.global());
+        let value = promise.value();
+        let options_root = jsc::StrongOptional::create(
+            options.extra_options.unwrap_or(JSValue::ZERO),
+            cx.global(),
+        );
+        bun_jsc::Job::<ArchiveCopyTask>::schedule(
+            cx,
+            BlobContext {
+                store: self.store.clone(),
+                compress: self.compress,
+                output_type: BlobOutputType::Blob,
+                result: BlobResult::Uncompressed,
+            },
+            ArchiveCopyDestination {
+                promise,
+                destination,
+                options,
+                _options_root: options_root,
+            },
+        );
+        Some(value)
+    }
+}
+
+struct ArchiveCopyDestination {
+    promise: JSPromiseStrong,
+    destination: Blob,
+    options: crate::webcore::blob::WriteFileOptions,
+    _options_root: jsc::StrongOptional,
+}
+
+impl Drop for ArchiveCopyDestination {
+    fn drop(&mut self) {
+        self.destination.detach();
+    }
+}
+
+// The destination and rooted options are only used and released on the JS thread.
+unsafe impl bun_jsc::job::JsAffine for ArchiveCopyDestination {}
+
+struct ArchiveCopyTask;
+
+impl bun_jsc::JobContext for ArchiveCopyTask {
+    type OffThread = BlobContext;
+    type Js = ArchiveCopyDestination;
+    fn run(
+        context: &mut BlobContext,
+        done: bun_jsc::Completion<Self>,
+    ) -> Option<bun_jsc::Completion<Self>> {
+        context.run();
+        Some(done)
+    }
+    fn then(
+        context: BlobContext,
+        mut destination: ArchiveCopyDestination,
+        cx: &bun_jsc::JsThread<'_>,
+    ) -> JsResult<()> {
+        let global = cx.global();
+        let source = match context.result {
+            BlobResult::Compressed(bytes) => {
+                Blob::create_with_bytes_and_allocator(bytes, global, false)
+            }
+            BlobResult::Err(error) => {
+                return destination.promise.reject(global, Ok(error.to_js(global)));
+            }
+            BlobResult::Source(error) => {
+                return destination.promise.reject(global, Ok(error.to_js(global)));
+            }
+            BlobResult::Uncompressed => {
+                let blob = Blob::init_with_store(context.store.store.clone(), global);
+                blob.offset.set(context.store.offset);
+                blob.size.set(context.store.size);
+                blob
+            }
+        };
+        let mut source = scopeguard::guard(source, |blob| blob.detach());
+        match crate::webcore::blob::write_file_with_source_destination(
+            cx,
+            &mut source,
+            &mut destination.destination,
+            &destination.options,
+        ) {
+            Ok(value) => destination.promise.resolve(global, value),
+            Err(error) => destination.promise.reject(global, Err(error)),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct ArchiveSource {
+    store: RefPtr<Store>,
+    offset: u64,
+    size: u64,
+    descriptor: Option<std::sync::Arc<bun_sys::File>>,
+}
+
+pub(crate) enum SourceError {
+    Sys(bun_sys::Error),
+    OutOfMemory,
+    Unsupported,
+    SyncLimit,
+}
+
+impl SourceError {
+    fn to_js(&self, global: &JSGlobalObject) -> JSValue {
+        match self {
+            Self::Sys(error) => error.to_js(global),
+            Self::OutOfMemory => global.create_out_of_memory_error(),
+            Self::Unsupported => global.create_error_instance(format_args!("Archive input must be a regular local file or in-memory Blob")),
+            Self::SyncLimit => global.create_error_instance(format_args!("Archive synchronous file entries exceed 64 MiB; read their bytes asynchronously before constructing the archive")),
+        }
+    }
+}
+
+impl ArchiveSource {
+    fn from_store(store: RefPtr<Store>) -> Self {
+        Self {
+            store,
+            offset: 0,
+            size: MAX_SIZE,
+            descriptor: None,
+        }
+    }
+
+    fn from_blob(blob: &Blob) -> Result<Option<Self>, SourceError> {
+        let Some(store) = blob.store.get().as_ref() else {
+            return Ok(None);
+        };
+        let descriptor = match &store.data {
+            Data::File(file) => match &file.pathlike {
+                PathOrFileDescriptor::Fd(fd) => Some(std::sync::Arc::new(bun_sys::File::from_fd(
+                    bun_sys::dup(*fd).map_err(SourceError::Sys)?,
+                ))),
+                PathOrFileDescriptor::Path(_) => None,
+            },
+            _ => None,
+        };
+        Ok(Some(Self {
+            store: store.clone(),
+            offset: blob.offset.get(),
+            size: blob.size.get(),
+            descriptor,
+        }))
+    }
+
+    fn shared_view(&self) -> &[u8] {
+        let bytes = self.store.shared_view();
+        let offset = usize::try_from(self.offset)
+            .unwrap_or(usize::MAX)
+            .min(bytes.len());
+        let bytes = &bytes[offset..];
+        &bytes[..usize::try_from(self.size)
+            .unwrap_or(usize::MAX)
+            .min(bytes.len())]
+    }
+
+    fn read(&self, limit: Option<usize>) -> Result<Utf8Bytes<'_>, SourceError> {
+        let Data::File(source) = &self.store.data else {
+            return match &self.store.data {
+                Data::Bytes(_) => Ok(Utf8Bytes::Borrowed(self.shared_view())),
+                _ => Err(SourceError::Unsupported),
+            };
+        };
+        let opened;
+        let file = if let Some(descriptor) = &self.descriptor {
+            descriptor.as_ref()
+        } else if let PathOrFileDescriptor::Path(path) = &source.pathlike {
+            let flags = bun_sys::O::RDONLY | bun_sys::O::CLOEXEC;
+            #[cfg(unix)]
+            let flags = flags | bun_sys::O::NONBLOCK;
+            opened = bun_sys::File::openat(Fd::cwd(), path.slice(), flags, 0)
+                .map_err(SourceError::Sys)?;
+            &opened
+        } else {
+            return Err(SourceError::Unsupported);
+        };
+        let metadata = file.stat().map_err(SourceError::Sys)?;
+        if !bun_sys::S::ISREG(metadata.st_mode as u32) {
+            return Err(SourceError::Unsupported);
+        }
+        let available = u64::try_from(metadata.st_size)
+            .unwrap_or(0)
+            .saturating_sub(self.offset);
+        let length =
+            usize::try_from(available.min(self.size)).map_err(|_| SourceError::OutOfMemory)?;
+        if limit.is_some_and(|limit| length > limit) {
+            return Err(SourceError::SyncLimit);
+        }
+        let mut bytes = Vec::new();
+        while bytes.len() < length {
+            let count = (length - bytes.len()).min(64 * 1024);
+            bytes
+                .try_reserve(count)
+                .map_err(|_| SourceError::OutOfMemory)?;
+            let start = bytes.len();
+            bytes.resize(start + count, 0);
+            let position = self
+                .offset
+                .checked_add(start as u64)
+                .and_then(|n| i64::try_from(n).ok())
+                .ok_or(SourceError::Unsupported)?;
+            let read = bun_sys::pread(file.fd(), &mut bytes[start..], position)
+                .map_err(SourceError::Sys)?;
+            bytes.truncate(start + read);
+            if read == 0 {
+                break;
+            }
+        }
+        Ok(Utf8Bytes::Owned(bytes))
     }
 }
 
@@ -193,11 +417,10 @@ impl Archive {
 
         // For Blob/Archive, ref the existing store (zero-copy)
         if let Some(blob) = blob_from_js(data_arg) {
-            if let Some(store) = blob.store.get().as_ref() {
-                return Ok(Box::new(Archive {
-                    store: store.clone(),
-                    compress,
-                }));
+            if let Some(store) = ArchiveSource::from_blob(blob)
+                .map_err(|error| global.throw_value(error.to_js(global)))?
+            {
+                return Ok(Box::new(Archive { store, compress }));
             }
         }
 
@@ -336,7 +559,7 @@ fn parse_mtime(global: &JSGlobalObject, value: JSValue) -> JsResult<isize> {
 }
 
 fn create_archive(data: Vec<u8>, compress: Compression) -> Box<Archive> {
-    let store = Store::init(data);
+    let store = ArchiveSource::from_store(Store::init(data));
     Box::new(Archive { store, compress })
 }
 
@@ -407,6 +630,7 @@ fn build_tarball_from_object(
     let default_mtime: isize = options
         .mtime
         .unwrap_or_else(|| isize::try_from(bun_core::time::milli_timestamp() / 1000).unwrap_or(0));
+    let mut sync_file_budget = 64 * 1024 * 1024;
 
     // Iterate over object properties and write directly to archive
     let iter = jsc::JSPropertyIterator::init(
@@ -461,7 +685,8 @@ fn build_tarball_from_object(
 
         // Get data - use view for Blob/ArrayBuffer, convert for strings
         let mut array_buffer = None;
-        let data_slice = get_entry_data(global, data_value, &mut array_buffer)?;
+        let data_slice =
+            get_entry_data(global, data_value, &mut array_buffer, &mut sync_file_budget)?;
 
         // Write entry to archive
         let data = data_slice.slice();
@@ -516,10 +741,25 @@ fn get_entry_data<'a>(
     global: &JSGlobalObject,
     value: JSValue,
     array_buffer: &'a mut Option<bun_jsc::ArrayBuffer>,
+    sync_file_budget: &mut usize,
 ) -> JsResult<Utf8Bytes<'a>> {
     // For Blob, use sharedView (no copy needed). The backing store outlives
     // the returned slice for the duration of the caller's tarball build.
     if let Some(blob) = blob_from_js(value) {
+        if matches!(
+            blob.store.get().as_ref().map(|store| &store.data),
+            Some(Data::File(_))
+        ) {
+            let source = ArchiveSource::from_blob(blob)
+                .map_err(|error| global.throw_value(error.to_js(global)))?;
+            if let Some(source) = source {
+                let bytes = source
+                    .read(Some(*sync_file_budget))
+                    .map_err(|error| global.throw_value(error.to_js(global)))?;
+                *sync_file_budget -= bytes.slice().len();
+                return Ok(bytes.into_owned());
+            }
+        }
         return Ok(Utf8Bytes::Borrowed(blob.shared_view()));
     }
 
@@ -577,10 +817,12 @@ pub(crate) fn write(global: &JSGlobalObject, callframe: &CallFrame) -> JsResult<
 
     // For Blobs, use store reference with options compression
     if let Some(blob) = blob_from_js(data_arg) {
-        if let Some(store) = blob.store.get().as_ref() {
+        if let Some(store) = ArchiveSource::from_blob(blob)
+            .map_err(|error| global.throw_value(error.to_js(global)))?
+        {
             return start_write_task(
                 &cx,
-                WriteData::Store(store.clone()),
+                WriteData::Store(store),
                 path_slice.slice(),
                 options_compress,
             );
@@ -779,8 +1021,14 @@ pub(crate) enum PromiseResult {
 impl PromiseResult {
     fn fulfill(self, global: &JSGlobalObject, promise: &mut JSPromise) -> JsResult<()> {
         match self {
-            PromiseResult::Resolve(v) => promise.resolve(global, v),
-            PromiseResult::Reject(v) => promise.reject_with_async_stack(global, Ok(v)),
+            PromiseResult::Resolve(v) => {
+                let _root = jsc::StrongOptional::create(v, global);
+                promise.resolve(global, v)
+            }
+            PromiseResult::Reject(v) => {
+                let _root = jsc::StrongOptional::create(v, global);
+                promise.reject_with_async_stack(global, Ok(v))
+            }
         }
     }
 }
@@ -841,10 +1089,11 @@ pub enum ExtractError {
 pub(crate) enum ExtractResult {
     Success(u32),
     Err(ExtractError),
+    Source(SourceError),
 }
 
 pub(crate) struct ExtractContext {
-    store: RefPtr<Store>,
+    store: ArchiveSource,
     path: Box<[u8]>,
     glob_patterns: Option<Vec<Box<[u8]>>>,
     result: ExtractResult,
@@ -863,6 +1112,7 @@ impl TaskContext for ExtractContext {
             ExtractResult::Err(e) => PromiseResult::Reject(
                 global.create_error_instance(format_args!("{}", <&'static str>::from(e))),
             ),
+            ExtractResult::Source(error) => PromiseResult::Reject(error.to_js(global)),
         })
     }
 }
@@ -871,7 +1121,11 @@ impl ExtractContext {
     fn do_run(&mut self) -> ExtractResult {
         // Glob patterns and zip archives go through the Bun.Archive reader;
         // the fast path is the tar-only extractor `bun install` uses.
-        let data = self.store.shared_view();
+        let source = match self.store.read(None) {
+            Ok(source) => source,
+            Err(error) => return ExtractResult::Source(error),
+        };
+        let data = source.slice();
         let is_zip = data.starts_with(b"PK\x03\x04") || data.starts_with(b"PK\x05\x06");
         if self.glob_patterns.is_some() || is_zip {
             let count =
@@ -884,7 +1138,7 @@ impl ExtractContext {
 
         // Otherwise use the fast path without filtering
         let count = match libarchive::Archiver::extract_to_disk(
-            self.store.shared_view(),
+            data,
             &self.path,
             None,
             &mut (),
@@ -906,7 +1160,7 @@ pub(crate) type ExtractTask = AsyncTask<ExtractContext>;
 
 fn start_extract_task(
     cx: &bun_jsc::JsThread<'_>,
-    store: &RefPtr<Store>,
+    store: &ArchiveSource,
     path: &[u8],
     glob_patterns: Option<Vec<Box<[u8]>>>,
 ) -> JsResult<JSValue> {
@@ -937,10 +1191,11 @@ enum BlobResult {
     Compressed(Vec<u8>),
     Uncompressed,
     Err(CompressError),
+    Source(SourceError),
 }
 
 pub(crate) struct BlobContext {
-    store: RefPtr<Store>,
+    store: ArchiveSource,
     compress: Compression,
     output_type: BlobOutputType,
     result: BlobResult,
@@ -948,18 +1203,45 @@ pub(crate) struct BlobContext {
 
 impl TaskContext for BlobContext {
     fn run(&mut self) {
+        if matches!(self.compress, Compression::None)
+            && matches!(self.output_type, BlobOutputType::Blob)
+            && matches!(self.store.store.data, Data::Bytes(_))
+        {
+            self.result = BlobResult::Uncompressed;
+            return;
+        }
+        let source = match self.store.read(None) {
+            Ok(source) => source,
+            Err(error) => {
+                self.result = BlobResult::Source(error);
+                return;
+            }
+        };
         self.result = match &self.compress {
-            Compression::Gzip(opts) => match compress_gzip(self.store.shared_view(), opts.level) {
+            Compression::Gzip(opts) => match compress_gzip(source.slice(), opts.level) {
                 Ok(data) => BlobResult::Compressed(data),
                 Err(e) => BlobResult::Err(e),
             },
-            Compression::None => BlobResult::Uncompressed,
+            Compression::None => match source {
+                Utf8Bytes::Owned(bytes) => BlobResult::Compressed(bytes),
+                source => {
+                    let view = source.slice();
+                    let mut bytes = Vec::new();
+                    if bytes.try_reserve_exact(view.len()).is_err() {
+                        BlobResult::Err(CompressError::OutOfMemory)
+                    } else {
+                        bytes.extend_from_slice(view);
+                        BlobResult::Compressed(bytes)
+                    }
+                }
+            },
         };
     }
 
     fn run_from_js(&mut self, global: &JSGlobalObject) -> JsResult<PromiseResult> {
         match core::mem::replace(&mut self.result, BlobResult::Uncompressed) {
             BlobResult::Err(e) => Ok(PromiseResult::Reject(e.to_js(global))),
+            BlobResult::Source(error) => Ok(PromiseResult::Reject(error.to_js(global))),
             BlobResult::Compressed(data) => {
                 // self.result already replaced with Uncompressed above — ownership transferred
                 Ok(PromiseResult::Resolve(match self.output_type {
@@ -979,8 +1261,12 @@ impl TaskContext for BlobContext {
                 BlobOutputType::Blob => {
                     // The clone bumps the refcount; ownership of
                     // the new ref transfers into the Blob via init_with_store.
-                    let store = self.store.clone();
+                    let store = self.store.store.clone();
                     let blob_ptr = Blob::new(Blob::init_with_store(store, global));
+                    unsafe {
+                        (*blob_ptr).offset.set(self.store.offset);
+                        (*blob_ptr).size.set(self.store.size);
+                    }
                     // SAFETY: blob_ptr is the heap allocation just produced by Blob::new.
                     PromiseResult::Resolve(unsafe { (*blob_ptr).to_js(global) })
                 }
@@ -1006,7 +1292,7 @@ pub(crate) type BlobTask = AsyncTask<BlobContext>;
 
 fn start_blob_task(
     cx: &bun_jsc::JsThread<'_>,
-    store: &RefPtr<Store>,
+    store: &ArchiveSource,
     compress: Compression,
     output_type: BlobOutputType,
 ) -> JsResult<JSValue> {
@@ -1028,11 +1314,12 @@ enum WriteResult {
     Success,
     Err(CompressError),
     SysErr(bun_sys::Error),
+    Source(SourceError),
 }
 
 enum WriteData {
     Owned(Vec<u8>),
-    Store(RefPtr<Store>),
+    Store(ArchiveSource),
 }
 
 pub(crate) struct WriteContext {
@@ -1052,15 +1339,23 @@ impl TaskContext for WriteContext {
             WriteResult::Success => PromiseResult::Resolve(JSValue::UNDEFINED),
             WriteResult::Err(e) => PromiseResult::Reject(e.to_js(global)),
             WriteResult::SysErr(sys_err) => PromiseResult::Reject(sys_err.to_js(global)),
+            WriteResult::Source(error) => PromiseResult::Reject(error.to_js(global)),
         })
     }
 }
 
 impl WriteContext {
     fn do_run(&mut self) -> WriteResult {
+        let source;
         let source_data: &[u8] = match &self.data {
             WriteData::Owned(d) => d,
-            WriteData::Store(s) => s.shared_view(),
+            WriteData::Store(s) => {
+                source = match s.read(None) {
+                    Ok(source) => source,
+                    Err(error) => return WriteResult::Source(error),
+                };
+                source.slice()
+            }
         };
         let compressed_buf;
         let data_to_write: &[u8] = match &self.compress {
@@ -1136,12 +1431,13 @@ enum FilesResult {
     Success(FileEntryList),
     LibarchiveErr(CString),
     Err(FilesError),
+    Source(SourceError),
 }
 
 // freeEntries deleted — Vec<FileEntry> drops each entry; FileEntry fields drop their boxes.
 
 pub(crate) struct FilesContext {
-    store: RefPtr<Store>,
+    store: ArchiveSource,
     glob_patterns: Option<Vec<Box<[u8]>>>,
     result: FilesResult,
 }
@@ -1160,7 +1456,11 @@ impl FilesContext {
         let archive = lib::ReadArchive::new();
         configure_archive_reader(&archive);
 
-        if archive.read_open_memory(self.store.shared_view()) != lib::Result::Ok {
+        let source = match self.store.read(None) {
+            Ok(source) => source,
+            Err(error) => return Ok(FilesResult::Source(error)),
+        };
+        if archive.read_open_memory(source.slice()) != lib::Result::Ok {
             // SAFETY: `archive` is the live `read_new()` handle opened above.
             return Ok(if let Some(err) = Self::clone_error_string(&archive) {
                 FilesResult::LibarchiveErr(err)
@@ -1252,6 +1552,7 @@ impl TaskContext for FilesContext {
         match &mut self.result {
             FilesResult::Success(entries) => {
                 let map = JSMap::create(global);
+                let _map_root = jsc::StrongOptional::create(map, global);
                 let Some(mut map_ptr) = JSMap::from_js(map) else {
                     return Ok(PromiseResult::Reject(
                         global.create_error_instance(format_args!("Failed to create Map")),
@@ -1269,7 +1570,9 @@ impl TaskContext for FilesContext {
                     blob.last_modified.set(entry.mtime as f64 * 1000.0);
 
                     let name_js = blob.name.get().to_js(global)?;
+                    let _name_root = jsc::StrongOptional::create(name_js, global);
                     let blob_js = blob.to_js(global);
+                    let _blob_root = jsc::StrongOptional::create(blob_js, global);
                     // SAFETY: map_ptr came from JSMap::from_js on a live value.
                     unsafe { map_ptr.as_mut() }.set(global, name_js, blob_js)?;
                 }
@@ -1282,6 +1585,7 @@ impl TaskContext for FilesContext {
             FilesResult::Err(e) => Ok(PromiseResult::Reject(
                 global.create_error_instance(format_args!("{}", <&'static str>::from(&*e))),
             )),
+            FilesResult::Source(error) => Ok(PromiseResult::Reject(error.to_js(global))),
         }
     }
 }
@@ -1290,7 +1594,7 @@ pub(crate) type FilesTask = AsyncTask<FilesContext>;
 
 fn start_files_task(
     cx: &bun_jsc::JsThread<'_>,
-    store: &RefPtr<Store>,
+    store: &ArchiveSource,
     glob_patterns: Option<Vec<Box<[u8]>>>,
 ) -> JsResult<JSValue> {
     let store = store.clone();

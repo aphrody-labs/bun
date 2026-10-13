@@ -1280,6 +1280,15 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
             }
 
             WindowEvent::MouseInput { state, button, .. } => {
+                #[cfg(feature = "native-ui")]
+                if route.path == RoutePath::Terminal
+                    && route
+                        .window
+                        .screen
+                        .native_ui_pointer(Some(state), Some(button))
+                {
+                    return;
+                }
                 if route.path != RoutePath::Terminal
                     || route.window.screen.renderer.confirm_quit.is_active()
                 {
@@ -1676,6 +1685,14 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                 route.window.screen.mouse.x = x;
                 route.window.screen.mouse.y = y;
                 route.window.screen.mouse.raw_y = position.y;
+
+                #[cfg(feature = "native-ui")]
+                if route.path == RoutePath::Terminal
+                    && route.window.screen.native_ui_pointer(None, None)
+                {
+                    route.window.winit_window.set_cursor(CursorIcon::Default);
+                    return;
+                }
 
                 if route.path != RoutePath::Terminal
                     || route.window.screen.renderer.confirm_quit.is_active()
@@ -2089,6 +2106,10 @@ impl ApplicationHandler<EventPayload> for Application<'_> {
                             return;
                         }
                         if route.modal_owns_input() {
+                            return;
+                        }
+                        #[cfg(feature = "native-ui")]
+                        if route.window.screen.native_ui_text(&text) {
                             return;
                         }
                         // Don't use bracketed paste for single char input.

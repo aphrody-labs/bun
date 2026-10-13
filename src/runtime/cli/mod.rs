@@ -332,6 +332,7 @@ pub(crate) mod python_compile;
 pub(crate) mod run_command;
 #[path = "ssh_command.rs"]
 pub(crate) mod ssh_command;
+pub(crate) mod tools_command;
 #[path = "vpn_command.rs"]
 pub(crate) mod vpn_command;
 #[path = "uv_command.rs"]
@@ -1421,11 +1422,6 @@ pub(crate) mod command {
                     .unwrap_or(b""),
             )
         {
-            if let Some(graph) = bun_standalone_graph::Graph::from_executable()? {
-                // Never taken for a plain `bun` binary; ~2 KB of argv-splice
-                // and ctx-setup code lives behind this cold call.
-                return boot_standalone(graph, log);
-            }
             // A coreutils applet (`head`, `sort`, ...) selected by argv0; never `bun`/`bunx`/`node`/`bunsh`.
             #[cfg(feature = "coreutils")]
             if let Some(applet) = bun_coreutils::applet_name(
@@ -1442,7 +1438,16 @@ pub(crate) mod command {
                 Output::flush();
                 Global::exit(u32::try_from(code).unwrap_or(1));
             }
+            if let Some(graph) = bun_standalone_graph::Graph::from_executable()? {
+                // Applet aliases must run before a compiled application's entry point.
+                return boot_standalone(graph, log);
+            }
         }
+
+        if let Some(code) = crate::curl::cli::dispatch() {
+            bun_core::Global::exit(u32::try_from(code).unwrap_or(2));
+        }
+        super::tools_command::dispatch();
 
         // Fast path: `bun -v` / `bun --version` / `bun --revision`, the
         // empty-eval forms `bun -e ''` / `bun -p ''` (and the `--eval=` /

@@ -29,7 +29,9 @@ export function reply(value: unknown): void {
 /** Runtime provenance and commit identity, independent of the generated plugin's content hash. */
 export function isAphrodyRuntime(revision: string, sourceUrl?: string, commit?: string): boolean {
   if (/^v?\d+\.\d+\.\d+-aphrody\.\d+(?:\+[a-f0-9]{7,40}| \([a-f0-9]{7,40}\))?$/.test(revision)) return true;
-  const parsed = /^v?(\d+\.\d+\.\d+)(?:\+([a-f0-9]{7,40})| \(([a-f0-9]{7,40})\))$/.exec(revision);
+  const parsed = /^v?(\d+\.\d+\.\d+)(?:-canary\.\d+)?(?:-debug)?(?:\+([a-f0-9]{7,40})| \(([a-f0-9]{7,40})\))$/.exec(
+    revision,
+  );
   if (!parsed || !commit || !/^[a-f0-9]{40}$/.test(commit) || !commit.startsWith(parsed[2] ?? parsed[3])) return false;
   const release =
     /^https:\/\/github\.com\/aphrody-labs\/bun\/releases\/download\/bun-v(\d+\.\d+\.\d+)(?:-debug)?\/bun-[a-z0-9]+(?:-[a-z0-9]+)*\.zip$/.exec(

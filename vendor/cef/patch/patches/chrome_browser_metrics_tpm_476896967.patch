@@ -1,0 +1,30 @@
+diff --git chrome/browser/metrics/chrome_browser_main_extra_parts_metrics.cc chrome/browser/metrics/chrome_browser_main_extra_parts_metrics.cc
+index 443ffadf69..6627639a90 100644
+--- chrome/browser/metrics/chrome_browser_main_extra_parts_metrics.cc
++++ chrome/browser/metrics/chrome_browser_main_extra_parts_metrics.cc
+@@ -36,6 +36,7 @@
+ #include "base/version.h"
+ #include "build/build_config.h"
+ #include "build/config/compiler/compiler_buildflags.h"
++#include "cef/libcef/features/features.h"
+ #include "chrome/browser/about_flags.h"
+ #include "chrome/browser/browser_process.h"
+ #include "chrome/browser/buildflags.h"
+@@ -1011,7 +1012,7 @@ bool IsBundleForMixedDeviceAccordingToVersionCode(
+ }
+ #endif  // BUILDFLAG(IS_ANDROID)
+ 
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC)
++#if !BUILDFLAG(ENABLE_CEF) && (BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC))
+ // The startup TPM benchmark performs synchronous hardware crypto operations
+ // that are invariant for a given machine. Subsample heavily on Stable, while
+ // leaving pre-Stable channels unsampled for faster regression detection.
+@@ -1173,7 +1174,7 @@ void ChromeBrowserMainExtraPartsMetrics::PostBrowserStart() {
+   }
+ #endif  // BUILDFLAG(IS_WIN)
+ 
+-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC)
++#if !BUILDFLAG(ENABLE_CEF) && (BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC))
+   // Deliberately delayed and sampled to avoid contending with early crypto and
+   // DBSC operations right after startup. The measurement runs slow TPM
+   // operations, which must not block shutdown.

@@ -22,6 +22,7 @@ regex = { workspace = true }
 image_rs = { workspace = true, optional = true }
 parking_lot = { workspace = true }
 serde = { workspace = true }
+serde_json = { version = "1.0.145", optional = true }
 rio-graphics = { workspace = true }
 rio-grapheme-width = { workspace = true }
 # Width tables plus the UAX #29 grapheme segmentation used by mode 2027.
@@ -67,6 +68,7 @@ pty = ["dep:corcovado", "dep:teletypewriter", "host-graphics"]
 # Allow Kitty graphics to read host files and shared memory. VT-only
 # embedders must opt in independently of image decoding.
 host-graphics = []
+native-ui = ["dep:serde_json"]
 # Expose the app-level `RioErrorType::FontsNotFound` variant (needs a
 # sugarloaf font type). Enabled by rio-backend's own `renderer` feature.
 renderer = ["dep:sugarloaf"]

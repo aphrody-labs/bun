@@ -6,6 +6,48 @@ import { connect, createServer, type Socket } from "node:net";
 import { startConnectProxy } from "../src/connect-proxy.ts";
 import { eventRecordId, startSystemStream } from "../src/system-stream.ts";
 import { startTaskService } from "../src/task-service.ts";
+import { runTool } from "../src/process.ts";
+
+test("librclone retains one initialized Go library across RPC calls", async () => {
+  using files = tempDir("librclone-retained", { "fixture-library": "controlled fake library" });
+  const moduleUrl = new URL("../src/rclone.ts", import.meta.url).href;
+  await using child = Bun.spawn({
+    cmd: [
+      bunExe(),
+      "-e",
+      `
+      import { mock } from "bun:test";
+      const counts = { load: 0, initialize: 0, free: 0, finalize: 0, unload: 0 };
+      mock.module("bun:ffi", () => ({
+        FFIType: { void: 0, cstring: 1, ptr: 2 }, ptr: () => 1,
+        CString: class { toString() { return '{"status":200,"output":{"ok":true}}'; } },
+        dlopen: () => { counts.load++; return {
+          symbols: {
+            RcloneInitialize() { counts.initialize++; }, RcloneRPCJSON() { return 1; },
+            RcloneFreeString() { counts.free++; }, RcloneFinalize() { counts.finalize++; }
+          }, close() { counts.unload++; }
+        }; }
+      }));
+      const { rcloneRpc } = await import(${JSON.stringify(moduleUrl)});
+      const results = await Promise.all([rcloneRpc("core/version"), rcloneRpc("core/version")]);
+      console.log(JSON.stringify({ counts, results }));
+    `,
+    ],
+    env: { ...bunEnv, APHRODY_LIBRCLONE: `${files}/fixture-library` },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  expect(JSON.parse(stdout)).toEqual({
+    counts: { load: 1, initialize: 1, free: 2, finalize: 0, unload: 0 },
+    results: [
+      { status: 200, output: { ok: true } },
+      { status: 200, output: { ok: true } },
+    ],
+  });
+  expect(stderr).toBe("");
+  expect(code).toBe(0);
+});
 
 test("periodic metadata service serializes tasks and awaits cancellation on stop", async () => {
   let calls = 0;
@@ -174,12 +216,13 @@ test("tool cache verifies bytes and replaces corruption only after a valid downl
   using directory = tempDir("bun-tools-cache", {});
   const modulePath = new URL("../src/assets.ts", import.meta.url).href;
   const script = `
-    import { ensureAsset } from ${JSON.stringify(modulePath)};
+    import { ensureAsset, installedToolPath } from ${JSON.stringify(modulePath)};
     import { readdirSync } from "node:fs";
     const name = "rclone-linux-x64";
-    const path = process.env.APHRODY_TOOLS_DIR + "/" + name;
+    const path = installedToolPath(name);
     const good = "qualified-tool-bytes";
     const digest = new Bun.CryptoHasher("sha256").update(good).digest("hex");
+    const pin = { bytes: good.length, sha256: digest };
     let downloads = 0;
     let download = good;
     globalThis.fetch = async url => {
@@ -188,21 +231,21 @@ test("tool cache verifies bytes and replaces corruption only after a valid downl
       return new Response(download);
     };
     await Bun.write(path, good);
-    await ensureAsset(name);
+    await ensureAsset(name, { pin });
     const cachedDownloads = downloads;
     await Bun.write(path, "corrupted-cache");
     download = "invalid-download";
     let rejected = false;
-    try { await ensureAsset(name); } catch { rejected = true; }
+    try { await ensureAsset(name, { download: true, pin }); } catch { rejected = true; }
     const preserved = await Bun.file(path).text();
     download = good;
-    await ensureAsset(name);
+    await ensureAsset(name, { download: true, pin });
     console.log(JSON.stringify({ cachedDownloads, rejected, preserved, repaired: await Bun.file(path).text(), downloads,
       partials: readdirSync(process.env.APHRODY_TOOLS_DIR).filter(name => name.endsWith(".part")).length }));
   `;
   await using child = Bun.spawn({
     cmd: [bunExe(), "-e", script],
-    env: { ...bunEnv, APHRODY_TOOLS_DIR: String(directory) },
+    env: { ...bunEnv, BUN_TOOLS_DIR: String(directory), APHRODY_TOOLS_DIR: String(directory) },
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -216,4 +259,66 @@ test("tool cache verifies bytes and replaces corruption only after a valid downl
 
 test.skipIf(process.platform !== "win32")("rsync rejects Windows before starting a compatibility process", async () => {
   await expect(rsync(["--version"])).rejects.toThrow("Native rsync is unsupported on Windows");
+});
+
+test("cached tool lookup never fetches, including missing caches", async () => {
+  using directory = tempDir("bun-tools-offline", {});
+  const modulePath = new URL("../src/assets.ts", import.meta.url).href;
+  await using child = Bun.spawn({
+    cmd: [
+      bunExe(),
+      "-e",
+      `import {ensureAsset} from ${JSON.stringify(modulePath)}; let calls=0; globalThis.fetch=async()=>{calls++;throw new Error("unexpected network");}; try{await ensureAsset("rclone-linux-x64");}catch{} console.log(calls);`,
+    ],
+    env: { ...bunEnv, BUN_TOOLS_DIR: String(directory), APHRODY_TOOLS_DIR: String(directory) },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  expect(stdout).toBe("0\n");
+  expect(stderr).toBe("");
+  expect(code).toBe(0);
+});
+
+test("tool process capture is bounded and forwards exact arguments", async () => {
+  const result = await runTool(bunExe(), [
+    "-e",
+    "console.log(JSON.stringify(process.argv.slice(-2)))",
+    "--",
+    "space value",
+    "semi;colon",
+  ]);
+  expect(result.stdout.trim()).toBe('["space value","semi;colon"]');
+  expect(result.stderr).toBe("");
+  expect(result.exitCode).toBe(0);
+  await expect(
+    runTool(bunExe(), ["-e", "process.stdout.write('x'.repeat(65536))"], { maxOutputBytes: 64 }),
+  ).rejects.toThrow("output exceeded");
+  const aborted = new AbortController();
+  aborted.abort();
+  await expect(
+    runTool(bunExe(), ["-e", "throw new Error('must not start')"], { signal: aborted.signal }),
+  ).rejects.toThrow();
+});
+
+test("API installation and native CLI share canonical unversioned names", async () => {
+  using directory = tempDir("bun-tools-location", {});
+  const module = new URL("../src/assets.ts", import.meta.url).href;
+  await using child = Bun.spawn({
+    cmd: [
+      bunExe(),
+      "-e",
+      `import{toolsDirectory,installedAssetName}from ${JSON.stringify(module)};console.log(JSON.stringify({directory:toolsDirectory(),names:[installedAssetName("rclone-linux-x64"),installedAssetName("rclone-windows-x64.exe"),installedAssetName("librclone-windows-x64.dll")]}));`,
+    ],
+    env: { ...bunEnv, BUN_TOOLS_DIR: String(directory), APHRODY_TOOLS_DIR: join(String(directory), "ignored-compat") },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  expect(JSON.parse(stdout)).toEqual({
+    directory: String(directory),
+    names: ["rclone", "rclone.exe", "librclone.dll"],
+  });
+  expect(stderr).toBe("");
+  expect(code).toBe(0);
 });

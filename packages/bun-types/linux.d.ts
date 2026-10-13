@@ -119,6 +119,7 @@ declare module "bun:linux" {
     readonly MFD_NOEXEC_SEAL: number;
     readonly MFD_EXEC: number;
     readonly PIDFD_NONBLOCK: number;
+    readonly PIDFD_SIGNAL_PROCESS_GROUP: number;
     readonly PIDFD_THREAD: number;
     readonly MODULE_INIT_IGNORE_MODVERSIONS: number;
     readonly MODULE_INIT_IGNORE_VERMAGIC: number;
@@ -345,15 +346,18 @@ declare module "bun:linux" {
    * @throws `ESRCH` if the process does not exist, `ENOSYS` on old kernels.
    */
   function pidfdOpen(pid: number, flags?: number): number;
+  /** Duplicate Bun.spawn's owned pidfd without a PID lookup. Returns null once exited or without kernel pidfd support. Close the returned descriptor with node:fs.closeSync. */
+  function pidfdForProcess(process: Bun.Subprocess): number | null;
 
   /**
    * Sends a signal through a pidfd (`pidfd_send_signal(2)`). Unlike `process.kill`, this
    * cannot hit a reused pid.
    *
    * @param signal A signal number or name such as `"SIGKILL"`.
+   * @param flags Defaults to zero. `PIDFD_SIGNAL_PROCESS_GROUP` targets the process group through its leader pidfd and requires Linux 6.9 or later.
    * @throws `ESRCH` if the process has exited, `EPERM` without permission.
    */
-  function pidfdSendSignal(pidfd: number, signal: number | NodeJS.Signals): void;
+  function pidfdSendSignal(pidfd: number, signal: number | NodeJS.Signals, flags?: number): void;
 
   /**
    * Duplicates a file descriptor of another process into this one (`pidfd_getfd(2)`).
@@ -627,6 +631,7 @@ declare module "bun:linux" {
     prctl: typeof prctl;
     setNoNewPrivs: typeof setNoNewPrivs;
     pidfdOpen: typeof pidfdOpen;
+    pidfdForProcess: typeof pidfdForProcess;
     pidfdSendSignal: typeof pidfdSendSignal;
     pidfdGetfd: typeof pidfdGetfd;
     memfdCreate: typeof memfdCreate;
@@ -658,6 +663,7 @@ declare module "bun:linux" {
     prctl,
     setNoNewPrivs,
     pidfdOpen,
+    pidfdForProcess,
     pidfdSendSignal,
     pidfdGetfd,
     memfdCreate,

@@ -53,6 +53,8 @@ test("native SDK publication binds the archive, consumer evidence and Bun build 
   const receipt = {
     schema: 1, kind: "native-sdk", component: "fixture", version: "a".repeat(40), sourceRevision: "a".repeat(40),
     sourceRepository: "https://github.com/aphrody-labs/bun", target: "linux-x64", consumer: "aphrody-bun",
+    source: { kind: "github-archive", repo: "aphrody-labs/bun", commit: "a".repeat(40) },
+    sourceIdentity: sha("e"), sourceRoot: "source",
     buildABI: { os: "linux", arch: "x64", abi: "gnu", asan: true, lto: false, baseline: false, buildType: "Debug" },
     gate: { schema: 1, nativeLink: "passed", runtimeQualification: "native-tests-passed", configureSHA256: sha("b"), ninjaSHA256: sha("c"), sourceReceiptSHA256: sha("d"), evidence: ["fixture build gate"] },
     configureSHA256: sha("b"), ninjaSHA256: sha("c"), sourceReceiptSHA256: sha("d"), qualification: "native-tests-passed",
@@ -78,6 +80,9 @@ test("native SDK publication binds the archive, consumer evidence and Bun build 
   expect(plan.receipt.buildABI).toEqual(receipt.buildABI);
   expect(plan.receipt.includes).toEqual(receipt.includes);
   expect(plan.receipt.defines).toEqual(receipt.defines);
+  expect(plan.receipt.source).toEqual(receipt.source);
+  expect(plan.receipt.sourceIdentity).toBe(receipt.sourceIdentity);
+  expect(plan.receipt.sourceRoot).toBe("source");
   expect(plan.receipt.nativeRuntimeABI).toBe("same-Bun-build-ABI-qualified");
   await Bun.write(qualificationFile, JSON.stringify({ ...qualification, checks: { libraryABI: true } }));
   await expect(mediaPublicationPlan(distributionFile, qualificationFile)).rejects.toThrow("consumer qualification");
@@ -86,6 +91,10 @@ test("native SDK publication binds the archive, consumer evidence and Bun build 
   await expect(mediaPublicationPlan(distributionFile, qualificationFile)).rejects.toThrow("evidence changed");
   await Bun.write(join(String(directory), "consumer.log"), "fixture-consumer-passed");
   await Bun.write(distributionFile, JSON.stringify({ ...distribution, buildABI: { ...receipt.buildABI, asan: false } }));
+  await expect(mediaPublicationPlan(distributionFile, qualificationFile)).rejects.toThrow("build ABI differs");
+  await Bun.write(distributionFile, JSON.stringify({ ...distribution, sourceRoot: "legacy" }));
+  await expect(mediaPublicationPlan(distributionFile, qualificationFile)).rejects.toThrow("exact Bun consumer");
+  await Bun.write(distributionFile, JSON.stringify({ ...distribution, sourceIdentity: sha("f") }));
   await expect(mediaPublicationPlan(distributionFile, qualificationFile)).rejects.toThrow("build ABI differs");
 });
 

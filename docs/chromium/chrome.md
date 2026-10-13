@@ -1,5 +1,47 @@
 # Chrome : guide documentaire du fork
 
+## CLI navigateur et applications — sources du 2026-10-13
+
+Le propriétaire est `scripts/aphrody/browser.ts`, appelé par les scripts
+`chrome` et `obscura`. Exemples depuis le checkout :
+
+```sh
+bun run chrome download https://example.com/ --outfile page.html
+bun run chrome compile app.ts --outfile app --minimal
+bun run chrome compile app.tsx --mode webview --outfile app
+bun run chrome compile index.html --outfile app
+bun run chrome pwa app.tsx --outdir dist --icon icon.png --name "Mon application"
+```
+
+Le mode script conserve l'exécution JS/TS habituelle. Les modes WebView et PWA
+créent un élément `#app` pour les entrées JS/JSX/TS/TSX : le code client monte
+son interface et fournit ses dépendances. Aucun framework de rendu n'est ajouté.
+Le bundler Bun embarque les imports et ressources HTML locales.
+
+L'exécutable contient le runtime Bun standard. `--minimal` désactive uniquement
+l'autochargement des configurations ; il ne réduit pas les composants natifs du
+runtime. Les applications HTML utilisent `Bun.WebView` avec Chrome, dans un
+processus navigateur séparé. Chrome doit être disponible sur la machine cible.
+La fermeture de la vue ou un signal termine le serveur local de l'application.
+
+Le téléchargement HTML est limité à 16 MiB, accepte annulation et délai, et
+résout la première base relative depuis l'URL finale après redirection. Les
+ressources distantes restent distantes. Aucun profil ou cookie n'est importé.
+
+La génération PWA produit un manifeste relatif, un service worker, des icônes
+PNG 192/512 via `Bun.Image` et un reçu des fichiers générés. Seuls ces fichiers
+entrent dans le cache. Les fichiers préexistants restent hors du cache ; un
+conflit sur une sortie générée est refusé. Servir le dossier via HTTPS ou
+localhost : l'enregistrement du worker nécessite un contexte sûr et la même
+origine, selon [MDN](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register).
+Une CSP existante peut empêcher le script d'enregistrement ; elle n'est pas
+modifiée. Les dépendances externes nécessitent toujours le réseau.
+
+Ces commandes et leurs tests sont préparés dans les sources. Compilation,
+exécution de l'artefact, enregistrement Chrome et installation effective sont
+des qualifications distinctes ; la génération seule ne prouve pas une PWA
+installée ni un backend Windows natif qualifié.
+
 Date de consultation : **2026-10-11**.
 
 Ce guide rassemble les contrats utiles au fork Bun ; il ne reproduit pas toute
@@ -114,8 +156,10 @@ Cookies, mots de passe, sessions et bases chiffrées restent dans leurs magasins
 ## Application au fork Bun
 
 Le contrat local se trouve dans [Chromium et Obscura](../aphrody/chromium.md).
-La cible sépare Obscura/JSC serverless et Chromium/V8 complet avec WebGPU.
-Les sources documentaires n'établissent pas que ces deux modes sont terminés.
+L'API actuelle `bun:obscura` réutilise le propriétaire Chromium partagé et son
+moteur de page V8. Le pipeline natif DOM/HTML sous JSC constitue un contrat
+distinct, à qualifier séparément ; il ne remplace pas ce moteur dans l'API
+Obscura actuelle.
 Qualifier séparément le code, le binaire changé, le navigateur installé et l'hôte.
 Conserver les numéros de version et les résultats réels dans les reçus de gates.
 

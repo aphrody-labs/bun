@@ -191,14 +191,20 @@ using job = new windows.Job({
   cpuRate: 50,
 });
 
-const child = Bun.spawn(["bun", "worker.ts"]);
-job.assign(child);
+const child = job.spawn(["bun", "worker.ts"]);
 
 job.info(); // { activeProcesses, totalProcesses, userTime, kernelTime, peakJobMemory, pids, ... }
 job.terminate(1);
 ```
 
 With `killOnClose`, closing the job (or leaving the `using` block) terminates its processes. A job that is garbage collected is closed too.
+
+`job.spawn(command, options)` and `job.spawn({ cmd, ...options })` return a
+standard `Bun.Subprocess`. Windows creates the process suspended, assigns its
+actual process handle to the job, then resumes its primary thread. Assignment
+failure terminates the suspended process and throws before child code executes.
+`job.assign(pidOrProcess)` remains available for existing processes; it cannot
+retroactively contain descendants created before assignment.
 
 | Limit             | Meaning                                     |
 | ----------------- | ------------------------------------------- |

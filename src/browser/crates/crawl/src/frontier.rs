@@ -63,6 +63,18 @@ CREATE TABLE IF NOT EXISTS pages (
  fetched_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS pages_hash ON pages(content_hash);
+CREATE TABLE IF NOT EXISTS sitemap_jobs (
+ url TEXT PRIMARY KEY,
+ host TEXT NOT NULL,
+ entry_offset INTEGER NOT NULL DEFAULT 0,
+ body_hash TEXT,
+ complete INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS sitemap_discovered_hosts (
+ scope TEXT NOT NULL,
+ host TEXT NOT NULL,
+ PRIMARY KEY(scope,host)
+);
 ";
 
 const REQUEST_MIGRATIONS: &[(&str, &str)] = &[
@@ -172,6 +184,7 @@ impl Frontier {
                 .map_err(|error| rusqlite::Error::InvalidParameterName(error.to_string()))?;
         }
         let db = Connection::open(path)?;
+        db.busy_timeout(std::time::Duration::from_secs(5))?;
         db.execute_batch(SCHEMA)?;
         migrate_schema(&db)?;
         let mut frontier = Self { db, options: normalize_options(options) };
@@ -648,6 +661,56 @@ impl Frontier {
             .optional()
     }
 
+    pub fn undiscovered_seed_urls(&self, scope: &str, limit: usize) -> rusqlite::Result<Vec<String>> {
+        let mut statement = self.db.prepare("SELECT MIN(url) FROM requests WHERE NOT EXISTS (SELECT 1 FROM sitemap_discovered_hosts AS seen WHERE seen.scope=?1 AND seen.host=requests.host) GROUP BY host LIMIT ?2")?;
+        statement.query_map(params![scope, limit.min(1024) as i64], |row| row.get(0))?.collect()
+    }
+
+    pub fn mark_sitemap_host_discovered(&self, scope: &str, host: &str) -> rusqlite::Result<()> {
+        self.db.execute("INSERT OR IGNORE INTO sitemap_discovered_hosts VALUES (?1,?2)", params![scope,host])?;
+        Ok(())
+    }
+
+    pub fn sitemap_hosts_pending_count(&self, scope: &str) -> rusqlite::Result<usize> {
+        self.db.query_row("SELECT COUNT(DISTINCT host) FROM requests WHERE NOT EXISTS (SELECT 1 FROM sitemap_discovered_hosts AS seen WHERE seen.scope=?1 AND seen.host=requests.host)", [scope], |row| row.get(0))
+    }
+
+    pub fn enqueue_sitemap(&self, url: &Url) -> rusqlite::Result<()> {
+        if !matches!(url.scheme(), "http" | "https") || !url.username().is_empty() || url.password().is_some() {
+            return Err(rusqlite::Error::InvalidParameterName("Invalid sitemap URL".into()));
+        }
+        self.db.execute("INSERT OR IGNORE INTO sitemap_jobs(url,host) VALUES (?1,?2)", params![url.as_str(),url.host_str().unwrap_or_default()])?;
+        Ok(())
+    }
+
+    pub fn pending_sitemaps(&self, allowed: &HashSet<String>, limit: usize) -> rusqlite::Result<Vec<(String, usize, Option<String>)>> {
+        let (filter, mut values) = sitemap_host_filter(allowed);
+        let limit_parameter = values.len() + 1;
+        values.push(rusqlite::types::Value::Integer(limit.min(100) as i64));
+        let mut statement = self.db.prepare(&format!("SELECT url,entry_offset,body_hash FROM sitemap_jobs WHERE complete=0 AND ({filter}) ORDER BY rowid LIMIT ?{limit_parameter}"))?;
+        statement.query_map(rusqlite::params_from_iter(values), |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?.collect()
+    }
+
+    pub fn sitemap_job(&self, url: &Url) -> rusqlite::Result<Option<(usize, bool, Option<String>)>> {
+        self.db.query_row("SELECT entry_offset,complete,body_hash FROM sitemap_jobs WHERE url=?1", [url.as_str()], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))).optional()
+    }
+
+    pub fn advance_sitemap(&self, url: &Url, next_offset: Option<usize>, body_hash: &str) -> rusqlite::Result<()> {
+        let offset = i64::try_from(next_offset.unwrap_or(0)).map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
+        self.db.execute("UPDATE sitemap_jobs SET entry_offset=CASE WHEN body_hash=?4 THEN MAX(entry_offset,?2) ELSE ?2 END,complete=CASE WHEN body_hash=?4 THEN MAX(complete,?3) ELSE ?3 END,body_hash=?4 WHERE url=?1", params![url.as_str(), offset, next_offset.is_none(), body_hash])?;
+        Ok(())
+    }
+
+    pub fn reset_sitemap(&self, url: &Url) -> rusqlite::Result<()> {
+        self.db.execute("UPDATE sitemap_jobs SET entry_offset=0,complete=0,body_hash=NULL WHERE url=?1", [url.as_str()])?;
+        Ok(())
+    }
+
+    pub fn sitemap_pending_count(&self, allowed: &HashSet<String>) -> rusqlite::Result<usize> {
+        let (filter, values) = sitemap_host_filter(allowed);
+        self.db.query_row(&format!("SELECT COUNT(*) FROM sitemap_jobs WHERE complete=0 AND ({filter})"), rusqlite::params_from_iter(values), |row| row.get(0))
+    }
+
     pub fn known_urls(&self) -> rusqlite::Result<HashSet<String>> {
         let mut statement = self.db.prepare("SELECT url FROM requests")?;
         statement.query_map([], |r| r.get::<_, String>(0))?.collect()
@@ -660,6 +723,13 @@ pub struct PageRecord {
     pub markdown: String,
     pub content_hash: String,
     pub simhash: u64,
+}
+
+fn sitemap_host_filter(allowed: &HashSet<String>) -> (String, Vec<rusqlite::types::Value>) {
+    if allowed.is_empty() { return ("1".into(), Vec::new()); }
+    let values: Vec<_> = allowed.iter().cloned().map(rusqlite::types::Value::Text).collect();
+    let clauses: Vec<_> = (1..=values.len()).map(|index| format!("host=?{index} OR substr(host,-length(?{index})-1)='.'||?{index}")).collect();
+    (clauses.join(" OR "), values)
 }
 
 fn family_key(url: &Url) -> String {
@@ -755,6 +825,24 @@ fn migrate_schema(db: &Connection) -> rusqlite::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sitemap_host_discovery_resumes_beyond_32_and_filters_pending_jobs_in_sql() {
+        let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
+        for index in 0..65 { frontier.enqueue(AddRequest::seed(format!("https://h{index:03}.example.test/")), 0).unwrap(); }
+        for expected in [32, 32, 1] {
+            let urls = frontier.undiscovered_seed_urls("fixture-scope", 32).unwrap();
+            assert_eq!(urls.len(), expected);
+            for raw in urls { let url = Url::parse(&raw).unwrap(); frontier.mark_sitemap_host_discovered("fixture-scope", url.host_str().unwrap()).unwrap(); }
+        }
+        assert_eq!(frontier.sitemap_hosts_pending_count("fixture-scope").unwrap(), 0);
+        assert_eq!(frontier.sitemap_hosts_pending_count("other-scope").unwrap(), 65);
+        for index in 0..120 { frontier.enqueue_sitemap(&Url::parse(&format!("https://other.test/{index}.xml")).unwrap()).unwrap(); }
+        frontier.enqueue_sitemap(&Url::parse("https://sub.example.test/sitemap.xml").unwrap()).unwrap();
+        let allowed = HashSet::from(["example.test".into()]);
+        assert_eq!(frontier.pending_sitemaps(&allowed, 1).unwrap()[0].0, "https://sub.example.test/sitemap.xml");
+        assert_eq!(frontier.sitemap_pending_count(&allowed).unwrap(), 1);
+    }
 
     #[test]
     fn normalized_url_dedup_and_priority_order() {
@@ -946,5 +1034,20 @@ mod tests {
             .query_row("SELECT band0,band1 FROM pages", [], |row| Ok((row.get(0)?, row.get(1)?)))
             .unwrap();
         assert_eq!(bands, (0x1234, 0));
+    }
+
+    #[test]
+    fn sitemap_progress_never_regresses_for_the_same_body() {
+        let frontier = Frontier::memory(FrontierOptions::default()).unwrap();
+        let url = Url::parse("https://example.test/sitemap.xml").unwrap();
+        frontier.enqueue_sitemap(&url).unwrap();
+        frontier.advance_sitemap(&url, Some(20), "one").unwrap();
+        frontier.advance_sitemap(&url, Some(10), "one").unwrap();
+        assert_eq!(frontier.sitemap_job(&url).unwrap().unwrap(), (20, false, Some("one".into())));
+        frontier.advance_sitemap(&url, None, "one").unwrap();
+        frontier.advance_sitemap(&url, Some(10), "one").unwrap();
+        assert!(frontier.sitemap_job(&url).unwrap().unwrap().1);
+        frontier.advance_sitemap(&url, Some(3), "two").unwrap();
+        assert_eq!(frontier.sitemap_job(&url).unwrap().unwrap(), (3, false, Some("two".into())));
     }
 }

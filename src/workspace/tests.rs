@@ -44,6 +44,96 @@ fn request(root: &Path, task: FileTask) -> WorkspaceRequest {
     }
 }
 
+fn cli_args(values: &[&str]) -> Vec<String> {
+    values.iter().map(|value| (*value).into()).collect()
+}
+
+#[test]
+fn workspace_cli_uses_native_rename_and_rejects_legacy_engines() -> Result<()> {
+    let root = std::env::current_dir()?;
+    let args = crate::cli::rename_args(
+        &cli_args(&[
+            "code-edit",
+            "rename",
+            "--find",
+            "@tauri-apps/",
+            "--with",
+            "@aphrody/",
+            "--glob",
+            "**/*.ts",
+            "--glob",
+            "!**/audits/**",
+            "--paths",
+            "--apply",
+        ]),
+        &root,
+    )?
+    .ok_or_else(|| WorkspaceError::Invalid("missing native rename arguments".into()))?;
+    assert_eq!(
+        &args[..10],
+        &[
+            "--from",
+            "@tauri-apps/",
+            "--to",
+            "@aphrody/",
+            "--include",
+            "**/*.ts",
+            "--exclude",
+            "**/audits/**",
+            "--paths",
+            "--apply"
+        ]
+    );
+    assert_eq!(Path::new(&args[10]), root);
+    assert!(
+        crate::cli::rename_args(
+            &cli_args(&["code-edit", "rename", "--engine", "yolo"]),
+            &root
+        )
+        .is_err()
+    );
+    assert!(
+        crate::cli::request(&cli_args(&["code-edit", "replace", "--find", "old"]), &root).is_err()
+    );
+    let restore = crate::cli::rename_args(
+        &cli_args(&["code-edit", "restore", "--journal", "receipt.json"]),
+        &root,
+    )?;
+    assert_eq!(restore, Some(cli_args(&["--restore", "receipt.json"])));
+    Ok(())
+}
+
+#[tokio::test]
+async fn workspace_cli_previews_then_applies_import_export_path_edits() -> Result<()> {
+    let temporary = tempfile::tempdir()?;
+    let path = temporary.path().join("index.ts");
+    let original = b"import { run } from '@legacy/google';\nexport * from '@legacy/tauri';\nconst path = '@legacy/obscura';\n";
+    write(&path, original)?;
+    let mut args = cli_args(&[
+        "code-edit",
+        "replace",
+        "--glob",
+        "*.ts",
+        "--find",
+        "@legacy/",
+        "--with",
+        "@aphrody/",
+    ]);
+    let preview =
+        crate::cli::execute(&args, temporary.path(), Arc::new(AtomicBool::new(false))).await?;
+    assert_eq!(preview["files"][0]["matches"], 3);
+    assert_eq!(read(&path)?, original);
+    args.push("--apply".into());
+    let applied =
+        crate::cli::execute(&args, temporary.path(), Arc::new(AtomicBool::new(false))).await?;
+    assert_eq!(applied["files"][0]["applied"], true);
+    assert_eq!(read(&path)?, b"import { run } from '@aphrody/google';\nexport * from '@aphrody/tauri';\nconst path = '@aphrody/obscura';\n");
+    let unchanged =
+        crate::cli::execute(&args, temporary.path(), Arc::new(AtomicBool::new(false))).await?;
+    assert_eq!(unchanged["files"].as_array().map(Vec::len), Some(0));
+    Ok(())
+}
+
 async fn execute(root: &Path, task: FileTask) -> Result<Value> {
     crate::run(request(root, task), Arc::new(AtomicBool::new(false))).await
 }

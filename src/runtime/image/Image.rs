@@ -195,11 +195,12 @@ impl Default for Resize {
 /// the worker snapshot is a plain struct copy with a fixed execution order
 /// (`run()` below), no allocation, no "too many ops" edge.
 ///
-/// Execution order matches Sharp: (autoOrient) → rotate → flip/flop → resize
+/// Execution order: autoOrient → extract → rotate → flip/flop → resize
 /// → modulate. Rotate precedes resize so the target box is interpreted in
 /// upright space; modulate runs last so it operates on the fewest pixels.
 #[derive(Clone, Copy, Default)]
 pub(crate) struct Pipeline {
+    pub(crate) extract: Option<Extract>,
     pub(crate) rotate: u16, // 0/90/180/270
     pub(crate) flip: bool,  // vertical
     pub(crate) flop: bool,  // horizontal
@@ -216,6 +217,31 @@ pub(crate) struct Modulate {
     pub(crate) brightness: f32,
     /// 0 = greyscale, 1 = identity, >1 = boost.
     pub(crate) saturation: f32,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Extract {
+    left: u32,
+    top: u32,
+    width: u32,
+    height: u32,
+}
+
+#[derive(thiserror::Error, Debug)]
+enum PipelineError {
+    #[error(transparent)]
+    Codec(#[from] codecs::Error),
+    #[error(
+        "Image.extract rectangle ({left}, {top}, {width}, {height}) exceeds decoded image bounds {source_width}x{source_height}"
+    )]
+    Extract {
+        left: u32,
+        top: u32,
+        width: u32,
+        height: u32,
+        source_width: u32,
+        source_height: u32,
+    },
 }
 
 impl Default for Modulate {
@@ -255,6 +281,62 @@ const MAX_INPUT_FILE_BYTES: u64 = 256 << 20;
 // ───────────────────────────── lifecycle ────────────────────────────────────
 
 impl Image {
+    pub(crate) fn capture_media_source(
+        global: &JSGlobalObject,
+        input: JSValue,
+        options: JSValue,
+    ) -> JsResult<(JSValue, core::ptr::NonNull<Image>)> {
+        let mut image = Box::<Image>::default();
+        apply_options(&mut image, global, options)?;
+        image.max_pixels = image.max_pixels.min((256 << 20) / 4);
+        let pointer = core::ptr::NonNull::from(image.as_ref());
+        let value = Image::to_js_boxed(image, global);
+        let _hold = Strong::create(value, global);
+        let source = source_from_js(global, input, value)?;
+        // The Strong protects the wrapper while source coercion can re-enter JS.
+        unsafe { pointer.as_ref() }.source.set(source);
+        Ok((value, pointer))
+    }
+
+    pub(crate) fn schedule_video(
+        &self,
+        cx: &jsc::JsThread<'_>,
+        image_value: JSValue,
+        time: Option<f64>,
+        deliver: Deliver,
+    ) -> JsResult<JSValue> {
+        self.schedule_video_operation(
+            cx,
+            image_value,
+            time.map_or(VideoOperation::Metadata, VideoOperation::Frame),
+            deliver,
+        )
+    }
+
+    pub(crate) fn schedule_video_operation(
+        &self,
+        cx: &jsc::JsThread<'_>,
+        image_value: JSValue,
+        operation: VideoOperation,
+        deliver: Deliver,
+    ) -> JsResult<JSValue> {
+        #[cfg(not(feature = "video_native"))]
+        {
+            let _ = (self, image_value, operation, deliver);
+            return Ok(JSPromise::rejected_promise(
+                cx.global(),
+                error_with_code(
+                    cx.global(),
+                    zstr!("ERR_VIDEO_PROVIDER_UNAVAILABLE"),
+                    zstr!("Bun.Video requires the native FilmCraft provider"),
+                ),
+            )
+            .as_value(cx.global()));
+        }
+        #[cfg(feature = "video_native")]
+        self.schedule(cx, image_value, Kind::Video(operation), deliver)
+    }
+
     // No `#[bun_jsc::host_fn]` here — `#[bun_jsc::JsClass]` on the
     // struct emits the constructor C-ABI shim; the bare attribute would expand
     // to a free-fn call (`constructor(__g, __f)`) that can't resolve in `impl`.
@@ -436,6 +518,47 @@ impl Image {
         let mut p = self.pipeline.get();
         f(&mut p);
         self.pipeline.set(p);
+    }
+
+    #[bun_jsc::host_fn(method)]
+    pub(crate) fn do_extract(
+        &self,
+        global: &JSGlobalObject,
+        frame: &CallFrame,
+    ) -> JsResult<JSValue> {
+        let options = frame.argument(0);
+        if !options.is_object() {
+            return Err(global.throw_invalid_arguments(format_args!(
+                "Image.extract expects a rectangle object"
+            )));
+        }
+        let component = |name: &str, minimum: f64| -> JsResult<u32> {
+            let value = options.get(global, name)?;
+            let Some(value) = value.filter(|value| value.is_number()) else {
+                return Err(global.throw_invalid_arguments(format_args!(
+                    "Image.extract {name} must be an integer"
+                )));
+            };
+            let number = value.as_number();
+            if !number.is_finite()
+                || number < minimum
+                || number > u32::MAX as f64
+                || number.fract() != 0.0
+            {
+                return Err(global.throw_invalid_arguments(format_args!(
+                    "Image.extract {name} is outside its supported integer range"
+                )));
+            }
+            Ok(number as u32)
+        };
+        let rectangle = Extract {
+            left: component("left", 0.0)?,
+            top: component("top", 0.0)?,
+            width: component("width", 1.0)?,
+            height: component("height", 1.0)?,
+        };
+        self.update_pipeline(|pipeline| pipeline.extract = Some(rectangle));
+        Ok(frame.this())
     }
 
     #[bun_jsc::host_fn(method)]
@@ -976,6 +1099,16 @@ impl Image {
     }
 
     #[bun_jsc::host_fn(method)]
+    pub(crate) fn do_rgba(&self, global: &JSGlobalObject, cf: &CallFrame) -> JsResult<JSValue> {
+        self.schedule(
+            &global.js_thread_of_caller(cf),
+            cf.this(),
+            Kind::Rgba,
+            Deliver::Uint8Array,
+        )
+    }
+
+    #[bun_jsc::host_fn(method)]
     pub(crate) fn do_buffer(&self, global: &JSGlobalObject, cf: &CallFrame) -> JsResult<JSValue> {
         let cx = global.js_thread_of_caller(cf);
         self.schedule(
@@ -1128,6 +1261,27 @@ impl Image {
                 .as_value(cx.global()));
             }
         };
+        #[cfg(feature = "video_native")]
+        let mut input = input;
+        #[cfg(feature = "video_native")]
+        if matches!(kind, Kind::Video(_))
+            && matches!(self.source.get(), Source::JsBuffer)
+            && input.copied.is_none()
+        {
+            if input.slice().len() as u64 > MAX_INPUT_FILE_BYTES {
+                return Ok(JSPromise::rejected_promise(
+                    cx.global(),
+                    error_with_code(
+                        cx.global(),
+                        zstr!("ERR_VIDEO_PROVIDER"),
+                        zstr!("Video input exceeds the 256 MiB source limit"),
+                    ),
+                )
+                .as_value(cx.global()));
+            }
+            // Snapshot mutable JS buffers before the worker parses stream bytes.
+            input.copied = Some(input.slice().to_vec());
+        }
         let work = PipelineTask {
             pipeline: self.pipeline.get(),
             input,
@@ -1221,13 +1375,20 @@ impl Image {
                 self.last_height.set(i32::try_from(h).expect("int cast"));
                 Ok((out, format.mime()))
             }
+            TaskResult::TransformError(message) => Err(global.throw(format_args!("{message}"))),
             TaskResult::Err(e) => Err(global.throw(format_args!(
                 "{}",
                 bstr::BStr::new(error_message(e).as_bytes())
             ))),
             // Preserve errno/path/syscall instead of flattening to DecodeFailed.
             TaskResult::IoErr(e) => Err(global.throw_value(e.to_js(global))),
-            TaskResult::Meta { .. } => unreachable!(),
+            TaskResult::Meta { .. } | TaskResult::Rgba { .. } => unreachable!(),
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoMeta(_)
+            | TaskResult::VideoError(_)
+            | TaskResult::VideoBytes(_)
+            | TaskResult::VideoCount(_)
+            | TaskResult::VideoFrames(_) => unreachable!("Image body tasks only encode images"),
         }
     }
 }
@@ -1510,10 +1671,39 @@ pub(crate) enum Deliver {
 // `Deliver::deinit` is just `Strong::Drop` on the `WriteDest` arm — handled
 // automatically.
 
+pub(crate) enum VideoOperation {
+    Metadata,
+    Frame(f64),
+    Placeholder(f64),
+    Rgba(f64),
+    Frames {
+        start: f64,
+        end: f64,
+        step: f64,
+        max_frames: usize,
+    },
+    Audio {
+        start: f64,
+        duration: f64,
+        stream: usize,
+        sample_rate: u32,
+    },
+    Remux(Vec<u8>),
+    Gif {
+        start: f64,
+        duration: f64,
+        fps: u16,
+        width: u16,
+    },
+}
+
 pub(crate) enum Kind {
     /// `None` ⇒ re-encode in the source format (resolved after decode).
     Encode(Option<codecs::EncodeOptions>),
     Metadata,
+    Rgba,
+    #[cfg(feature = "video_native")]
+    Video(VideoOperation),
     /// `.placeholder()` — decode → box-resize ≤100 → ThumbHash → render
     /// → PNG → `data:` URL. The whole chain runs on the worker; the
     /// hash itself never crosses the JS boundary unless we add an
@@ -1522,6 +1712,13 @@ pub(crate) enum Kind {
 }
 
 pub(crate) enum TaskResult {
+    TransformError(String),
+    Rgba {
+        data: Vec<u8>,
+        w: u32,
+        h: u32,
+        icc_profile: Option<Vec<u8>>,
+    },
     Encoded {
         out: codecs::Encoded,
         format: codecs::Format,
@@ -1533,18 +1730,224 @@ pub(crate) enum TaskResult {
         h: u32,
         format: codecs::Format,
     },
+    #[cfg(feature = "video_native")]
+    VideoMeta(bun_video_native::filmcraft::VideoMetadata),
+    #[cfg(feature = "video_native")]
+    VideoError(String),
+    #[cfg(feature = "video_native")]
+    VideoBytes(Vec<u8>),
+    #[cfg(feature = "video_native")]
+    VideoCount(u64),
+    #[cfg(feature = "video_native")]
+    VideoFrames(Vec<(f64, Vec<u8>)>),
     Err(codecs::Error),
     IoErr(sys::Error),
+}
+
+#[cfg(feature = "video_native")]
+fn run_video_operation(
+    operation: &VideoOperation,
+    path: Option<&[u8]>,
+    bytes: &[u8],
+    max_pixels: u64,
+) -> TaskResult {
+    use bun_video_native::filmcraft::{self, VideoError, VideoInput, VideoSession};
+    let input = || VideoInput::Bytes(std::sync::Arc::from(bytes));
+    let result: Result<TaskResult, VideoError> = (|| match operation {
+        VideoOperation::Frames {
+            start,
+            end,
+            step,
+            max_frames,
+        } => {
+            let mut session = if let Some(path) = path {
+                VideoSession::open_path(path, max_pixels)?
+            } else {
+                VideoSession::open(input(), max_pixels)?
+            };
+            let mut frames = Vec::new();
+            let mut total_bytes = 0usize;
+            for index in 0..*max_frames {
+                let requested = start + index as f64 * step;
+                if requested >= *end {
+                    break;
+                }
+                let frame = session.frame(requested)?;
+                total_bytes = total_bytes
+                    .checked_add(frame.png.len())
+                    .ok_or(VideoError::Invalid("frame sequence byte budget overflow"))?;
+                if total_bytes > 64 << 20 {
+                    return Err(VideoError::Invalid("frame sequence exceeds 64 MiB"));
+                }
+                frames.push((frame.timestamp_seconds.unwrap_or(requested), frame.png));
+            }
+            Ok(TaskResult::VideoFrames(frames))
+        }
+        VideoOperation::Audio {
+            start,
+            duration,
+            stream,
+            sample_rate,
+        } => {
+            let output = if let Some(path) = path {
+                filmcraft::encode_audio_wav_path(
+                    path,
+                    *start,
+                    *duration,
+                    *stream,
+                    *sample_rate,
+                    max_pixels,
+                )?
+            } else {
+                filmcraft::encode_audio_wav(
+                    input(),
+                    *start,
+                    *duration,
+                    *stream,
+                    *sample_rate,
+                    max_pixels,
+                )?
+            };
+            Ok(TaskResult::VideoBytes(output))
+        }
+        VideoOperation::Remux(output) => {
+            let written = if let Some(path) = path {
+                filmcraft::remux_mp4_path(path, output)?
+            } else {
+                filmcraft::remux_mp4_bytes(std::sync::Arc::from(bytes), output)?
+            };
+            Ok(TaskResult::VideoCount(written))
+        }
+        VideoOperation::Gif {
+            start,
+            duration,
+            fps,
+            width,
+        } => {
+            let output = if let Some(path) = path {
+                filmcraft::encode_gif_path(path, *start, *duration, *fps, *width, max_pixels)?
+            } else {
+                filmcraft::encode_gif(input(), *start, *duration, *fps, *width, max_pixels)?
+            };
+            Ok(TaskResult::VideoBytes(output))
+        }
+        VideoOperation::Metadata
+        | VideoOperation::Frame(_)
+        | VideoOperation::Placeholder(_)
+        | VideoOperation::Rgba(_) => {
+            unreachable!()
+        }
+    })();
+    result.unwrap_or_else(|error| TaskResult::VideoError(error.to_string()))
 }
 
 impl PipelineTask {
     /// Runs on a `WorkPool` thread. No JSC access.
     pub(crate) fn run(&mut self) {
+        #[cfg(feature = "video_native")]
+        let video_frame;
+        #[cfg(feature = "video_native")]
+        if matches!(self.kind, Kind::Video(_)) {
+            use bun_video_native::filmcraft::{
+                VideoInput, VideoSession, probe_video, probe_video_path,
+            };
+            let path = self.input.path.map(|path| {
+                // SAFETY: PendingTask roots the Image that owns this source path.
+                unsafe { (&*path).as_bytes() }
+            });
+            let bytes = self.input.slice();
+            if path.is_none() && bytes.len() as u64 > MAX_INPUT_FILE_BYTES {
+                self.result =
+                    TaskResult::VideoError("Video input exceeds the 256 MiB source limit".into());
+                return;
+            }
+            match &self.kind {
+                Kind::Video(VideoOperation::Metadata) => {
+                    let result = if let Some(path) = path {
+                        probe_video_path(path, self.max_pixels)
+                    } else {
+                        probe_video(
+                            VideoInput::Bytes(std::sync::Arc::from(bytes)),
+                            self.max_pixels,
+                        )
+                    };
+                    self.result = match result {
+                        Ok(metadata) => TaskResult::VideoMeta(metadata),
+                        Err(error) => TaskResult::VideoError(error.to_string()),
+                    };
+                    return;
+                }
+                Kind::Video(
+                    VideoOperation::Frame(time)
+                    | VideoOperation::Placeholder(time)
+                    | VideoOperation::Rgba(time),
+                ) => {
+                    let placeholder =
+                        matches!(self.kind, Kind::Video(VideoOperation::Placeholder(_)));
+                    let rgba = matches!(self.kind, Kind::Video(VideoOperation::Rgba(_)));
+                    let result = if let Some(path) = path {
+                        VideoSession::open_path(path, self.max_pixels)
+                    } else {
+                        VideoSession::open(
+                            VideoInput::Bytes(std::sync::Arc::from(bytes)),
+                            self.max_pixels,
+                        )
+                    }
+                    .and_then(|mut session| session.frame_rgba(*time));
+                    match result {
+                        Ok(frame) => {
+                            video_frame = Some(codecs::Decoded {
+                                rgba: frame.rgba,
+                                width: frame.width,
+                                height: frame.height,
+                                icc_profile: None,
+                            })
+                        }
+                        Err(error) => {
+                            self.result = TaskResult::VideoError(error.to_string());
+                            return;
+                        }
+                    }
+                    self.kind = if placeholder {
+                        Kind::Placeholder
+                    } else if rgba {
+                        Kind::Rgba
+                    } else {
+                        Kind::Encode(self.pipeline.output)
+                    };
+                }
+                Kind::Video(operation) => {
+                    self.result = run_video_operation(operation, path, bytes, self.max_pixels);
+                    return;
+                }
+                _ => unreachable!(),
+            }
+        } else {
+            video_frame = None;
+        }
         // `self.input` was prepared on the JS thread by `pin_for_task`: either a
         // pinned ArrayBuffer slice (pin lives until `then()` unpins), an owned
         // buffer, or a path to read here.
         let owned_file: Option<Vec<u8>>;
-        let input: &[u8] = if let Some(p) = self.input.path {
+        let input: &[u8] = if {
+            #[cfg(feature = "video_native")]
+            {
+                video_frame.is_some()
+            }
+            #[cfg(not(feature = "video_native"))]
+            {
+                false
+            }
+        } {
+            #[cfg(feature = "video_native")]
+            {
+                &[]
+            }
+            #[cfg(not(feature = "video_native"))]
+            {
+                unreachable!()
+            }
+        } else if let Some(p) = self.input.path {
             // SAFETY: `p` borrows `image.source.path`, which outlives the task
             // because `this_ref` is held Strong while pending_tasks > 0.
             let p: &ZStr = unsafe { &*p };
@@ -1648,7 +2051,11 @@ impl PipelineTask {
         // can be over-shrunk and then upscaled, throwing away detail.
         // (flip/flop are pure mirrors that never change w/h, so the hint
         //  stays valid through them.)
-        let hint: codecs::DecodeHint = if let Some(r) = self.pipeline.resize {
+        let hint: codecs::DecodeHint = if let Some(r) = self
+            .pipeline
+            .resize
+            .filter(|_| self.pipeline.extract.is_none())
+        {
             let mut tw = r.w;
             // r.h==0 means "preserve aspect" — constrain on width only.
             let mut th = if r.h != 0 { r.h } else { r.w };
@@ -1668,7 +2075,13 @@ impl PipelineTask {
             codecs::DecodeHint::default()
         };
 
-        let mut decoded = match codecs::decode(input, self.max_pixels, hint) {
+        #[cfg(feature = "video_native")]
+        let decoded = video_frame
+            .map(Ok)
+            .unwrap_or_else(|| codecs::decode(input, self.max_pixels, hint));
+        #[cfg(not(feature = "video_native"))]
+        let decoded = codecs::decode(input, self.max_pixels, hint);
+        let mut decoded = match decoded {
             Ok(d) => d,
             Err(e) => {
                 self.result = TaskResult::Err(e);
@@ -1710,7 +2123,22 @@ impl PipelineTask {
         }
 
         if let Err(e) = self.apply_pipeline(&mut decoded) {
-            self.result = TaskResult::Err(e);
+            self.result = match e {
+                PipelineError::Codec(error) => TaskResult::Err(error),
+                error @ PipelineError::Extract { .. } => {
+                    TaskResult::TransformError(error.to_string())
+                }
+            };
+            return;
+        }
+
+        if matches!(self.kind, Kind::Rgba) {
+            self.result = TaskResult::Rgba {
+                data: decoded.rgba,
+                w: decoded.width,
+                h: decoded.height,
+                icc_profile: decoded.icc_profile,
+            };
             return;
         }
 
@@ -1767,9 +2195,20 @@ impl PipelineTask {
         // Stash final dims here (JS thread) — `run()` is on a WorkPool thread
         // so writing `image.*` there would race the synchronous getters.
         match &self.result {
-            TaskResult::Encoded { w, h, .. } | TaskResult::Meta { w, h, .. } => {
+            TaskResult::Encoded { w, h, .. }
+            | TaskResult::Meta { w, h, .. }
+            | TaskResult::Rgba { w, h, .. } => {
                 image.last_width.set(i32::try_from(*w).expect("int cast"));
                 image.last_height.set(i32::try_from(*h).expect("int cast"));
+            }
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoMeta(metadata) => {
+                image
+                    .last_width
+                    .set(i32::try_from(metadata.width).expect("video width"));
+                image
+                    .last_height
+                    .set(i32::try_from(metadata.height).expect("video height"));
             }
             _ => {}
         }
@@ -1778,6 +2217,37 @@ impl PipelineTask {
             TaskResult::Err(codecs::Error::UnknownFormat),
         );
         match result {
+            TaskResult::Rgba {
+                data,
+                w,
+                h,
+                icc_profile,
+            } => {
+                let result = (|| -> JsResult<JSValue> {
+                    let object = JSValue::create_empty_object(global, 5);
+                    let _hold = Strong::create(object, global);
+                    object.put(global, b"width", JSValue::js_number(f64::from(w)));
+                    object.put(global, b"height", JSValue::js_number(f64::from(h)));
+                    object.put(global, b"channels", JSValue::js_number(4.0));
+                    object.put(
+                        global,
+                        b"data",
+                        JSValue::create_buffer_from_box(global, data.into_boxed_slice())?,
+                    );
+                    let profile = match icc_profile {
+                        Some(profile) => {
+                            JSValue::create_buffer_from_box(global, profile.into_boxed_slice())?
+                        }
+                        None => JSValue::NULL,
+                    };
+                    object.put(global, b"iccProfile", profile);
+                    Ok(object)
+                })();
+                match result {
+                    Ok(value) => promise.resolve(global, value)?,
+                    Err(error) => promise.reject(global, Err(error))?,
+                }
+            }
             TaskResult::Encoded { out, format, .. } => {
                 // Ownership of `out.bytes` is transferred to JS below; suppress
                 // the codec `Drop` so the deallocator runs exactly once (via the
@@ -1933,21 +2403,197 @@ impl PipelineTask {
                 obj.put(global, b"format", fmt_js);
                 promise.resolve(global, obj)?;
             }
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoMeta(metadata) => {
+                let result = (|| -> JsResult<JSValue> {
+                    let object = JSValue::create_empty_object(global, 10);
+                    let _hold = Strong::create(object, global);
+                    object.put(
+                        global,
+                        b"width",
+                        JSValue::js_number(f64::from(metadata.width)),
+                    );
+                    object.put(
+                        global,
+                        b"height",
+                        JSValue::js_number(f64::from(metadata.height)),
+                    );
+                    object.put(
+                        global,
+                        b"duration",
+                        metadata
+                            .duration_seconds
+                            .map_or(JSValue::NULL, JSValue::js_number),
+                    );
+                    object.put(
+                        global,
+                        b"codec",
+                        bun_core::String::from_bytes(metadata.codec.as_bytes()).to_js(global)?,
+                    );
+                    object.put(
+                        global,
+                        b"fpsNumerator",
+                        JSValue::js_number(metadata.fps_numerator as f64),
+                    );
+                    object.put(
+                        global,
+                        b"fpsDenominator",
+                        JSValue::js_number(metadata.fps_denominator as f64),
+                    );
+                    object.put(
+                        global,
+                        b"container",
+                        bun_core::String::from_bytes(metadata.container.as_bytes())
+                            .to_js(global)?,
+                    );
+                    object.put(
+                        global,
+                        b"fileBytes",
+                        JSValue::js_number(metadata.file_bytes as f64),
+                    );
+                    object.put(
+                        global,
+                        b"frameCount",
+                        JSValue::js_number(metadata.frame_count as f64),
+                    );
+                    let audio = JSValue::create_empty_array(global, metadata.audio_streams.len())?;
+                    let _audio_hold = Strong::create(audio, global);
+                    for (index, stream) in metadata.audio_streams.into_iter().enumerate() {
+                        let entry = JSValue::create_empty_object(global, 3);
+                        let _hold = Strong::create(entry, global);
+                        entry.put(
+                            global,
+                            b"sampleRate",
+                            JSValue::js_number(f64::from(stream.sample_rate)),
+                        );
+                        entry.put(
+                            global,
+                            b"channels",
+                            JSValue::js_number(f64::from(stream.channels)),
+                        );
+                        entry.put(
+                            global,
+                            b"codec",
+                            bun_core::String::from_bytes(stream.codec.as_bytes()).to_js(global)?,
+                        );
+                        audio.put_index(global, index as u32, entry)?;
+                    }
+                    object.put(global, b"audioStreams", audio);
+                    Ok(object)
+                })();
+                match result {
+                    Ok(object) => promise.resolve(global, object)?,
+                    Err(error) => promise.reject(global, Err(error))?,
+                }
+            }
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoBytes(bytes) => {
+                match JSValue::create_buffer_from_box(global, bytes.into_boxed_slice()) {
+                    Ok(value) => promise.resolve(global, value)?,
+                    Err(error) => promise.reject(global, Err(error))?,
+                }
+            }
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoCount(bytes) => {
+                promise.resolve(global, JSValue::js_number(bytes as f64))?
+            }
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoFrames(frames) => {
+                let result = (|| -> JsResult<JSValue> {
+                    let array = JSValue::create_empty_array(global, frames.len())?;
+                    let _array_hold = Strong::create(array, global);
+                    for (index, (time, bytes)) in frames.into_iter().enumerate() {
+                        let object = JSValue::create_empty_object(global, 2);
+                        let _hold = Strong::create(object, global);
+                        object.put(global, b"time", JSValue::js_number(time));
+                        object.put(
+                            global,
+                            b"bytes",
+                            JSValue::create_buffer_from_box(global, bytes.into_boxed_slice())?,
+                        );
+                        array.put_index(global, index as u32, object)?;
+                    }
+                    Ok(array)
+                })();
+                match result {
+                    Ok(value) => promise.resolve(global, value)?,
+                    Err(error) => promise.reject(global, Err(error))?,
+                }
+            }
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoError(message) => {
+                let error = EncodedSlice::utf8(message.as_bytes()).to_error_instance(global);
+                error.put(
+                    global,
+                    b"code",
+                    bun_core::String::static_(b"ERR_VIDEO_PROVIDER").to_js(global)?,
+                );
+                promise.reject(global, Ok(error))?;
+            }
+            TaskResult::TransformError(message) => {
+                let error = EncodedSlice::utf8(message.as_bytes()).to_error_instance(global);
+                error.put(
+                    global,
+                    b"code",
+                    bun_core::String::static_(b"ERR_IMAGE_INVALID_TRANSFORM").to_js(global)?,
+                );
+                promise.reject(global, Ok(error))?;
+            }
             TaskResult::Err(e) => promise.reject(global, Ok(reject_error(global, e)))?,
             TaskResult::IoErr(e) => promise.reject(global, Ok(e.to_js(global)))?,
         }
         Ok(())
     }
 
-    /// Fixed Sharp order: rotate → flip/flop → resize. Each stage replaces
+    /// Fixed order: extract → rotate → flip/flop → resize. Each stage replaces
     /// `d` in place; the old buffer is freed before assigning the new one so
     /// peak memory is at most 2× one frame. Every stage hand-swaps only the
     /// pixel slots — rotate/resize return a fresh `Decoded` with
     /// `icc_profile == None`, so overwriting `d.*` wholesale would drop the
     /// source's colour profile. Geometry doesn't change colour meaning, so
     /// the profile survives unchanged.
-    fn apply_pipeline(&self, d: &mut codecs::Decoded) -> Result<(), codecs::Error> {
+    fn apply_pipeline(&self, d: &mut codecs::Decoded) -> Result<(), PipelineError> {
         let p = &self.pipeline;
+        if let Some(rectangle) = p.extract {
+            if rectangle.width == 0
+                || rectangle.height == 0
+                || rectangle
+                    .left
+                    .checked_add(rectangle.width)
+                    .is_none_or(|right| right > d.width)
+                || rectangle
+                    .top
+                    .checked_add(rectangle.height)
+                    .is_none_or(|bottom| bottom > d.height)
+            {
+                return Err(PipelineError::Extract {
+                    left: rectangle.left,
+                    top: rectangle.top,
+                    width: rectangle.width,
+                    height: rectangle.height,
+                    source_width: d.width,
+                    source_height: d.height,
+                });
+            }
+            let expected = (d.width as usize)
+                .checked_mul(d.height as usize)
+                .and_then(|pixels| pixels.checked_mul(4))
+                .ok_or(codecs::Error::TooManyPixels)?;
+            if d.rgba.len() != expected {
+                return Err(codecs::Error::DecodeFailed.into());
+            }
+            let row_bytes = rectangle.width as usize * 4;
+            for row in 0..rectangle.height as usize {
+                let source = ((rectangle.top as usize + row) * d.width as usize
+                    + rectangle.left as usize)
+                    * 4;
+                d.rgba
+                    .copy_within(source..source + row_bytes, row * row_bytes);
+            }
+            d.rgba.truncate(row_bytes * rectangle.height as usize);
+            d.width = rectangle.width;
+            d.height = rectangle.height;
+        }
         if p.rotate != 0 {
             let next = codecs::rotate(&d.rgba, d.width, d.height, u32::from(p.rotate))?;
             // Assignment drops
@@ -1975,7 +2621,7 @@ impl PipelineTask {
             if (t.0 as u64) * (t.1 as u64) > self.max_pixels
                 || (t.0 as u64) * (d.height as u64) > self.max_pixels
             {
-                return Err(codecs::Error::TooManyPixels);
+                return Err(codecs::Error::TooManyPixels.into());
             }
             if t.0 != d.width || t.1 != d.height {
                 let next = codecs::resize(&d.rgba, d.width, d.height, t.0, t.1, r.filter)?;

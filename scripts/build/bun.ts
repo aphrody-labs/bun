@@ -22,10 +22,12 @@ import { generateDepVersionsHeader } from "./depVersionsHeader.ts";
 import { dotnetHostRustSources } from "./deps/dotnet-host.ts";
 import { allDeps } from "./deps/index.ts";
 import { lolhtml } from "./deps/lolhtml.ts";
+import { oxc } from "./deps/oxc.ts";
 import { rustArgon2 } from "./deps/rust-argon2.ts";
 import { uutils } from "./deps/uutils.ts";
 import { uv, uvRustSources } from "./deps/uv.ts";
 import { windowsToolchainRustSources } from "./deps/windows-toolchain.ts";
+import { WINFW_SYSTEM_LIBRARIES } from "./deps/winfw.ts";
 import { assert } from "./error.ts";
 import {
   bunIncludes,
@@ -123,6 +125,9 @@ function systemLibs(cfg: Config): string[] {
       "ws2_32.lib",
       "delayimp.lib", // required for /delayload: in release
     );
+    libs.push(...WINFW_SYSTEM_LIBRARIES);
+    if (cfg.coreutils) libs.push("mpr.lib"); // WNetGetConnectionW in uutils' Windows filesystem owner.
+    if (cfg.curlNative) libs.push("secur32.lib", "advapi32.lib", "iphlpapi.lib", "wldap32.lib", "normaliz.lib");
   }
 
   return libs;
@@ -195,6 +200,9 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   const uvDep = resolveDep(n, cfg, uv, depsByName);
   assert(uvDep !== null, "uv resolveDep returned null — should never be skipped");
   depsByName.set(uv.name, uvDep);
+  const oxcDep = resolveDep(n, cfg, oxc, depsByName);
+  assert(oxcDep !== null, "oxc resolveDep returned null — should never be skipped");
+  depsByName.set(oxc.name, oxcDep);
   const rust = emitRust(n, cfg, {
     codegenOrderOnly: codegen.rustInputs,
     rustSources: [
@@ -203,7 +211,7 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
       ...windowsToolchainRustSources(cfg),
       ...dotnetHostRustSources(cfg),
     ],
-    vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs, ...uvDep.outputs],
+    vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs, ...uvDep.outputs, ...oxcDep.outputs],
     shimValidations: emitShimVerify(n, cfg),
   });
 

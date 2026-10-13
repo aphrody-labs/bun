@@ -35,18 +35,18 @@
  */
 
 import { getCurrentWebview, Webview, type WebviewLabel, type WebviewOptions } from "./webview";
-import type { WindowOptions } from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/window.ts";
-import { Window } from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/window.ts";
+import type { WindowOptions } from "@aphrody/tauri/api/window";
+import { Window } from "@aphrody/tauri/api/window";
 import {
   listen,
   once,
-} from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/event.ts";
+} from "@aphrody/tauri/api/event";
 import type {
   EventName,
   EventCallback,
   UnlistenFn,
-} from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/event.ts";
-import { invoke } from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/core.ts";
+} from "@aphrody/tauri/api/event";
+import { invoke } from "@aphrody/tauri/api/core";
 import type { Color, DragDropEvent } from "./webview";
 
 /**

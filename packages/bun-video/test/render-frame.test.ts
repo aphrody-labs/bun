@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { captureCompositionFrames } from "../src/render-frame";
-import type { NativeWebViewContext } from "../src/hyperframes-native";
+import { validateNativePng, type NativeWebViewContext } from "../src/hyperframes-native";
 import { frameOperationSignal } from "../src/frame-plan";
 
 const plan = {
@@ -13,6 +13,19 @@ const plan = {
   width: 16,
   height: 16,
 };
+
+test("shared PNG validation preserves subarray offsets and strict capture dimensions", () => {
+  const bytes = new Uint8Array(37);
+  const png = bytes.subarray(4);
+  png.set([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82]);
+  const header = new DataView(png.buffer, png.byteOffset, png.byteLength);
+  header.setUint32(16, 16);
+  header.setUint32(20, 8);
+  expect(() => validateNativePng(png, 2, { width: 16, height: 8 })).not.toThrow();
+  expect(() => validateNativePng(png, 2, { width: 8, height: 16 })).toThrow("dimensions do not match");
+  expect(() => validateNativePng(png.subarray(0, 8), 2)).not.toThrow();
+  expect(() => validateNativePng(png.subarray(0, 8), 2, { width: 16, height: 8 })).toThrow("PNG IHDR");
+});
 
 function context(
   options: { cancelled?: string; contract?: boolean; abort?: AbortController; invalidPng?: boolean } = {},

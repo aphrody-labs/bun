@@ -1,7 +1,6 @@
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
-import { createR2Client, loadCloudflareEnvironment } from "../../bun-cloudflare/src/api";
 import type { VideoCatalog } from "./video-catalog";
 import { exportVideoDataset, queryVideoDataset, type VideoDatasetTable } from "./video-dataset";
 
@@ -114,6 +113,7 @@ export async function publishBunVideoExports(
   const base = validateVideoPublicationTarget(bucket, prefix, options.publicBase ?? "https://dist.aphrody.app");
   if (!isAbsolute(options.outputDirectory) || options.outputDirectory.includes("\0"))
     throw new TypeError("Absolute publication directory required");
+  const { createR2Client, loadCloudflareEnvironment } = await import("@aphrody/bun-cloudflare/api");
   const work = join(options.outputDirectory, crypto.randomUUID());
   mkdirSync(work, { recursive: true });
   const snapshot = exportPublicVideoCatalog(catalog, join(work, "catalog.sqlite"));

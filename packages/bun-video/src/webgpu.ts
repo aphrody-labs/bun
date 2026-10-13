@@ -19,22 +19,73 @@ export interface WebGpuOptions {
   readonly timeout?: number;
   readonly backend?: "native" | "chromium";
   readonly libraryPath?: string;
+  readonly chromiumExecutable?: string;
 }
+
+export type WebGpuAdapterEvidence =
+  | { kind: "native"; selected: GpuReport["selected"]; limits: GpuReport["limits"] }
+  | { kind: "chromium"; info: BrowserWebGpuInfo["info"]; fallback: boolean | null };
 
 interface ChromiumConnection {
   send<T = unknown>(method: string, params?: Record<string, unknown>, sessionId?: string): Promise<T>;
   gpu(sessionId: string): Promise<BrowserWebGpuInfo>;
   close(): void;
+  on(method: string, callback: (params: Record<string, unknown>, sessionId?: string) => void): () => void;
 }
 
 interface ChromiumModule {
   launch(options: {
     url: string;
+    executable?: string;
     headless: boolean;
     webgpu: boolean;
     timeout: number;
     signal?: AbortSignal;
-  }): Promise<{ connection: ChromiumConnection; close(): Promise<void> }>;
+  }): Promise<{ connection: ChromiumConnection; process: { exited: Promise<number> }; close(): Promise<void> }>;
+}
+
+async function navigateComputePage(
+  browser: Awaited<ReturnType<ChromiumModule["launch"]>>,
+  sessionId: string,
+  url: string,
+  signal: AbortSignal,
+) {
+  signal.throwIfAborted();
+  const connection = browser.connection;
+  await connection.send("Page.enable", {}, sessionId);
+  await connection.send("Page.setLifecycleEventsEnabled", { enabled: true }, sessionId);
+  const completed = new Set<string>();
+  let loader: string | undefined;
+  const ready = Promise.withResolvers<void>();
+  const remove = connection.on("Page.lifecycleEvent", (params, eventSession) => {
+    if (eventSession !== sessionId || params.name !== "load" || typeof params.loaderId !== "string") return;
+    completed.add(params.loaderId);
+    if (params.loaderId === loader) ready.resolve();
+  });
+  const abort = () => ready.reject(signal.reason);
+  signal.addEventListener("abort", abort, { once: true });
+  if (signal.aborted) abort();
+  void browser.process.exited.then(
+    code => ready.reject(new Error(`Chromium exited during navigation (${code})`)),
+    ready.reject,
+  );
+  try {
+    await Promise.all([
+      connection
+        .send<{ loaderId?: string; errorText?: string }>("Page.navigate", { url }, sessionId)
+        .then(navigation => {
+          if (navigation.errorText) throw new Error(`Chromium compute navigation failed: ${navigation.errorText}`);
+          if (!navigation.loaderId) throw new Error("Chromium compute navigation did not create a document loader");
+          loader = navigation.loaderId;
+          if (completed.has(loader)) ready.resolve();
+        }),
+      ready.promise,
+    ]);
+    signal.throwIfAborted();
+  } finally {
+    remove();
+    signal.removeEventListener("abort", abort);
+  }
 }
 
 async function withChromiumPage<T>(
@@ -42,6 +93,10 @@ async function withChromiumPage<T>(
   options: WebGpuOptions = {},
 ): Promise<T> {
   options.signal?.throwIfAborted();
+  const signal = AbortSignal.any([
+    AbortSignal.timeout(options.timeout ?? 15_000),
+    ...(options.signal ? [options.signal] : []),
+  ]);
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -54,10 +109,11 @@ async function withChromiumPage<T>(
     };
     browser = await chromium.launch({
       url: `http://127.0.0.1:${server.port}/webgpu`,
+      ...(options.chromiumExecutable === undefined ? {} : { executable: options.chromiumExecutable }),
       headless: true,
       webgpu: true,
       timeout: options.timeout ?? 15_000,
-      signal: options.signal,
+      signal,
     });
     const targets = await browser.connection.send<{
       targetInfos: Array<{ targetId: string; type: string; url: string }>;
@@ -70,6 +126,7 @@ async function withChromiumPage<T>(
       targetId: target.targetId,
       flatten: true,
     });
+    await navigateComputePage(browser, attached.sessionId, `http://127.0.0.1:${server.port}/webgpu`, signal);
     return await operation(browser.connection, attached.sessionId);
   } finally {
     await browser?.close();
@@ -128,14 +185,19 @@ function browserComputeExpression(job: WebGpuJob): string {
     const elapsedMs = performance.now() - started;
     readback.unmap(); readback.destroy(); buffer.destroy(); device.destroy();
     let binary = ""; for (const byte of result) binary += String.fromCharCode(byte);
-    return { data: btoa(binary), elapsedMs };
+    const info = adapter.info;
+    return { data: btoa(binary), elapsedMs, adapter: {
+      kind: "chromium",
+      fallback: typeof info?.isFallbackAdapter === "boolean" ? info.isFallbackAdapter : null,
+      info: info ? { vendor: info.vendor, architecture: info.architecture, device: info.device, description: info.description } : null
+    } };
   })()`;
 }
 
 async function runChromiumWgsl(job: WebGpuJob, options: WebGpuOptions) {
   return await withChromiumPage(async (connection, sessionId) => {
     const response = await connection.send<{
-      result: { value?: { data: string; elapsedMs: number } };
+      result: { value?: { data: string; elapsedMs: number; adapter: WebGpuAdapterEvidence } };
       exceptionDetails?: { text?: string; exception?: { description?: string } };
     }>(
       "Runtime.evaluate",
@@ -153,7 +215,11 @@ async function runChromiumWgsl(job: WebGpuJob, options: WebGpuOptions) {
     const value = response.result.value;
     if (!value || typeof value.data !== "string" || !Number.isFinite(value.elapsedMs))
       throw new Error("Chromium returned an invalid WebGPU result");
-    return { data: new Uint8Array(Buffer.from(value.data, "base64")), elapsedMs: value.elapsedMs };
+    return {
+      data: new Uint8Array(Buffer.from(value.data, "base64")),
+      elapsedMs: value.elapsedMs,
+      adapter: value.adapter,
+    };
   }, options);
 }
 
@@ -173,7 +239,12 @@ export async function runWebGpuJob(job: WebGpuJob, options: WebGpuOptions = {}) 
     ...(job.entryPoint === undefined ? {} : { entryPoint: job.entryPoint }),
     ...(signal === undefined ? {} : { signal }),
   };
-  return await runtime.wgsl(nativeJob);
+  const info = await runtime.info(signal === undefined ? undefined : { signal });
+  const result = await runtime.wgsl(nativeJob);
+  return {
+    ...result,
+    adapter: { kind: "native", selected: info.selected, limits: info.limits } as WebGpuAdapterEvidence,
+  };
 }
 
 /** Read adapter and limits from the native wgpu/CUDA provider used by Linux serverless jobs. */

@@ -864,6 +864,11 @@ export const defines: Flag[] = [
 
   // ─── Feature toggles ───
   {
+    flag: "BUN_VIDEO_NATIVE=1",
+    when: c => c.windows && c.videoNative,
+    desc: "Native video DLL delay-load hook",
+  },
+  {
     flag: "LAZY_LOAD_SQLITE=0",
     when: c => c.staticSqlite,
     desc: "SQLite statically linked",
@@ -1032,6 +1037,11 @@ export const linkerFlags: Flag[] = [
     desc: "Emit PDB so the crash handler can symbolize stack traces",
   },
   {
+    flag: "/delayload:winfw.dll",
+    when: c => c.windows,
+    desc: "Load the optional VPN firewall library only when its API is called",
+  },
+  {
     flag: [
       "/LTCG",
       "/OPT:REF",
@@ -1063,6 +1073,8 @@ export const linkerFlags: Flag[] = [
       "/delayload:SHELL32.dll",
       "/delayload:OLEAUT32.dll",
       "/delayload:USERENV.dll",
+      "/delayload:dnsapi.dll",
+      "/delayload:winfw.dll",
     ],
     when: c => c.windows && c.release,
     desc: "Release link opts + delay-load non-critical DLLs (faster startup)",

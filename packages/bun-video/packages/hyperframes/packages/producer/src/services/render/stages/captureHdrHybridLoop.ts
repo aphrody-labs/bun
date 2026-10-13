@@ -145,7 +145,7 @@ export async function runHybridLayeredFrameLoop(input: HybridLoopInput): Promise
       }
     }
 
-    const workerCanvases: Buffer[] = sessions.map(() => new Uint8Array(bufSize));
+    const workerCanvases: Buffer[] = sessions.map(() => Buffer.alloc(bufSize));
     // hf#732 PR 5: K-deep ring of transition buffer-triples per worker. The
     // ring lets capture-N+1 proceed on the DOM worker while the shader-blend
     // pool is still working on frames N-K+1..N. Without the ring (PR 4), each
@@ -170,9 +170,9 @@ export async function runHybridLayeredFrameLoop(input: HybridLoopInput): Promise
       const ring: LayeredTransitionBuffers[] = [];
       for (let k = 0; k < TRANSITION_RING_DEPTH; k++) {
         ring.push({
-          bufferA: new Uint8Array(bufSize),
-          bufferB: new Uint8Array(bufSize),
-          output: new Uint8Array(bufSize),
+          bufferA: Buffer.alloc(bufSize),
+          bufferB: Buffer.alloc(bufSize),
+          output: Buffer.alloc(bufSize),
         });
       }
       return ring;

@@ -58,6 +58,12 @@ async function prepare() {
 }
 
 async function loadCookies(): Promise<CookieBundle> {
+  const secretName = option("--cookie-secret");
+  if (secretName) {
+    const stored = await loadJsonSecret({ service: "@aphrody/bun-video", name: secretName });
+    if (stored === null) throw new Error("Configured cookie credential is missing from the OS trousseau.");
+    return parseCookieBundle(stored);
+  }
   let raw;
   try {
     raw = await Bun.file(cookieFile).json();
@@ -159,7 +165,10 @@ export async function main() {
   await selfCheck();
   if (args.includes("--check")) return;
   const cookies = await loadCookies();
-  const config = validateHlsConfig(await Bun.file(hlsFile).json());
+  const selectedPage = option("--page");
+  const config = selectedPage
+    ? validateHlsConfig({ src: option("--src") ?? null, pageUrl: selectedPage, config: { enableWorker: false } })
+    : validateHlsConfig(await Bun.file(hlsFile).json());
   let pageProbe: Record<string, unknown> = { configured: !!config.pageUrl };
   if (config.pageUrl) {
     const url = new URL(config.pageUrl);

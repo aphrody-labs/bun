@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { expect, test } from "bun:test";
+import { bunEnv, bunExe } from "harness";
+import { resolve } from "node:path";
 import { runDriveCli } from "../src/drive-cli";
 
 test("Drive sync help returns before option validation or credential access", async () => {
@@ -16,4 +18,21 @@ test("Drive sync help returns before option validation or credential access", as
     expect.stringContaining("Usage: yolo google drive "),
     expect.stringContaining("Usage: yolo google drive "),
   ]);
+});
+
+test("standalone Google CLI dispatches Drive help without reading credentials", async () => {
+  const child = Bun.spawn([bunExe(), resolve(import.meta.dir, "../src/cli.ts"), "drive", "--help"], {
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+    windowsHide: true,
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+  expect(stdout).toContain("Usage: yolo google drive ");
+  expect(stderr).toBe("");
+  expect(exitCode).toBe(0);
 });

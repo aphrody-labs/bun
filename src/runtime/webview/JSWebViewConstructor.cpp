@@ -7,6 +7,7 @@
 #include "ZigGlobalObject.h"
 #include "ScriptExecutionContext.h"
 #include "ErrorCode.h"
+#include "WebCoreJSBuiltins.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/InternalFunction.h>
 #include <JavaScriptCore/FunctionPrototype.h>
@@ -58,6 +59,9 @@ private:
             PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
         putDirectNativeFunction(vm, globalObject(), Identifier::fromString(vm, "closeAll"_s),
             0, jsWebViewConstructorCloseAll, ImplementationVisibility::Public, NoIntrinsic,
+            PropertyAttribute::Function | PropertyAttribute::DontEnum);
+        putDirect(vm, Identifier::fromString(vm, "openApplication"_s),
+            JSFunction::create(vm, globalObject(), WebCore::webViewOpenApplicationCodeGenerator(vm), globalObject()),
             PropertyAttribute::Function | PropertyAttribute::DontEnum);
     }
 };
@@ -130,13 +134,25 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
         JSObject* opts = options.getObject();
         JSValue w = opts->get(globalObject, Identifier::fromString(vm, "width"_s));
         RETURN_IF_EXCEPTION(scope, {});
-        if (w.isNumber()) width = static_cast<uint32_t>(w.toUInt32(globalObject));
-        RETURN_IF_EXCEPTION(scope, {});
+        if (!w.isUndefined()) {
+            if (!w.isNumber())
+                return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_TYPE, "width must be a number"_s);
+            double number = w.asNumber();
+            if (!(number >= 1 && number <= 16384) || number != static_cast<uint32_t>(number))
+                return Bun::ERR::OUT_OF_RANGE(scope, globalObject, "width"_s, 1, 16384, w);
+            width = static_cast<uint32_t>(number);
+        }
 
         JSValue h = opts->get(globalObject, Identifier::fromString(vm, "height"_s));
         RETURN_IF_EXCEPTION(scope, {});
-        if (h.isNumber()) height = static_cast<uint32_t>(h.toUInt32(globalObject));
-        RETURN_IF_EXCEPTION(scope, {});
+        if (!h.isUndefined()) {
+            if (!h.isNumber())
+                return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_TYPE, "height must be a number"_s);
+            double number = h.asNumber();
+            if (!(number >= 1 && number <= 16384) || number != static_cast<uint32_t>(number))
+                return Bun::ERR::OUT_OF_RANGE(scope, globalObject, "height"_s, 1, 16384, h);
+            height = static_cast<uint32_t>(number);
+        }
 
         JSValue headlessOpt = opts->get(globalObject, Identifier::fromString(vm, "headless"_s));
         RETURN_IF_EXCEPTION(scope, {});
@@ -237,8 +253,15 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
                         return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_TYPE,
                             "backend.argv entries must be strings"_s);
                     }
-                    chromeArgv.append(item.toWTFString(globalObject));
+                    WTF::String argument = item.toWTFString(globalObject);
                     RETURN_IF_EXCEPTION(scope, {});
+                    if (argument == "--remote-debugging-pipe"_s || argument.startsWith("--remote-debugging-pipe="_s)
+                        || argument == "--remote-debugging-port"_s || argument.startsWith("--remote-debugging-port="_s)
+                        || argument == "--user-data-dir"_s || argument.startsWith("--user-data-dir="_s)) {
+                        return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_VALUE,
+                            "backend.argv cannot override the owned debugging transport or dataStore directory"_s);
+                    }
+                    chromeArgv.append(argument);
                 }
             } else if (!argvVal.isUndefined()) {
                 return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_TYPE,
@@ -282,6 +305,12 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
             };
             if (!parseStdio("stdout"_s, stdoutInherit)) return {};
             if (!parseStdio("stderr"_s, stderrInherit)) return {};
+            if (backend == WebViewBackend::WebKit && (!path.isUndefined() || !argvVal.isUndefined() || !urlOpt.isUndefined()))
+                return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_VALUE,
+                    "backend.path, backend.argv and backend.url require a Chrome or native host backend"_s);
+        } else if (!be.isUndefined()) {
+            return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_TYPE,
+                "backend must be a string or an object"_s);
         }
 
         // Initial URL — the navigate() is fired off immediately after
@@ -338,6 +367,9 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(constructWebView, __attribute__((minsiz
                 return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_VALUE,
                     "dataStore must be \"ephemeral\" or { directory: string }"_s);
             }
+        } else if (!dataStore.isUndefined()) {
+            return Bun::throwError(globalObject, scope, ErrorCode::ERR_INVALID_ARG_TYPE,
+                "dataStore must be \"ephemeral\" or { directory: string }"_s);
         }
     }
 

@@ -12,6 +12,7 @@
     "src",
     "include",
     "runtime.d.ts",
+    "docs/core-native-source-receipt.json",
     "README.md",
     "LICENSE-APACHE"
   ],
@@ -21,6 +22,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./modules": "./src/modules.ts",
+    "./system": "./src/system.ts",
     "./preload": "./src/preload.ts",
     "./runtime.d.ts": "./runtime.d.ts",
     "./bundler": "./src/bundler.ts",

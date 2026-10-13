@@ -98,13 +98,26 @@ A pidfd names one process, so a signal can never reach a reused pid.
 
 ```ts
 const child = Bun.spawn(["sleep", "60"]);
-const fd = linux.pidfdOpen(child.pid);
-linux.pidfdSendSignal(fd, "SIGKILL");
-await child.exited;
-require("node:fs").closeSync(fd);
+const fd = linux.pidfdForProcess(child);
+if (fd === null) throw new Error("Process exited or kernel pidfds unavailable");
+try {
+  linux.pidfdSendSignal(fd, "SIGKILL");
+  await child.exited;
+} finally {
+  require("node:fs").closeSync(fd);
+}
 ```
 
 `pidfdGetfd(pidfd, targetFd)` copies a descriptor from another process.
+
+`pidfdForProcess(child)` duplicates the descriptor already owned by `Bun.spawn`;
+it never looks up the child's numeric PID. The duplicate remains caller-owned
+after the subprocess exits. `pidfdOpen(pid)` is for independently selected PIDs.
+
+For a child spawned with `detached: true`, pass
+`linux.constants.PIDFD_SIGNAL_PROCESS_GROUP` as the third `pidfdSendSignal`
+argument to signal its process group through the leader's descriptor. This
+[kernel flag requires Linux 6.9](https://man7.org/linux/man-pages/man2/pidfd_send_signal.2.html).
 
 ---
 

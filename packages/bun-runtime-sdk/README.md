@@ -1,5 +1,33 @@
 # @aphrody/bun-runtime-sdk
 
+## Native system and process ownership
+
+`@aphrody/bun-runtime-sdk/system` gets statistics and executable identity from
+the running Bun runtime. Its managed processes use `Bun.spawn`, POSIX process
+groups and Windows `bun:windows.Job`; no external runtime library is loaded.
+Binary capture drains both pipes concurrently. Lossless capture enforces a
+per-stream lifetime byte budget, while capture mode retains the last 64 KiB.
+Collection timeout, abort or capture failure terminates the owned child and
+waits for exit and drain. Use `await using` or `release()` to release ownership.
+Readiness awaits pipe events or subprocess exit, and HTTP probes use bounded
+same-origin fetch requests. `system.capabilities()` reports only these APIs.
+
+```ts
+import { processes, system } from "@aphrody/bun-runtime-sdk/system";
+
+const identity = system.info();
+await using child = processes.spawn({
+  program: identity.executable,
+  args: ["-e", "console.log('ready')"],
+  stdio: "capture-lossless",
+});
+const result = await child.collectOutput();
+```
+
+The core source receipt is in `docs/core-native-source-receipt.json`. The former
+native ABI modules require separate consumer migration; this export does not
+qualify their removal or native benchmark/GPU replacement.
+
 ## Browser HLS lifecycle
 
 The pure `@aphrody/bun-runtime-sdk/video/hls` export does not load a native library or bundle a

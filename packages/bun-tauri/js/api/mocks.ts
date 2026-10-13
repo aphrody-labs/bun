@@ -247,7 +247,7 @@ export function mockIPC(
 
 /**
  * Mocks one or many window labels.
- * In non-tauri context it is required to call this function *before* using the `@aphrody/api/window` module.
+ * In non-tauri context it is required to call this function *before* using the `@aphrody/tauri/api/window` module.
  *
  * This function only mocks the *presence* of windows,
  * window properties (e.g. width and height) can be mocked like regular IPC calls using the `mockIPC` function.

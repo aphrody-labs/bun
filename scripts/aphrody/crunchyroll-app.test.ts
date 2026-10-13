@@ -1,11 +1,30 @@
 // SPDX-License-Identifier: Apache-2.0
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import {
   CRUNCHYROLL_WATCH_URL,
+  crunchyrollAppMain,
   planChromeSiteApp,
   selectActiveGoogleChromeRoot,
 } from "../../packages/bun-video/labs/crunchyroll-app";
 import { planChromeSiteApp as compatibilityPlan } from "./crunchyroll-app";
+
+test("default application delegates the official HTTPS page to the native profile owner", async () => {
+  const open = spyOn(Bun.WebView, "openApplication").mockResolvedValue({
+    pid: 123,
+    browser: "chrome",
+    profileDirectory: "Default",
+    mode: "native-profile-application",
+  });
+  try {
+    await crunchyrollAppMain([]);
+    expect(open).toHaveBeenCalledWith({ url: CRUNCHYROLL_WATCH_URL, browser: "chrome" });
+    expect(open).toHaveBeenCalledTimes(1);
+    await expect(crunchyrollAppMain(["--unknown"])).rejects.toThrow("Unknown");
+    expect(open).toHaveBeenCalledTimes(1);
+  } finally {
+    open.mockRestore();
+  }
+});
 
 test("legacy app entry forwards to the canonical package launcher", () => {
   expect(compatibilityPlan).toBe(planChromeSiteApp);

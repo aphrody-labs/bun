@@ -1,133 +1,74 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
-/**
- * Google pipeline gate: the Rust (`aphrody-google` in the multi-call `aphrody`), Bun
- * (`@aphrody/google`, `@aphrody/doc-ai`) and Python (`aphrody`, `aphrody-cli`) owners exist where
- * the manifests say, the uv pin matches the monorepo toolchain and no source assigns a literal API
- * key; then, unless `--static`, every `crates/google/*` crate runs serialized clippy and tests on
- * its own, the Bun packages verify, and the locked Python workspace syncs, imports the pinned
- * google-antigravity SDK and runs its tests. Child processes never open a console window.
- *
- * Usage: bun scripts/audit/verify-google-pipeline.ts [--static] [--root <aphrody>] [--python-root <py>]
- */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const HELP =
-  "Usage: bun scripts/audit/verify-google-pipeline.ts [--static] [--root <aphrody>] [--python-root <py>]";
+  "Usage: bun scripts/aphrody-source/audit/verify-google-pipeline.ts [--static | --rust-only | --sdk-only] [--root <bun>]";
 
-interface CargoTarget {
-  name: string;
-  kind: string[];
-}
-interface CargoPackage {
+export interface CargoPackage {
   name: string;
   manifest_path: string;
-  targets: CargoTarget[];
+  targets: { name: string; kind: string[] }[];
 }
 
 export interface Owners {
   root: string;
-  python: string;
+  googleWorkspace: string;
   cargoManifest: string;
   rustCli: string;
+  boqManifest: string;
   bunManifest: string;
   bunEntry: string;
-  docAiManifest: string;
-  docAiEntry: string;
-  pythonManifest: string;
-  pythonCliManifest: string;
-  pythonWorkspace: string;
-  pythonFacade: string;
-  pythonLock: string;
-  toolchain: string;
+  facadeManifest: string;
+  facadeEntry: string;
+  nativeTests: string;
+  facadeTests: string;
   cargoSerial: string;
 }
 
-export function owners(root: string, python = join(root, "py")): Owners {
+export function owners(root = resolve(import.meta.dir, "../../..")): Owners {
+  root = resolve(root);
   return {
     root,
-    python,
-    cargoManifest: join(root, "crates/google/google/Cargo.toml"),
-    rustCli: join(root, "crates/google/google/src/cli.rs"),
-    bunManifest: join(root, "packages/google/google/package.json"),
-    bunEntry: join(root, "packages/google/google/src/cli.ts"),
-    docAiManifest: join(root, "packages/ai/doc-ai/package.json"),
-    docAiEntry: join(root, "packages/ai/doc-ai/src/llm.ts"),
-    pythonManifest: join(python, "packages/aphrody/pyproject.toml"),
-    pythonCliManifest: join(python, "packages/cli/pyproject.toml"),
-    pythonWorkspace: join(python, "pyproject.toml"),
-    pythonFacade: join(python, "packages/aphrody/src/aphrody/google.py"),
-    pythonLock: join(python, "uv.lock"),
-    toolchain: join(root, "tools/config/system-packages.json"),
+    googleWorkspace: join(root, "packages/bun-google/aphrody"),
+    cargoManifest: join(root, "packages/bun-google/aphrody/crates/google/Cargo.toml"),
+    rustCli: join(root, "packages/bun-google/aphrody/crates/google/src/cli.rs"),
+    boqManifest: join(root, "packages/bun-google/crates/boq/Cargo.toml"),
+    bunManifest: join(root, "packages/bun-google/package.json"),
+    bunEntry: join(root, "packages/bun-google/src/index.ts"),
+    facadeManifest: join(root, "packages/bun-google/aphrody/packages/google/package.json"),
+    facadeEntry: join(root, "packages/bun-google/aphrody/packages/google/src/index.ts"),
+    nativeTests: join(root, "packages/bun-google/test"),
+    facadeTests: join(root, "packages/bun-google/aphrody/packages/google/test"),
     cargoSerial: join(root, "scripts/build/rust/cargo-serial.ts"),
   };
 }
 
-/** `required-version` of `[tool.uv]` as `{ operator, version }` (`==0.12.24`, `>=0.12.24`). */
-export function uvPin(workspaceToml: string): { operator: string; version: string } | undefined {
-  const match = /^required-version\s*=\s*["'](==|>=|~=)?\s*([0-9][^"']*)["']\s*$/m.exec(
-    workspaceToml,
-  );
-  return match ? { operator: match[1] ?? "==", version: match[2] as string } : undefined;
-}
-
-export function compareVersions(left: string, right: string): number {
-  const a = left.split(".").map(Number);
-  const b = right.split(".").map(Number);
-  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
-    const delta = (a[index] ?? 0) - (b[index] ?? 0);
-    if (delta !== 0) return delta;
-  }
-  return 0;
-}
-
-/** Whether `uv --version` output satisfies the workspace pin. */
-export function uvSatisfies(output: string, pin: { operator: string; version: string }): boolean {
-  const found = /\buv\s+(\d+(?:\.\d+)*)/.exec(output)?.[1];
-  if (!found) return false;
-  return pin.operator === ">=" || pin.operator === "~="
-    ? compareVersions(found, pin.version) >= 0
-    : compareVersions(found, pin.version) === 0;
-}
-
-/** The `[project] name` of a pyproject and whether `[project.scripts]` maps `script` to `target`. */
-export function pyprojectDeclares(toml: string, name: string, script?: [string, string]): boolean {
-  if (
-    !new RegExp(String.raw`^name\s*=\s*["']${name.replace(/[-.]/g, "\\$&")}["']\s*$`, "m").test(
-      toml,
-    )
-  )
-    return false;
-  if (!script) return true;
-  const scripts = /^\[project\.scripts\]\s*$([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(toml)?.[1] ?? "";
-  return new RegExp(
-    String.raw`^${script[0].replace(/[-.]/g, "\\$&")}\s*=\s*["']${script[1].replace(/[.:]/g, "\\$&")}["']`,
-    "m",
-  ).test(scripts);
-}
-
-/** Source files (`.ts`, `.py`) under `dir` that assign a literal Gemini/Google API key. */
 export function literalKeyFiles(dir: string): string[] {
   const hits: string[] = [];
-  for (const file of new Bun.Glob("**/*.{ts,py}").scanSync({ cwd: dir, dot: false })) {
-    if (file.includes("node_modules")) continue;
+  for (const file of new Bun.Glob("**/*.{ts,rs,py}").scanSync({ cwd: dir, dot: false })) {
+    if (file.split(/[\\/]/).some(part => part === "node_modules" || part === "target")) continue;
     const text = readFileSync(join(dir, file), "utf8");
     if (text.includes("GEMINI_API_KEY=") || text.includes("GOOGLE_API_KEY=")) hits.push(file);
   }
-  return hits;
+  return hits.toSorted();
 }
 
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, "utf8")) as T;
 }
 
+function requireFile(path: string): void {
+  if (!existsSync(path) || !statSync(path).isFile()) throw new Error(`Owner file missing: ${path}`);
+}
+
 function hasScripts(manifest: string, name: string, scripts: string[]): void {
   const json = readJson<{ name?: string; scripts?: Record<string, string> }>(manifest);
-  if (json.name !== name)
-    throw new Error(`Unexpected Bun package owner: ${json.name} (${manifest})`);
-  for (const script of scripts)
+  if (json.name !== name) throw new Error(`Unexpected Bun package owner: ${json.name} (${manifest})`);
+  for (const script of scripts) {
     if (!json.scripts?.[script]) throw new Error(`${name} has no '${script}' script.`);
+  }
 }
 
 function cargoMetadata(root: string): CargoPackage[] {
@@ -138,209 +79,186 @@ function cargoMetadata(root: string): CargoPackage[] {
       "--format-version",
       "1",
       "--no-deps",
+      "--locked",
       "--manifest-path",
       join(root, "Cargo.toml"),
     ],
     { cwd: root, windowsHide: true, stdout: "pipe", stderr: "pipe" },
   );
-  if (result.exitCode !== 0)
-    throw new Error(
-      `cargo metadata failed for the monorepo workspace: ${result.stderr.toString()}`,
-    );
+  if (result.exitCode !== 0) throw new Error(`cargo metadata failed for ${root}: ${result.stderr.toString()}`);
   return (JSON.parse(result.stdout.toString()) as { packages: CargoPackage[] }).packages;
 }
 
-const same = (left: string, right: string) =>
-  resolve(left).toLowerCase() === resolve(right).toLowerCase();
+function same(left: string, right: string): boolean {
+  const a = resolve(left);
+  const b = resolve(right);
+  return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
 
-/** Static owner checks; returns the Google crates (sorted) and the uv pin. */
-export function verifyStatic(paths: Owners): {
+export interface StaticResult {
   crates: string[];
-  uv: { operator: string; version: string };
-} {
-  for (const path of [
-    join(paths.root, "Cargo.toml"),
-    paths.cargoManifest,
-    paths.rustCli,
-    paths.bunManifest,
-    paths.bunEntry,
-    paths.docAiManifest,
-    paths.docAiEntry,
-    paths.cargoSerial,
-    paths.pythonManifest,
-    paths.pythonCliManifest,
-    paths.pythonWorkspace,
-    paths.pythonFacade,
-    paths.pythonLock,
-    paths.toolchain,
-  ])
-    if (!existsSync(path) || !statSync(path).isFile())
-      throw new Error(`Owner file missing: ${path}`);
+  rustOwners: { name: string; manifest: string }[];
+}
 
-  const packages = cargoMetadata(paths.root);
-  const google = packages.find((item) => item.name === "aphrody-google");
-  if (!google?.targets.some((target) => target.kind.includes("lib")))
+function verifyRustOwners(paths: Owners, metadata: (root: string) => CargoPackage[]) {
+  for (const path of [join(paths.googleWorkspace, "Cargo.toml"), paths.cargoManifest, paths.rustCli, paths.boqManifest])
+    requireFile(path);
+  const packages = metadata(paths.googleWorkspace);
+  const google = packages.find(item => item.name === "aphrody-google");
+  if (!google?.targets.some(target => target.kind.includes("lib"))) {
     throw new Error("Current Cargo metadata does not expose the aphrody-google library.");
-  if (!same(google.manifest_path, paths.cargoManifest))
+  }
+  if (!same(google.manifest_path, paths.cargoManifest)) {
     throw new Error(`Cargo package aphrody-google is not owned by ${paths.cargoManifest}.`);
-  const aphrody = packages.find((item) => item.name === "aphrody");
-  if (!aphrody?.targets.some((target) => target.name === "aphrody" && target.kind.includes("bin")))
-    throw new Error("Current Cargo metadata does not expose the aphrody multi-call binary.");
-  const domain = join(paths.root, "crates", "google");
+  }
+  const domain = join(paths.googleWorkspace, "crates");
   const onDisk = readdirSync(domain)
-    .map((name) => join(domain, name, "Cargo.toml"))
-    .filter((manifest) => existsSync(manifest));
-  const crates = packages
-    .filter((item) => onDisk.some((manifest) => same(manifest, item.manifest_path)))
-    .map((item) => item.name)
-    .toSorted();
-  if (crates.length !== onDisk.length)
-    throw new Error(
-      `crates/google has ${onDisk.length} manifests but the workspace exposes ${crates.length}: ${crates.join(", ")}`,
-    );
-
-  hasScripts(paths.bunManifest, "@aphrody/google", ["test", "build", "verify"]);
-  hasScripts(paths.docAiManifest, "@aphrody/doc-ai", ["test", "typecheck"]);
-
-  if (!pyprojectDeclares(readFileSync(paths.pythonManifest, "utf8"), "aphrody"))
-    throw new Error(
-      `Python package manifest does not declare project 'aphrody': ${paths.pythonManifest}`,
-    );
-  if (
-    !pyprojectDeclares(readFileSync(paths.pythonCliManifest, "utf8"), "aphrody-cli", [
-      "aphrody-python-google",
-      "aphrody_cli.google:main",
-    ])
-  )
-    throw new Error(
-      `Python CLI does not expose the aphrody-python-google entry point: ${paths.pythonCliManifest}`,
-    );
-  const uv = uvPin(readFileSync(paths.pythonWorkspace, "utf8"));
-  if (!uv) throw new Error(`Python workspace does not pin uv in ${paths.pythonWorkspace}.`);
-  const monorepo = readJson<{ toolchains?: { uv?: { version?: string } } }>(paths.toolchain)
-    .toolchains?.uv?.version;
-  if (uv.version !== monorepo)
-    throw new Error(
-      `uv pin mismatch: tools/config/system-packages.json requires ${monorepo}, but py/ requires ${uv.operator}${uv.version}.`,
-    );
-
-  for (const dir of [
-    join(paths.root, "packages/google/google"),
-    join(paths.root, "packages/ai/doc-ai"),
-    join(paths.python, "packages/aphrody/src/aphrody"),
-    join(paths.python, "packages/cli/src/aphrody_cli"),
-  ]) {
-    const hits = literalKeyFiles(dir);
-    if (hits.length > 0) throw new Error(`Literal API key assignment found under ${dir}.`);
-  }
-  return { crates, uv };
-}
-
-async function owner(name: string, argv: string[], cwd: string): Promise<void> {
-  console.log(`==> ${name}`);
-  const child = Bun.spawn(argv, {
-    cwd,
-    windowsHide: true,
-    stdin: "ignore",
-    stdout: "inherit",
-    stderr: "inherit",
+    .map(name => join(domain, name, "Cargo.toml"))
+    .filter(existsSync);
+  const rustOwners = onDisk.map(manifest => {
+    const found = packages.filter(item => same(manifest, item.manifest_path));
+    if (found.length !== 1) throw new Error(`Google workspace must expose exactly one owner for ${manifest}.`);
+    return { name: found[0]!.name, manifest };
   });
-  const code = await child.exited;
-  if (code !== 0) throw new Error(`${name} failed (exit ${code}).`);
+  const boq = metadata(dirname(paths.boqManifest)).find(item => item.name === "aphrody-boq");
+  if (!boq || !same(boq.manifest_path, paths.boqManifest)) {
+    throw new Error(`Cargo package aphrody-boq is not owned by ${paths.boqManifest}.`);
+  }
+  rustOwners.push({ name: boq.name, manifest: paths.boqManifest });
+  for (const dir of rustOwners.map(owner => join(dirname(owner.manifest), "src"))) {
+    if (literalKeyFiles(dir).length) throw new Error(`Literal API key assignment found under ${dir}.`);
+  }
+  return rustOwners;
 }
 
-export async function verify(paths: Owners, staticOnly: boolean): Promise<void> {
-  const { crates, uv } = verifyStatic(paths);
-  console.log("GOOGLE_PIPELINE: manifests and Rust/Bun/Python owner paths verified.");
-  console.log(`Rust: ${paths.cargoManifest} -> aphrody-google (${crates.join(", ")})`);
-  console.log(`Bun: ${paths.bunManifest} -> @aphrody/google`);
-  console.log(`Doc AI: ${paths.docAiManifest} -> @aphrody/doc-ai`);
-  console.log(`Python: ${paths.pythonManifest} -> aphrody.google / aphrody-python-google`);
-  if (staticOnly) return;
-
-  const version = Bun.spawnSync(["uv", "--version"], { windowsHide: true, stdout: "pipe" });
-  if (version.exitCode !== 0)
-    throw new Error("Could not query the uv version for the Python gate.");
-  if (!uvSatisfies(version.stdout.toString(), uv))
-    throw new Error(
-      `Python gate requires uv ${uv.operator}${uv.version} from py/pyproject.toml; found ${version.stdout.toString().trim()}.`,
+export function verifyStatic(paths: Owners, metadata = cargoMetadata, scope: Scope = "all"): StaticResult {
+  requireFile(join(paths.root, "package.json"));
+  const rustOwners = scope === "sdk" ? [] : verifyRustOwners(paths, metadata);
+  if (scope !== "rust") {
+    for (const path of [paths.bunManifest, paths.bunEntry, paths.facadeManifest, paths.facadeEntry]) requireFile(path);
+    hasScripts(paths.bunManifest, "@aphrody/bun-google", ["test"]);
+    hasScripts(paths.facadeManifest, "@aphrody/google", ["test", "build", "verify"]);
+    const rootPackage = readJson<{ workspaces?: string[]; scripts?: Record<string, string> }>(
+      join(paths.root, "package.json"),
     );
-  // One `-p` per crate, so a crate that silently relies on a sibling's features fails here.
-  const cargo = [process.execPath, paths.cargoSerial];
-  for (const crate of crates) {
-    await owner(
-      `Rust ${crate} clippy (serialized, standalone)`,
-      [...cargo, "clippy", "--locked", "-p", crate, "--all-targets", "--", "-D", "warnings"],
-      paths.root,
-    );
-    await owner(
-      `Rust ${crate} tests (serialized, standalone)`,
-      [...cargo, "test", "--locked", "-p", crate],
-      paths.root,
-    );
+    if (!rootPackage.scripts?.bd) throw new Error(`Bun root has no changed-binary 'bd' gate: ${paths.root}`);
+    for (const manifest of [paths.bunManifest, paths.facadeManifest]) {
+      const directory = dirname(manifest);
+      if (
+        !rootPackage.workspaces?.some(pattern =>
+          new Bun.Glob(pattern.replace(/^\.\//, "")).match(
+            directory.slice(paths.root.length + 1).replaceAll("\\", "/"),
+          ),
+        )
+      ) {
+        throw new Error(`Bun package is not owned by the root workspace: ${manifest}`);
+      }
+    }
+    for (const dir of [join(dirname(paths.bunManifest), "src"), join(dirname(paths.facadeManifest), "src")]) {
+      if (literalKeyFiles(dir).length) throw new Error(`Literal API key assignment found under ${dir}.`);
+    }
   }
-  const bun = process.execPath;
-  await owner(
-    "@aphrody/google verify (tests + Bun build)",
-    [bun, "run", "--filter", "@aphrody/google", "verify"],
-    paths.root,
+  rustOwners.sort((a, b) => a.name.localeCompare(b.name));
+  return { crates: rustOwners.map(owner => owner.name), rustOwners };
+}
+
+export type Scope = "all" | "rust" | "sdk";
+export interface Qualification {
+  stage: "rust-source" | "native-sdk" | "facade-build";
+  name: string;
+  argv: string[];
+  cwd: string;
+}
+
+export function qualificationPlan(
+  paths: Owners,
+  result: StaticResult,
+  scope: Scope,
+  platform = process.platform,
+  bun = process.execPath,
+): Qualification[] {
+  const plan: Qualification[] = [];
+  if (scope !== "sdk") {
+    const cargo = [bun, paths.cargoSerial, ...(platform === "win32" ? ["--msvc"] : [])];
+    for (const owner of result.rustOwners) {
+      const args = ["--locked", "--manifest-path", owner.manifest, "-p", owner.name];
+      plan.push({
+        stage: "rust-source",
+        name: `${owner.name} standalone Clippy`,
+        argv: [...cargo, "clippy", ...args, "--all-targets", "--", "-D", "warnings"],
+        cwd: dirname(owner.manifest),
+      });
+      plan.push({
+        stage: "rust-source",
+        name: `${owner.name} standalone tests`,
+        argv: [...cargo, "test", ...args],
+        cwd: dirname(owner.manifest),
+      });
+    }
+  }
+  if (scope !== "rust") {
+    plan.push({
+      stage: "native-sdk",
+      name: "Google SDK and facade changed-binary fixture tests",
+      argv: [bun, "bd", "test", paths.nativeTests, paths.facadeTests],
+      cwd: paths.root,
+    });
+    plan.push({
+      stage: "facade-build",
+      name: "@aphrody/google source bundle",
+      argv: [bun, "run", "build"],
+      cwd: dirname(paths.facadeManifest),
+    });
+  }
+  return plan;
+}
+
+export async function verify(paths: Owners, staticOnly: boolean, scope: Scope = "all"): Promise<void> {
+  const result = verifyStatic(paths, cargoMetadata, scope);
+  console.log(
+    `GOOGLE_PIPELINE ${scope} source ownership verified${result.crates.length ? `: ${result.crates.join(", ")}` : "."}`,
   );
-  await owner(
-    "@aphrody/doc-ai tests",
-    [bun, "run", "--filter", "@aphrody/doc-ai", "test"],
-    paths.root,
-  );
-  await owner(
-    "@aphrody/doc-ai typecheck",
-    [bun, "run", "--filter", "@aphrody/doc-ai", "typecheck"],
-    paths.root,
-  );
-  // The SDK lives in its pinned Git repository (the `antigravity` extra of `aphrody`); the locked
-  // sync builds its wheel through uv without building the aphrody project itself.
-  await owner(
-    "Python pinned google-antigravity SDK installs from the lock",
-    [
-      "uv",
-      "sync",
-      "--locked",
-      "--package",
-      "aphrody",
-      "--extra",
-      "antigravity",
-      "--no-install-project",
-    ],
-    paths.python,
-  );
-  await owner(
-    "Python google-antigravity SDK imports",
-    ["uv", "run", "--no-sync", "python", "-c", "import google.antigravity"],
-    paths.python,
-  );
-  await owner(
-    "Python aphrody tests",
-    ["uv", "run", "--locked", "--package", "aphrody", "pytest"],
-    paths.python,
-  );
-  console.log("GOOGLE_PIPELINE: all current owner gates passed.");
+  if (staticOnly) return;
+  if (scope !== "sdk") requireFile(paths.cargoSerial);
+  for (const qualification of qualificationPlan(paths, result, scope)) {
+    console.log(`${qualification.stage}: ${qualification.name}`);
+    const child = Bun.spawn(qualification.argv, {
+      cwd: qualification.cwd,
+      windowsHide: true,
+      stdin: "ignore",
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    const code = await child.exited;
+    if (code !== 0) throw new Error(`${qualification.stage}: ${qualification.name} failed (exit ${code}).`);
+  }
+  console.log(`GOOGLE_PIPELINE requested qualification passed: ${scope}.`);
 }
 
 if (import.meta.main) {
-  const args = process.argv.slice(2);
-  let root = resolve(import.meta.dir, "../..");
-  let python: string | undefined;
+  let root = resolve(import.meta.dir, "../../..");
   let staticOnly = false;
+  let scope: Scope = "all";
   try {
-    for (let index = 0; index < args.length; index += 1) {
+    const args = process.argv.slice(2);
+    for (let index = 0; index < args.length; index++) {
       const arg = args[index];
       if (arg === "--static") staticOnly = true;
-      else if (arg === "--root") root = resolve(args[++index] ?? "");
-      else if (arg === "--python-root") python = resolve(args[++index] ?? "");
-      else if (arg === "--help" || arg === "-h") {
+      else if (arg === "--rust-only" || arg === "--sdk-only") {
+        const requested = arg === "--rust-only" ? "rust" : "sdk";
+        if (scope !== "all" && scope !== requested)
+          throw new Error(`Choose either --rust-only or --sdk-only.\n${HELP}`);
+        scope = requested;
+      } else if (arg === "--root") {
+        const value = args[++index];
+        if (!value || value.startsWith("--")) throw new Error(`--root requires a Bun checkout path.\n${HELP}`);
+        root = resolve(value);
+      } else if (arg === "--help" || arg === "-h") {
         console.log(HELP);
         process.exit(0);
       } else throw new Error(`Unknown argument: ${arg}\n${HELP}`);
     }
-    await verify(owners(root, python), staticOnly);
+    await verify(owners(root), staticOnly, scope);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

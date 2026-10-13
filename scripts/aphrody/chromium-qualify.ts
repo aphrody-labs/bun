@@ -20,20 +20,7 @@ const receiptPath = join(
 );
 
 async function closeBrowser(browser: Awaited<ReturnType<typeof launch>>) {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    await Promise.race([
-      browser.connection.send("Browser.close").catch(() => {}),
-      new Promise<void>(resolve => {
-        timer = setTimeout(resolve, 3000);
-      }),
-    ]);
-  } finally {
-    clearTimeout(timer);
-    browser.connection.close();
-    if (browser.process.exitCode === null) browser.process.kill();
-    browser.process.unref();
-  }
+  await browser.close();
 }
 
 async function qualify() {
@@ -53,7 +40,6 @@ async function qualify() {
   try {
     browser = await launch({
       executable,
-      userDataDir: join(root, "build/chromium/qualification-profile", crypto.randomUUID()),
       headless: true,
       timeout: 60000,
     });

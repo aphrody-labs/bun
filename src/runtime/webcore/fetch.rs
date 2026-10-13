@@ -34,6 +34,8 @@ pub(crate) mod compress_body;
 
 #[path = "fetch/FetchSession.rs"]
 pub(crate) mod fetch_session;
+#[path = "fetch/har.rs"]
+pub(crate) mod har;
 pub(crate) use self::fetch_session::FetchSession;
 
 /// `proxyInternals` of `bun:internal-for-testing`. `generated_js2native.rs`

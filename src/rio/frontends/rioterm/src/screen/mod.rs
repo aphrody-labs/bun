@@ -136,6 +136,106 @@ fn window_should_be_opaque(config: &rio_backend::config::Config) -> bool {
 }
 
 impl Screen<'_> {
+    #[cfg(feature = "native-ui")]
+    fn native_ui_key(&mut self, key: &rio_window::event::KeyEvent) -> bool {
+        if !self.renderer.hint_click_would_land() {
+            return false;
+        }
+        let current = self.context_manager.current_mut();
+        let frame = current.terminal.lock().native_ui.clone();
+        let Some(frame) = frame.filter(|frame| frame.focus) else {
+            return false;
+        };
+        let mods = self.modifiers.state();
+        let logical = match &key.logical_key {
+            Key::Character(text) => text.to_string(),
+            Key::Named(key) => format!("{key:?}"),
+            _ => String::new(),
+        };
+        if let Some(bytes) = rio_backend::ansi::native_ui::reply(&serde_json::json!({
+            "version":1, "sequence":frame.sequence, "type":"key", "key":logical,
+            "text":key.text.as_ref().map(|s| s.as_str()).unwrap_or(""),
+            "state":if key.state == ElementState::Pressed { "pressed" } else { "released" },
+            "repeat":key.repeat,
+            "modifiers":{"shift":mods.shift_key(),"control":mods.control_key(),"alt":mods.alt_key(),"super":mods.super_key()}
+        })) {
+            current.messenger.send_bytes(bytes);
+        }
+        true
+    }
+
+    #[cfg(feature = "native-ui")]
+    pub fn native_ui_pointer(
+        &mut self,
+        state: Option<ElementState>,
+        button: Option<MouseButton>,
+    ) -> bool {
+        if !self.renderer.hint_click_would_land() {
+            return false;
+        }
+        let scale = self.sugarloaf.scale_factor();
+        let x = self.mouse.x as f32 / scale;
+        let y = self.mouse.y as f32 / scale;
+        let Some((route_id, pane, id)) = self.renderer.native_ui.hit(x, y) else {
+            return false;
+        };
+        let sequence = pane.frame.sequence;
+        let local_x = x - pane.bounds[0];
+        let local_y = y - pane.bounds[1];
+        let Some(item) = self.context_manager.get_by_route_id(route_id) else {
+            return false;
+        };
+        if !item
+            .val
+            .terminal
+            .lock()
+            .native_ui
+            .as_ref()
+            .is_some_and(|frame| frame.sequence == sequence)
+        {
+            return false;
+        }
+        let button = match button {
+            Some(MouseButton::Left) => "left",
+            Some(MouseButton::Right) => "right",
+            Some(MouseButton::Middle) => "middle",
+            Some(MouseButton::Back) => "back",
+            Some(MouseButton::Forward) => "forward",
+            None => "none",
+            _ => "other",
+        };
+        let state = match state {
+            Some(ElementState::Pressed) => "pressed",
+            Some(ElementState::Released) => "released",
+            None => "moved",
+        };
+        if let Some(bytes) = rio_backend::ansi::native_ui::reply(&serde_json::json!({
+            "version":1,"sequence":sequence,"type":"pointer","id":id,"x":local_x,"y":local_y,
+            "button":button,"state":state
+        })) {
+            item.val.messenger.send_bytes(bytes);
+        }
+        true
+    }
+
+    #[cfg(feature = "native-ui")]
+    pub fn native_ui_text(&mut self, text: &str) -> bool {
+        if !self.renderer.hint_click_would_land() {
+            return false;
+        }
+        let current = self.context_manager.current_mut();
+        let frame = current.terminal.lock().native_ui.clone();
+        let Some(frame) = frame.filter(|frame| frame.focus) else {
+            return false;
+        };
+        if let Some(bytes) = rio_backend::ansi::native_ui::reply(
+            &serde_json::json!({"version":1,"sequence":frame.sequence,"type":"text","text":text}),
+        ) {
+            current.messenger.send_bytes(bytes);
+        }
+        true
+    }
+
     pub fn new<'screen>(
         window_properties: ScreenWindowProperties,
         config: &rio_backend::config::Config,
@@ -814,6 +914,10 @@ impl Screen<'_> {
         key: &rio_window::event::KeyEvent,
         clipboard: &mut Clipboard,
     ) {
+        #[cfg(feature = "native-ui")]
+        if self.native_ui_key(key) {
+            return;
+        }
         if self.ime.preedit().is_some() {
             return;
         }

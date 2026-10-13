@@ -70,6 +70,7 @@ export const libuv: Dependency = {
     "patches/libuv/win-poll-abort-with-disconnect.patch",
     "patches/libuv/win-allow-wer.patch",
     "patches/libuv/win-hide-console-without-console.patch",
+    "patches/libuv/win-spawn-job-before-resume.patch",
   ],
 
   build: () => ({

@@ -12,6 +12,8 @@ pub mod confirm_quit;
 pub mod custom_cursor;
 pub mod helpers;
 pub mod island;
+#[cfg(feature = "native-ui")]
+pub mod native_ui;
 pub mod scrollbar;
 pub mod search;
 pub mod trail_cursor;
@@ -151,6 +153,8 @@ fn window_bg_alpha(config: &Config) -> f32 {
 pub use rio_backend::sugarloaf::{atlas_image_key, kitty_image_key, route_image_key};
 
 pub struct Renderer {
+    #[cfg(feature = "native-ui")]
+    pub native_ui: native_ui::NativeUi,
     is_vi_mode_enabled: bool,
     is_game_mode_enabled: bool,
     pub is_window_focused: bool,
@@ -239,6 +243,8 @@ impl Renderer {
         };
 
         Renderer {
+            #[cfg(feature = "native-ui")]
+            native_ui: native_ui::NativeUi::default(),
             unfocused_split_opacity: config.navigation.unfocused_split_opacity,
             unfocused_split_fill: config.navigation.unfocused_split_fill,
             last_active: None,
@@ -435,7 +441,7 @@ impl Renderer {
     /// express; a stale highlight over those is a pre-existing quirk
     /// of the highlight lifecycle, not of this gate.
     #[inline]
-    fn hint_click_would_land(&self) -> bool {
+    pub(crate) fn hint_click_would_land(&self) -> bool {
         !self.assistant.is_active()
             && !self.command_palette.is_enabled()
             && !self.search.is_active()
@@ -808,6 +814,32 @@ impl Renderer {
                 let w = (cols * cell_w) / scale_factor;
                 let h = (rows * cell_h) / scale_factor;
                 sugarloaf.rect(None, x, y, w, h, dim_color, 0.0, 3);
+            }
+        }
+
+        #[cfg(feature = "native-ui")]
+        {
+            self.native_ui.panes.clear();
+            if self.hint_click_would_land() {
+                let grid = context_manager.current_grid();
+                let margin = grid.get_scaled_margin();
+                for item in grid.contexts().values() {
+                    let frame = item.val.terminal.lock().native_ui.clone();
+                    if let Some(frame) = frame {
+                        let r = item.layout_rect;
+                        self.native_ui.draw(
+                            item.val.route_id,
+                            frame,
+                            [
+                                (r[0] + margin.left) / scale_factor,
+                                (r[1] + margin.top) / scale_factor,
+                                r[2] / scale_factor,
+                                r[3] / scale_factor,
+                            ],
+                            sugarloaf,
+                        );
+                    }
+                }
             }
         }
 

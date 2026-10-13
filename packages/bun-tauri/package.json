@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./js/index.ts",
+    "./api": "./js/api/index.ts",
     "./api/*": "./js/api/*.ts",
     "./plugins/*": "./js/plugins/*.ts",
     "./bun": "./js/bun.ts",

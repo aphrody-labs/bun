@@ -1,6 +1,35 @@
 import { describe, expect } from "bun:test";
 import { itBundled } from "./expectBundled";
 
+itBundled("compile/CurlInternalDispatchPreservesApplicationArguments", {
+  compile: true,
+  backend: "cli",
+  files: {
+    "/entry.ts": `
+      if (typeof Bun.Curl.run !== "function") throw new Error("Native Curl API missing");
+      if (Bun.Curl.available) {
+        const version = await Bun.Curl.run(["--version"]);
+        if (version.exitCode !== 0 || !new TextDecoder().decode(version.stdout).includes("curl 8.22.0"))
+          throw new Error("Embedded curl tool did not run");
+        const server = Bun.serve({ port: 0, fetch: () => new Response(new Uint8Array([0, 255, 42])) });
+        try {
+          const response = await Bun.Curl.run(["--silent", server.url.href]);
+          if (response.exitCode !== 0 || JSON.stringify([...response.stdout]) !== "[0,255,42]")
+            throw new Error("Native curl binary output changed");
+          try {
+            await Bun.Curl.run(["--silent", server.url.href], { maxOutputBytes: 2 });
+            throw new Error("Curl output limit did not reject");
+          } catch (error) {
+            if (error.code !== "ERR_CURL_OUTPUT_LIMIT") throw error;
+          }
+        } finally { server.stop(true); }
+      }
+      console.log(JSON.stringify(process.argv.slice(2)));
+    `,
+  },
+  run: { args: ["curl", "--version"], stdout: '["curl","--version"]' },
+});
+
 // `BUN_JSC_dumpOptions=2` prints every JSC option as `   name=value` on stderr
 // once JSCInitialize has applied Bun's overrides.
 function jscOption(stderr: string, name: string): string | undefined {

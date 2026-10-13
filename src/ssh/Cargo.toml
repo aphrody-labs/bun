@@ -18,6 +18,7 @@ fast_rsync = "=0.2.0"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "net", "io-util", "io-std", "time", "sync", "macros", "process", "fs"] }
 serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
+sha2 = "=0.11.0"
 clap = { version = "4.6.7", features = ["derive"] }
 thiserror.workspace = true
 rand = { version = "0.10", features = ["thread_rng"] }

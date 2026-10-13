@@ -1,5 +1,5 @@
 /**
- * The Linux executable is linked by clang++, not rustc. Native libraries recorded only in rlib metadata
+ * Bun is linked by a C++ driver, not rustc. Native libraries recorded only in rlib metadata
  * therefore need a final-link input of their own. Build scripts are run by ninja, so collect their output
  * at build time, after the target scripts ran, rather than reading potentially stale output at configure.
  */
@@ -25,6 +25,7 @@ export function nativeLinkResponse(args: string[]): string {
  */
 export function nativeLinkArguments(
   outputs: (Pick<BuildScriptOutput, "linkLibs" | "linkSearch"> & { cwd: string })[],
+  platform: "linux" | "windows" = "linux",
 ): string[] {
   const args: string[] = [];
   // Search directories precede libraries, preserving Cargo's order (no sorting or library deduplication).
@@ -37,7 +38,7 @@ export function nativeLinkArguments(
       assert(kind !== "framework", "Rust framework search paths are not supported by the Linux native link");
       assert(path.length > 0 && !/[\0\r\n]/.test(path), "Invalid Rust native library search path");
       // rustc runs in the package directory; the final clang link runs in the build directory.
-      args.push(`-L${isAbsolute(path) ? path : resolve(output.cwd, path)}`);
+      args.push(`${platform === "windows" ? "/LIBPATH:" : "-L"}${isAbsolute(path) ? path : resolve(output.cwd, path)}`);
     }
   }
   for (const output of outputs) {
@@ -63,6 +64,12 @@ export function nativeLinkArguments(
         assert(!mods.get("whole-archive"), `Bundled whole-archive requires rustc final linking: ${spec}`);
         continue;
       }
+      if (platform === "windows") {
+        assert(!mods.has("as-needed"), `as-needed is not supported by the Windows linker: ${spec}`);
+        const library = mods.get("verbatim") ? name : `${name}.lib`;
+        args.push(mods.get("whole-archive") ? `/WHOLEARCHIVE:${library}` : library);
+        continue;
+      }
       const scoped = kind === "static" || mods.has("as-needed");
       if (scoped) args.push("-Wl,--push-state");
       if (kind === "static") {
@@ -78,9 +85,9 @@ export function nativeLinkArguments(
   return args;
 }
 
-/** Return a generated clang response file, or nothing for the unchanged non-Linux build graphs. */
+/** Return a generated response file for the ELF and PE final linkers. */
 export function emitRustNativeLink(n: Ninja, cfg: Config, graph: RustGraph): string | undefined {
-  if (!cfg.linux) return undefined;
+  if (!cfg.linux && !cfg.windows) return undefined;
   // linkedRlibs excludes proc-macros and their host-only transitive dependencies, including on native builds.
   const scripts = new Map<string, { output: string; cwd: string }>();
   for (const unit of linkedRlibs(graph)) {
@@ -95,7 +102,7 @@ export function emitRustNativeLink(n: Ninja, cfg: Config, graph: RustGraph): str
   writeIfChanged(manifest, JSON.stringify([...scripts.values()], null, 2) + "\n");
   const hostWindows = cfg.host.os === "windows";
   n.rule("rust_native_link", {
-    command: `${quote(cfg.bun, hostWindows)} ${quote(script, hostWindows)} $manifest $out`,
+    command: `${quote(cfg.bun, hostWindows)} ${quote(script, hostWindows)} $manifest $out ${cfg.windows ? "windows" : "linux"}`,
     description: "Rust native link inputs $out",
     restat: true,
   });
@@ -111,14 +118,15 @@ export function emitRustNativeLink(n: Ninja, cfg: Config, graph: RustGraph): str
 
 if (import.meta.main) {
   try {
-    const [manifest, response] = process.argv.slice(2);
+    const [manifest, response, platform = "linux"] = process.argv.slice(2);
+    assert(platform === "linux" || platform === "windows", "Unsupported Rust native linker platform");
     assert(manifest !== undefined && response !== undefined, "native-link.ts requires a manifest and response path");
     const scripts = JSON.parse(readFileSync(manifest, "utf8")) as { output: string; cwd: string }[];
     const outputs = scripts.map(({ output, cwd }) => ({
       ...(JSON.parse(readFileSync(output, "utf8")) as BuildScriptOutput),
       cwd,
     }));
-    writeIfChanged(response, nativeLinkResponse(nativeLinkArguments(outputs)));
+    writeIfChanged(response, nativeLinkResponse(nativeLinkArguments(outputs, platform)));
   } catch (error) {
     process.stderr.write(error instanceof BuildError ? error.format() : `${error}\n`);
     process.exitCode = 1;

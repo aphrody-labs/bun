@@ -1,4 +1,5 @@
 import { validateFramePlan, type FramePlan } from "./frame-plan";
+import { validateNativePng } from "./hyperframes-native";
 
 export interface CapturedPng {
   frame: number;
@@ -93,14 +94,10 @@ export async function* captureParallelFrames(
           return;
         }
         const png = new Uint8Array(message.png);
-        const header = [137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82];
-        if (png.length < 33 || !header.every((byte, i) => png[i] === byte)) {
-          fail(new Error("Capture worker did not return a PNG IHDR"));
-          return;
-        }
-        const dimensions = new DataView(message.png);
-        if (dimensions.getUint32(16) !== plan.width || dimensions.getUint32(20) !== plan.height) {
-          fail(new Error("Capture PNG dimensions do not match the plan"));
+        try {
+          validateNativePng(png, message.frame, plan);
+        } catch (error) {
+          fail(error instanceof Error ? error : new Error(String(error)));
           return;
         }
         clearTimeout(state.timer);

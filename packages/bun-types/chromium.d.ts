@@ -40,11 +40,13 @@ declare module "bun:chromium" {
   }
 
   export interface ChromiumBrowser {
+    readonly endpoint: string;
     readonly connection: ChromiumConnection;
     readonly userDataDir: string;
     readonly process: Bun.Subprocess;
     /** Close the connection and terminate the browser launched by Bun. */
     close(): Promise<void>;
+    [Symbol.asyncDispose](): Promise<void>;
   }
 
   /** Connect to a Chrome remote debugging endpoint. */
@@ -73,8 +75,82 @@ declare module "bun:chromium" {
   }
 
   export namespace profiles {
+    interface OpenApplicationOptions {
+      url: string;
+      browser?: "chrome" | "chromium";
+      executable?: string;
+      userDataDir?: string;
+      /** Existing profile directory. openApplication chooses Chrome's last-used profile, then Default. */
+      profileDirectory?: string;
+    }
+    interface OpenApplicationResult {
+      pid: number;
+      browser: "chrome" | "chromium";
+      profileDirectory: string;
+      mode: "native-profile-application";
+    }
+    /** Validate an application command without reading or launching anything. Defaults to Default without metadata. */
+    function planApplication(options: OpenApplicationOptions & { executable: string; userDataDir: string }): string[];
+    /** Delegate an application window to the browser that owns its profile. No debugger, profile copy or process-tree ownership is introduced. */
+    function openApplication(options: OpenApplicationOptions): Promise<OpenApplicationResult>;
+    interface ImportSiteOptions {
+      view: Bun.WebView;
+      /** Explicit connected source browser; no encrypted profile files are read. */
+      source: ChromiumConnection;
+      /** Reuse an existing source target session; otherwise attach a same-origin page temporarily. */
+      sourceSessionId?: string;
+      site: string;
+      /** Transfer only cookies applicable to the selected site URL. Defaults to true. */
+      cookies?: boolean;
+      /** Preserve domain cookies only within the selected hostname's subtree. Defaults to host-only scoping. */
+      includeSubdomains?: boolean;
+      /** Return page targets of exactly the selected origin. Defaults to true. */
+      sessions?: boolean;
+      /** Navigate only to this explicitly selected source target after cookie acknowledgement. */
+      navigate?: string;
+      /** Currently unavailable; true rejects before any browser mutation. */
+      passwords?: boolean;
+      signal?: AbortSignal;
+    }
+    interface ImportSiteResult {
+      site: string;
+      cookiesImported: number;
+      cookiesRequested: number;
+      sessions: { targetId: string; url: string; title: string }[];
+      navigated: boolean;
+    }
+    /** Transfers live site cookies and verifies native readback. Initialize the destination view first; its profile may be shared by other views. */
+    function importSite(options: ImportSiteOptions): Promise<ImportSiteResult>;
+    interface DiscoveredProfile {
+      userDataDir: string;
+      directory: string;
+      name: string;
+      /** The literal Default profile directory. */
+      isDefault: boolean;
+      /** Matches Local State profile.last_used; may be a different directory. */
+      isLastUsed: boolean;
+    }
+    /** Discover profile metadata on demand. No profile is opened for writing or copied. */
+    function discover(options?: { userDataDirs?: readonly string[] }): Promise<DiscoveredProfile[]>;
+    /** Existing ownership boundaries; encrypted stores are not exported. */
+    function capabilities(): Readonly<{
+      discovery: "read-only-metadata";
+      bookmarks: "read-only-file";
+      storedCookies: "unavailable";
+      storedPasswords: "unavailable";
+      liveCookies: "requires-connected-browser-site-api";
+      liveSessions: "requires-connected-browser-target-api";
+    }>;
     /** Read and flatten an explicitly selected Chrome Bookmarks JSON file. */
-    function readBookmarks(file: string): Promise<Bookmark[]>;
+    function readBookmarks(
+      file: string,
+      options?: {
+        /** HTTP(S) URL. Its hostname is normalized by URL, including IDNA. */
+        site?: string;
+        /** Include dot-delimited subdomains. Defaults to false. */
+        includeSubdomains?: boolean;
+      },
+    ): Promise<Bookmark[]>;
   }
 
   export namespace protocol {

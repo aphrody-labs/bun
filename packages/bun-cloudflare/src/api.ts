@@ -68,6 +68,7 @@ export function createR2Client(options: { bucket: string; env: Record<string, st
     endpoint,
     accessKeyId,
     secretAccessKey,
+    sessionToken: env.R2_SESSION_TOKEN ?? env.AWS_SESSION_TOKEN ?? env.S3_SESSION_TOKEN,
     bucket: options.bucket,
     region: "auto",
     queueSize: 1,

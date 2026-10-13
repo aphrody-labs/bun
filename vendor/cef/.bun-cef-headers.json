@@ -1,0 +1,9 @@
+{
+  "qualification": "translated-headers-only-native-port-incomplete",
+  "cefRevision": "d2209bae80c55caecd5b050e8b403e8c43f62a5d",
+  "target": "x86_64-pc-windows-msvc",
+  "apiVersion": 15600,
+  "chromiumRevision": "ce0615a76d6347f1914d673f1da66285b328d494",
+  "chromiumVersion": "157.0.8099.0",
+  "schema": 1
+}

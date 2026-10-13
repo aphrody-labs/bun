@@ -157,7 +157,8 @@ async function verifyFiles(target: string, entries: Entry[]) {
     const normalized = path.split("\\").join("/");
     const stat = await lstat(resolve(target, path));
     if (stat.isDirectory()) continue;
-    if (!declared.has(normalized) && normalized !== RECEIPT) throw new Error(`Unexpected vendor output: ${normalized}`);
+    if (!declared.has(normalized) && normalized !== RECEIPT && normalized !== ".ref")
+      throw new Error(`Unexpected vendor output: ${normalized}`);
   }
   const files: Receipt["files"] = [];
   for (const entry of entries) {
@@ -168,19 +169,62 @@ async function verifyFiles(target: string, entries: Entry[]) {
       parent = dirname(parent);
     }
     const stat = await lstat(path);
+    if (entry.link === undefined ? !stat.isFile() : !stat.isSymbolicLink())
+      throw new Error(`Entry type differs: ${entry.path}`);
     const data =
       entry.link === undefined
         ? new Uint8Array(await Bun.file(path).arrayBuffer())
         : new TextEncoder().encode(
             process.platform === "win32" ? (await readlink(path)).split("\\").join("/") : await readlink(path),
           );
-    if (entry.link === undefined ? !stat.isFile() : !stat.isSymbolicLink())
-      throw new Error(`Entry type differs: ${entry.path}`);
     if (data.length !== entry.size || gitBlob(data) !== entry.blob)
       throw new Error(`Tracked source integrity differs: ${entry.path}`);
     files.push({ ...entry, sha256: hash(data) });
   }
   return files;
+}
+
+export async function verifyVendorReceipt(targetPath: string, revision = OXC_REVISION) {
+  const target = resolve(targetPath);
+  if ((await lstat(target)).isSymbolicLink()) throw new Error("Vendor target must not be a symlink");
+  const receiptPath = resolve(target, RECEIPT);
+  const stat = await lstat(receiptPath);
+  if (!stat.isFile() || stat.isSymbolicLink()) throw new Error("Vendor receipt must be a regular file");
+  const receipt = (await Bun.file(receiptPath).json()) as Receipt;
+  if (
+    receipt.schema !== 1 || receipt.revision !== revision ||
+    !/^[a-f0-9]{64}$/.test(receipt.archiveSha256) ||
+    !Array.isArray(receipt.files) || !receipt.files.length
+  )
+    throw new Error("Vendor receipt is not the requested immutable source");
+  const seen = new Set<string>();
+  let bytes = 0;
+  for (const entry of receipt.files) {
+    safePath(entry.path);
+    const name = process.platform === "win32" ? entry.path.toLowerCase() : entry.path;
+    if (seen.has(name)) throw new Error(`Duplicate vendor source: ${entry.path}`);
+    seen.add(name);
+    if (
+      !["100644", "100755", "120000"].includes(entry.mode) ||
+      !/^[a-f0-9]{40}$/.test(entry.blob) ||
+      !/^[a-f0-9]{64}$/.test(entry.sha256) ||
+      !Number.isSafeInteger(entry.size) || entry.size < 0 ||
+      (entry.mode === "120000") !== (typeof entry.link === "string")
+    ) throw new Error(`Invalid vendor source receipt: ${entry.path}`);
+    bytes += entry.size;
+    if (entry.link !== undefined) {
+      if (!entry.link || isAbsolute(entry.link) || /^[a-z]:/i.test(entry.link) || entry.link.includes("\\"))
+        throw new Error(`Unsafe source symlink: ${entry.path}`);
+      safePath(relative(target, resolve(dirname(resolve(target, entry.path)), entry.link)).split("\\").join("/"));
+    }
+  }
+  if (bytes > 512 * 1024 * 1024 || !receipt.files.some(entry => /^LICENSE(?:\.[^/]*)?$/.test(entry.path)))
+    throw new Error("Invalid vendor source scope");
+  const stamp = await exists(resolve(target, ".ref"));
+  if (stamp && (!stamp.isFile() || stamp.isSymbolicLink())) throw new Error("Vendor stamp must be a regular file");
+  const files = await verifyFiles(target, receipt.files);
+  if (JSON.stringify(files) !== JSON.stringify(receipt.files)) throw new Error("Vendor receipt content hashes differ");
+  return receipt;
 }
 
 async function writeTrackedBlobs(source: string, target: string, entries: Entry[]) {

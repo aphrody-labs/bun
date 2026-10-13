@@ -3,6 +3,7 @@ import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { configOf, type ConfigureInput } from "../build/configure";
 import { allDeps } from "../build/deps";
 import { readManifest, type Manifest } from "../build/ninja";
+import { computeNativeSDKABI, nativeSDKSourceIdentity } from "../build/native-sdk";
 import { depSource, depSourceDir } from "../build/source";
 import { hashSDKFile } from "../../packages/bun-video/src/sdk";
 
@@ -119,17 +120,32 @@ export async function packageNativeSDK(
     if (bytes > 2 * 1024 * 1024 * 1024 || Object.keys(entries).length >= 100_000)
       throw new Error("Native SDK file budget exceeded");
     if (entries[name]) throw new Error("Native SDK member collision");
-    entries[name] = { data: Bun.file(file), mode: info.mode & 0o777, mtime: 0 };
+    entries[name] = { data: await Bun.file(file).bytes(), mode: info.mode & 0o777, mtime: 0 };
     hashes[name] = await hashSDKFile(file);
   }
   for (const library of libraries) await add(`lib/${basename(library)}`, library);
   const includes: string[] = [];
-  for (const [index, include] of dependency.provides(cfg).includes.entries()) {
+  for (const include of dependency.provides(cfg).includes) {
     const root = await realpath(resolve(sourceDirectory, include));
-    const includeName = `include/${index}`;
+    const sourceRelative = relative(sourceDirectory, root);
+    const generatedRelative = relative(join(build, "deps", component), root);
+    const inside = (path: string) =>
+      !isAbsolute(path) && path !== ".." && !path.startsWith("../") && !path.startsWith("..\\");
+    const includeName = inside(sourceRelative)
+      ? ["source", sourceRelative.replaceAll("\\", "/")].filter(Boolean).join("/")
+      : inside(generatedRelative)
+        ? ["generated", generatedRelative.replaceAll("\\", "/")].filter(Boolean).join("/")
+        : undefined;
+    if (!includeName) throw new Error("SDK include root belongs to another source or build owner");
     includes.push(includeName);
-    for await (const name of new Bun.Glob("**/*.{h,hpp,hxx,inc,inl}").scan({ cwd: root, onlyFiles: true, dot: true }))
-      await add(`${includeName}/${name.replaceAll("\\", "/")}`, await containedFile(root, join(root, name)));
+    for await (const name of new Bun.Glob("**/*.{h,hh,hpp,hxx,inc,inl}").scan({
+      cwd: root,
+      onlyFiles: true,
+      dot: true,
+    })) {
+      const member = `${includeName}/${name.replaceAll("\\", "/")}`;
+      if (!entries[member]) await add(member, await containedFile(root, join(root, name)));
+    }
   }
   if (!includes.length) throw new Error("Native SDK has no public include directories");
   const licenses: string[] = [];
@@ -154,17 +170,11 @@ export async function packageNativeSDK(
     sourceRepository: `https://github.com/${source.repo}`,
     consumer: "aphrody-bun",
     source,
+    sourceIdentity: nativeSDKSourceIdentity(cfg, dependency, source),
+    sourceRoot: "source",
     gate,
     target: `${cfg.os}-${cfg.arch}`,
-    buildABI: {
-      os: cfg.os,
-      arch: cfg.arch,
-      abi: cfg.abi,
-      asan: cfg.asan,
-      lto: cfg.lto,
-      baseline: cfg.baseline,
-      buildType: cfg.buildType,
-    },
+    buildABI: computeNativeSDKABI(cfg, dependency),
     includes,
     libraries: libraries.map(file => `lib/${basename(file)}`),
     defines: dependency.provides(cfg).defines ?? [],

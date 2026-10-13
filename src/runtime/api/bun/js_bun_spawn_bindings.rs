@@ -339,7 +339,17 @@ pub(crate) fn spawn(
     args: JSValue,
     secondary_args_value: Option<JSValue>,
 ) -> JsResult<JSValue> {
-    spawn_maybe_sync(false, cx, args, secondary_args_value, &mut None)
+    spawn_maybe_sync(false, cx, args, secondary_args_value, &mut None, None)
+}
+
+#[cfg(windows)]
+pub(crate) fn spawn_with_job(
+    cx: &bun_jsc::JsThread<'_>,
+    args: JSValue,
+    options: Option<JSValue>,
+    job: u32,
+) -> JsResult<JSValue> {
+    spawn_maybe_sync(false, cx, args, options, &mut None, Some(job))
 }
 
 /// Bun.spawnSync() calls this.
@@ -349,7 +359,14 @@ pub(crate) fn spawn_sync(
     secondary_args_value: Option<JSValue>,
 ) -> JsResult<JSValue> {
     let mut bun_test_deadline: Option<Timespec> = None;
-    let result = spawn_maybe_sync(true, cx, args, secondary_args_value, &mut bun_test_deadline);
+    let result = spawn_maybe_sync(
+        true,
+        cx,
+        args,
+        secondary_args_value,
+        &mut bun_test_deadline,
+        None,
+    );
     // A bun:test deadline that passed while the isolated loop was blocking is reported only now: the loop is torn down and the child reaped, so the runner's callback re-enters nothing that is mid-flight. With an exception pending (spawn failure, termination) the file timer is left armed and reports it from the main loop instead.
     if let Some(deadline) = bun_test_deadline
         && result.is_ok()
@@ -410,7 +427,10 @@ fn spawn_maybe_sync(
     args_: JSValue,
     secondary_args_value: Option<JSValue>,
     bun_test_deadline: &mut Option<Timespec>,
+    job_id: Option<u32>,
 ) -> JsResult<JSValue> {
+    #[cfg(not(windows))]
+    let _ = job_id;
     if is_sync {
         // We skip this on Windows due to test failures.
         #[cfg(not(windows))]
@@ -1179,6 +1199,11 @@ fn spawn_maybe_sync(
         None => None,
     };
 
+    #[cfg(windows)]
+    let job = job_id
+        .map(crate::windows::sys::jobs::duplicate)
+        .transpose()
+        .map_err(|error| crate::windows::win_error(cx.global(), error))?;
     let mut spawn_options = SpawnOptions {
         // Empty means "inherit the parent's working directory". Only chdir
         // when the user asked for it: the stored cwd path string can be stale
@@ -1232,6 +1257,8 @@ fn spawn_maybe_sync(
             .as_deref()
             .or_else(|| terminal_info.0.as_ref().map(|info| info.terminal.get()))
             .and_then(Terminal::get_pseudoconsole),
+        #[cfg(windows)]
+        job_handle: job.as_ref().map(|job| job.0),
 
         #[cfg(windows)]
         windows: spawn::WindowsOptions {

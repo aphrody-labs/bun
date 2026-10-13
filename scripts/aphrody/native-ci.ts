@@ -5,6 +5,8 @@ import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { LOLHTML_SOURCE } from "../build/deps/lolhtml.ts";
+import { OXC_SOURCE } from "../build/deps/oxc.ts";
+import { verifyVendorReceipt } from "./vendor-oxc.ts";
 import { RUST_ARGON2_PATCHES, RUST_ARGON2_SOURCE } from "../build/deps/rust-argon2.ts";
 import { UUTILS_PATCHES, UUTILS_SOURCE } from "../build/deps/uutils.ts";
 import { computeSourceIdentity } from "../build/fetch-cli.ts";
@@ -161,6 +163,13 @@ export async function rustDependencyPlan(checkout: string) {
         patches: [] as string[],
       },
       {
+        name: "oxc",
+        manifest: "crates/oxc_allocator/Cargo.toml",
+        package: "oxc_allocator",
+        source: OXC_SOURCE,
+        patches: [] as string[],
+      },
+      {
         name: "rust-argon2",
         manifest: "Cargo.toml",
         package: "rust-argon2",
@@ -188,11 +197,16 @@ export async function rustDependencyPlan(checkout: string) {
       if (state) {
         if (state.isSymbolicLink() || !state.isDirectory() || (await realpath(destination)) !== destination)
           throw Error(`Dependency ${dependency.name} destination must remain canonical`);
-        const stamp = await lstat(join(destination, ".ref"));
+        const gitExport = dependency.name === "oxc" && await Bun.file(join(destination, ".bun-vendor.json")).exists();
+        if (gitExport) await verifyVendorReceipt(destination, dependency.source.commit);
+        const stamp = await lstat(join(destination, ".ref")).catch(error => {
+          if (gitExport && error.code === "ENOENT") return undefined;
+          throw error;
+        });
         if (
-          !stamp.isFile() ||
+          stamp && (!stamp.isFile() ||
           stamp.isSymbolicLink() ||
-          (await readFile(join(destination, ".ref"), "utf8")).trim() !== identity
+          (await readFile(join(destination, ".ref"), "utf8")).trim() !== identity)
         )
           throw Error(`Dependency ${dependency.name} source identity differs; preserved`);
         await verifyCargoManifest(join(destination, dependency.manifest), dependency.package);

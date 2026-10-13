@@ -26,7 +26,8 @@ const capgetNative = $newRustFunction("linux/caps.rs", "jsCapget", 1);
 const capsetNative = $newRustFunction("linux/caps.rs", "jsCapset", 6);
 const prctlNative = $newRustFunction("linux/caps.rs", "jsPrctl", 9);
 const pidfdOpenNative = $newRustFunction("linux/pidfd.rs", "jsPidfdOpen", 2);
-const pidfdSendSignalNative = $newRustFunction("linux/pidfd.rs", "jsPidfdSendSignal", 2);
+const pidfdForProcessNative = $newRustFunction("linux/pidfd.rs", "jsPidfdForProcess", 1);
+const pidfdSendSignalNative = $newRustFunction("linux/pidfd.rs", "jsPidfdSendSignal", 3);
 const pidfdGetfdNative = $newRustFunction("linux/pidfd.rs", "jsPidfdGetfd", 2);
 const memfdCreateNative = $newRustFunction("linux/memfd.rs", "jsMemfdCreate", 2);
 const landlockAbiVersionNative = $newRustFunction("linux/landlock.rs", "jsLandlockAbiVersion", 0);
@@ -184,6 +185,7 @@ const constants = Object.freeze({
   MFD_EXEC: 0x0010,
 
   PIDFD_NONBLOCK: 0o4000,
+  PIDFD_SIGNAL_PROCESS_GROUP: 1 << 2,
   PIDFD_THREAD: 0o200,
 
   MODULE_INIT_IGNORE_MODVERSIONS: 1,
@@ -584,6 +586,10 @@ function pidfdOpen(pid, flags = 0) {
   return pidfdOpenNative(pid, flags);
 }
 
+function pidfdForProcess(process) {
+  return pidfdForProcessNative(process);
+}
+
 function signalNumber(signal) {
   if (typeof signal === "string") {
     const number = require("node:os").constants.signals[signal];
@@ -596,9 +602,10 @@ function signalNumber(signal) {
   return signal;
 }
 
-function pidfdSendSignal(pidfd, signal) {
+function pidfdSendSignal(pidfd, signal, flags = 0) {
   validateFd(pidfd, "pidfd");
-  pidfdSendSignalNative(pidfd, signalNumber(signal));
+  validateInteger(flags, "flags", 0, MAX_UINT32);
+  pidfdSendSignalNative(pidfd, signalNumber(signal), flags);
 }
 
 function pidfdGetfd(pidfd, targetFd) {
@@ -1110,6 +1117,7 @@ export default {
   prctl,
   setNoNewPrivs,
   pidfdOpen,
+  pidfdForProcess,
   pidfdSendSignal,
   pidfdGetfd,
   memfdCreate,

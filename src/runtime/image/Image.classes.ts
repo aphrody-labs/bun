@@ -37,6 +37,7 @@ export default [
     proto: {
       // Chainable mutators — record an op and return `this`.
       resize: { fn: "doResize", length: 2 },
+      extract: { fn: "doExtract", length: 1 },
       rotate: { fn: "doRotate", length: 1 },
       flip: { fn: "doFlip", length: 0 },
       flop: { fn: "doFlop", length: 0 },
@@ -51,6 +52,7 @@ export default [
 
       // Terminal async ops — run decode → pipeline → encode on the work pool.
       bytes: { fn: "doBytes", length: 0, async: true },
+      rgba: { fn: "doRgba", length: 0, async: true },
       buffer: { fn: "doBuffer", length: 0, async: true },
       // Sharp-compat alias for `buffer()`; same native fn, no overhead.
       toBuffer: { fn: "doBuffer", length: 0, async: true },

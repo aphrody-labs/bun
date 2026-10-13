@@ -256,22 +256,22 @@ impl Server {
             "Page.navigate" => {
                 let url = p.get("url").and_then(Value::as_str).unwrap_or("about:blank");
                 let frame = self.targets.iter().find(|t| t.id == view).map(|t| t.target_id.clone()).unwrap_or_default();
-                match b.navigate(view, url) {
+                b.navigate_async(view, url, Box::new(move |result| match result {
                     Ok(()) => reply.ok(json!({ "frameId": frame, "loaderId": frame })),
                     Err(e) => reply.ok(json!({ "frameId": frame, "errorText": e })),
-                }
+                }));
             }
             "Page.reload" => reply.done(b.reload(view).map(|()| json!({}))),
-            "Page.getNavigationHistory" => reply.done(b.history(view).map(|(cur, entries)| {
+            "Page.getNavigationHistory" => b.history_async(view, Box::new(move |result| reply.done(result.map(|(cur, entries)| {
                 let entries: Vec<Value> = entries
                     .into_iter()
                     .map(|e| json!({ "id": e.id, "url": e.url, "userTypedURL": e.url, "title": e.title, "transitionType": "link" }))
                     .collect();
                 json!({ "currentIndex": cur, "entries": entries })
-            })),
+            })))),
             "Page.navigateToHistoryEntry" => {
                 let entry = p.get("entryId").and_then(Value::as_u64).unwrap_or(0) as u32;
-                reply.done(b.go_to_history_entry(view, entry).map(|()| json!({})));
+                b.go_to_history_entry_async(view, entry, Box::new(move |result| reply.done(result.map(|()| json!({})))));
             }
             "Page.captureScreenshot" => {
                 let format = ImageFormat::parse(p.get("format").and_then(Value::as_str).unwrap_or("png"));

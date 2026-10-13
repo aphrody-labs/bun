@@ -44,9 +44,9 @@ Chromium launches a visible browser by default (`headless: false`). The built-in
 bridges reuse Bun's WebSocket, process and file primitives for browser-scope CDP,
 isolated launches, MV3/theme/PWA helpers and explicit bookmark JSON import.
 The `obscura` branch checkpoint `c82e6a6e3bd` contains the standalone
-`packages/bun-obscura` workspace. Its concurrent uncommitted `src/browser` and
-JSC integration in the Obscura worktree remain owned by that workstream; do not
-copy them or claim the native JSC port complete.
+`packages/bun-obscura` workspace. Its libraries have since moved to `src/browser`
+in the root Bun Cargo workspace; [the current plan](src/browser/PLAN.md) owns
+qualification. Source integration does not establish native JSC parity.
 Reuse `bun:windows.gpu.d3d12`, bun-cosmic's tiny-skia/optional wgpu rendering,
 the existing Tauri CEF runtime's CDP/cookie facilities and Obscura CookieJar.
 No new GPU stack or dependencies are needed for the bridge batch.
@@ -338,7 +338,7 @@ Owner lockfile iterator lot (2026-10-10): pooled RAII scratch removes four runti
 
 Owner launch/shell pointer lot (2026-10-10): four runtime Windows diagnostics removed (18 to14), GNU strict both targets zero, MSVC owned zero. Changed engine44 pass/14 inherited skips/0 fail,27 snapshots/121 assertions. See docs/project/launch-shell-pointer-qualification.md. Interactive console and full delivery gates remain open.
 
-Owner directive (2026-10-11): Obscura engine source moves from Aphrody into `packages/bun-obscura`, a standalone workspace on the `obscura` branch of `aphrody-labs/bun-os`. Product adapters remain in Aphrody and consume exact provider revisions. See [transfer plan](packages/bun-obscura/PLAN.md). V8, local patches and permission boundaries stay intact; no native Bun binding is implied by the source transfer.
+Owner directive (2026-10-11): Obscura engine source moves from Aphrody into `packages/bun-obscura`, a standalone workspace on the `obscura` branch of `aphrody-labs/bun-os`. Product adapters remain in Aphrody and consume exact provider revisions. See [current integration plan](src/browser/PLAN.md). V8, local patches and permission boundaries stay intact; no native Bun binding is implied by the source transfer.
 
 ## Rio wrap cells — 2026-10-13
 

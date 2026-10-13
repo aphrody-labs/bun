@@ -212,6 +212,62 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     expect(errorCode(() => job.setLimits({ cpuRate: 0 }))).toBe("ERR_OUT_OF_RANGE");
   });
 
+  test("Job.spawn owns the child before its first descendant and closes the process tree", async () => {
+    using job = new windows.Job({ killOnClose: true });
+    const program = `
+      const descendant = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], {
+        stdin: "ignore", stdout: "inherit", stderr: "ignore", windowsHide: true,
+      });
+      console.log(JSON.stringify({ parent: process.pid, descendant: descendant.pid }));
+      setInterval(() => {}, 1000);
+    `;
+    await using child = job.spawn([bunExe(), "-e", program], {
+      env: bunEnv,
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+      windowsHide: true,
+    });
+    const reader = child.stdout.getReader();
+    let text = "";
+    try {
+      while (!text.includes("\n")) {
+        const chunk = await reader.read();
+        if (chunk.done) throw new Error("owned process exited before reporting its descendant");
+        text += new TextDecoder().decode(chunk.value);
+      }
+      const report = JSON.parse(text.slice(0, text.indexOf("\n"))) as { parent: number; descendant: number };
+      expect(report.parent).toBe(child.pid);
+      expect(job.info().pids).toEqual(expect.arrayContaining([child.pid, report.descendant]));
+      job.close();
+      while (!(await reader.read()).done) {}
+      expect(windows.processes.list().some(process => process.pid === report.descendant)).toBe(false);
+      expect(await new Response(child.stderr).text()).toBe("");
+      expect(await child.exited).toBe(0);
+    } finally {
+      reader.releaseLock();
+    }
+  });
+
+  test("Job.spawn rejects assignment before executing child code and preserves the closed state", async () => {
+    using directory = tempDir("windows-job-spawn-limit", {});
+    const marker = `${directory}/executed.txt`;
+    using job = new windows.Job({ activeProcesses: 0, killOnClose: true });
+    expect(() =>
+      job.spawn({
+        cmd: [bunExe(), "-e", `await Bun.write(${JSON.stringify(marker)}, "executed")`],
+        env: bunEnv,
+        stdout: "ignore",
+        stderr: "ignore",
+        windowsHide: true,
+      }),
+    ).toThrow();
+    expect(await Bun.file(marker).exists()).toBe(false);
+    expect(job.info().activeProcesses).toBe(0);
+    job.close();
+    expect(errorCode(() => job.spawn([bunExe(), "-e", "0"]))).toBe("ERR_INVALID_STATE");
+  });
+
   test("clipboard round-trip", () => {
     let previous: string | null;
     try {

@@ -665,6 +665,10 @@ function buildScriptRunManifest(ctx: ManifestContext, unit: RustUnit): BuildScri
     env.CXX = ctx.cfg.hostCxx;
     env.AR = ctx.cfg.hostAr;
   }
+  if (!isHost && info.triple.endsWith("-windows-msvc") && unit.pkg.name === "talpid-core") {
+    env.BUN_WINFW_STATIC = "1";
+    env.WINFW_LIB_DIR = join(ctx.cfg.buildDir, "deps/winfw");
+  }
   if (
     !isHost &&
     info.triple.endsWith("-windows-msvc") &&

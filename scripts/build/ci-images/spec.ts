@@ -282,6 +282,7 @@ const aptPackages = [
     "ccache",
     "golang",
     "libtool",
+    "libmnl-dev",
     "make",
     "nasm",
     "ninja-build",

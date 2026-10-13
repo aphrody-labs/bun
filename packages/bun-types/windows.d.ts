@@ -318,6 +318,17 @@ declare module "bun:windows" {
     setLimits(limits: JobLimits): void;
     /** Adds a process to the job. */
     assign(pid: number | { pid: number }): void;
+    /** Creates a Bun subprocess assigned to this job before its primary thread starts. */
+    spawn<
+      const In extends Bun.SpawnOptions.Writable = "ignore",
+      const Out extends Bun.SpawnOptions.Readable = "pipe",
+      const Err extends Bun.SpawnOptions.Readable = "inherit",
+    >(command: string[], options?: Bun.SpawnOptions.SpawnOptions<In, Out, Err>): Bun.Subprocess<In, Out, Err>;
+    spawn<
+      const In extends Bun.SpawnOptions.Writable = "ignore",
+      const Out extends Bun.SpawnOptions.Readable = "pipe",
+      const Err extends Bun.SpawnOptions.Readable = "inherit",
+    >(options: Bun.SpawnOptions.SpawnOptions<In, Out, Err> & { cmd: string[] }): Bun.Subprocess<In, Out, Err>;
     /** Terminates every process of the job with `exitCode` (default `1`). */
     terminate(exitCode?: number): void;
     info(): JobInfo;

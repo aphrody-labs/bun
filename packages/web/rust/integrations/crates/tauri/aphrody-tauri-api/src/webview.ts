@@ -44,20 +44,20 @@
 import {
   PhysicalPosition,
   PhysicalSize,
-} from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/dpi.ts";
+} from "@aphrody/tauri/api/dpi";
 import type {
   LogicalPosition,
   LogicalSize,
-} from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/dpi.ts";
+} from "@aphrody/tauri/api/dpi";
 import {
   Position,
   Size,
-} from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/dpi.ts";
+} from "@aphrody/tauri/api/dpi";
 import type {
   EventName,
   EventCallback,
   UnlistenFn,
-} from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/event.ts";
+} from "@aphrody/tauri/api/event";
 import {
   TauriEvent,
   // imported for documentation purposes
@@ -66,15 +66,15 @@ import {
   emitTo,
   listen,
   once,
-} from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/event.ts";
-import { invoke } from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/core.ts";
+} from "@aphrody/tauri/api/event";
+import { invoke } from "@aphrody/tauri/api/core";
 import {
   type BackgroundThrottlingPolicy,
   type ScrollBarStyle,
   type Color,
   Window,
   getCurrentWindow,
-} from "../../../../../../../../aphrody/crates/tauri/aphrody-tauri-api/src/window.ts";
+} from "@aphrody/tauri/api/window";
 import { WebviewWindow } from "./webviewWindow";
 
 /**

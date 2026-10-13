@@ -2,6 +2,8 @@
 //! Shared crawl frontier, page processing and injectable network transport.
 
 mod blocking;
+pub mod archive;
+pub mod cli;
 /// Native acquisition of Material Design's published structured documents.
 pub mod design;
 /// Verified Markdown exports of the public Google Design mirror.
@@ -39,4 +41,4 @@ pub use runner::{
     BunBrowserTransport, crawl_bounded, crawl_daemon, extract_links_opts,
 };
 pub use scoring::{anchor_relevance, frontier_score};
-pub use sitemap::{ParsedSitemap, SitemapEntry, SitemapKind, parse_sitemap, seed_boost};
+pub use sitemap::{ParsedSitemap, SitemapEntry, SitemapKind, parse_sitemap, parse_sitemap_page, seed_boost};

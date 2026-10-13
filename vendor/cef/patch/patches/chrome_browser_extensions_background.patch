@@ -1,0 +1,19 @@
+diff --git chrome/browser/extensions/BUILD.gn chrome/browser/extensions/BUILD.gn
+index 41e9e0ee1d7f30fdeeb4b2e08c51c098317fb9a5..238df07e2c8da2b51a4da8ab054c274c60881cc8 100644
+--- chrome/browser/extensions/BUILD.gn
++++ chrome/browser/extensions/BUILD.gn
+@@ -3172,10 +3172,10 @@ source_set("browser_tests") {
+ 
+     if (!is_chromeos) {
+       # Chrome OS doesn't use background mode or download bubbles.
+-      deps += [
+-        "//chrome/browser/background/extensions",
+-        "//chrome/browser/download/bubble",
+-      ]
++      if (enable_background_mode) {
++        deps += [ "//chrome/browser/background/extensions" ]
++      }
++      deps += [ "//chrome/browser/download/bubble" ]
+     }
+ 
+     if (enable_background_mode) {

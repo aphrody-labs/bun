@@ -5,8 +5,9 @@
 //! - [`cdp::Server`] exposes any [`Backend`] as the Chrome DevTools Protocol subset that
 //!   Bun.WebView's ChromeBackend.cpp speaks, over the `--remote-debugging-pipe` transport
 //!   ([`pipe`]). `bun-webview-host` (src/main.rs) is that server as an executable.
-//! - Engines: [`backend::webkitgtk`] (GTK4, webkitgtk-6.0), `wry` (WebView2 / WKWebView /
-//!   WebKitGTK-GTK3, aphrody-labs/wry fork), [`backend::mock`] (no display, for tests).
+//! - Engines: GTK4 WebKitGTK, optional Windows WebView2 through the wry fork,
+//!   and [`backend::mock`] (no display, for tests). WKWebView and CEF host drivers
+//!   remain unimplemented; selecting them returns an explicit unavailable error.
 
 #[cfg(all(target_os = "linux", feature = "gtk4", feature = "gtk3"))]
 compile_error!("features `gtk4` and `gtk3` are exclusive: one GTK major per build");
@@ -180,10 +181,19 @@ pub trait Backend {
     fn create(&mut self, id: u32, opts: &CreateOptions, events: Events) -> Result<(), String>;
     fn close(&mut self, id: u32);
     fn navigate(&mut self, id: u32, url: &str) -> Result<(), String>;
+    fn navigate_async(&mut self, id: u32, url: &str, callback: Callback<()>) {
+        callback(self.navigate(id, url));
+    }
     fn reload(&mut self, id: u32) -> Result<(), String>;
     /// `(current index, entries)`; entry ids are stable until the next navigation.
     fn history(&mut self, id: u32) -> Result<(usize, Vec<HistoryEntry>), String>;
+    fn history_async(&mut self, id: u32, callback: Callback<(usize, Vec<HistoryEntry>)>) {
+        callback(self.history(id));
+    }
     fn go_to_history_entry(&mut self, id: u32, entry_id: u32) -> Result<(), String>;
+    fn go_to_history_entry_async(&mut self, id: u32, entry_id: u32, callback: Callback<()>) {
+        callback(self.go_to_history_entry(id, entry_id));
+    }
     fn evaluate(&mut self, id: u32, expression: &str, cb: Callback<EvalOutcome>);
     fn screenshot(&mut self, id: u32, format: ImageFormat, quality: u8, cb: Callback<Vec<u8>>);
     fn resize(&mut self, id: u32, width: u32, height: u32) -> Result<(), String>;

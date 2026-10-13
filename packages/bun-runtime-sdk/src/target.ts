@@ -10,6 +10,7 @@ export const SUPPORTED_TARGETS: Readonly<Record<string, string>> = {
   "darwin-x64": "x86_64-apple-darwin",
   "darwin-arm64": "aarch64-apple-darwin",
   "win32-x64": "x86_64-pc-windows-msvc",
+  "win32-arm64": "aarch64-pc-windows-msvc",
 };
 
 export function hostTarget(): string {

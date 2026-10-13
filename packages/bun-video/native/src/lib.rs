@@ -1,10 +1,16 @@
 //! Typed streaming encoder commands; no shell, frame buffering, or automatic GPU fallback.
 #![cfg_attr(windows, feature(windows_process_extensions_raw_attribute))]
 pub mod owned_process;
+#[cfg(feature = "filmcraft")]
+pub mod filmcraft;
 #[cfg(feature = "libav")]
 pub mod libav;
 #[cfg(feature = "libav")]
 pub mod memory_io;
+#[cfg(all(windows, feature = "libav"))]
+mod windows_provider;
+#[cfg(feature = "mpv")]
+pub mod mpv_memory;
 use owned_process::{OwnedChild, spawn_owned};
 use std::ffi::{OsStr, OsString};
 use std::io;
@@ -157,13 +163,32 @@ pub fn spawn_decode_rgba(ffmpeg: &OsStr, input: &Path) -> io::Result<OwnedChild>
 }
 
 #[cfg(feature = "libav")]
-pub fn libav_encoder_present(backend: Backend) -> Result<bool, ffmpeg_next::Error> {
-    ffmpeg_next::init()?;
-    Ok(ffmpeg_next::codec::encoder::find_by_name(backend.encoder()).is_some())
+pub fn libav_encoder_present(backend: Backend) -> Result<bool, libav::VideoError> {
+    libav::encoder_present(backend.encoder())
 }
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "libav")]
+    #[test]
+    fn video_provider_probes_and_decodes_one_memory_frame_with_bounds() {
+        use crate::libav::{VideoInput, decode_video_frame, decode_video_frame_with_cancel, probe_video};
+        use std::sync::{Arc, atomic::AtomicBool};
+        let pixels = [255, 0, 0, 255, 0, 0, 255, 255];
+        let source: Arc<[u8]> = encode_rgba_png(2, 1, &pixels).expect("fixture PNG").into();
+        let metadata = probe_video(VideoInput::Bytes(source.clone()), 2).expect("probe PNG stream");
+        assert_eq!((metadata.width, metadata.height), (2, 1));
+        assert_eq!(metadata.codec, "png");
+        let decoded = decode_video_frame(VideoInput::Bytes(source.clone()), 0.0, 2).expect("decode selected frame");
+        assert_eq!((decoded.width, decoded.height), (2, 1));
+        let mut reader = png::Decoder::new(std::io::Cursor::new(decoded.png)).read_info().expect("PNG result");
+        let mut restored = vec![0; reader.output_buffer_size()];
+        let frame = reader.next_frame(&mut restored).expect("PNG pixels");
+        assert_eq!(&restored[..frame.buffer_size()], pixels);
+        assert!(probe_video(VideoInput::Bytes(source.clone()), 1).is_err());
+        assert!(decode_video_frame(VideoInput::Bytes(source.clone()), f64::NAN, 2).is_err());
+        assert!(decode_video_frame_with_cancel(VideoInput::Bytes(source), 0.0, 2, Some(Arc::new(AtomicBool::new(true)))).is_err());
+    }
     use super::*;
     #[cfg(feature = "libav")]
     #[test]
@@ -178,6 +203,13 @@ mod tests {
         let mut decoded = Vec::new();
         assert_eq!(libav::decode_rgba(&path, &mut decoded).unwrap(), 2);
         assert_eq!(decoded, rgba);
+        let source: std::sync::Arc<[u8]> = std::fs::read(&path).unwrap().into();
+        let frame = libav::decode_video_frame(libav::VideoInput::Bytes(source), 0.03, 64 * 64).unwrap();
+        assert!(frame.timestamp_seconds.is_some_and(|time| time >= 0.03));
+        let mut reader = png::Decoder::new(std::io::Cursor::new(frame.png)).read_info().unwrap();
+        let mut selected = vec![0; reader.output_buffer_size()];
+        let info = reader.next_frame(&mut selected).unwrap();
+        assert_eq!(&selected[..info.buffer_size()], &rgba[64 * 64 * 4..]);
         assert!(libav::encode_ffv1(&mut std::io::Cursor::new(&pngs), &path, &opts).is_err());
         std::fs::remove_file(path).unwrap();
     }

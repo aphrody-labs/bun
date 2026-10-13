@@ -38,6 +38,7 @@ export const ffmpegABI = {
     av_frame_get_buffer: functionABI([p, i], i),
     av_frame_make_writable: functionABI([p], i),
     av_dict_set: functionABI([p, p, p, i], i),
+    av_dict_count: functionABI([p], i),
     av_dict_free: functionABI([p], v),
     av_opt_set: functionABI([p, p, p, i], i),
     av_opt_set_int: functionABI([p, p, "i64", i], i),
@@ -256,7 +257,10 @@ export class FFmpeg {
         const encodedValue = new TextEncoder().encode(`${value}\0`);
         this.check(api.av_dict_set(ptr(dictionary), ptr(encodedKey), ptr(encodedValue), 0));
       }
-      return operation(ptr(dictionary));
+      const result = operation(ptr(dictionary));
+      if (dictionary[0] && api.av_dict_count(Number(dictionary[0]) as Pointer) > 0)
+        throw new Error("FFmpeg options were not recognized by the codec or protocol");
+      return result;
     } finally {
       api.av_dict_free(ptr(dictionary));
     }
@@ -355,40 +359,55 @@ export class FFmpeg {
     return this.#ownReference("packet", api.av_packet_alloc(), api.av_packet_free, api.av_packet_unref);
   }
 
-  openDecoder(name: string, parameters?: Pointer): FFmpegDecoder {
-    if (!name || name.includes("\0")) throw new TypeError("FFmpeg decoder name must be nonempty and contain no NUL");
+  #openCodec(
+    name: string,
+    kind: "decoder" | "encoder",
+    parameters?: Pointer,
+    options?: Readonly<Record<string, string>>,
+  ): FFmpegPacket {
+    if (!name || name.includes("\0")) throw new TypeError(`FFmpeg ${kind} name must be nonempty and contain no NUL`);
     const api = this.libraries.avcodec.symbols;
     const encoded = new TextEncoder().encode(`${name}\0`);
-    const codec = api.avcodec_find_decoder_by_name(ptr(encoded));
-    if (!codec) throw new Error(`FFmpeg decoder not found: ${name}`);
+    const codec =
+      kind === "decoder"
+        ? api.avcodec_find_decoder_by_name(ptr(encoded))
+        : api.avcodec_find_encoder_by_name(ptr(encoded));
+    if (!codec) throw new Error(`FFmpeg ${kind} not found: ${name}`);
     const context = this.#ownReference(
-      "decoder",
+      kind,
       api.avcodec_alloc_context3(codec),
       api.avcodec_free_context,
       api.avcodec_flush_buffers,
     );
     try {
       if (parameters !== undefined) this.check(api.avcodec_parameters_to_context(context.pointer, parameters));
-      this.check(api.avcodec_open2(context.pointer, codec, null));
+      this.#withOptions(options, dictionary => this.check(api.avcodec_open2(context.pointer, codec, dictionary)));
     } catch (error) {
       context.close();
       throw error;
     }
-    const outcome = (status: number): FFmpegCodecStatus => {
-      if (status === -11) return "again";
-      if (status === -541478725) return "eof";
-      this.check(status);
-      return "ok";
-    };
+    return context;
+  }
+
+  #codecStatus(status: number): FFmpegCodecStatus {
+    if (status === -11) return "again";
+    if (status === -541478725) return "eof";
+    this.check(status);
+    return "ok";
+  }
+
+  openDecoder(name: string, parameters?: Pointer, options?: Readonly<Record<string, string>>): FFmpegDecoder {
+    const api = this.libraries.avcodec.symbols;
+    const context = this.#openCodec(name, "decoder", parameters, options);
     return {
       get pointer() {
         return context.pointer;
       },
-      sendPacket: packet => outcome(api.avcodec_send_packet(context.pointer, packet?.pointer ?? null)),
+      sendPacket: packet => this.#codecStatus(api.avcodec_send_packet(context.pointer, packet?.pointer ?? null)),
       receiveFrame: frame => {
         const pointer = context.pointer;
         frame.unref();
-        return outcome(api.avcodec_receive_frame(pointer, frame.pointer));
+        return this.#codecStatus(api.avcodec_receive_frame(pointer, frame.pointer));
       },
       flush: () => context.unref(),
       close: context.close,
@@ -396,8 +415,26 @@ export class FFmpeg {
     };
   }
 
+  openEncoder(name: string, options?: Readonly<Record<string, string>>, parameters?: Pointer): FFmpegEncoder {
+    const api = this.libraries.avcodec.symbols;
+    const context = this.#openCodec(name, "encoder", parameters, options);
+    return {
+      get pointer() {
+        return context.pointer;
+      },
+      sendFrame: frame => this.#codecStatus(api.avcodec_send_frame(context.pointer, frame?.pointer ?? null)),
+      receivePacket: packet => {
+        const pointer = context.pointer;
+        packet.unref();
+        return this.#codecStatus(api.avcodec_receive_packet(pointer, packet.pointer));
+      },
+      close: context.close,
+      [Symbol.dispose]: context.close,
+    };
+  }
+
   #ownReference(
-    kind: "frame" | "packet" | "decoder",
+    kind: "frame" | "packet" | "decoder" | "encoder",
     allocated: Pointer | number | bigint | null,
     free: (slot: Pointer) => void,
     unref: (value: Pointer) => void,
@@ -485,4 +522,9 @@ export interface FFmpegDecoder extends FFmpegInput {
   sendPacket(packet: FFmpegPacket | null): FFmpegCodecStatus;
   receiveFrame(frame: FFmpegFrame): FFmpegCodecStatus;
   flush(): void;
+}
+
+export interface FFmpegEncoder extends FFmpegInput {
+  sendFrame(frame: FFmpegFrame | null): FFmpegCodecStatus;
+  receivePacket(packet: FFmpegPacket): FFmpegCodecStatus;
 }

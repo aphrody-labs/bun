@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { tempDir } from "harness";
+import {
+  DENO_CORE_REPOSITORY,
+  DENO_CORE_REVISION,
+  DENO_CORE_UPSTREAM_REVISION,
+  denoSourcePath,
+  verifyDenoCore,
+} from "../../scripts/aphrody/vendor-deno-core.ts";
+
 import { createHash } from "node:crypto";
 import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { lstat, readlink, symlink } from "node:fs/promises";
@@ -42,7 +50,7 @@ import {
   writePublicCache,
 } from "../../scripts/aphrody/sync-public-upstream.ts";
 import { sync } from "../../scripts/aphrody/sync-upstream.ts";
-import { vendorApply, vendorPlan } from "../../scripts/aphrody/vendor-oxc.ts";
+import { vendorApply, vendorPlan, verifyVendorReceipt } from "../../scripts/aphrody/vendor-oxc.ts";
 
 test("public snapshot reconstruction truncates stale trailing rows", async () => {
   using directory = tempDir("public-snapshot-rebuild", {});
@@ -559,11 +567,24 @@ describe("immutable OXC vendoring", () => {
     expect(await Bun.file(join(options.target, "source.rs")).text()).toBe("pub fn owner() {}\n");
     expect(await Bun.file(join(options.target, "ignored.cache")).exists()).toBe(false);
     expect((await vendorApply(options)).unchanged).toBe(true);
+    expect((await verifyVendorReceipt(options.target, revision)).revision).toBe(revision);
+    expect(await Bun.file(join(options.target, ".ref")).exists()).toBe(false);
+    await expect(verifyVendorReceipt(options.target, "0".repeat(40))).rejects.toThrow("immutable source");
+    const receiptPath = join(options.target, ".bun-vendor.json");
+    const receiptText = await Bun.file(receiptPath).text();
+    const altered = JSON.parse(receiptText);
+    altered.files[0].sha256 = "0".repeat(64);
+    await Bun.write(receiptPath, JSON.stringify(altered));
+    await expect(verifyVendorReceipt(options.target, revision)).rejects.toThrow("hashes differ");
+    await Bun.write(receiptPath, receiptText);
+    await Bun.write(join(options.target, ".ref"), "qualified-stamp\n");
+    expect((await verifyVendorReceipt(options.target, revision)).files).toHaveLength(6);
     expect(await Bun.file(join(options.target, "fixtures/node_modules/example/index.js")).text()).toBe(
       "export default 1;\n",
     );
     await Bun.write(join(options.target, "source.rs"), "changed\n");
     await expect(vendorApply(options)).rejects.toThrow("integrity differs");
+    await expect(verifyVendorReceipt(options.target, revision)).rejects.toThrow("integrity differs");
     expect(await Bun.file(join(options.target, "source.rs")).text()).toBe("changed\n");
   });
 });
@@ -925,5 +946,69 @@ describe("sync-upstream", () => {
     const { dir, root } = forkRepo("aphrody-sync-noop");
     using _ = dir;
     expect(await sync(options(root))).toEqual({ status: "up-to-date", behind: 0 });
+  });
+});
+
+describe("Deno core source owner", () => {
+  function fixture() {
+    const files = {
+      "Cargo.toml": "[workspace]\n",
+      "LICENSE.md": "MIT\n",
+      "libs/core/Cargo.toml": "core\n",
+      "libs/ops/Cargo.toml": "ops\n",
+      "libs/serde_v8/Cargo.toml": "serde\n",
+      "libs/deno_v8/Cargo.toml": "v8\n",
+    };
+    const receipt = {
+      schema: 1,
+      repository: DENO_CORE_REPOSITORY,
+      revision: DENO_CORE_REVISION,
+      upstreamRevision: DENO_CORE_UPSTREAM_REVISION,
+      archiveSha256: "a".repeat(64),
+      files: Object.entries(files).map(([path, text]) => {
+        const bytes = new TextEncoder().encode(text);
+        return {
+          path,
+          mode: "100644",
+          size: bytes.length,
+          blob: new Bun.CryptoHasher("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex"),
+          sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
+        };
+      }),
+    };
+    return tempDir("deno-core-receipt", { ...files, ".bun-vendor.json": JSON.stringify(receipt) });
+  }
+
+  test("qualifies the exact source closure read-only and preserves rejected changes", async () => {
+    using dir = fixture();
+    const manifest = join(String(dir), "libs/core/Cargo.toml");
+    const before = readFileSync(manifest, "utf8");
+    expect(await verifyDenoCore(String(dir))).toEqual({ revision: DENO_CORE_REVISION, files: 6 });
+    expect(readFileSync(manifest, "utf8")).toBe(before);
+    writeFileSync(manifest, "changed source\n");
+    await expect(verifyDenoCore(String(dir))).rejects.toThrow("source drift");
+    expect(readFileSync(manifest, "utf8")).toBe("changed source\n");
+  });
+
+  test("rejects another revision and unreceipted source", async () => {
+    using dir = fixture();
+    const receiptPath = join(String(dir), ".bun-vendor.json");
+    const receipt = JSON.parse(readFileSync(receiptPath, "utf8"));
+    receipt.revision = DENO_CORE_UPSTREAM_REVISION;
+    writeFileSync(receiptPath, JSON.stringify(receipt));
+    await expect(verifyDenoCore(String(dir))).rejects.toThrow("receipt mismatch");
+    receipt.revision = DENO_CORE_REVISION;
+    writeFileSync(receiptPath, JSON.stringify(receipt));
+    writeFileSync(join(String(dir), "legacy.ts"), "retained\n");
+    await expect(verifyDenoCore(String(dir))).rejects.toThrow("Unexpected Deno core source");
+    expect(readFileSync(join(String(dir), "legacy.ts"), "utf8")).toBe("retained\n");
+  });
+
+  test("limits the export to the core library closure", () => {
+    expect(denoSourcePath("libs/core/runtime/jsruntime.rs")).toBe(true);
+    expect(denoSourcePath("runtime/lib.rs")).toBe(false);
+    expect(denoSourcePath("cli/main.rs")).toBe(false);
+    expect(() => denoSourcePath("libs/core/../credentials")).toThrow("Invalid Deno source path");
+    expect(() => denoSourcePath("C:/protected/session")).toThrow("Invalid Deno source path");
   });
 });

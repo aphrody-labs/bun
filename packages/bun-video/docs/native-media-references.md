@@ -13,9 +13,11 @@ are not yet linked into Bun; the running FFI still calls our compiled C engines.
 | `vendor/libmpv-rs` | Rust client, events, rendering and custom protocol lifecycle | `examples/events.rs`, `examples/protocol.rs`, `examples/opengl.rs`, `src` |
 | `vendor/libplacebo` | Native D3D11 renderer and FFmpeg frame mapping | `src/d3d11`, `src/include/libplacebo/utils/libav.h` |
 
-The selected FFmpeg Rust source is 9.0.1, aligned with our FFmpeg major 9
-development source. Bun Video's native Cargo crate now uses the local FFmpeg Rust fork and its
-local ffmpeg-sys-next fork. The libav feature compiles against build/media.
+The selected first-party provider uses registry `ffmpeg-sys-next =9.0.1` and
+the qualified SDK selected through `FFMPEG_DIR`. The vendored Rust wrappers
+remain references until that replacement passes its native gates; they are
+not dependencies of the provider. Optional libav/mpv/GPU features remain off
+by default.
 
 Required integration work is native decode/encode through owned codec and
 frame contexts, GPU frame interop, typed libmpv event/render APIs, then direct

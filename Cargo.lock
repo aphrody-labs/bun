@@ -222,7 +222,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -233,7 +233,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1192,6 +1192,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun-video-native"
+version = "0.1.0"
+dependencies = [
+ "filmcraft-codecs",
+ "filmcraft-frame",
+ "filmcraft-isobmff",
+ "filmcraft-media",
+ "filmcraft-time",
+ "gif",
+ "libc",
+ "png 0.17.16",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "bun_agent_tools"
 version = "1.4.4"
 dependencies = [
@@ -1359,7 +1374,7 @@ dependencies = [
  "image",
  "jpeg-encoder",
  "libc",
- "png",
+ "png 0.18.1",
  "serde",
  "serde_json",
  "tokio",
@@ -1378,9 +1393,11 @@ dependencies = [
  "bun_browser_extract",
  "bun_browser_net",
  "chrono",
+ "flate2",
  "fs4",
  "futures",
  "image",
+ "quick-xml 0.42.0",
  "regex",
  "rusqlite",
  "serde",
@@ -2767,6 +2784,7 @@ dependencies = [
  "blake2 0.10.6",
  "bstr",
  "bun-dotnet-host",
+ "bun-video-native",
  "bun_alloc",
  "bun_analytics",
  "bun_ast",
@@ -2775,6 +2793,7 @@ dependencies = [
  "bun_boringssl",
  "bun_boringssl_sys",
  "bun_brotli",
+ "bun_browser_crawl",
  "bun_browser_dom",
  "bun_bundler",
  "bun_bundler_jsc",
@@ -2857,10 +2876,12 @@ dependencies = [
  "bun_vt",
  "bun_watcher",
  "bun_which",
+ "bun_workspace",
  "bun_wyhash",
  "bun_zlib",
  "bun_zstd",
  "bytemuck",
+ "chrono",
  "const_format",
  "encoding_rs",
  "enum-map",
@@ -2879,6 +2900,7 @@ dependencies = [
  "sha3 0.10.9",
  "strum 0.26.3",
  "thiserror 2.0.20",
+ "tokio",
  "uv",
  "uv-command-support",
  "windows-bindgen",
@@ -3165,6 +3187,7 @@ dependencies = [
  "russh-sftp",
  "serde",
  "serde_json",
+ "sha2 0.11.0",
  "thiserror 2.0.20",
  "tokio",
  "windows-sys 0.61.2",
@@ -3578,7 +3601,7 @@ dependencies = [
  "maybe-owned",
  "rustix 1.1.5",
  "rustix-linux-procfs",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
  "winx",
 ]
 
@@ -4686,7 +4709,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c54e03a951783e8b327515db3f2a2fd0e3bed362a96b066f341ce66ed49b4ead"
 dependencies = [
  "data-encoding",
- "syn 3.0.7",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -5078,7 +5101,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5569,7 +5592,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5641,6 +5664,12 @@ dependencies = [
  "smallvec",
  "zune-inflate",
 ]
+
+[[package]]
+name = "extended"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af9673d8203fcb076b19dfd17e38b3d4ae9f44959416ea532ce72415a6020365"
 
 [[package]]
 name = "eyre"
@@ -5786,6 +5815,254 @@ checksum = "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759"
 dependencies = [
  "cfg-if",
  "libc",
+]
+
+[[package]]
+name = "filmcraft-aac"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-bitstream",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-ac3"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-apv"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-bitstream",
+ "rayon",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-av1"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-bitstream",
+ "rayon",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-avi"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+
+[[package]]
+name = "filmcraft-bitstream"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+
+[[package]]
+name = "filmcraft-codecs"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-aac",
+ "filmcraft-ac3",
+ "filmcraft-apv",
+ "filmcraft-av1",
+ "filmcraft-avi",
+ "filmcraft-bitstream",
+ "filmcraft-color",
+ "filmcraft-dnx",
+ "filmcraft-frame",
+ "filmcraft-h264",
+ "filmcraft-hevc",
+ "filmcraft-isobmff",
+ "filmcraft-matroska",
+ "filmcraft-media",
+ "filmcraft-mpa",
+ "filmcraft-mpeg2v",
+ "filmcraft-mpegts",
+ "filmcraft-mxf",
+ "filmcraft-ogg",
+ "filmcraft-opus",
+ "filmcraft-prores",
+ "filmcraft-time",
+ "filmcraft-vp8",
+ "filmcraft-vp9",
+ "image",
+ "log",
+ "rayon",
+ "symphonia",
+ "thiserror 2.0.20",
+ "web-time",
+]
+
+[[package]]
+name = "filmcraft-color"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "filmcraft-dng"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "rayon",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-dnx"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-bitstream",
+ "rayon",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-frame"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-color",
+ "filmcraft-time",
+ "rayon",
+ "serde",
+]
+
+[[package]]
+name = "filmcraft-h264"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-bitstream",
+ "rayon",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-hevc"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-bitstream",
+ "rayon",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-isobmff"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-bitstream",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-matroska"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+
+[[package]]
+name = "filmcraft-media"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-color",
+ "filmcraft-dng",
+ "filmcraft-frame",
+ "filmcraft-time",
+ "image",
+ "rayon",
+ "serde",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-mpa"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-bitstream",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-mpeg2v"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "rayon",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-mpegts"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-mxf"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+
+[[package]]
+name = "filmcraft-ogg"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+
+[[package]]
+name = "filmcraft-opus"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+
+[[package]]
+name = "filmcraft-prores"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-bitstream",
+ "rayon",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-time"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "filmcraft-vp8"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "filmcraft-vp9"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=cee1feb185e675a108f78067f71ad86a640ace3d#cee1feb185e675a108f78067f71ad86a640ace3d"
+dependencies = [
+ "filmcraft-bitstream",
+ "rayon",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
@@ -7312,7 +7589,7 @@ dependencies = [
  "tracing",
  "tun 0.8.14",
  "typed-builder 0.21.2",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
  "wintun-bindings",
  "x25519-dalek",
  "zerocopy",
@@ -8252,7 +8529,7 @@ dependencies = [
  "image-webp",
  "moxcms",
  "num-traits",
- "png",
+ "png 0.18.1",
  "qoi",
  "ravif",
  "rayon",
@@ -8536,7 +8813,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -8832,7 +9109,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cde48f36530cbd91b65f050101e6c056d6eb743cea2a8f0f19beef69c6742ff8"
 dependencies = [
  "scopeguard",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -9393,7 +9670,7 @@ version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "536bfad37a309d62069485248eeaba1e8d9853aaf951caaeaed0585a95346f08"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -10072,7 +10349,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -11724,7 +12001,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba7c3f5af00d3596a148cc80178ac690152b71c283d15a8bcea0cddfea759a36"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -11837,6 +12114,19 @@ dependencies = [
  "pnet_base 0.35.0",
  "pnet_macros 0.35.0",
  "pnet_macros_support 0.35.0",
+]
+
+[[package]]
+name = "png"
+version = "0.17.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82151a2fc869e011c153adc57cf2789ccb8d9906ce52c0b39a6b5697749d7526"
+dependencies = [
+ "bitflags 1.3.2",
+ "crc32fast",
+ "fdeflate",
+ "flate2",
+ "miniz_oxide 0.8.9",
 ]
 
 [[package]]
@@ -12326,7 +12616,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -13374,7 +13664,7 @@ dependencies = [
  "errno 0.3.14",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -13443,7 +13733,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -13715,7 +14005,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b55fb86dfd3a2f5f76ea78310a88f96c4ea21a3031f8d212443d56123fd0521"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -14335,7 +14625,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -14692,6 +14982,164 @@ name = "symlink"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7973cce6668464ea31f176d85b13c7ab3bba2cb3b77a2ed26abd7801688010a"
+
+[[package]]
+name = "symphonia"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5773a4c030a19d9bfaa090f49746ff35c75dfddfa700df7a5939d5e076a57039"
+dependencies = [
+ "lazy_static",
+ "symphonia-bundle-flac",
+ "symphonia-bundle-mp3",
+ "symphonia-codec-aac",
+ "symphonia-codec-alac",
+ "symphonia-codec-pcm",
+ "symphonia-codec-vorbis",
+ "symphonia-core",
+ "symphonia-format-isomp4",
+ "symphonia-format-ogg",
+ "symphonia-format-riff",
+ "symphonia-metadata",
+]
+
+[[package]]
+name = "symphonia-bundle-flac"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c91565e180aea25d9b80a910c546802526ffd0072d0b8974e3ebe59b686c9976"
+dependencies = [
+ "log",
+ "symphonia-core",
+ "symphonia-metadata",
+ "symphonia-utils-xiph",
+]
+
+[[package]]
+name = "symphonia-bundle-mp3"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4872dd6bb56bf5eac799e3e957aa1981086c3e613b27e0ac23b176054f7c57ed"
+dependencies = [
+ "lazy_static",
+ "log",
+ "symphonia-core",
+ "symphonia-metadata",
+]
+
+[[package]]
+name = "symphonia-codec-aac"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c263845aa86881416849c1729a54c7f55164f8b96111dba59de46849e73a790"
+dependencies = [
+ "lazy_static",
+ "log",
+ "symphonia-core",
+]
+
+[[package]]
+name = "symphonia-codec-alac"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8413fa754942ac16a73634c9dfd1500ed5c61430956b33728567f667fdd393ab"
+dependencies = [
+ "log",
+ "symphonia-core",
+]
+
+[[package]]
+name = "symphonia-codec-pcm"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e89d716c01541ad3ebe7c91ce4c8d38a7cf266a3f7b2f090b108fb0cb031d95"
+dependencies = [
+ "log",
+ "symphonia-core",
+]
+
+[[package]]
+name = "symphonia-codec-vorbis"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f025837c309cd69ffef572750b4a2257b59552c5399a5e49707cc5b1b85d1c73"
+dependencies = [
+ "log",
+ "symphonia-core",
+ "symphonia-utils-xiph",
+]
+
+[[package]]
+name = "symphonia-core"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea00cc4f79b7f6bb7ff87eddc065a1066f3a43fe1875979056672c9ef948c2af"
+dependencies = [
+ "arrayvec",
+ "bitflags 1.3.2",
+ "bytemuck",
+ "lazy_static",
+ "log",
+]
+
+[[package]]
+name = "symphonia-format-isomp4"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "243739585d11f81daf8dac8d9f3d18cc7898f6c09a259675fc364b382c30e0a5"
+dependencies = [
+ "encoding_rs",
+ "log",
+ "symphonia-core",
+ "symphonia-metadata",
+ "symphonia-utils-xiph",
+]
+
+[[package]]
+name = "symphonia-format-ogg"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b4955c67c1ed3aa8ae8428d04ca8397fbef6a19b2b051e73b5da8b1435639cb"
+dependencies = [
+ "log",
+ "symphonia-core",
+ "symphonia-metadata",
+ "symphonia-utils-xiph",
+]
+
+[[package]]
+name = "symphonia-format-riff"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2d7c3df0e7d94efb68401d81906eae73c02b40d5ec1a141962c592d0f11a96f"
+dependencies = [
+ "extended",
+ "log",
+ "symphonia-core",
+ "symphonia-metadata",
+]
+
+[[package]]
+name = "symphonia-metadata"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36306ff42b9ffe6e5afc99d49e121e0bd62fe79b9db7b9681d48e29fa19e6b16"
+dependencies = [
+ "encoding_rs",
+ "lazy_static",
+ "log",
+ "symphonia-core",
+]
+
+[[package]]
+name = "symphonia-utils-xiph"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee27c85ab799a338446b68eec77abf42e1a6f1bb490656e121c6e27bfbab9f16"
+dependencies = [
+ "symphonia-core",
+ "symphonia-metadata",
+]
 
 [[package]]
 name = "syn"
@@ -15204,7 +15652,7 @@ dependencies = [
  "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.5",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -15257,7 +15705,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix 1.1.5",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -15396,7 +15844,7 @@ dependencies = [
  "bytemuck",
  "cfg-if",
  "log",
- "png",
+ "png 0.18.1",
  "tiny-skia-path",
 ]
 
@@ -16101,7 +16549,7 @@ checksum = "f2f6fb2847f6742cd76af783a2a2c49e9375d0a111c7bef6f71cd9e738c72d6e"
 dependencies = [
  "memoffset 0.9.1",
  "tempfile",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -16522,7 +16970,7 @@ dependencies = [
  "rustix 1.1.5",
  "thiserror 2.0.20",
  "uucore",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -16560,7 +17008,7 @@ dependencies = [
  "rustc-hash 2.1.3",
  "thiserror 2.0.20",
  "uucore",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -16785,7 +17233,7 @@ dependencies = [
  "fluent",
  "rustix 1.1.5",
  "uucore",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -17080,7 +17528,7 @@ dependencies = [
  "fluent",
  "rustix 1.1.5",
  "uucore",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -17109,7 +17557,7 @@ dependencies = [
  "notify",
  "rustix 1.1.5",
  "uucore",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -17166,7 +17614,7 @@ dependencies = [
  "rustix 1.1.5",
  "thiserror 2.0.20",
  "uucore",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -17177,7 +17625,7 @@ dependencies = [
  "fluent",
  "rustix 1.1.5",
  "uucore",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -17241,7 +17689,7 @@ dependencies = [
  "fluent",
  "rustix 1.1.5",
  "uucore",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -17293,7 +17741,7 @@ dependencies = [
  "uucore_procs",
  "walkdir",
  "wild",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
  "z85",
 ]
 
@@ -19950,7 +20398,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

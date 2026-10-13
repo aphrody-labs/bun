@@ -167,6 +167,9 @@ export interface Config {
   webAssembly: boolean;
   /** Include the native uutils owner in the single Bun executable. */
   coreutils: boolean;
+  videoNative: boolean;
+  curlNative: boolean;
+  browserCrawl: boolean;
   /** Bundle small .cpp files into unified TUs (WebKit-style). See unified.ts. */
   unifiedSources: boolean;
   /**
@@ -397,6 +400,9 @@ export interface PartialConfig {
   codeGenerationFromStrings?: boolean;
   webAssembly?: boolean;
   coreutils?: boolean;
+  videoNative?: boolean;
+  curlNative?: boolean;
+  browserCrawl?: boolean;
   unifiedSources?: boolean;
   archiveDeps?: boolean;
   timeTrace?: boolean;
@@ -1429,8 +1435,11 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     codeGenerationFromStrings: partial.codeGenerationFromStrings ?? true,
     webAssembly: partial.webAssembly ?? true,
     coreutils: partial.coreutils ?? true,
+    videoNative: partial.videoNative ?? true,
+    curlNative: partial.curlNative ?? false,
+    browserCrawl: partial.browserCrawl ?? false,
     unifiedSources: partial.unifiedSources ?? true,
-    archiveDeps: partial.archiveDeps ?? false,
+    archiveDeps: (partial.curlNative ?? false) || (partial.archiveDeps ?? false),
     timeTrace: partial.timeTrace ?? false,
     ci,
     buildkite,
@@ -1819,6 +1828,9 @@ export function formatConfig(cfg: Config, exe: string): string {
   if (!cfg.codeGenerationFromStrings) features.push("code-generation-from-strings:off");
   if (!cfg.webAssembly) features.push("webassembly:off");
   features.push(`coreutils:${cfg.coreutils ? "on" : "off"}`);
+  if (cfg.videoNative) features.push("video-native");
+  if (cfg.curlNative) features.push("curl-native");
+  if (cfg.browserCrawl) features.push("browser-crawl");
   if (!cfg.canary) features.push("canary:off");
   if (cfg.versionTag) features.push(`version-tag:${cfg.versionTag}`);
   // Non-default modes — show so you notice when a build is unusual.

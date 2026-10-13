@@ -90,6 +90,9 @@ interface Distribution {
   version: string;
   sourceRevision: string;
   sourceRepository?: string;
+  source?: { kind: string; repo: string; commit: string };
+  sourceIdentity?: string;
+  sourceRoot?: string;
   consumer?: "aphrody-bun";
   buildABI?: {
     os: string;
@@ -147,6 +150,12 @@ export async function mediaPublicationPlan(distributionFile: string, qualificati
     const gate = distribution.gate;
     if (
       distribution.consumer !== "aphrody-bun" ||
+      distribution.sourceRoot !== "source" ||
+      !/^[a-f0-9]{64}$/.test(distribution.sourceIdentity ?? "") ||
+      distribution.source?.kind !== "github-archive" ||
+      distribution.source.commit !== distribution.sourceRevision ||
+      !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(distribution.source.repo) ||
+      distribution.sourceRepository !== `https://github.com/${distribution.source.repo}` ||
       distribution.version !== distribution.sourceRevision ||
       !/^[a-f0-9]{40}$/.test(distribution.sourceRevision) ||
       !abi ||
@@ -274,6 +283,9 @@ export async function mediaPublicationPlan(distributionFile: string, qualificati
   if (
     generic &&
     (inside.consumer !== distribution.consumer ||
+      inside.sourceRoot !== distribution.sourceRoot ||
+      inside.sourceIdentity !== distribution.sourceIdentity ||
+      JSON.stringify(inside.source) !== JSON.stringify(distribution.source) ||
       JSON.stringify(inside.buildABI) !== JSON.stringify(distribution.buildABI) ||
       JSON.stringify(inside.gate) !== JSON.stringify(distribution.gate) ||
       JSON.stringify(inside.includes) !== JSON.stringify(distribution.includes) ||
@@ -325,6 +337,9 @@ export async function mediaPublicationPlan(distributionFile: string, qualificati
       ? {
           consumer: distribution.consumer,
           sourceRepository: distribution.sourceRepository,
+          source: distribution.source,
+          sourceIdentity: distribution.sourceIdentity,
+          sourceRoot: distribution.sourceRoot,
           buildABI: distribution.buildABI,
           includes: distribution.includes,
           libraries: distribution.libraries,

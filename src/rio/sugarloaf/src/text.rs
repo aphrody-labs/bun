@@ -31,6 +31,51 @@ pub struct TextInstance {
 // 36 bytes (4-aligned). f32 pos (vs grid's u16 grid_pos) adds 4 bytes.
 const _: () = assert!(std::mem::size_of::<TextInstance>() == 36);
 
+impl TextInstance {
+    fn clipped(mut self, bounds: [f32; 4]) -> Option<Self> {
+        let origin = [
+            self.pos[0] + self.bearings[0] as f32,
+            self.pos[1] + self.bearings[1] as f32,
+        ];
+        let left = (bounds[0] - origin[0]).max(0.0).ceil() as u32;
+        let top = (bounds[1] - origin[1]).max(0.0).ceil() as u32;
+        let right = (bounds[2] - origin[0])
+            .max(0.0)
+            .floor()
+            .min(self.glyph_size[0] as f32) as u32;
+        let bottom = (bounds[3] - origin[1])
+            .max(0.0)
+            .floor()
+            .min(self.glyph_size[1] as f32) as u32;
+        if right <= left || bottom <= top {
+            return None;
+        }
+        self.pos = [origin[0] + left as f32, origin[1] + top as f32];
+        self.bearings = [0, 0];
+        self.glyph_pos[0] += left;
+        self.glyph_pos[1] += top;
+        self.glyph_size = [right - left, bottom - top];
+        Some(self)
+    }
+}
+
+#[test]
+fn native_ui_glyph_clip_preserves_atlas_coordinates() {
+    let glyph = TextInstance {
+        pos: [10.0, 20.0],
+        bearings: [-2, 3],
+        glyph_pos: [100, 200],
+        glyph_size: [20, 30],
+        ..TextInstance::default()
+    };
+    let clipped = glyph.clipped([12.0, 25.0, 24.0, 40.0]).unwrap();
+    assert_eq!(clipped.pos, [12.0, 25.0]);
+    assert_eq!(clipped.bearings, [0, 0]);
+    assert_eq!(clipped.glyph_pos, [104, 202]);
+    assert_eq!(clipped.glyph_size, [12, 15]);
+    assert!(glyph.clipped([100.0, 100.0, 120.0, 120.0]).is_none());
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct DrawOpts {
     // unscaled font size. Text multiplies by its
@@ -255,8 +300,36 @@ impl Text {
         width_px / self.scale_factor
     }
 
-    /// Measure `text` under `opts` without recording a draw. Returns
-    /// logical-pixel width.
+    /// Clip emitted glyph atlas rectangles to a logical-pixel pane on every backend.
+    pub fn draw_clipped(
+        &mut self,
+        x: f32,
+        y: f32,
+        text: &str,
+        opts: &DrawOpts,
+        clip: [f32; 4],
+    ) -> f32 {
+        let start = self.instances.len();
+        let width = self.draw(x, y, text, opts);
+        let scale = self.scale_factor;
+        let bounds = [
+            clip[0] * scale,
+            clip[1] * scale,
+            (clip[0] + clip[2]) * scale,
+            (clip[1] + clip[3]) * scale,
+        ];
+        let mut write = start;
+        for read in start..self.instances.len() {
+            if let Some(glyph) = self.instances[read].clipped(bounds) {
+                self.instances[write] = glyph;
+                write += 1;
+            }
+        }
+        self.instances.truncate(write);
+        width
+    }
+
+    /// Measure `text` under `opts` without recording a draw. Returns logical-pixel width.
     pub fn measure(&mut self, text: &str, opts: &DrawOpts) -> f32 {
         if text.is_empty() {
             return 0.0;

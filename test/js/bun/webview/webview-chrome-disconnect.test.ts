@@ -16,7 +16,8 @@
 // would break any other test sharing it.
 
 import { expect, test } from "bun:test";
-import { bunEnv, bunExe, isWindows } from "harness";
+import { bunEnv, bunExe } from "harness";
+import { findExecutable } from "bun:chromium";
 
 const mockCDP = /* js */ `
   function startMockCDP() {
@@ -218,25 +219,10 @@ test.concurrent.each([
   expect(result).toEqual({ loadingBefore: true, navigate: `rejected: ${reason}`, loadingAfter: false });
 });
 
-// Same scenario against a real Chrome over the debugging pipe: closeAll()
-// SIGKILLs it while a page is committed but still loading. Spawning Chrome
-// is not implemented on Windows; elsewhere this needs a Chrome the runtime
-// finds on its own (BUN_CHROME_PATH or one of the $PATH names it probes),
-// otherwise todo.
-const chromeInstalled =
-  !isWindows &&
-  (!!process.env.BUN_CHROME_PATH ||
-    [
-      "google-chrome-stable",
-      "google-chrome",
-      "chromium-browser",
-      "chromium",
-      "brave-browser",
-      "microsoft-edge",
-      "chrome",
-    ].some(n => Bun.which(n)));
+// Repeat against the browser selected by the shared Chromium owner.
+const chromeExecutable = findExecutable();
 
-(chromeInstalled ? test.concurrent : test.todo)(
+(chromeExecutable ? test.concurrent : test.todo)(
   "closeAll() rejects a navigate() whose page committed but never finished loading",
   async () => {
     await using proc = Bun.spawn({
@@ -245,24 +231,39 @@ const chromeInstalled =
         "-e",
         `
         // --no-sandbox: Chrome refuses to start as root otherwise (containers).
-        const view = new Bun.WebView({ backend: { type: "chrome", url: false, argv: ["--no-sandbox"] }, width: 100, height: 100 });
+        const view = new Bun.WebView({ backend: { type: "chrome", path: ${JSON.stringify(chromeExecutable)}, url: false, argv: ["--no-sandbox"] }, width: 100, height: 100 });
         await view.navigate("data:text/html,<body></body>");
 
         // The document commits, but its <img> request is never answered, so
         // the load event never fires and navigate() stays pending.
+        const imageRequested = Promise.withResolvers();
+        const pendingResponses = new Set();
         const server = Bun.serve({
           port: 0,
           hostname: "127.0.0.1",
           fetch(req) {
-            if (new URL(req.url).pathname === "/hang") return new Promise(() => {});
+            if (new URL(req.url).pathname === "/hang") {
+              const response = new Promise(resolve => {
+                const complete = () => {
+                  pendingResponses.delete(complete);
+                  resolve(new Response(null, { status: 499 }));
+                };
+                pendingResponses.add(complete);
+                req.signal.addEventListener("abort", complete, { once: true });
+                if (req.signal.aborted) complete();
+              });
+              imageRequested.resolve();
+              return response;
+            }
             return new Response("<img src='/hang'>", { headers: { "content-type": "text/html" } });
           },
         });
-        const committed = Promise.withResolvers();
-        view.onNavigated = () => committed.resolve();
+        let navigated = false;
+        view.onNavigated = () => { navigated = true; };
         let navigate = "pending";
-        view.navigate(server.url.href).then(() => (navigate = "resolved"), e => (navigate = "rejected: " + e.message));
-        await committed.promise;
+        const navigationDone = view.navigate(server.url.href).then(() => (navigate = "resolved"), e => (navigate = "rejected: " + e.message));
+        await imageRequested.promise;
+        const committed = await view.evaluate("location.href") === server.url.href;
         const loadingBefore = view.loading;
 
         // Still waiting for Chrome's reply when it dies; rejects once the
@@ -274,9 +275,10 @@ const chromeInstalled =
         );
 
         Bun.WebView.closeAll();
-        await unansweredDone;
-        console.log(JSON.stringify({ loadingBefore, unanswered, navigate, loadingAfter: view.loading }));
-        server.stop(true);
+        await Promise.all([unansweredDone, navigationDone]);
+        for (const complete of pendingResponses) complete();
+        await server.stop(true);
+        console.log(JSON.stringify({ committed, navigated, loadingBefore, unanswered, navigate, loadingAfter: view.loading }));
         `,
       ],
       env: bunEnv,
@@ -288,7 +290,14 @@ const chromeInstalled =
     // Whichever the event loop sees first, the pipe closing or the process
     // exit, decides the wording; both must settle everything.
     const died = expect.stringMatching(/^rejected: Chrome (killed by signal \d+|process closed the pipe|exited)$/);
-    expect(JSON.parse(stdout)).toEqual({ loadingBefore: true, unanswered: died, navigate: died, loadingAfter: false });
+    expect(JSON.parse(stdout)).toEqual({
+      committed: true,
+      navigated: true,
+      loadingBefore: true,
+      unanswered: died,
+      navigate: died,
+      loadingAfter: false,
+    });
     expect(exitCode, stderr).toBe(0);
   },
 );

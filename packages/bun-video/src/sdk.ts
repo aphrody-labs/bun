@@ -19,6 +19,7 @@ export interface MediaSDKDescriptor {
   assets: MediaSDKAsset[];
   upstreamAssets?: MediaSDKAsset[];
   apiMajor?: number;
+  libraryName?: string;
 }
 
 export function mediaSDKPrefix(component: MediaSDKComponent, executable = process.execPath): string {
@@ -40,7 +41,10 @@ export function mediaSDKLibraryDirectory(component: MediaSDKComponent, directory
 export function mediaSDKPlan(component: MediaSDKComponent, target: MediaSDKTarget): MediaSDKDescriptor {
   if (!Object.hasOwn(manifest.targets, target) || !["ffmpeg", "mpv"].includes(component))
     throw new TypeError("Unsupported media SDK target or component");
-  return structuredClone(manifest.targets[target][component]);
+  const plan = structuredClone(manifest.targets[target][component]);
+  if ("libraryName" in plan && (typeof plan.libraryName !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(plan.libraryName)))
+    throw new TypeError("SDK library name must be a file basename");
+  return plan;
 }
 
 export function validateSDKAsset(asset: MediaSDKAsset): void {
@@ -216,7 +220,7 @@ export async function verifyMediaSDKLayout(component: MediaSDKComponent, target:
       throw new Error("mpv client SDK header ABI mismatch");
     files.push(header);
     files.push(
-      await confinedFile(prefix, join(prefix, target.startsWith("windows") ? "bin/mpv-2.dll" : "lib/libmpv.so.2")),
+      await confinedFile(prefix, join(prefix, target.startsWith("windows") ? "bin" : "lib", plan.libraryName ?? (target.startsWith("windows") ? "libmpv-2.dll" : "libmpv.so.2"))),
     );
     files.push(await confinedFile(prefix, join(prefix, target.startsWith("windows") ? "bin/mpv.exe" : "bin/mpv")));
     if (target.startsWith("windows")) {
@@ -256,7 +260,7 @@ export async function extractMediaSDKArchive(file: string, directory: string): P
   if (magic[0] !== 0x50 || magic[1] !== 0x4b || magic[2] !== 0x03 || magic[3] !== 0x04)
     throw new Error("SDK consumers require a normalized ZIP; upstream archives must be normalized by the factory");
   await mkdir(dirname(directory), { recursive: true });
-  const archive = new Bun.Archive(Bun.file(file));
+  const archive = new Bun.Archive(await Bun.file(file).bytes());
   const members = await archive.files();
   let expanded = 0;
   for (const [name, value] of members) {

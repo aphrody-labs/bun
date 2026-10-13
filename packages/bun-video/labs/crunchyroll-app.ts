@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
-import { isAbsolute, resolve } from "node:path";
+import { isAbsolute, resolve, win32 } from "node:path";
 
 export const CRUNCHYROLL_WATCH_URL = "https://www.crunchyroll.com/fr/watch/GE00389313JAJP/the-god-who-destroys";
 
@@ -23,7 +23,10 @@ export function selectActiveGoogleChromeRoot(processes: Array<Partial<ActiveChro
 }
 
 export function planChromeSiteApp(profile: ActiveChromeProfile) {
-  if (!isAbsolute(profile.executable) || !isAbsolute(profile.userDataDir))
+  if (
+    !(isAbsolute(profile.executable) || win32.isAbsolute(profile.executable)) ||
+    !(isAbsolute(profile.userDataDir) || win32.isAbsolute(profile.userDataDir))
+  )
     throw new Error("Chrome executable and user data directory must be absolute paths.");
   if (
     !profile.profileDirectory ||
@@ -116,7 +119,7 @@ export async function installChromeSiteAppShortcut(profile: ActiveChromeProfile)
   planChromeSiteApp(profile);
   const launcher = resolve(import.meta.dir, "crunchyroll-app.ts");
   if (/["\r\n]/.test(launcher)) throw new Error("Invalid launcher path.");
-  const installedBun = resolve(process.env.WINDIR ?? "C:/Windows", "System32/bun.exe");
+  const installedBun = process.execPath;
   if (!(await Bun.file(installedBun).exists()))
     throw new Error("Installed Aphrody Bun runtime is unavailable for the shortcut.");
   return await powershellJson(
@@ -126,7 +129,7 @@ $shortcutPath = Join-Path $shortcutDesktop 'Crunchyroll - Bun Chrome.lnk'
 $shortcutShell = New-Object -ComObject WScript.Shell
 $shortcutLink = $shortcutShell.CreateShortcut($shortcutPath)
 $shortcutLink.TargetPath = $env:BUN_SITE_APP_RUNTIME
-$shortcutLink.Arguments = '"' + $env:BUN_SITE_APP_SCRIPT + '" --open'
+$shortcutLink.Arguments = if ($env:BUN_SITE_APP_STANDALONE -eq '1') { '--open' } else { '"' + $env:BUN_SITE_APP_SCRIPT + '" --open' }
 $shortcutLink.WorkingDirectory = $env:BUN_SITE_APP_WORKDIR
 $shortcutLink.Description = 'Official Crunchyroll watch page in the existing Chrome profile, launched by Bun'
 $shortcutLink.IconLocation = $env:BUN_SITE_APP_CHROME + ',0'
@@ -136,17 +139,22 @@ $shortcutLink.Save()
     {
       BUN_SITE_APP_RUNTIME: installedBun,
       BUN_SITE_APP_SCRIPT: launcher,
-      BUN_SITE_APP_WORKDIR: resolve(import.meta.dir, ".."),
+      BUN_SITE_APP_WORKDIR: Bun.isStandaloneExecutable ? win32.dirname(installedBun) : resolve(import.meta.dir, ".."),
       BUN_SITE_APP_CHROME: profile.executable,
+      BUN_SITE_APP_STANDALONE: Bun.isStandaloneExecutable ? "1" : "0",
     },
   );
 }
 
 export async function crunchyrollAppMain(args = Bun.argv.slice(2)) {
+  if (args.some(argument => !["--help", "--check", "--install", "--open"].includes(argument)))
+    throw new Error("Unknown Crunchyroll application option");
   if (args.includes("--help")) {
     console.log(
-      "bun run ./labs/crunchyroll-app.ts [--check] [--install] [--open]\nOpens the official watch page as a Chrome site app using the running browser profile. --install creates a desktop shortcut. Site PWA installation and offline playback are not implied.",
+      "Crunchyroll [--check] [--install] [--open]\nOpens the official watch page with the default Chrome profile. --check and --install inspect the active Chrome profile; --install creates a desktop shortcut. Playback requires an Internet connection.",
     );
+  } else if (!args.includes("--check") && !args.includes("--install")) {
+    await Bun.WebView.openApplication({ url: CRUNCHYROLL_WATCH_URL, browser: "chrome" });
   } else {
     const profile = await detectActiveChromeProfile();
     const plan = planChromeSiteApp(profile);
@@ -161,7 +169,14 @@ export async function crunchyrollAppMain(args = Bun.argv.slice(2)) {
     );
     if (!args.includes("--check")) {
       if (args.includes("--install")) console.log(JSON.stringify(await installChromeSiteAppShortcut(profile)));
-      if (args.includes("--open")) Bun.spawn(plan.command, { stdout: "ignore", stderr: "ignore" }).unref();
+      if (args.includes("--open"))
+        await Bun.WebView.openApplication({
+          url: CRUNCHYROLL_WATCH_URL,
+          browser: "chrome",
+          executable: profile.executable,
+          userDataDir: profile.userDataDir,
+          profileDirectory: profile.profileDirectory,
+        });
     }
   }
 }

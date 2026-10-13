@@ -21,6 +21,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./services": "./src/services.ts",
+    "./edge-proxy": "./src/edge-proxy.ts",
     "./cli": "./src/cli.ts",
     "./search": "./src/search.ts",
     "./public-index": "./src/public-index.ts",
@@ -33,7 +34,7 @@
     "models": "bun src/cli.ts models",
     "generate": "bun src/cli.ts generate",
     "stream": "bun src/cli.ts stream",
-    "test": "cd ../.. && bun bd test ./packages/bun-google/test/services.test.ts"
+    "test": "cd ../.. && bun bd test ./packages/bun-google/test"
   },
   "engines": {
     "bun": ">=1.4.4"

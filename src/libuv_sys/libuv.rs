@@ -1632,6 +1632,20 @@ impl Process {
         rc
     }
     #[inline]
+    pub fn spawn_with_job(
+        &mut self,
+        loop_: *mut Loop,
+        options: *const uv_process_options_t,
+        job: HANDLE,
+    ) -> ReturnCode {
+        // SAFETY: caller retains the job handle and spawn options throughout this synchronous call.
+        let rc = unsafe { uv_spawn_with_job(loop_, self, options, job) };
+        if rc.0 == 0 {
+            open_handles::add_process(self);
+        }
+        rc
+    }
+    #[inline]
     pub fn kill(&mut self, signum: c_int) -> ReturnCode {
         // SAFETY: process was spawned.
         unsafe { uv_process_kill(self, signum) }
@@ -2770,6 +2784,12 @@ unsafe extern "C" {
         loop_: *mut Loop,
         handle: *mut Process,
         options: *const uv_process_options_t,
+    ) -> ReturnCode;
+    pub fn uv_spawn_with_job(
+        loop_: *mut Loop,
+        handle: *mut Process,
+        options: *const uv_process_options_t,
+        job: HANDLE,
     ) -> ReturnCode;
     pub fn uv_process_kill(handle: *mut Process, signum: c_int) -> ReturnCode;
 

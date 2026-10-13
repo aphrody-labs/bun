@@ -28,7 +28,7 @@ export function createPeakAccumulator(
   return {
     bins: [],
     frame: 0,
-    carry: new Uint8Array(0),
+    carry: Buffer.alloc(0),
     framesPerBin: Math.max(1, Math.round(sampleRate * binSeconds)),
     channels: Math.max(1, channels),
   };

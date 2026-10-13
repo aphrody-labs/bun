@@ -160,6 +160,16 @@ impl Session {
         self.forwarded.take()
     }
 
+    /// Negotiates bounded delta transfer with an explicitly selected remote Bun executable.
+    pub async fn upload_delta(&self, command: &str, source: &std::path::Path) -> Result<crate::delta::TransferSummary> {
+        let channel = self.handle.channel_open_session().await?;
+        channel.exec(true, command).await?;
+        let mut stream = channel.into_stream();
+        let (mut reader, mut writer) = tokio::io::split(&mut stream);
+        tokio::time::timeout(Duration::from_secs(300), crate::delta::send(&mut reader, &mut writer, source))
+            .await.map_err(|_| crate::Error::Timeout(300))?
+    }
+
     /// Runs `command` and collects its output (aphrody's `InProcessSshSession::exec`).
     pub async fn exec_collect(&self, command: &str, stdin: Option<&[u8]>) -> Result<(i32, Vec<u8>, Vec<u8>)> {
         let mut channel = self.handle.channel_open_session().await?;

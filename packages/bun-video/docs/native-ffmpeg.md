@@ -1,5 +1,60 @@
 # Native FFmpeg foundation
 
+## Selected-frame provider and Bun.Image pipeline
+
+The runtime exposes `Bun.Video` with the same lazy source and worker pipeline
+as `Bun.Image`. The optional `bun_runtime/video_native` feature enables its
+existing libav provider; GPU and mpv features remain disabled for this path.
+`Bun.Video.available` reports whether that provider was compiled into the runtime.
+Build with `bun bd --video-native=on` to opt in; standard builds leave it off.
+
+```ts
+if (!Bun.Video.available) throw new Error("This runtime has no native video provider");
+const video = new Bun.Video(Bun.file("/media/input.mp4"));
+const metadata = await video.metadata();
+const frame = await video.frame(12).resize(320, 180).png().bytes();
+await Bun.write("/media/frame.png", frame);
+```
+
+Frame timestamps are seconds. Sources are captured lazily, while mutable byte
+inputs are snapshotted when an asynchronous operation starts. Resize and PNG,
+JPEG or WebP encoding reuse Bun.Image rather than a second image implementation.
+Native provider compilation and playback are separate qualification steps.
+
+The native owner in `native/src/libav.rs` exposes `VideoInput::Path` and
+`VideoInput::Bytes(Arc<[u8]>)`, `probe_video`, and `decode_video_frame`. Their
+cancel-aware variants share an atomic cancellation token with the caller.
+The caller runs these operations off the JavaScript thread; the provider does
+not turn synchronous FFmpeg calls into promises.
+
+The provider depends only on registry `ffmpeg-sys-next =9.0.1`; it does not link
+the high-level Rust wrapper or either vendored Rust fork. Memory sources reuse
+the first-party `MemoryInput` AVIO owner. One immutable `Arc<[u8]>` stays alive
+without another full source copy. Teardown closes the demuxer, frees the AVIO
+buffer/context, then releases that source. Codec names come from
+`avcodec_get_name`, avoiding a second exhaustive codec-ID enum.
+Selected-frame decoding seeks against the best stream's timestamp base and
+flushes decoder/demux state. The decoder uses one thread and enforces dimension,
+100000-packet and 100000-frame limits. Memory input is capped at 512 MiB,
+`maxPixels` at 268435456, and one RGBA/PNG frame at 256 MiB.
+Probing uses at most 128 streams, an 8 MiB probe window and five seconds of
+analysis. A shared thirty-second deadline and atomic cancellation are checked
+in AVIO callbacks and between codec operations. They do not preempt a codec
+call or an arbitrary caller-supplied blocking Rust reader/writer.
+
+The result is one PNG frame with dimensions and its optional presentation
+timestamp. PNG encoding reuses `encode_rgba_png`. Bun.Image remains the owner
+of subsequent resize and image-format operations. Metadata reports dimensions,
+codec and optional duration. This contract does not claim whole-video
+transcoding, shared GPU textures, DRM decoding or a default heavyweight FFmpeg
+link in Bun.
+
+Provider tests use a synthetic PNG stream and cover exact decoded pixels,
+dimension limits, invalid timestamps and cancellation. Runtime integration and
+host qualification remain separate gates. Source vendors and license notices
+remain until a qualified single-owner replacement is published and dependent
+paths are verified.
+
 Official reference: https://www.ffmpeg.org/documentation.html and the Doxygen
 API at https://www.ffmpeg.org/doxygen/trunk/index.html. The checked-in headers
 in `vendor/ffmpeg` define the exact ABI used here; online trunk can advance.
@@ -42,6 +97,7 @@ through an owned `AVDictionary`. For example, network protocols supporting
 `rw_timeout` accept its value in microseconds. Protocol-specific support still
 depends on FFmpeg; this is not an asynchronous JavaScript cancellation hook.
 The dictionary and failed input contexts are released on every error path.
+Unconsumed options are rejected instead of silently ignored.
 
 `FFmpeg.openDecoder(name, codecParameters?)` owns an opened native decoder.
 The optional parameters pointer must reference valid `AVCodecParameters` from
@@ -52,6 +108,14 @@ the decoder, receive frames until `eof`, and call `flush()` before restarting
 after a seek. `receiveFrame(frame)` reports the same states and clears the
 previous frame reference. Disposal releases the codec before unloading its DLL.
 Codec configuration and packet/frame native pointers remain directly accessible.
+
+`openEncoder(name, options?, codecParameters?)` uses the same owned codec
+context and option dictionary as the decoder. `sendFrame(frame)` and
+`receivePacket(packet)` return `ok`, `again`, or `eof`; send `null` to drain.
+Use native context options such as `video_size`, `pixel_format` and `time_base`
+to configure video encoders. Frames received by the native decoder can be
+submitted directly when their dimensions and pixel format match the encoder.
+No PNG serialization or FFmpeg subprocess is required between these codec calls.
 
 `openVideoPipeline` opens the normalized media source with the owned FFmpeg
 demuxer and exposes it as `pipeline.input`. Closing the pipeline stops its mpv
@@ -126,6 +190,12 @@ and GNU Make; it does not use WSL. Outputs and headers install in `build/media`.
 FFmpeg includes its built-in codecs and Windows D3D11/D3D12 acceleration;
 optional external codecs require their own dependencies.
 
+Windows media builds first compile the existing Bun `vendor/zlib` source in
+shared zlib-compatible mode. Its `zlib1.dll` accompanies the FFmpeg libraries,
+enabling PNG and the other codecs requiring zlib. `BUN_MEDIA_JOBS` limits the
+native build's parallelism (1..16, default at most 4). Compression support is
+required explicitly, so configuration fails if this dependency cannot link.
+
 Qualification on the owner Windows host: the built DLLs opened a generated
 FFV1 Matroska fixture and yielded its three packets through Bun FFI. Native
 error -22 was decoded through av_strerror. The native Rust libav decoder also
@@ -133,3 +203,43 @@ produced three RGBA frames (49,152 bytes) identical to FFmpeg CLI output,
 SHA-256 f855642a83b0f29aea59326cbdc0729b340500df1236e0da45ac47be01c94bcf.
 Encode, GPU texture sharing and Remotion/HyperFrames integration remain
 unqualified.
+
+## Registry bindings replacement
+
+Registry archives checked on 2026-10-13 provide `ffmpeg-next =9.0.0` and
+`ffmpeg-sys-next =9.0.1`. Their checksums and source commits are recorded in
+the existing `vendor/ffmpeg-rs/UPSTREAM.json` and
+`vendor/ffmpeg-sys-rs/UPSTREAM.json`. The published wrapper already includes
+`StreamIo`, `from_read_seek` and `input_from_stream_with_interrupt`; moving
+those methods into a second implementation is unnecessary.
+
+The current wrapper source also contains six local compatibility changes for
+FFmpeg codec, pixel/sample format and side-data enums. The published 9.0.0
+wrapper does not include those additions. Its conversions use exhaustive
+matches; enabling `non-exhaustive-enums` introduces `unimplemented!()` for
+unknown values and does not provide a safe replacement. Registry migration
+must compile and exercise the chosen SDK's actual headers and libraries.
+The sys fork's remaining header change gates CUDA hardware-context bindings
+on an actual CUDA header; the registry header uses opaque CUDA stand-ins.
+
+Before qualifying the registry-backed provider, the VPS gate must verify metadata,
+selected-frame PNG decoding, cancellation and malformed input against the SDK,
+plus the existing memory-input and libav tests. Preserve the current source
+until that replacement passes. No registry replacement or vendor deletion is
+qualified by this source audit.
+
+The first-party provider now owns the required state transitions directly on
+registry sys bindings. It does not need another renamed crate publication or
+a high-level enum fallback. The registry crate retains its WTFPL license;
+first-party source retains the native package's MIT license.
+Cargo features are independent and disabled by default: `libav`, `mpv`, `gpu`.
+The mpv byte-stream bridge uses Rust allocations and can compile without libav;
+its existing memory-input adapter is present when both features are enabled.
+
+The `libav` build requires an explicit absolute `FFMPEG_DIR` with the SDK
+owner's `bun-sdk-receipt.json` and real version headers. The SDK owner validates
+that receipt and its file hashes before invoking Cargo; the native build checks
+prefix/receipt presence and derives its expected ABI majors from those headers.
+Runtime library majors are checked before reading FFmpeg struct fields.
+Provider-off builds do not inspect SDK paths. An SDK layout receipt alone does
+not qualify the runtime ABI, decoder or Windows DLL loading.

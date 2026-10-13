@@ -46,6 +46,7 @@ image_rs = { workspace = true }
 libc = { workspace = true }
 parking_lot = { workspace = true }
 serde = { workspace = true }
+serde_json = { version = "1.0.145", optional = true }
 taffy = { version = "0.10.1", features = ["flexbox","grid"] }
 teletypewriter = { workspace = true }
 rio-unicode = { workspace = true }
@@ -102,7 +103,8 @@ workspace = true
 features = ["wgpu"]
 
 [features]
-default = ["wayland", "x11", "audio", "wgpu"]
+default = ["wayland", "x11", "audio", "wgpu", "native-ui"]
+native-ui = ["rio-backend/native-ui", "dep:serde_json"]
 audio = ["cpal"]
 x11 = [
     "rio-backend/x11",

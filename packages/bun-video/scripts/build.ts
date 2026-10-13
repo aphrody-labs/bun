@@ -26,7 +26,7 @@ const hyperframes = await hyperframesStandaloneConfig({
 const result = await Bun.build({
   ...hyperframes,
   entrypoints: [
-    join(root, library ? "umbrella-src/index.ts" : "umbrella-src/cli.ts"),
+    join(root, library ? "src/index.ts" : "umbrella-src/cli.ts"),
     join(root, "src/frame-worker.ts"),
     join(root, "src/video-worker-entry.ts"),
   ],
@@ -45,9 +45,9 @@ const result = await Bun.build({
         outdir: outfile,
         naming: "[name].ts",
         format: "esm" as const,
-        external: ["bun-video:media-runtime"],
+        external: ["bun-video:media-runtime", "@aphrody/bun-cloudflare/api"],
       }
-    : { compile: { outfile, executablePath: process.execPath } }),
+    : { external: ["@aphrody/bun-cloudflare/api"], compile: { outfile, executablePath: process.execPath } }),
 });
 if (!result.success) throw new AggregateError(result.logs, "Unified bun-video compilation failed");
 const artifact = await stat(library ? join(outfile, "index.ts") : outfile);

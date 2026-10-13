@@ -8,7 +8,7 @@ export interface BrowserPasswordProvider {
   ): Promise<void>;
 }
 
-export function parseCrunchyrollWatchUrl(value: string | URL) {
+function parseCrunchyrollContentUrl(value: string | URL, kind: "watch" | "series") {
   const url = new URL(value);
   if (
     url.protocol !== "https:" ||
@@ -17,10 +17,20 @@ export function parseCrunchyrollWatchUrl(value: string | URL) {
     url.username ||
     url.password
   )
-    throw new CrunchyrollError("Invalid official Crunchyroll watch URL");
-  const match = url.pathname.match(/^\/(?:([a-z]{2}(?:-[A-Za-z]{2})?)\/)?watch\/([A-Z0-9]{9,32})(?:\/([^/]+))?\/?$/);
-  if (!match) throw new CrunchyrollError("Invalid Crunchyroll watch path");
+    throw new CrunchyrollError(`Invalid official Crunchyroll ${kind} URL`);
+  const match = url.pathname.match(
+    new RegExp(`^/(?:([a-z]{2}(?:-[A-Za-z]{2})?)/)?${kind}/([A-Z0-9]{9,32})(?:/([^/]+))?/?$`),
+  );
+  if (!match) throw new CrunchyrollError(`Invalid Crunchyroll ${kind} path`);
   return { url: url.href, locale: match[1] ?? null, contentId: match[2]!, slug: match[3] ?? null };
+}
+
+export function parseCrunchyrollWatchUrl(value: string | URL) {
+  return parseCrunchyrollContentUrl(value, "watch");
+}
+
+export function parseCrunchyrollSeriesUrl(value: string | URL) {
+  return parseCrunchyrollContentUrl(value, "series");
 }
 
 export interface CrunchyrollOptions {

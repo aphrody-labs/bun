@@ -1,9 +1,9 @@
 fn main() {
-    #[cfg(windows)]
-    win::main();
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
+        win::main();
+    }
 }
 
-#[cfg(windows)]
 mod win {
     use std::{env, path::PathBuf};
 
@@ -46,11 +46,17 @@ mod win {
 
     pub fn declare_library(env_var: &str, default_dir: &str, lib_name: &str) {
         println!("cargo::rerun-if-env-changed={env_var}");
+        println!("cargo::rerun-if-env-changed=BUN_WINFW_STATIC");
         let lib_dir = env::var_os(env_var)
             .map(PathBuf::from)
             .unwrap_or_else(|| default_windows_build_artifact_dir(default_dir));
         println!("cargo::rustc-link-search={}", lib_dir.display());
-        println!("cargo::rustc-link-lib=dylib={lib_name}");
+        let kind = if env::var_os("BUN_WINFW_STATIC").is_some() {
+            "static:-bundle"
+        } else {
+            "dylib"
+        };
+        println!("cargo::rustc-link-lib={kind}={lib_name}");
     }
 
     pub fn manifest_dir() -> PathBuf {

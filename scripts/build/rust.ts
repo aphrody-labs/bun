@@ -42,7 +42,7 @@ import type { Ninja } from "./ninja.ts";
 import { envify } from "./rust/cargo-env.ts";
 import { emitRustPlan, emitRustUnits, registerRustUnitRules } from "./rust/emit.ts";
 import { emitRustNativeLink } from "./rust/native-link.ts";
-import { type PlanInput, planEnv, planPath, readPlan } from "./rust/plan.ts";
+import { type PlanInput, manifestInputPaths, planEnv, planPath, readPlan } from "./rust/plan.ts";
 import { buildRustGraph, linkedRlibs } from "./rust/units.ts";
 import { quote } from "./shell.ts";
 
@@ -291,7 +291,13 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
     profile,
     "--locked",
   ];
-  if (cfg.coreutils) args.push("--features", "coreutils");
+  const features = [
+    cfg.coreutils && "coreutils",
+    cfg.videoNative && "video_native",
+    cfg.curlNative && "curl_native",
+    cfg.browserCrawl && "browser_crawl",
+  ].filter(Boolean);
+  if (features.length) args.push("--features", features.join(","));
   // std is compiled from source (cargoBuildStdArg) in every build: the link is bun's own and takes each crate's rlib
   // as the output of an edge (rust/units.ts linkedRlibs), so std's crates have to be units of the graph like the
   // rest; the toolchain's prebuilt std is not. It also gives:
@@ -788,10 +794,12 @@ export function emitRust(
       args: what.args,
       env: planEnv(what.env),
     };
+    const plan = readPlan(dir, input);
+    const dependencyManifests = plan ? manifestInputPaths(Object.values(plan.packages)) : [];
     return {
       dir,
-      file: emitRustPlan(n, cfg, dir, { input, inputs: planEdgeInputs }),
-      plan: readPlan(dir, input),
+      file: emitRustPlan(n, cfg, dir, { input, inputs: [...new Set([...planEdgeInputs, ...dependencyManifests])] }),
+      plan,
     };
   };
   const runtime = planned(rustTargetDir(cfg), { args, env, rustflags });
@@ -846,6 +854,7 @@ export function emitRust(
   }
 
   const graph = buildRustGraph(runtime.plan, runtime.dir);
+  if (cfg.windows) packageInputs["talpid-core"] = [resolve(cfg.buildDir, "deps/winfw/winfw.lib")];
   assert(
     graph.root.kind === "lib",
     `rust plan root ${graph.root.crateName} is a ${graph.root.kind}, expected a library`,

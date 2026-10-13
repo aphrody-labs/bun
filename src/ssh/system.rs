@@ -8,6 +8,30 @@
 
 use std::path::{Path, PathBuf};
 
+/// Installed tool binaries are checked against the single shipped asset manifest before execution.
+pub fn verify_installed_tool(path: &Path, bytes: u64, expected_sha256: &str) -> crate::Result<()> {
+    use std::io::Read;
+    use sha2::{Digest, Sha256};
+    let metadata = std::fs::symlink_metadata(path)?;
+    if !metadata.is_file() || metadata.file_type().is_symlink() || metadata.len() != bytes || bytes > 256 * 1024 * 1024 {
+        return Err(crate::other("Installed tool has an invalid file type or pinned size"));
+    }
+    let mut file = std::fs::File::open(path)?;
+    let mut hash = Sha256::new();
+    let mut chunk = [0; 64 * 1024];
+    let mut total = 0_u64;
+    loop {
+        let read = file.read(&mut chunk)?;
+        if read == 0 { break; }
+        total += read as u64;
+        if total > bytes { return Err(crate::other("Installed tool exceeded its pinned size")); }
+        hash.update(&chunk[..read]);
+    }
+    let actual = hash.finalize().iter().map(|byte| format!("{byte:02x}")).collect::<String>();
+    if total != bytes || actual != expected_sha256 { return Err(crate::other("Installed tool SHA-256 mismatch")); }
+    Ok(())
+}
+
 const EXE: &str = std::env::consts::EXE_SUFFIX;
 
 /// Finds `tool` (without extension). Returns `None` when the tool is not installed.
@@ -122,5 +146,22 @@ mod tests {
         // SAFETY: the variable is unique to this test and read on this thread only.
         unsafe { std::env::set_var("BUN_SSH_BUN_TEST_TOOL", "none") };
         assert!(find("bun-test-tool").is_none());
+    }
+
+    #[test]
+    fn installed_tool_size_and_sha_are_checked_without_mutating_the_file() {
+        use std::io::Write;
+        struct Owned(std::path::PathBuf);
+        impl Drop for Owned { fn drop(&mut self) { let _ = std::fs::remove_file(&self.0); } }
+        let path = std::env::temp_dir().join(format!("bun-tool-pin-fixture-{}-{:016x}", std::process::id(), rand::random::<u64>()));
+        let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&path).unwrap();
+        let owned = Owned(path);
+        file.write_all(b"abc").unwrap(); drop(file);
+        let pin = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+        verify_installed_tool(&owned.0, 3, pin).unwrap();
+        assert!(verify_installed_tool(&owned.0, 4, pin).is_err());
+        std::fs::write(&owned.0, b"abd").unwrap();
+        assert!(verify_installed_tool(&owned.0, 3, pin).is_err());
+        assert_eq!(std::fs::read(&owned.0).unwrap(), b"abd");
     }
 }

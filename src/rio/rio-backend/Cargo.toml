@@ -42,6 +42,7 @@ renderer = ["dep:sugarloaf", "rio-vt/renderer"]
 # Image (sixel/kitty/iTerm2) and glyph protocol decoding. On for the desktop
 # frontend; off for lean headless embeds (librio).
 graphics = ["rio-vt/graphics"]
+native-ui = ["rio-vt/native-ui"]
 # Rio's window layer (rio-window, a winit fork). Pulls in the window types
 # and bridges the core's WindowId to rio-window at the frontend boundary.
 rio-window = ["dep:rio-window", "rio-vt/rio-window"]

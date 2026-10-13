@@ -1,6 +1,8 @@
 //! Manage WireGuard tunnels.
 
 #![deny(missing_docs)]
+// zerocopy derives generate Unicode identifiers for the packed kernel timespec.
+#![allow(non_ascii_idents)]
 
 use crate::obfuscation::Obfuscator;
 #[cfg(target_os = "linux")]

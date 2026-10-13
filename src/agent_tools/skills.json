@@ -5,9 +5,13 @@
       "name": "cpp-bun",
       "description": "C++ in the Bun fork: JavaScriptCore bindings in src/jsc/bindings, JS classes and .classes.ts codegen, exception scopes (BUN_JSC_validateExceptionChecks), GC and iso subspaces, Rust and C++ interop. Use when editing the runtime's .cpp/.h files or their Rust counterparts.",
       "sections": [
-        { "kind": "markdown", "file": "CLAUDE.md", "heading": "Build Commands" },
-        { "kind": "markdown", "file": "CLAUDE.md", "heading": "JavaScript Class Implementation (C++)" },
-        { "kind": "markdown", "file": "CLAUDE.md", "heading": "Code Generation" },
+        { "kind": "markdown", "file": "scripts/build/CLAUDE.md", "heading": "Common tasks" },
+        {
+          "kind": "markdown",
+          "file": ".claude/skills/implementing-jsc-classes-cpp/SKILL.md",
+          "heading": "Class Structure"
+        },
+        { "kind": "markdown", "file": "scripts/build/CLAUDE.md", "heading": "Phase 2 — emitBun (`bun.ts::emitBun`)" },
         { "kind": "markdown", "file": "src/CLAUDE.md", "heading": "JSC Interop & FFI Safety" },
         { "kind": "files", "glob": "src/**/*.classes.ts", "title": "Class definitions (`*.classes.ts`)", "limit": 0 },
         {

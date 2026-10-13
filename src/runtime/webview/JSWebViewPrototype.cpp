@@ -6,6 +6,7 @@
 #include "JSWebView.h"
 #include "ZigGlobalObject.h"
 #include "ErrorCode.h"
+#include "WebCoreJSBuiltins.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/ObjectConstructor.h>
 #include <JavaScriptCore/VMTrapsInlines.h>
@@ -100,6 +101,9 @@ private:
         Base::finishCreation(vm);
         Bun::reifyStaticPropertyTable(vm, JSWebView::info(), JSWebViewPrototypeTableValues, *this);
         Bun::putToStringTagWithoutTransition(vm, this, info());
+        putDirect(vm, Identifier::fromString(vm, "importProfile"_s),
+            JSFunction::create(vm, globalObject, WebCore::webViewImportProfileCodeGenerator(vm), globalObject),
+            PropertyAttribute::Function | PropertyAttribute::DontEnum);
 
         // close() is synchronous: writes the Close frame, rejects any pending
         // promises, erases from the routing table. `using` calls dispose;

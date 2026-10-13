@@ -9205,6 +9205,8 @@ declare module "bun" {
       };
 
   interface FetchSessionInit {
+    /** Record a bounded HAR 1.2 log through response headers. Bodies and query values are omitted; non-public headers are redacted. */
+    har?: boolean | undefined;
     /**
      * TLS options for the connections of this session. A request that passes
      * its own `tls` uses that instead, as a whole.
@@ -9278,6 +9280,10 @@ declare module "bun" {
    * ```
    */
   class FetchSession {
+    /** Serialize this session's captured HAR 1.2 log. Recording requires `har: true`; at most 256 entries and 8 MiB are retained. */
+    exportHAR(): string;
+    /** Discard recorded exchanges and reset the dropped-entry count. */
+    clearHAR(): void;
     constructor(init?: FetchSessionInit);
     /**
      * `fetch()` with this session. The function is bound: hand it to anything
@@ -9535,6 +9541,21 @@ declare module "bun" {
   }
 
   namespace Image {
+    interface ExtractOptions {
+      left: number;
+      top: number;
+      width: number;
+      height: number;
+    }
+    interface RGBA {
+      width: number;
+      height: number;
+      channels: 4;
+      /** Row-major RGBA8 after the geometry/modulation pipeline, with unassociated alpha. */
+      data: Uint8Array;
+      /** Source ICC profile when pixels retain that colour space; null when absent or colour managed. */
+      iccProfile: Uint8Array | null;
+    }
     /**
      * Stable `error.code` values set on rejections from `Bun.Image` terminals.
      * Branch on these instead of parsing the message.
@@ -9549,6 +9570,7 @@ declare module "bun" {
      *   bytes, a missing end marker, truncated scan data) does not reject.
      *   Blocks with no data come back flat grey.
      * - `ERR_IMAGE_UNKNOWN_FORMAT` — input bytes didn't match any sniffer.
+     * - `ERR_IMAGE_INVALID_TRANSFORM` — extract rectangle exceeds decoded image bounds.
      * - `ERR_INVALID_STATE` — the input ArrayBuffer was transferred between
      *   construction and the terminal call.
      * - File-backed inputs surface the underlying syscall code (`ENOENT`,
@@ -9560,6 +9582,7 @@ declare module "bun" {
       | "ERR_IMAGE_DECODE_FAILED"
       | "ERR_IMAGE_ENCODE_FAILED"
       | "ERR_IMAGE_UNKNOWN_FORMAT"
+      | "ERR_IMAGE_INVALID_TRANSFORM"
       | "ERR_INVALID_STATE";
 
     /**
@@ -9623,6 +9646,144 @@ declare module "bun" {
     }
   }
 
+  /** Optional native libcurl transfers; disabled providers reject with ERR_CURL_PROVIDER_UNAVAILABLE. */
+  /** Optional native archive indexing and persistent crawl scheduler. */
+  export class Crawl {
+    private constructor();
+    static readonly available: boolean;
+    /** Runs off the JS thread. Checkpoints survive cancellation; store must be absolute. */
+    static run(options: CrawlOptions): Promise<CrawlReport>;
+  }
+
+  export interface CrawlOptions {
+    action: "archive-cdx" | "archive-media" | "sitemaps" | "run";
+    store: string;
+    seed?: string;
+    seeds?: readonly string[];
+    query?: string;
+    mediaType?: "image" | "movies";
+    scope?: "exact" | "prefix" | "host" | "domain";
+    endpoint?: string;
+    pageSize?: number;
+    maxPages?: number;
+    maxRequests?: number;
+    maxSitemaps?: number;
+    concurrency?: number;
+    timeout?: number;
+    allowPrivate?: boolean;
+    signal?: AbortSignal;
+  }
+
+  export interface CrawlReport {
+    owner: "bun_browser_crawl";
+    action: CrawlOptions["action"];
+    pages: number;
+    inserted?: number;
+    complete?: boolean;
+    attempts?: number;
+    pageDetailsDropped?: number;
+    errorCount?: number;
+    errorsDropped?: number;
+    errors?: [url: string, message: string][];
+    sitemapsFetched?: number;
+    sitemapEntriesProcessed?: number;
+    sitemapsPending?: number;
+    sitemapHostsPending?: number;
+    sitemapBudgetExhausted?: boolean;
+    frontier?: { pending: number; done: number };
+  }
+
+  export class Curl {
+    static readonly available: boolean;
+    static capabilities(): { available: boolean; version?: string | null; tls?: string | null; protocols: string[]; features?: number };
+    /** Runs the complete embedded curl tool in a child of this Bun binary, before its VM starts. */
+    static run(argv: string[], options?: {
+      maxOutputBytes?: number;
+      timeout?: number;
+      signal?: AbortSignal;
+      cwd?: string;
+      env?: Record<string, string | undefined>;
+      stdin?: Blob | ArrayBufferView | ArrayBuffer;
+    }): Promise<{ stdout: Uint8Array; stderr: Uint8Array; exitCode: number; signalCode: NodeJS.Signals | number | null }>;
+    /** Uses the optional native libcurl provider; the response header text redacts protected values. */
+    static request(url: string, options?: {
+      method?: string;
+      headers?: string[];
+      body?: string;
+      timeout?: number;
+      maxBytes?: number;
+      followRedirects?: boolean;
+      maxRedirects?: number;
+      signal?: AbortSignal;
+      /** Native CURLOPT names: string, long/enum, curl_off_t and slist types. Pointer/callback/blob options are rejected. */
+      options?: Record<string, string | number | boolean | string[]>;
+    }): Promise<{ status: number; body: Blob; headers: string }>;
+  }
+
+  /** Native Rust media probing, frame extraction and Bun.Image transformations. */
+  export class Video {
+    /** Whether this runtime includes native codecs; individual formats may still reject. */
+    static readonly available: boolean;
+    static readonly decoder: "filmcraft";
+    /** Backend shared with Bun.Image for extracted-frame transformations and encoding. */
+    static backend: typeof Image.backend;
+    constructor(input: string | ArrayBuffer | ArrayBufferView | Blob, options?: { maxPixels?: number; autoOrient?: boolean });
+    /** Select a frame in seconds. Repeated calls overwrite the previous selection. Defaults to zero. */
+    frame(seconds: number): this;
+    /** Apply the existing Bun.Image geometry pipeline to the extracted frame. */
+    resize(width: number, height?: number, options?: Image.ResizeOptions): this;
+    /** Crop after auto-orientation, before rotate/flip/resize; all coordinates must be integers. */
+    extract(rectangle: Image.ExtractOptions): this;
+    rotate(degrees: Parameters<Image["rotate"]>[0]): this;
+    flip(): this;
+    flop(): this;
+    modulate(options: Parameters<Image["modulate"]>[0]): this;
+    png(options?: Parameters<Image["png"]>[0]): this;
+    jpeg(options?: Parameters<Image["jpeg"]>[0]): this;
+    webp(options?: Parameters<Image["webp"]>[0]): this;
+    heic(options?: Parameters<Image["heic"]>[0]): this;
+    avif(options?: Parameters<Image["avif"]>[0]): this;
+    /** Encoded still-frame bytes, PNG by default; this does not encode a video container. */
+    bytes(): Promise<Uint8Array>;
+    /** Transformed selected-frame pixels without image encoding. */
+    rgba(): Promise<Image.RGBA>;
+    buffer(): Promise<Buffer>;
+    toBuffer(): Promise<Buffer>;
+    toBase64(): Promise<string>;
+    dataurl(): Promise<string>;
+    toDataURL(): Promise<string>;
+    placeholder(as?: "dataurl"): Promise<string>;
+    blob(): Promise<Blob>;
+    /** Write the selected encoded frame through Bun.write; select png/jpeg/webp before writing. */
+    write(destination: Parameters<typeof Bun.write>[0]): Promise<number>;
+    metadata(): Promise<Video.Metadata>;
+    /** One worker-owned decode session; source-resolution PNGs, at most 64 frames and 64 MiB per batch. */
+    frames(options: { start?: number; end: number; step?: number; maxFrames?: number }): Promise<{ time: number; bytes: Uint8Array }[]>;
+    /** PCM WAV from a native audio stream, at most 30 seconds and 64 MiB. */
+    audio(options: { start?: number; duration: number; stream?: number; sampleRate?: number }): Promise<Uint8Array>;
+    /** Preserve encoded audio/video access units in a new MP4 file; refuses overwriting. */
+    remux(destination: string): Promise<number>;
+    /** Palette GIF; at most 5 seconds, 120 frames, 640×360 and 32 MiB. */
+    gif(options: { start?: number; duration: number; fps?: number; width?: number }): Promise<Uint8Array>;
+    readonly width: number;
+    readonly height: number;
+  }
+
+  namespace Video {
+    interface Metadata {
+      width: number;
+      height: number;
+      duration: number | null;
+      codec: string;
+      container: string;
+      fpsNumerator: number;
+      fpsDenominator: number;
+      frameCount: number;
+      fileBytes: number;
+      audioStreams: { sampleRate: number; channels: number; codec: string }[];
+    }
+  }
+
   /**
    * Decode, transform and re-encode images. Ships JPEG, PNG and WebP via
    * statically-linked libjpeg-turbo / libspng / libwebp; resize and rotate
@@ -9634,7 +9795,7 @@ declare module "bun" {
    *
    * Chainables overwrite (calling `.resize()` twice keeps the second). Order
    * of execution is fixed regardless of call order:
-   * `autoOrient → rotate → flip/flop → resize → modulate`.
+   * `autoOrient → extract → rotate → flip/flop → resize → modulate`.
    *
    * The source ICC colour profile (Display P3, Adobe RGB, Jpegli XYB, etc.)
    * is preserved through re-encode to JPEG, PNG, and WebP so non-sRGB
@@ -9689,6 +9850,8 @@ declare module "bun" {
 
     /** Set target dimensions. Omit `height` to keep the source aspect ratio. */
     resize(width: number, height?: number, options?: Image.ResizeOptions): this;
+    /** Crop after auto-orientation, before rotate/flip/resize; all coordinates must be integers. */
+    extract(rectangle: Image.ExtractOptions): this;
     /** Rotate by a multiple of 90°. */
     rotate(degrees: number): this;
     /** Mirror about the x-axis (vertical). */
@@ -9736,6 +9899,8 @@ declare module "bun" {
      * called, re-encodes in the source format.
      */
     bytes(): Promise<Uint8Array>;
+    /** Decode and transform to owned RGBA8 pixels without image encoding. */
+    rgba(): Promise<Image.RGBA>;
     /** Like {@link bytes} but as a Node `Buffer`. */
     buffer(): Promise<Buffer>;
     /** Sharp-compatible alias for {@link buffer}. */
@@ -9842,12 +10007,12 @@ declare module "bun" {
     /**
      * Browser backend selection.
      *
-     * - `"webkit"` (default): WKWebView. macOS only. Zero external
+     * - `"webkit"` (default on macOS): WKWebView. macOS only. Zero external
      *   dependencies — uses the system WebKit.framework.
-     * - `"chrome"`: Chrome/Chromium via DevTools Protocol over
+     * - `"chrome"` (default elsewhere): Chrome/Chromium via DevTools Protocol over
      *   `--remote-debugging-pipe`. Works anywhere Chrome is installed.
      *   Auto-detects the binary in standard locations; override with
-     *   `backend.path` or the `BUN_CHROME_PATH` environment variable.
+     *   `backend.path`, `BUN_CHROMIUM_PATH`, or `BUN_CHROME_PATH`.
      *
      * The object form accepts extra launch flags. Chrome switches are
      * last-wins for duplicates, so `argv` can override the defaults.
@@ -9857,11 +10022,24 @@ declare module "bun" {
      * the same Chrome instance via `Target.createTarget`.
      *
      * Default flags: `--remote-debugging-pipe --headless --no-first-run
-     * --no-default-browser-check --disable-gpu --user-data-dir=<temp>`.
+     * --no-default-browser-check --user-data-dir=<temp>`.
+     * GPU support stays enabled unless `argv` explicitly includes `--disable-gpu`.
      */
     type Backend =
       | "webkit"
       | "chrome"
+      | "webkitgtk"
+      | "webview2"
+      | "wkwebview"
+      | "cef"
+      | {
+          /** Optional native host backend; requires its qualified bun-webview-host. */
+          type: "webkitgtk" | "webview2" | "wkwebview" | "cef";
+          path?: string;
+          argv?: readonly string[];
+          stdout?: "inherit" | "ignore";
+          stderr?: "inherit" | "ignore";
+        }
       | {
           type: "chrome";
           /**
@@ -9916,6 +10094,8 @@ declare module "bun" {
            * Extra command-line arguments appended after the default flags.
            * Chrome's CommandLine does last-wins for duplicate switches, so
            * `["--headless=new"]` would override the default `--headless`.
+           * Debugging transport and `--user-data-dir` switches are reserved;
+           * use `url` and `dataStore.directory` to select their owners.
            */
           argv?: string[];
           /**
@@ -9974,9 +10154,8 @@ declare module "bun" {
        */
       headless?: boolean;
       /**
-       * Browser backend. Defaults to `"webkit"` on macOS, throws on other
-       * platforms unless `"chrome"` is specified.
-       * @default "webkit"
+       * Browser backend. Defaults to `"webkit"` on macOS and `"chrome"`
+       * elsewhere. Optional native hosts must be installed separately.
        */
       backend?: Backend;
       /**
@@ -9994,7 +10173,8 @@ declare module "bun" {
       /**
        * Storage backing for cookies, localStorage, IndexedDB, etc.
        *
-       * - `"ephemeral"` (default): in-memory only, nothing written to disk.
+       * - `"ephemeral"` (default): nonpersistent storage. Chrome uses a
+       *   temporary profile removed when its owned process closes.
        * - `{ directory }`: persistent storage rooted at the given path.
        *   Multiple views with the same directory share state.
        *
@@ -10036,6 +10216,10 @@ declare module "bun" {
    * @experimental
    */
   class WebView extends EventTarget {
+    /** Open an application window in its native browser-owned profile, including that browser's credentials and sessions. */
+    static openApplication(options: import("bun:chromium").profiles.OpenApplicationOptions): Promise<import("bun:chromium").profiles.OpenApplicationResult>;
+    /** Import only the selected site's live cookies and session metadata from an explicit source browser. */
+    importProfile(options: Omit<import("bun:chromium").profiles.ImportSiteOptions, "view">): Promise<import("bun:chromium").profiles.ImportSiteResult>;
     /**
      * @throws on non-macOS platforms when `backend` is `"webkit"` (the
      * default). Pass `backend: "chrome"` for cross-platform support.
@@ -10313,6 +10497,8 @@ declare module "bun" {
     /**
      * Close the view and release its WebContent process. After close,
      * all methods throw. Idempotent.
+     * Emits a `close` event once after teardown. Closing the browser target
+     * or losing its host process also emits that event.
      *
      * Pending operations reject with `Error("WebView closed")`. The
      * rejections are marked as handled: a promise you hold still rejects

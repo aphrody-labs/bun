@@ -5,6 +5,33 @@ description: Reuse existing Python, system package, browser transport and toolch
 
 # Chromium family and native Bun owners
 
+## Read-only profile metadata — source contract, 2026-10-13
+
+`bun:chromium.profiles.discover()` discovers Chrome/Chromium metadata on demand.
+An explicit `userDataDirs` list selects fixture or owner directories. `isDefault`
+means the literal `Default` directory; `isLastUsed` reflects `Local State`, which
+may select another profile. No profile is copied, unlocked or opened for writing.
+
+`profiles.readBookmarks(absoluteFile, { site, includeSubdomains })` reads one
+selected JSON file. Site filtering accepts HTTP(S), normalizes case and IDNA,
+and matches the exact hostname unless dot-delimited subdomains are requested.
+Metadata reads are bounded to 8 MiB; bookmark traversal is bounded to 100000
+nodes and 64 folder levels. Errors do not include raw JSON values.
+
+`profiles.capabilities()` keeps encrypted-store export separate from APIs of an
+already connected browser. Direct cookies/password-store export is unavailable;
+site cookies and live tab metadata require their browser-native owners. Chromium
+Windows app-bound encryption validates the calling application as well as its
+user, according to `chrome/browser/os_crypt/README.md`; DPAPI alone does not
+establish access to those values. Branded Chrome also rejects remote-debugging
+switches with its normal user-data directory. Discovery does not change either
+policy or launch a browser against that directory. CEF/WebView2 persistence
+remains in the destination engine's own store.
+
+The corresponding tests use synthetic `Local State` and `Bookmarks` files.
+Source contracts do not establish qualification of a live protected profile or
+native Windows credential handling.
+
 Owner directive, 2026-10-11: support Chromium-family browsers across qualified
 platforms and converge browser JavaScript on Bun's JavaScriptCore. Reuse native
 Bun owners for Python, dependencies, toolchains and browser lifecycle. The

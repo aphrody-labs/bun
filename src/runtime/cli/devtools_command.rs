@@ -8,6 +8,9 @@ pub(crate) const NAMES: [&[u8]; 4] = [b"rename", b"docs", b"parse", b"bench"];
 #[cold]
 #[inline(never)]
 pub(crate) fn is_project_entry(name: &[u8]) -> bool {
+    if bun_core::env_var::feature_flag::BUN_BE_BUN::get().unwrap_or(false) {
+        return false;
+    }
     use bun_paths::platform::Auto;
     use bun_paths::resolve_path::join_abs_string;
     if super::toolchain_command::is_package_script(name) {

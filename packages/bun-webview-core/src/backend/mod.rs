@@ -2,6 +2,8 @@
 //! or sends `Browser.close`.
 
 pub mod mock;
+#[cfg(all(windows, feature = "wry"))]
+pub mod wry;
 #[cfg(all(target_os = "linux", feature = "gtk4"))]
 pub mod webkitgtk;
 
@@ -13,6 +15,8 @@ use std::io::{Read, Write};
 /// Engines compiled into this build, in preference order.
 pub fn available() -> Vec<BackendKind> {
     let mut v = Vec::new();
+    #[cfg(all(windows, feature = "wry"))]
+    v.push(BackendKind::WebView2);
     #[cfg(all(target_os = "linux", feature = "gtk4"))]
     v.push(BackendKind::WebKitGtk);
     v.push(BackendKind::Mock);
@@ -40,6 +44,8 @@ pub fn run(kind: BackendKind, cfg: HostConfig, input: Box<dyn Read + Send>, outp
         }
         #[cfg(all(target_os = "linux", feature = "gtk4"))]
         BackendKind::WebKitGtk => webkitgtk::run(cfg, input, out),
+        #[cfg(all(windows, feature = "wry"))]
+        BackendKind::WebView2 => wry::run(cfg, input, out),
         other => Err(format!(
             "backend \"{}\" is not built into this bun-webview-host (available: {})",
             other.name(),

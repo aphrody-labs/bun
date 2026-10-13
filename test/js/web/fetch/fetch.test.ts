@@ -2,6 +2,46 @@
 import { AnyFunction, serve, ServeOptions, Server, sleep, TCPSocketListener } from "bun";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { chmodSync, closeSync, ftruncateSync, openSync, rmSync, writeFileSync } from "fs";
+
+it("Bun.Curl exposes the optional provider boundary", async () => {
+  expect(typeof Bun.Curl.request).toBe("function");
+  const capabilities = Bun.Curl.capabilities();
+  expect(capabilities.available).toBe(Bun.Curl.available);
+  expect(Array.isArray(capabilities.protocols)).toBe(true);
+  if (!Bun.Curl.available) {
+    await expect(Bun.Curl.request("http://127.0.0.1/")).rejects.toMatchObject({ code: "ERR_CURL_PROVIDER_UNAVAILABLE" });
+    expect(capabilities.protocols).toEqual([]);
+    await expect(Bun.Curl.run(["--version"])).rejects.toMatchObject({ code: "ERR_CURL_PROVIDER_UNAVAILABLE" });
+  }
+});
+
+it("Bun.Curl transfers through libcurl and bounds response bytes", async () => {
+  if (!Bun.Curl.available) return;
+  const server = Bun.serve({ port: 0, fetch(request) {
+    return new Response(request.method === "POST" ? request.body : "native curl", { headers: { "set-cookie": "fixture=value", "x-owner": "libcurl" } });
+  } });
+  try {
+    const response = await Bun.Curl.request(server.url.href, { method: "POST", body: "owned upload", headers: ["Content-Type: text/plain"] });
+    expect(response.status).toBe(200);
+    expect(await response.body.text()).toBe("owned upload");
+    const automaticPost = await Bun.Curl.request(server.url.href, { body: "automatic post" });
+    expect(await automaticPost.body.text()).toBe("automatic post");
+    expect(response.headers).toContain("[redacted]");
+    expect(response.headers).not.toContain("fixture=value");
+    const ranged = await Bun.Curl.request(server.url.href, { options: { RANGE: "0-1", ACCEPT_ENCODING: "" } });
+    expect(ranged.status).toBe(200);
+    const version = await Bun.Curl.run(["--version"]);
+    expect(new TextDecoder().decode(version.stdout)).toContain("curl 8.22.0");
+    expect(version.exitCode).toBe(0);
+    const tool = await Bun.Curl.run(["--silent", "--show-error", server.url.href]);
+    expect(new TextDecoder().decode(tool.stdout)).toBe("native curl");
+    expect(tool.exitCode).toBe(0);
+    await expect(Bun.Curl.run(["--silent", server.url.href], { maxOutputBytes: 2 })).rejects.toMatchObject({ code: "ERR_CURL_OUTPUT_LIMIT" });
+    await expect(Bun.Curl.request(server.url.href, { signal: AbortSignal.abort() })).rejects.toMatchObject({ code: "ERR_CURL_ABORTED" });
+    await expect(Bun.Curl.request(server.url.href, { options: { WRITEFUNCTION: 0 } })).rejects.toMatchObject({ code: "ERR_CURL_OPTION_OWNED_BY_RUNTIME" });
+    await expect(Bun.Curl.request(server.url.href, { maxBytes: 2 })).rejects.toMatchObject({ code: "ERR_CURL_RESPONSE_LIMIT" });
+  } finally { server.stop(true); }
+});
 import {
   bunEnv,
   bunExe,

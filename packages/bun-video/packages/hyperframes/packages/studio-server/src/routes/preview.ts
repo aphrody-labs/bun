@@ -724,7 +724,7 @@ export function registerPreviewRoutes(api: Hono, adapter: PreviewApiAdapter): vo
     // 1KB slice of a multi-hundred-MB source must not readFileSync the whole
     // file on each one. The full read also blocked the event loop, so every
     // other Studio request (SSE, saves, the voice track) waited behind it.
-    const textBuffer = isText ? new TextEncoder().encode(readFileSync(file), "utf-8") : null;
+    const textBuffer = isText ? new TextEncoder().encode(readFileSync(file, "utf8")) : null;
     const totalSize = textBuffer ? textBuffer.length : statSync(servedPath).size;
     const bodyFor = (start: number, end: number): BodyInit =>
       textBuffer

@@ -20,6 +20,18 @@ import {
 } from "../../scripts/aphrody/native-sdk-factory";
 import { rustcPhasesPath } from "../../scripts/build/rust/units.ts";
 import {
+  assertNativeSDKCompatible,
+  compatibleNativeSDK,
+  nativeSDKHash,
+  nativeSDKMember,
+  registerNativeSDKRoot,
+  validateNativeSDKAsset,
+  verifyNativeSDKDirectory,
+  type NativeSDKAsset,
+} from "../../scripts/build/native-sdk.ts";
+import { depSourceDir } from "../../scripts/build/source.ts";
+import type { Config } from "../../scripts/build/config.ts";
+import {
   type Build,
   chartData,
   chartHtml,
@@ -168,6 +180,122 @@ beforeAll(async () => {
   writeFileSync(rustcPhasesPath(out("liba.rlib")), JSON.stringify(passes(T0 - 86_400_000)));
 
   build = loadBuild(at(buildDir));
+});
+
+describe("native SDK consumer", () => {
+  function fixture(): NativeSDKAsset {
+    const files = {
+      "lib/libfixture.a": "library",
+      "source/include/fixture.h": "header",
+      "licenses/LICENSE": "license",
+    };
+    return {
+      schema: 1,
+      kind: "native-sdk",
+      component: "boringssl",
+      source: { kind: "github-archive", repo: "fixture/source", commit: "a".repeat(40) },
+      sourceIdentity: "b".repeat(64),
+      target: "linux-x64",
+      sourceRoot: "source",
+      buildABI: {
+        os: "linux",
+        arch: "x64",
+        abi: "gnu",
+        buildType: "Debug",
+        asan: false,
+        lto: false,
+        baseline: true,
+        crossTarget: null,
+        osxDeploymentTarget: null,
+        pgo: false,
+        tools: { cc: "clang version 23.1.1", cxx: "clang version 23.1.1" },
+        systemHeaders: {},
+        nativeWindowsSDK: null,
+        flags: { cflags: ["-march=nehalem"], cxxflags: [] },
+        build: { kind: "direct" },
+        provides: {},
+      },
+      includes: ["source/include"],
+      libraries: ["lib/libfixture.a"],
+      defines: [],
+      licenses: ["licenses/LICENSE"],
+      files: Object.fromEntries(
+        Object.entries(files).map(([name, contents]) => [
+          name,
+          new Bun.CryptoHasher("sha256").update(contents).digest("hex"),
+        ]),
+      ),
+      qualification: "native-tests-passed",
+      asset: {
+        url: "https://bun-lib.aphrody.app/native/fixture.zip",
+        bytes: 100,
+        sha256: "c".repeat(64),
+        format: "zip",
+      },
+    };
+  }
+
+  test("requires exact source patches, flags and compiler ABI", () => {
+    const asset = fixture();
+    expect(() => assertNativeSDKCompatible(asset, asset.sourceIdentity, asset.buildABI)).not.toThrow();
+    expect(() => assertNativeSDKCompatible(asset, "d".repeat(64), asset.buildABI)).toThrow("source/patch/ABI mismatch");
+    expect(() =>
+      assertNativeSDKCompatible(asset, asset.sourceIdentity, {
+        ...asset.buildABI,
+        flags: { cflags: ["-march=native"] },
+      }),
+    ).toThrow("source/patch/ABI mismatch");
+    expect(() =>
+      assertNativeSDKCompatible(asset, asset.sourceIdentity, {
+        ...asset.buildABI,
+        tools: { cc: "clang version 23.1.2" },
+      }),
+    ).toThrow("source/patch/ABI mismatch");
+    expect(nativeSDKHash({ b: 2, a: 1 })).toBe(nativeSDKHash({ a: 1, b: 2 }));
+  });
+
+  test("auto selection retains source acquisition for another compiler; explicit SDK remains strict", () => {
+    const asset = fixture();
+    const localABI = { ...asset.buildABI, tools: { cc: "clang version 23.1.3", cxx: "clang version 23.1.3" } };
+    expect(compatibleNativeSDK([asset], asset.sourceIdentity, localABI, false)).toBeUndefined();
+    expect(() => compatibleNativeSDK([asset], asset.sourceIdentity, localABI, true)).toThrow(
+      "source/patch/ABI mismatch",
+    );
+    expect(compatibleNativeSDK([asset], asset.sourceIdentity, asset.buildABI, false)).toBe(asset);
+    const corrupt = { ...asset, asset: { ...asset.asset, sha256: "invalid" } };
+    expect(() => compatibleNativeSDK([corrupt], asset.sourceIdentity, asset.buildABI, false)).toThrow("checksum pins");
+  });
+
+  test("keeps cross-dependency source-relative header paths", () => {
+    const cfg = { localDeps: {}, vendorDir: "/fixture/vendor" } as Config;
+    registerNativeSDKRoot(cfg, "boringssl", "/fixture/sdk");
+    expect(depSourceDir(cfg, "boringssl")).toBe(join("/fixture/sdk", "source"));
+    for (const invalid of ["../secret", "source/../secret", "C:/secret", "source\\header", "source//header"])
+      expect(nativeSDKMember(invalid)).toBe(false);
+    const asset = fixture();
+    asset.includes = ["include/0"];
+    expect(() => validateNativeSDKAsset(asset)).toThrow("include directory");
+    asset.includes = ["source/include"];
+    asset.asset.sha256 = "";
+    expect(() => validateNativeSDKAsset(asset)).toThrow("checksum pins");
+  });
+
+  test("rechecks cached SDK bytes and rejects additional files", async () => {
+    const asset = fixture();
+    const { asset: _distribution, ...receipt } = asset;
+    using dir = tempDir("native-sdk-consumer", {
+      "bun-native-sdk.json": JSON.stringify(receipt),
+      "lib/libfixture.a": "library",
+      "source/include/fixture.h": "header",
+      "licenses/LICENSE": "license",
+    });
+    await verifyNativeSDKDirectory(String(dir), asset);
+    writeFileSync(join(String(dir), "source/include/fixture.h"), "modified");
+    await expect(verifyNativeSDKDirectory(String(dir), asset)).rejects.toThrow("checksum mismatch");
+    writeFileSync(join(String(dir), "source/include/fixture.h"), "header");
+    writeFileSync(join(String(dir), "source/include/unregistered.h"), "extra");
+    await expect(verifyNativeSDKDirectory(String(dir), asset)).rejects.toThrow("unregistered member");
+  });
 });
 
 const labels = (xs: { label: string }[]) => xs.map(x => x.label);

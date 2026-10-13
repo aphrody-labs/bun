@@ -1,9 +1,37 @@
 import type { YtDlpOptions, YtDlpResult } from "./ytdlp";
-import { GpuRuntime, type GpuReport } from "@aphrody/bun-runtime-sdk/gpu";
+import type { GpuRuntime, GpuReport } from "@aphrody/bun-runtime-sdk/gpu";
 import { MpvClient, mpvLibraryPath } from "./mpv";
 import { FFmpeg, type FFmpegInput } from "./ffmpeg";
 import type { WebGpuOptions } from "./webgpu";
-import { materializeVideoSource, type VideoSource } from "./source";
+import { materializeVideoSource, resolveVideoSource, type VideoSource } from "./source";
+
+/** Create the native lazy frame pipeline; source ingestion does not load FFmpeg or a player. */
+export async function createVideo(
+  source: VideoSource,
+  options: { readonly maxPixels?: number; readonly signal?: AbortSignal } = {},
+): Promise<Bun.Video> {
+  options.signal?.throwIfAborted();
+  if (typeof Bun.Video !== "function") throw new Error("This runtime does not expose the native Bun.Video owner");
+  const constructorOptions = options.maxPixels === undefined ? undefined : { maxPixels: options.maxPixels };
+  if (source instanceof Blob || source instanceof ArrayBuffer)
+    return new Bun.Video(source, constructorOptions);
+  if(ArrayBuffer.isView(source))return new Bun.Video(new Uint8Array(source.buffer,source.byteOffset,source.byteLength),constructorOptions);
+  if (typeof source === "string" || source instanceof URL) {
+    const resolved = resolveVideoSource(source);
+    if (resolved.kind === "file") return new Bun.Video(resolved.path, constructorOptions);
+    if (resolved.kind !== "remote" || !/^https?:\/\//i.test(resolved.url))
+      throw new TypeError("Bun.Video URL ingestion requires HTTP(S); other protocols use the explicit media pipeline");
+    source = new Request(resolved.url);
+  }
+  if (source instanceof Response && !source.ok) {
+    await source.body?.cancel().catch(() => {});
+    throw new Error(`Media response failed (${source.status})`);
+  }
+  const resolved = await materializeVideoSource(source, options.signal);
+  options.signal?.throwIfAborted();
+  if (resolved.kind !== "bytes") throw new TypeError("Bun.Video ingestion did not produce a bounded byte source");
+  return new Bun.Video(resolved.data, constructorOptions);
+}
 
 export interface VideoPipelineOptions {
   readonly source: VideoSource;
@@ -66,6 +94,7 @@ export async function openVideoPipeline(options: VideoPipelineOptions): Promise<
     if (options.webgpu !== false) {
       if (options.webgpu?.backend === "chromium")
         throw new TypeError("The native video pipeline requires the native GPU backend");
+      const { GpuRuntime } = await import("@aphrody/bun-runtime-sdk/gpu");
       gpuRuntime = GpuRuntime.load(
         options.webgpu?.libraryPath === undefined ? {} : { libraryPath: options.webgpu.libraryPath },
       );

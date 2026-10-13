@@ -47,6 +47,7 @@ Official external dependencies retain their own terms:
 | yt-dlp                                                       | 2026.08.19 | [Unlicense](packages/yt-dlp/LICENSE), absorbed from [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp/tree/2026.08.19); executed through `bun:python`/BUV |
 | mpv                                                           | git 88eb9f2 | [GPL-2.0-or-later/LGPL-2.1-or-later](../../vendor/mpv/LICENSE.GPL), forked from [mpv-player/mpv](https://github.com/mpv-player/mpv/tree/88eb9f2e73945d8bc9c133a2f67babaa9af34680); native shared-library FFI only |
 | gpu-video                                                    | 0.4.0      | [MIT](https://github.com/software-mansion/smelter/blob/6637f3df71282c816140cd3bb9821d69b30be2ba/LICENSE), pinned from [software-mansion/smelter](https://github.com/software-mansion/smelter/tree/6637f3df71282c816140cd3bb9821d69b30be2ba/gpu-video); wgpu 30 hardware decode/encode |
+| filmcraft-codecs, filmcraft-frame, filmcraft-media, filmcraft-time, filmcraft-isobmff | git cee1feb185e675a108f78067f71ad86a640ace3d | MIT OR Apache-2.0, [pinned FilmCraft source](https://github.com/aphrody-labs/filmcraft/tree/cee1feb185e675a108f78067f71ad86a640ace3d); native software decoding and MP4 remux used by `Bun.Video` |
 
 Native Bun, JavaScriptCore, browser providers and media executables are not
 included in this source package. Their distribution licenses remain separate.

@@ -1,6 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
-import { bunEnv, bunExe, isASAN, tempDir } from "harness";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "fs";
+import { bunEnv, bunExe, isASAN, isWindows, tempDir } from "harness";
 import { join, relative, resolve } from "path";
 import { lspExtensions, mcpTools } from "../../../packages/bun-agent-plugin/src/catalog.ts";
 import { generate } from "../../../packages/bun-agent-plugin/src/generate.ts";
@@ -67,6 +78,55 @@ async function run(cmd: string[], options: { stdin?: string; env?: Record<string
   const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   return { stdout, stderr, exitCode };
 }
+
+test("embedded plugin repairs an incomplete owned cache during concurrent invocations", async () => {
+  using fixture = tempDir("agent-plugin-cache-repair", {});
+  const env = { TMPDIR: String(fixture), TMP: String(fixture), TEMP: String(fixture) };
+  const home = join(String(fixture), "home");
+  const command = [bunExe(), "agent-plugin", "doctor", "--json", "--home", home];
+  const initial = await run(command, { env });
+  expect(initial.stderr).toBe("");
+  expect(initial.exitCode).toBe(0);
+  const base = join(String(fixture), "bun-agent-plugin");
+  const caches = readdirSync(base).filter(name => /^[0-9a-f]{16}$/.test(name));
+  expect(caches).toHaveLength(1);
+  const cache = join(base, caches[0]);
+  const installer = join(cache, "package/bin/bun-agent-plugin.ts");
+  const original = readFileSync(installer, "utf8");
+  unlinkSync(installer);
+  writeFileSync(join(cache, "unrelated.txt"), "preserve");
+  const results = await Promise.all([run(command, { env }), run(command, { env })]);
+  for (const result of results) {
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toMatchObject({ version: Bun.version_with_sha });
+    expect(result.exitCode).toBe(0);
+  }
+  expect(readFileSync(installer, "utf8")).toBe(original);
+  expect(readFileSync(join(cache, "unrelated.txt"), "utf8")).toBe("preserve");
+  expect(readdirSync(base).filter(name => name.startsWith("."))).toEqual([]);
+});
+
+test("embedded plugin cache refuses directory links without traversing their target", async () => {
+  using fixture = tempDir("agent-plugin-cache-link", {});
+  const env = { TMPDIR: String(fixture), TMP: String(fixture), TEMP: String(fixture) };
+  const home = join(String(fixture), "home");
+  const command = [bunExe(), "agent-plugin", "doctor", "--json", "--home", home];
+  expect((await run(command, { env })).exitCode).toBe(0);
+  const base = join(String(fixture), "bun-agent-plugin");
+  const caches = readdirSync(base).filter(name => /^[0-9a-f]{16}$/.test(name));
+  expect(caches).toHaveLength(1);
+  const bin = join(base, caches[0], "package/bin");
+  rmSync(bin, { recursive: true });
+  const outside = join(String(fixture), "outside");
+  mkdirSync(outside);
+  const sentinel = join(outside, "bun-agent-plugin.ts");
+  writeFileSync(sentinel, 'console.log("outside cache");');
+  symlinkSync(outside, bin, isWindows ? "junction" : "dir");
+  const result = await run(command, { env });
+  expect(result.stderr).toContain("symbolic link or non-directory");
+  expect(result.exitCode).not.toBe(0);
+  expect(readFileSync(sentinel, "utf8")).toBe('console.log("outside cache");');
+});
 
 describe("generate", () => {
   const files = generate({ root, pkg });

@@ -9,6 +9,7 @@ use std::sync::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub mod cli;
 mod error;
 #[path = "../file_tools/mod.rs"]
 mod file_tools;

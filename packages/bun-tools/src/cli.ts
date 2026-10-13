@@ -6,6 +6,7 @@ import { startTaskService } from "./task-service.ts";
 const help = `bun-host <command> --config <file.json>
 
 Commands:
+  tool install <rclone|rsync|librclone>  Explicit pinned tool installation
   proxy        Loopback HTTP CONNECT to an explicit SOCKS5 endpoint
   stream       Loopback Windows snapshots and event stream
   ntfs         NTFS baseline metadata into an explicit SQLite database
@@ -22,6 +23,14 @@ No service, volume scan or private configuration is loaded by default.
 `;
 
 export async function hostCommand(argv: string[]) {
+  if (argv[0] === "tool") {
+    const [, operation, name, ...extra] = argv;
+    if (operation !== "install" || extra.length || !["rclone", "rsync", "librclone"].includes(name))
+      throw new Error("Expected: bun-host tool install rclone|rsync|librclone");
+    const { assetName, ensureAsset } = await import("./assets.ts");
+    console.log(await ensureAsset(assetName(name as "rclone" | "rsync" | "librclone"), { download: true }));
+    return;
+  }
   const [command, flag, configPath, ...extra] = argv;
   if (!command || command === "--help" || command === "help") {
     console.log(help);

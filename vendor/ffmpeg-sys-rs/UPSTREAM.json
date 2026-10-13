@@ -1,5 +1,13 @@
 {
   "repository": "https://github.com/zmwangx/rust-ffmpeg-sys",
   "commit": "ba293c6ffa4a5f2f745df024c96b54b5c94abd84",
-  "archiveSha256": "f26a6f3d44b4de1b7fbd3a67162fec887d33862c45016fcd526a2ec8d35de976"
+  "archiveSha256": "f26a6f3d44b4de1b7fbd3a67162fec887d33862c45016fcd526a2ec8d35de976",
+  "registry": {
+    "package": "ffmpeg-sys-next",
+    "version": "9.0.1",
+    "checksum": "c6f932d8c1cede016c65d4f1435f323369c99c74df55143b18676aa10e7603f9",
+    "sourceCommit": "ba293c6ffa4a5f2f745df024c96b54b5c94abd84"
+  },
+  "localChangesFromPinnedCommit": ["hwcontext_wrapper.h"],
+  "registryReplacementQualified": false
 }

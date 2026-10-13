@@ -111,7 +111,7 @@ function cropRgb48le(
   cropW: number,
   cropH: number,
 ): Buffer {
-  const dst = new Uint8Array(cropW * cropH * RGB48_BYTES_PER_PIXEL);
+  const dst = Buffer.alloc(cropW * cropH * RGB48_BYTES_PER_PIXEL);
   for (let row = 0; row < cropH; row++) {
     const srcRow = cropY + row;
     if (srcRow < 0 || srcRow >= srcH) continue;

@@ -134,7 +134,7 @@ test("all dependency destinations preflight before a fetch and preserve unknown 
   expect(await Bun.file(join(directory, "vendor/lolhtml/.ref")).exists()).toBe(false);
 });
 
-test("the pinned fetch owner receives all three sources and stamps are checked after fetch", async () => {
+test("the pinned fetch owner receives all Rust sources and stamps are checked after fetch", async () => {
   using directory = await dependencyFixture();
   const plans = await rustDependencyPlan(String(directory));
   const commands: string[][] = [];
@@ -154,7 +154,7 @@ test("the pinned fetch owner receives all three sources and stamps are checked a
     }
     return 0;
   });
-  expect(commands.map((command) => command[3])).toEqual(["lolhtml", "rust-argon2", "uutils"]);
+  expect(commands.map((command) => command[3])).toEqual(["lolhtml", "oxc", "rust-argon2", "uutils"]);
   for (const [index, plan] of plans.entries()) {
     expect(commands[index]).toEqual([
       "bun",
@@ -269,7 +269,7 @@ test("post-fetch qualification checks every generated Cargo path without exempti
       return 0;
     }),
   ).rejects.toThrow();
-  expect(commands.map((command) => command[3])).toEqual(["lolhtml", "rust-argon2", "uutils"]);
+  expect(commands.map((command) => command[3])).toEqual(["lolhtml", "oxc", "rust-argon2", "uutils"]);
   const secondary = join(String(directory), "vendor/uutils/src/uu/cat/Cargo.toml");
   await mkdir(dirname(secondary), { recursive: true });
   await Bun.write(secondary, '[package]\nname = "wrong_package"\nversion = "0.0.0"\n');

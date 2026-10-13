@@ -6,13 +6,14 @@
 
 use std::ffi::OsString;
 use std::hash::Hasher;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use bun_core::{Global, ZBox};
 use bun_spawn::process::sync as spawn_sync;
 use bun_sys::{Dir, Fd, File, O};
 
 const MAGIC: &[u8; 8] = b"BUNAGPL1";
+const INSTALLER: &str = "package/bin/bun-agent-plugin.ts";
 
 pub(crate) enum Invocation {
     Bun,
@@ -57,6 +58,9 @@ fn entries(bytes: &[u8]) -> Option<Vec<(&str, &[u8])>> {
         return None;
     }
     let count = u32_at(8)?;
+    if count > 100_000 || count > bytes.len().saturating_sub(12) / 8 {
+        return None;
+    }
     let mut out = Vec::with_capacity(count);
     let mut o = 12;
     for _ in 0..count {
@@ -68,6 +72,7 @@ fn entries(bytes: &[u8]) -> Option<Vec<(&str, &[u8])>> {
         o += 4 + len;
         if path.is_empty()
             || path.starts_with('/')
+            || path.contains(['\\', ':', '\0'])
             || bun_core::strings::split(path.as_bytes(), b"/")
                 .any(|c| c.is_empty() || c == b"." || c == b"..")
         {
@@ -75,55 +80,198 @@ fn entries(bytes: &[u8]) -> Option<Vec<(&str, &[u8])>> {
         }
         out.push((path, data));
     }
-    Some(out)
+    (o == bytes.len() && out.iter().any(|(path, _)| *path == INSTALLER)).then_some(out)
 }
 
-/// `<temp>/bun-agent-plugin/<hash of the archive>`, written whole before it is renamed into place.
+fn child_dir(parent: &Dir, name: &str, full: &Path) -> Result<Dir, String> {
+    let zname = ZBox::from_vec(name.as_bytes().to_vec());
+    let inspect = || {
+        bun_sys::lstat(&ZBox::from_vec(
+            full.as_os_str().as_encoded_bytes().to_vec(),
+        ))
+    };
+    match inspect() {
+        Ok(stat) if (stat.st_mode as u32 & 0xf000) == 0x4000 => {}
+        Ok(_) => {
+            return Err(format!(
+                "plugin cache refuses a symbolic link or non-directory: {}",
+                full.display()
+            ));
+        }
+        Err(error) if error.get_errno() == bun_sys::E::ENOENT => {
+            match bun_sys::mkdirat(parent.fd(), &zname, 0o700) {
+                Ok(()) => {}
+                Err(error) if error.get_errno() == bun_sys::E::EEXIST => {}
+                Err(error) => return Err(format!("{}: {error}", full.display())),
+            }
+            let stat = inspect().map_err(|error| format!("{}: {error}", full.display()))?;
+            if (stat.st_mode as u32 & 0xf000) != 0x4000 {
+                return Err(format!(
+                    "plugin cache refuses a symbolic link or non-directory: {}",
+                    full.display()
+                ));
+            }
+        }
+        Err(error) => return Err(format!("{}: {error}", full.display())),
+    }
+    #[cfg(windows)]
+    {
+        parent
+            .open_dir(
+                name.as_bytes(),
+                bun_sys::OpenDirOptions {
+                    no_follow: true,
+                    ..Default::default()
+                },
+            )
+            .map_err(|error| error.to_string())
+    }
+    #[cfg(not(windows))]
+    {
+        bun_sys::openat(
+            parent.fd(),
+            &zname,
+            O::DIRECTORY | O::NOFOLLOW | O::CLOEXEC | O::RDONLY,
+            0,
+        )
+        .map(Dir::from_fd)
+        .map_err(|error| error.to_string())
+    }
+}
+
+fn parent_dir(root: &Path, rooted: &Dir, path: &str) -> Result<(Dir, String), String> {
+    let mut full = root.to_path_buf();
+    let mut directory = Dir::from_fd(bun_sys::dup(rooted.fd()).map_err(|error| error.to_string())?);
+    let mut components = path.split('/').peekable();
+    while let Some(component) = components.next() {
+        if components.peek().is_none() {
+            return Ok((directory, component.to_owned()));
+        }
+        full.push(component);
+        directory = child_dir(&directory, component, &full)?;
+    }
+    Err("invalid plugin archive path".into())
+}
+
+fn complete(root: &Path, rooted: &Dir, files: &[(&str, &[u8])]) -> bool {
+    files.iter().all(|(path, bytes)| {
+        let Ok((parent, name)) = parent_dir(root, rooted, path) else {
+            return false;
+        };
+        let Ok(link_stat) = bun_sys::lstat(&ZBox::from_vec(
+            root.join(path).as_os_str().as_encoded_bytes().to_vec(),
+        )) else {
+            return false;
+        };
+        if !bun_sys::is_regular_file(link_stat.st_mode as _) {
+            return false;
+        }
+        let Ok(file) = parent.open_file(name.as_bytes(), O::RDONLY | O::NOFOLLOW | O::CLOEXEC, 0)
+        else {
+            return false;
+        };
+        let Ok(stat) = bun_sys::fstat(file.fd()) else {
+            return false;
+        };
+        if !bun_sys::is_regular_file(stat.st_mode as _) || stat.st_size as usize != bytes.len() {
+            return false;
+        }
+        let mut contents = vec![0; bytes.len()];
+        let mut extra = [0; 1];
+        file.read_all(&mut contents)
+            .is_ok_and(|length| length == bytes.len())
+            && contents == *bytes
+            && file.read(&mut extra).is_ok_and(|length| length == 0)
+    })
+}
+
+/// Only archive-owned files are atomically published; the installer is published last.
 fn extract(bytes: &[u8]) -> Result<PathBuf, String> {
+    let files = entries(bytes).ok_or("the embedded agent plugin archive is corrupt")?;
     let mut hasher = std::hash::DefaultHasher::new();
     hasher.write(bytes);
-    let base = std::env::temp_dir().join("bun-agent-plugin");
+    let temp = std::env::temp_dir();
+    let temp_handle = Dir::from_fd(
+        bun_sys::open_dir_absolute(temp.as_os_str().as_encoded_bytes())
+            .map_err(|error| error.to_string())?,
+    );
+    let base = temp.join("bun-agent-plugin");
+    let base_handle = child_dir(&temp_handle, "bun-agent-plugin", &base)?;
     let dir = base.join(format!("{:016x}", hasher.finish()));
-    if dir
-        .join("package")
-        .join("bin")
-        .join("bun-agent-plugin.ts")
-        .is_file()
-    {
+    let cache_handle = child_dir(&base_handle, &format!("{:016x}", hasher.finish()), &dir)?;
+    if complete(&dir, &cache_handle, &files) {
         return Ok(dir);
     }
-    let files = entries(bytes).ok_or("the embedded agent plugin archive is corrupt")?;
-    let staging = base.join(format!(".{:016x}-{}", hasher.finish(), std::process::id()));
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_nanos();
+    let staging = base.join(format!(
+        ".{:016x}-{}-{nonce}-{}",
+        hasher.finish(),
+        std::process::id(),
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
     let cwd = Dir::cwd();
-    let _ = cwd.delete_tree(staging.as_os_str().as_encoded_bytes());
-    for (path, data) in files {
-        let target = staging.join(path);
-        if let Some(parent) = target.parent() {
-            cwd.make_path(parent.as_os_str().as_encoded_bytes())
-                .map_err(|e| format!("{}: {e}", parent.display()))?;
-        }
-        File::openat(
-            Fd::cwd(),
-            target.as_os_str().as_encoded_bytes(),
-            O::WRONLY | O::CREAT | O::TRUNC,
-            0o644,
-        )
-        .and_then(|file| file.write_all(data))
-        .map_err(|e| format!("{}: {e}", target.display()))?;
-    }
-    if bun_sys::rename(
+    bun_sys::mkdir(
         &ZBox::from_vec(staging.as_os_str().as_encoded_bytes().to_vec()),
-        &ZBox::from_vec(dir.as_os_str().as_encoded_bytes().to_vec()),
+        0o700,
     )
-    .is_err()
-    {
-        // Another bun extracted the same archive first.
-        let _ = cwd.delete_tree(staging.as_os_str().as_encoded_bytes());
-        if !dir.is_dir() {
-            return Err(format!("could not create {}", dir.display()));
+    .map_err(|error| error.to_string())?;
+    let staging_handle = child_dir(
+        &base_handle,
+        staging
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or("invalid staging name")?,
+        &staging,
+    )?;
+    let result = (|| {
+        for (path, data) in &files {
+            let (parent, name) = parent_dir(&staging, &staging_handle, path)?;
+            parent
+                .open_file(
+                    name.as_bytes(),
+                    O::WRONLY | O::CREAT | O::EXCL | O::NOFOLLOW,
+                    0o644,
+                )
+                .and_then(|file| file.write_all(data))
+                .map_err(|e| format!("{path}: {e}"))?;
         }
-    }
-    Ok(dir)
+        if complete(&dir, &cache_handle, &files) {
+            return Ok(dir.clone());
+        }
+        for (path, _) in files
+            .iter()
+            .filter(|(path, _)| *path != INSTALLER)
+            .chain(files.iter().filter(|(path, _)| *path == INSTALLER))
+        {
+            let (source, source_name) = parent_dir(&staging, &staging_handle, path)?;
+            let (target, target_name) = parent_dir(&dir, &cache_handle, path)?;
+            if let Err(error) = bun_sys::renameat(
+                source.fd(),
+                &ZBox::from_vec(source_name.into_bytes()),
+                target.fd(),
+                &ZBox::from_vec(target_name.into_bytes()),
+            ) {
+                if complete(&dir, &cache_handle, &files) {
+                    return Ok(dir.clone());
+                }
+                return Err(format!("could not repair plugin cache {path}: {error}"));
+            }
+        }
+        if !complete(&dir, &cache_handle, &files) {
+            return Err(format!(
+                "plugin cache remains incomplete: {}",
+                dir.display()
+            ));
+        }
+        Ok(dir.clone())
+    })();
+    drop(staging_handle);
+    let _ = cwd.delete_tree(staging.as_os_str().as_encoded_bytes());
+    result
 }
 
 #[cold]

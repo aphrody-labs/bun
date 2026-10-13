@@ -1,6 +1,6 @@
 /**
  * Google Fonts edge proxy for cdn.aphrody.com: the same paths as fonts.googleapis.com (`/css2`,
- * `/css`, `/icon`) and fonts.gstatic.com (`/s/...`), fetched once from Google through the yolo-core
+ * `/css`, `/icon`) and fonts.gstatic.com (`/s/...`), fetched once from Google through the Bun Google
  * edge proxy, stored on disk and served from there. CSS is requested with a modern browser
  * User-Agent (WOFF2 + unicode-range subsets) and its gstatic URLs are rewritten to this origin.
  * Only the allowed families are proxied (default: the Material 3 fonts and Material Symbols).
@@ -9,7 +9,7 @@
  */
 import { stat } from "node:fs/promises";
 import { extname, join } from "node:path";
-import { type EdgeRoute, createEdgeProxy } from "@aphrody/yolo-core/edge-proxy";
+import { type EdgeRoute, createEdgeProxy } from "@aphrody/bun-google/edge-proxy";
 
 export const M3_FONT_FAMILIES = [
   "Google Sans Flex",

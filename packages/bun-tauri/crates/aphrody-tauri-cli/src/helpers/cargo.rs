@@ -12,8 +12,7 @@ const PLUGINS_GIT_URL: &str = "https://github.com/aphrody-labs/plugins-workspace
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CargoInstallOptions<'a> {
   pub name: &'a str,
-  /// Dependency key to use when `name` is a package published under another name, e.g. the
-  /// Aphrody fork `aphrody-tauri-plugin-fs` added as `tauri-plugin-fs`.
+  /// Dependency key when the package is published under another name.
   pub rename: Option<&'a str>,
   pub version: Option<&'a str>,
   pub rev: Option<&'a str>,
@@ -21,6 +20,9 @@ pub struct CargoInstallOptions<'a> {
   pub branch: Option<&'a str>,
   pub cwd: Option<&'a std::path::Path>,
   pub target: Option<&'a str>,
+  pub features: &'a [&'a str],
+  pub no_default_features: bool,
+  pub git_url: Option<&'a str>,
 }
 
 pub fn install_one(options: CargoInstallOptions) -> crate::Result<()> {
@@ -33,7 +35,7 @@ pub fn install_one(options: CargoInstallOptions) -> crate::Result<()> {
     cargo.arg(options.name);
 
     if options.tag.is_some() || options.rev.is_some() || options.branch.is_some() {
-      cargo.args(["--git", PLUGINS_GIT_URL]);
+      cargo.args(["--git", options.git_url.unwrap_or(PLUGINS_GIT_URL)]);
     }
 
     match (options.tag, options.rev, options.branch) {
@@ -53,6 +55,13 @@ pub fn install_one(options: CargoInstallOptions) -> crate::Result<()> {
 
   if let Some(rename) = options.rename {
     cargo.args(["--rename", rename]);
+  }
+
+  if options.no_default_features {
+    cargo.arg("--no-default-features");
+  }
+  if !options.features.is_empty() {
+    cargo.args(["--features", &options.features.join(",")]);
   }
 
   if let Some(target) = options.target {

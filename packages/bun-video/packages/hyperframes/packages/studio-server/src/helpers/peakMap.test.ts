@@ -13,7 +13,7 @@ import {
 } from "./peakMap.js";
 
 function stereo(frames: Array<[number, number]>): Buffer {
-  const buf = new Uint8Array(frames.length * 8);
+  const buf = Buffer.alloc(frames.length * 8);
   frames.forEach(([l, r], i) => {
     buf.writeFloatLE(l, i * 8);
     buf.writeFloatLE(r, i * 8 + 4);
@@ -52,7 +52,7 @@ describe("peak accumulation", () => {
 describe("peak accumulation, mono", () => {
   it("reads one channel per frame", () => {
     const acc = createPeakAccumulator(2, 1, 1);
-    const buf = new Uint8Array(8);
+    const buf = Buffer.alloc(8);
     buf.writeFloatLE(-1, 0);
     buf.writeFloatLE(0.5, 4);
     accumulatePeaks(acc, buf);

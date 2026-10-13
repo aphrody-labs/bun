@@ -1,62 +1,120 @@
 // SPDX-License-Identifier: Apache-2.0
-import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { expect, test } from "bun:test";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { tempDir } from "../../../test/harness";
 import {
+  type CargoPackage,
   literalKeyFiles,
   owners,
-  pyprojectDeclares,
-  uvPin,
-  uvSatisfies,
+  qualificationPlan,
   verifyStatic,
 } from "./verify-google-pipeline.ts";
 
-const sandbox = mkdtempSync(join(tmpdir(), "google-pipeline-"));
-afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+function fixture(root: string) {
+  const paths = owners(root);
+  const write = (file: string, text: string) => {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, text);
+  };
+  write(
+    join(root, "package.json"),
+    JSON.stringify({
+      scripts: { bd: "bun build.ts" },
+      workspaces: ["./packages/*", "./packages/bun-google/aphrody/packages/*"],
+    }),
+  );
+  for (const file of [
+    join(paths.googleWorkspace, "Cargo.toml"),
+    paths.cargoManifest,
+    paths.rustCli,
+    paths.boqManifest,
+    join(dirname(paths.boqManifest), "src/lib.rs"),
+    paths.bunEntry,
+    paths.facadeEntry,
+  ])
+    write(file, "");
+  write(paths.bunManifest, JSON.stringify({ name: "@aphrody/bun-google", scripts: { test: "fixture" } }));
+  write(
+    paths.facadeManifest,
+    JSON.stringify({ name: "@aphrody/google", scripts: { test: "fixture", build: "fixture", verify: "fixture" } }),
+  );
+  const packages: CargoPackage[] = [
+    {
+      name: "aphrody-google",
+      manifest_path: paths.cargoManifest,
+      targets: [{ name: "aphrody_google", kind: ["lib"] }],
+    },
+    { name: "aphrody-boq", manifest_path: paths.boqManifest, targets: [{ name: "aphrody_boq", kind: ["lib"] }] },
+  ];
+  return { paths, packages, metadata: () => packages };
+}
 
-describe("verify-google-pipeline", () => {
-  test("reads the uv pin and checks the installed version", () => {
-    expect(uvPin('[tool.uv]\nrequired-version = ">=0.12.24"\n')).toEqual({
-      operator: ">=",
-      version: "0.12.24",
-    });
-    expect(uvPin('required-version = "==0.9.1"')).toEqual({ operator: "==", version: "0.9.1" });
-    expect(uvPin("[tool.uv]\n")).toBeUndefined();
-    const pin = { operator: ">=", version: "0.12.24" };
-    expect(uvSatisfies("uv 0.12.24 (x86_64-pc-windows-msvc)", pin)).toBe(true);
-    expect(uvSatisfies("uv 0.13.0", pin)).toBe(true);
-    expect(uvSatisfies("uv 0.12.3", pin)).toBe(false);
-    expect(uvSatisfies("uv 0.13.0", { operator: "==", version: "0.12.24" })).toBe(false);
-  });
+test("standalone Google ownership needs no neighbouring checkout, Python or application multicall", () => {
+  using directory = tempDir("google-pipeline-owners", {});
+  const { paths, metadata } = fixture(String(directory));
+  const result = verifyStatic(paths, metadata);
+  expect(result.crates).toEqual(["aphrody-boq", "aphrody-google"]);
+  expect(paths.root).toBe(String(directory));
+});
 
-  test("checks pyproject names and script entry points", () => {
-    const toml =
-      '[project]\nname = "aphrody-cli"\n\n[project.scripts]\naphrody-python = "aphrody_cli.main:main"\naphrody-python-google = "aphrody_cli.google:main"\n\n[tool.x]\n';
-    expect(pyprojectDeclares(toml, "aphrody-cli")).toBe(true);
-    expect(pyprojectDeclares(toml, "aphrody")).toBe(false);
-    expect(
-      pyprojectDeclares(toml, "aphrody-cli", ["aphrody-python-google", "aphrody_cli.google:main"]),
-    ).toBe(true);
-    expect(
-      pyprojectDeclares(toml, "aphrody-cli", ["aphrody-google", "aphrody_cli.google:main"]),
-    ).toBe(false);
-  });
+test("rejects Cargo metadata claiming Google sources from another owner", () => {
+  using directory = tempDir("google-pipeline-wrong-owner", {});
+  const { paths, packages, metadata } = fixture(String(directory));
+  packages[0]!.manifest_path = join(String(directory), "wrong-owner/Cargo.toml");
+  expect(() => verifyStatic(paths, metadata)).toThrow(
+    `Cargo package aphrody-google is not owned by ${paths.cargoManifest}.`,
+  );
+});
 
-  test("finds literal key assignments in sources only", () => {
-    const dir = join(sandbox, "src");
-    mkdirSync(join(dir, "nested"), { recursive: true });
-    writeFileSync(join(dir, "ok.ts"), "const key = process.env.GEMINI_API_KEY;\n");
-    writeFileSync(join(dir, "nested", "bad.py"), `GOOGLE_API_KEY${"="}placeholder\n`);
-    writeFileSync(join(dir, "notes.md"), `GEMINI_API_KEY${"="}placeholder\n`);
-    expect(literalKeyFiles(dir).map((file) => file.replaceAll("\\", "/"))).toEqual([
-      "nested/bad.py",
-    ]);
+test("finds literal key assignments while leaving protected stores and fixture data alone", () => {
+  using directory = tempDir("google-pipeline-keys", {
+    "ok.ts": "const key = process.env.GEMINI_API_KEY;\n",
+    "nested/bad.rs": `// GOOGLE_API_KEY${"="}placeholder\n`,
+    "notes.md": `GEMINI_API_KEY${"="}placeholder\n`,
+    "node_modules/mock/bad.ts": `GOOGLE_API_KEY${"="}synthetic\n`,
   });
+  expect(literalKeyFiles(String(directory)).map(file => file.replaceAll("\\", "/"))).toEqual(["nested/bad.rs"]);
+});
 
-  test("the current checkout satisfies the static owner checks", () => {
-    const { crates, uv } = verifyStatic(owners(resolve(import.meta.dir, "../..")));
-    expect(crates).toContain("aphrody-google");
-    expect(uv.version).toMatch(/^\d+\.\d+/);
-  });
+test("source ownership fails on literal assignments without disclosing their value", () => {
+  using directory = tempDir("google-pipeline-key-owner", {});
+  const { paths, metadata } = fixture(String(directory));
+  writeFileSync(paths.bunEntry, `GOOGLE_API_KEY${"="}synthetic-fixture\n`);
+  expect(() => verifyStatic(paths, metadata)).toThrow(
+    `Literal API key assignment found under ${dirname(paths.bunEntry)}.`,
+  );
+});
+
+test("Rust source and changed-binary native SDK qualifications use independent own-root plans", () => {
+  using directory = tempDir("google-pipeline-plan", {});
+  const { paths, metadata } = fixture(String(directory));
+  const result = verifyStatic(paths, metadata);
+  const rust = qualificationPlan(paths, result, "rust", "linux", "fixture-bun");
+  expect(rust).toHaveLength(4);
+  expect(rust.every(item => item.stage === "rust-source")).toBe(true);
+  expect(rust[0]!.argv.slice(0, 3)).toEqual(["fixture-bun", paths.cargoSerial, "clippy"]);
+  const windows = qualificationPlan(paths, result, "rust", "win32", "fixture-bun");
+  expect(windows[0]!.argv.slice(0, 4)).toEqual(["fixture-bun", paths.cargoSerial, "--msvc", "clippy"]);
+  const sdk = qualificationPlan(paths, result, "sdk", "linux", "fixture-bun");
+  expect(sdk.map(item => item.stage)).toEqual(["native-sdk", "facade-build"]);
+  expect(sdk[0]!.argv).toEqual(["fixture-bun", "bd", "test", paths.nativeTests, paths.facadeTests]);
+  expect(sdk.every(item => item.cwd.startsWith(paths.root))).toBe(true);
+});
+
+test("native SDK qualification remains available when the independent Rust workspace is unqualified", () => {
+  using directory = tempDir("google-pipeline-independent-sdk", {});
+  const { paths } = fixture(String(directory));
+  const result = verifyStatic(
+    paths,
+    () => {
+      throw new Error("Rust fixture is unqualified");
+    },
+    "sdk",
+  );
+  expect(result.crates).toEqual([]);
+  expect(qualificationPlan(paths, result, "sdk", "linux", "fixture-bun").map(item => item.stage)).toEqual([
+    "native-sdk",
+    "facade-build",
+  ]);
 });

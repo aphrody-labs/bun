@@ -4,6 +4,9 @@
   "private": true,
   "repository": "github:aphrody-labs/bun",
   "workspaces": [
+    "./packages/bun-google",
+    "./packages/bun-google/aphrody/packages/google",
+    "./packages/bun-tauri",
     "./packages/bun-types",
     "./packages/bun-web",
     "./packages/bun-plugin-tailwind",

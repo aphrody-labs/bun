@@ -107,9 +107,12 @@ enum Cmd {
         conn: Conn,
         #[arg(short = 'r', long)]
         recursive: bool,
-        /// Only send differences (system rsync when available, else skip unchanged files).
+        /// Only send differences; use --remote-bun for the native versioned protocol.
         #[arg(long)]
         delta: bool,
+        /// Explicit native Bun executable on the remote host; negotiates real chunked delta transfer.
+        #[arg(long, requires = "delta")]
+        remote_bun: Option<String>,
         source: String,
         target: String,
     },
@@ -186,10 +189,12 @@ enum Cmd {
     },
     /// Detected OpenSSH, rsync, git and gh.
     Doctor,
+    #[command(hide = true)]
+    DeltaReceive { target: PathBuf },
 }
 
 const SUBCOMMANDS: &[&str] = &[
-    "exec", "shell", "cp", "sftp", "forward", "config", "keys", "keygen", "known-hosts", "server", "doctor", "help", "--help", "-h",
+    "exec", "shell", "cp", "sftp", "forward", "config", "keys", "keygen", "known-hosts", "server", "doctor", "delta-receive", "help", "--help", "-h",
 ];
 
 /// Entry point. `args` excludes the program name and `ssh`.
@@ -384,7 +389,18 @@ fn run(command: Cmd) -> Result<i32> {
             runtime.block_on(session.close());
             Ok(code)
         },
-        Cmd::Cp { conn, recursive, delta, source, target } => copy(&conn, recursive, delta, &source, &target),
+        Cmd::Cp { conn, recursive, delta, remote_bun, source, target } => {
+            if let Some(remote_bun) = remote_bun { return copy_delta(&conn, recursive, &source, &target, &remote_bun); }
+            copy(&conn, recursive, delta, &source, &target)
+        },
+        Cmd::DeltaReceive { target } => {
+            let runtime = crate::runtime()?;
+            let result = runtime.block_on(crate::delta::receive(&mut tokio::io::stdin(), &mut tokio::io::stdout(), &target));
+            // Tokio stdin uses an uncancellable blocking read; this dedicated CLI process must still exit on its protocol deadline.
+            runtime.shutdown_timeout(std::time::Duration::from_secs(1));
+            result?;
+            Ok(0)
+        },
         Cmd::Sftp { conn, op, destination, path, extra } => sftp(&conn, &op, &destination, &path, extra.as_deref()),
         Cmd::Forward { conn, local, remote, dynamic, destination } => forward(&conn, &local, &remote, &dynamic, &destination),
         Cmd::Config { conn, destination } => {
@@ -501,6 +517,25 @@ fn run(command: Cmd) -> Result<i32> {
     }
 }
 
+fn copy_delta(conn: &Conn, recursive: bool, source: &str, target: &str, remote_bun: &str) -> Result<i32> {
+    if recursive { return Err(Error::InvalidInput("native delta currently transfers one regular file; select each destination explicitly".into())); }
+    if !remote_bun.starts_with('/') || remote_bun.contains(['\0', '\n', '\r']) {
+        return Err(Error::InvalidInput("remote Bun must be an absolute executable path on a POSIX SSH peer".into()));
+    }
+    if split_remote(source).is_some() { return Err(Error::InvalidInput("native delta currently uploads local files only".into())); }
+    let (host, path) = split_remote(target).ok_or_else(|| Error::InvalidInput("native delta requires host:/absolute/target".into()))?;
+    if !path.starts_with('/') || path.contains(['\0', '\n', '\r']) { return Err(Error::InvalidInput("native delta target must be an absolute remote path".into())); }
+    if std::fs::symlink_metadata(source)?.file_type().is_symlink() { return Err(Error::InvalidInput("native delta source cannot be a symbolic link".into())); }
+    let source = std::fs::canonicalize(source)?;
+    let command = format!("{} ssh delta-receive -- {}", shell_quote(remote_bun), shell_quote(path));
+    let (runtime, session) = connect(conn, host)?;
+    let result = runtime.block_on(session.upload_delta(&command, &source));
+    runtime.block_on(session.close());
+    let report = result?;
+    json(&serde_json::to_value(report).map_err(|_| Error::InvalidInput("delta report encoding failed".into()))?);
+    Ok(0)
+}
+
 fn copy(conn: &Conn, recursive: bool, delta: bool, source: &str, target: &str) -> Result<i32> {
     let (src_remote, dst_remote) = (split_remote(source), split_remote(target));
     if src_remote.is_some() && dst_remote.is_some() {
@@ -523,7 +558,9 @@ fn copy(conn: &Conn, recursive: bool, delta: bool, source: &str, target: &str) -
             }
         }
         if let Some(scp) = system::find("scp") {
+            if delta { return Err(Error::InvalidInput("true delta requires system rsync or an explicit --remote-bun executable".into())); }
             let mut cmd = Command::new(scp);
+            cmd.arg("-S").arg(ssh);
             cmd.args(multiplex_args()).args(overrides.openssh_args("-P"));
             if recursive {
                 cmd.arg("-r");
@@ -532,6 +569,7 @@ fn copy(conn: &Conn, recursive: bool, delta: bool, source: &str, target: &str) -
             return Ok(status_code(cmd));
         }
     }
+    if delta { return Err(Error::InvalidInput("native delta requires an explicit --remote-bun executable".into())); }
     let (host, remote_path, local, upload) = match (src_remote, dst_remote) {
         (Some((host, path)), None) => (host, path, target, false),
         (None, Some((host, path))) => (host, path, source, true),

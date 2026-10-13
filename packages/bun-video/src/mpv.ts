@@ -1,6 +1,6 @@
 import { CString, FFIType, dlopen, ptr, toArrayBuffer, type FFIFunction, type Pointer } from "bun:ffi";
 import { join } from "node:path";
-import { mediaSDKLibraryDirectory } from "./sdk";
+import { mediaSDKLibraryDirectory, mediaSDKPlan, type MediaSDKTarget } from "./sdk";
 
 const functionABI = <
   const A extends NonNullable<FFIFunction["args"]>,
@@ -80,10 +80,11 @@ export interface MpvEvent {
 }
 
 export function mpvLibraryPath(directory = mediaSDKLibraryDirectory("mpv")): string {
-  return join(
-    directory,
-    process.platform === "win32" ? "mpv-2.dll" : process.platform === "darwin" ? "libmpv.2.dylib" : "libmpv.so.2",
-  );
+  if (process.platform === "darwin") return join(directory, "libmpv.2.dylib");
+  const target = `${process.platform === "win32" ? "windows" : process.platform}-${process.arch}` as MediaSDKTarget;
+  const libraryName = mediaSDKPlan("mpv", target).libraryName;
+  if (!libraryName) throw new Error("The media SDK does not declare an mpv library");
+  return join(directory, libraryName);
 }
 
 function cstring(value: string): Uint8Array {

@@ -132,7 +132,7 @@ fn frame(
         let path = relative.join(name);
         let native = bun_core::ZBox::from_bytes(name);
         match bun_sys::lstatat(&directory, native.as_zstr()) {
-            Err(error) if error.errno == bun_sys::E::NOENT as u16 => continue,
+            Err(error) if error.errno == bun_sys::E::ENOENT as u16 => continue,
             Err(error) => return Err(error.into()),
             Ok(stat) if !bun_sys::is_regular_file(stat.st_mode as bun_sys::Mode) => continue,
             Ok(_) => {}

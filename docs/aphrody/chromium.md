@@ -4,7 +4,7 @@
 
 ## Chromium and Obscura modes
 
-The target has two modes: native Obscura/JSC for serverless browser execution, and full Chromium/V8 with WebGPU enabled by default. `bun:chromium` currently controls an installed Chromium browser. `bun:obscura` launches the independently installed native `aphrody-web` browser service and reuses the loopback CDP connection client. Both expose named and default exports for `launch`, `connect` and `findExecutable`.
+`bun:obscura` launches Chromium through `bun:chromium`, with the same executable discovery, CDP connection, profile isolation and process cleanup. Its result identifies `engine: "chromium"`. Configure `BUN_CHROMIUM_PATH` or pass `executable` to select the owner build; the checkout CLI resolves `vendor/chromium/src/out/bun` and never falls back to an adjacent service. Both expose named and default exports for `launch`, `connect` and `findExecutable`. Chromium options, including headless and WebGPU, are shared; `workers` currently accepts only one browser worker.
 
 ```ts
 import { launch } from "bun:obscura";
@@ -38,7 +38,7 @@ try {
 
 Obscura's `launch({ executable?, timeout?, signal?, workers? })` selects a dynamically assigned loopback port, accepts one to 64 workers (one worker on Windows until process-tree shutdown is qualified) and returns `{ endpoint, connection, process, close }`. It does not enable unsafe file access. `await close()` terminates the owned process. `findExecutable()` returns an installed `aphrody-web` path or `null`.
 
-The existing independently installed Obscura backend uses `deno_core` and V8. The `obscura` branch checkpoint `c82e6a6e3bd` contains the standalone `packages/bun-obscura` workspace. A concurrent native browser/JSC migration under `src/browser` and JSC bindings is uncommitted in the Obscura worktree; it remains owned by that workstream and is not copied into this bridge batch. Completing and qualifying that port is required before the Obscura/JSC mode can be reported as delivered.
+The custom DOM backend under `src/browser` uses `deno_core` and V8. Its integration and qualification are tracked in [the browser plan](../../src/browser/PLAN.md). It is separate from the default shared Chromium route and does not establish Blink or JSC parity.
 
 Obscura's CDP `Browser.getVersion` response contains compatibility metadata, so a Chrome-shaped product string does not establish that the engine is Chromium. Obscura's CDP subset, rendering and GPU support require separate qualification; Chromium's GPU results cannot establish Obscura GPU support or a performance advantage. The two modes retain their own engine and sandbox contracts.
 
@@ -70,7 +70,19 @@ const app = manifests.createPWA({
 
 `findExecutable()` returns a discovered browser executable path or `null`. It does not install a browser or start a process. `launch({ executable?, userDataDir?, headless?, webgpu?, url?, extensions?, timeout?, signal? })` starts an installed browser with a dynamically assigned loopback debugging port and returns `{ connection, process, userDataDir, close }`. The default is a visible browser (`headless: false`); pass `headless: true` for automation. Without `userDataDir`, it creates a temporary isolated profile and removes that profile after `await browser.close()` terminates the process. An explicitly supplied profile path must be absolute and is retained on close; select a dedicated automation directory. Cancellation stops the owned process and cleans up its temporary profile. Extension directories must be absolute and contain a valid MV3 manifest.
 
+Closing first requests CDP `Browser.close`, then forces termination after a
+bounded grace period. Windows launches in an owned kill-on-close Job before
+the child executes. Linux requires the Linux 6.9 process-group pidfd flag and
+checks it before spawning. It retains a duplicate of Bun's subprocess pidfd
+and signals the original group even after its leader exits. Descendants that
+explicitly start a different session or process group escape that Linux group;
+this lifecycle ownership is not a security containment boundary. No cgroup or
+namespace permissions are implicitly requested. `await using` invokes the
+same idempotent close operation.
+
 The existing `Bun.WebView` Chrome backend also provides browser launching, page navigation, screenshots and tab-scoped CDP access. The `bun:chromium` launcher uses a browser-level connection so callers can create targets and attach flattened CDP sessions explicitly.
+
+WebView emits `close` once after explicit teardown, browser target detachment or transport failure. Applications can stop their local server from this event. Headless mode keeps GPU support enabled; use an explicit `--disable-gpu` argument to disable it. Windows-owned browser processes use Bun's atomic Job Object spawn path, including their child processes. Temporary profile removal is best effort after process exit; explicitly selected profile directories are preserved.
 
 `launch` enables Chromium's `WebGPUService` by default; pass `webgpu: false` to disable it. `connection.gpu(sessionId)` probes WebGPU support and adapter availability in an attached target. WebGPU requires a secure context, such as HTTPS or a trustworthy local loopback page, and an adapter accepted by the browser's installed drivers and GPU blocklist. See [Chrome WebGPU troubleshooting](https://developer.chrome.com/docs/web-platform/webgpu/troubleshooting-tips). The launcher does not bypass those checks with unsafe flags. GPU availability and successful shader execution require qualification on the actual host.
 
@@ -100,7 +112,7 @@ The existing `packages/bun-tauri/crates/aphrody-tauri-runtime-cef` owns CEF brow
 
 Bun's debugger uses the WebKit Inspector Protocol. Chrome uses CDP. Browser CDP connectivity does not establish Chrome DevTools compatibility for debugging Bun's JavaScriptCore execution, V8 embedding parity, or WebKit/Blink rendering parity. These require separate protocol adapters and measured conformance coverage.
 
-A Chromium fork with native Bun runtime integration remains a subsequent deliverable, after the requested browser capabilities are qualified. Full Chromium mode retains V8; the native JSC port belongs to the Obscura mode. The current bridge does not embed Chromium inside Bun. Chromium's [Windows build instructions](https://chromium.googlesource.com/chromium/src/+/main/docs/windows_build_instructions.md) require a substantial independent source checkout and native toolchain. [V8 embedding](https://v8.dev/docs/embed) uses engine-specific isolates, handles and contexts. Each mode needs evidence for its changed executable, rendering, extensions, debugging, GPU and sandbox behavior; native JSC implementation and engine parity are not established by bridge tests.
+Chromium and Obscura browser pages execute in Chromium's V8 engine; Bun executes in JavaScriptCore. The Chromium bridge does not embed a browser engine inside Bun. `Bun.WebView` uses the existing CDP backend and routes native host selections to the optional `bun-webview-host` process. Its GUI dependencies are not linked into the Bun executable. A recognized backend name does not prove that its driver is built into that host. Selecting a backend requires its own executable, compiled driver and qualification; CDP transport tests alone do not establish native Win32 rendering, engine parity or CEF ABI compatibility.
 
 ## Qualification — 2026-10-11
 

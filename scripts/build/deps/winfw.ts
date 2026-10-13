@@ -1,0 +1,105 @@
+import { readFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
+import type { Dependency } from "../source.ts";
+
+export const WINFW_SYSTEM_LIBRARIES = [
+  "fwpuclnt.lib",
+  "rpcrt4.lib",
+  "iphlpapi.lib",
+  "advapi32.lib",
+  "gdi32.lib",
+  "winspool.lib",
+  "comdlg32.lib",
+  "uuid.lib",
+  "odbc32.lib",
+  "odbccp32.lib",
+];
+
+export function winfwSources(root: string): string[] {
+  const projects = [
+    "windows/winfw/src/winfw/winfw.vcxproj",
+    "windows/libwfp/src/libwfp/libwfp.vcxproj",
+    "windows/windows-libraries/src/libcommon/libcommon.vcxproj",
+  ];
+  const sources = projects
+    .flatMap(project => {
+      const file = resolve(root, project);
+      return [...readFileSync(file, "utf8").matchAll(/<ClCompile Include="([^"]+)"/g)].map(match => {
+        const source = resolve(dirname(file), match[1]!.replaceAll("\\", "/"));
+        const member = relative(root, source).replaceAll("\\", "/");
+        if (member.startsWith("../") || !member.endsWith(".cpp")) throw new Error("Invalid WinFw project source");
+        return member;
+      });
+    })
+    .filter(source => !source.endsWith("/dllmain.cpp"));
+  sources.push(
+    ...["stdafx.cpp", "logging/logsinkadapter.cpp", "logging/stdoutlogger.cpp", "logging/unwind.cpp"].map(
+      path => `windows/libshared/src/libshared/${path}`,
+    ),
+  );
+  if (new Set(sources).size !== sources.length || sources.length !== 71)
+    throw new Error("WinFw source closure changed");
+  return sources;
+}
+
+export const winfw: Dependency = {
+  name: "winfw",
+  enabled: cfg => cfg.windows,
+  source: cfg => ({
+    kind: "local",
+    path: resolve(cfg.cwd, "vendor/mullvad"),
+    hint: "Prepare the pinned Mullvad Windows submodule source closure",
+  }),
+  build: cfg => ({
+    kind: "direct",
+    archive: true,
+    lang: "cxx",
+    preBuild: {
+      command: [
+        process.execPath,
+        resolve(cfg.cwd, "scripts/build/deps/winfw-prepare.ts"),
+        resolve(cfg.cwd, "vendor/mullvad"),
+        resolve(cfg.buildDir, "deps/winfw/generated/winfw/lannetworks.h"),
+        resolve(cfg.cwd, "build/winfw-generator"),
+        cfg.rustToolchain ?? "",
+        cfg.host.os !== "windows" ? (cfg.winsysroot ?? "") : "",
+      ],
+      cwd: cfg.cwd,
+      outputs: [
+        resolve(cfg.buildDir, "deps/winfw/generated/winfw/lannetworks.h"),
+        ...(cfg.host.os !== "windows" && cfg.winsysroot
+          ? [resolve(cfg.buildDir, "deps/winfw/generated/sdk-vfs.json")]
+          : []),
+      ],
+      inputs: [
+        "scripts/build/deps/winfw-prepare.ts",
+        "scripts/build/deps/winfw-libwfp.patch",
+        "vendor/mullvad/Cargo.lock",
+        "vendor/mullvad/talpid-types/Cargo.toml",
+        "vendor/mullvad/talpid-types/src/bin/generate-cpp-lannetworks.rs",
+        "vendor/mullvad/talpid-types/src/net/mod.rs",
+      ].map(path => resolve(cfg.cwd, path)),
+    },
+    sources: winfwSources(resolve(cfg.cwd, "vendor/mullvad")),
+    includes: [
+      resolve(cfg.buildDir, "deps/winfw/generated"),
+      "windows/winfw/src",
+      "windows/libwfp/src",
+      "windows/windows-libraries/src",
+      "windows/libshared/src",
+    ],
+    defines: { WINFW_STATIC: true, UNICODE: true, _UNICODE: true, _LIB: true, _WINDOWS: true },
+    cflags: [
+      "/std:c++20",
+      "/EHsc",
+      "/GR",
+      ...["windows/winfw/src/winfw", "windows/libwfp/src/libwfp", "windows/windows-libraries/src/libcommon"].flatMap(
+        path => ["/clang:-idirafter", `/clang:${resolve(cfg.cwd, "vendor/mullvad", path)}`],
+      ),
+      ...(cfg.host.os !== "windows" && cfg.winsysroot
+        ? ["/clang:-ivfsoverlay", `/clang:${resolve(cfg.buildDir, "deps/winfw/generated/sdk-vfs.json")}`]
+        : []),
+    ],
+  }),
+  provides: () => ({ libs: ["winfw"], includes: [] }),
+};

@@ -1,0 +1,269 @@
+diff --git content/browser/devtools/devtools_http_handler.cc content/browser/devtools/devtools_http_handler.cc
+index fab13300e5d8f6f562dfef1e5bc8e902ca0a43c4..b4d54c5c568ca46abe2a509a910d2d34f7c1046c 100644
+--- content/browser/devtools/devtools_http_handler.cc
++++ content/browser/devtools/devtools_http_handler.cc
+@@ -627,7 +627,7 @@ void DevToolsHttpHandler::OnJsonRequest(
+     base::DictValue version;
+     version.Set("Protocol-Version", DevToolsAgentHost::GetProtocolVersion());
+     version.Set("WebKit-Version", GetWebKitVersion());
+-    version.Set("Browser", GetContentClient()->browser()->GetProduct());
++    version.Set("Browser", GetContentClient()->browser()->GetChromeProduct());
+     version.Set("File-Path-Style", kNativeFilePathStyle);
+     version.Set("User-Agent", GetContentClient()->browser()->GetUserAgent());
+     version.Set("V8-Version", V8_VERSION_STRING);
+diff --git content/browser/loader/navigation_url_loader_impl.cc content/browser/loader/navigation_url_loader_impl.cc
+index f7fcb6e0637db389c7b32993ffc291bb98e26ce6..67f3bf2ba910c39cfbf422cbf3e4ea02a44fa949 100644
+--- content/browser/loader/navigation_url_loader_impl.cc
++++ content/browser/loader/navigation_url_loader_impl.cc
+@@ -1298,7 +1298,7 @@ NavigationURLLoaderImpl::CreateNonNetworkLoaderFactory(
+   mojo::PendingRemote<network::mojom::URLLoaderFactory>
+       terminal_external_protocol;
+   bool handled = GetContentClient()->browser()->HandleExternalProtocol(
+-      resource_request.url, std::move(web_contents_getter),
++      resource_request.url, web_contents_getter,
+       frame_tree_node->frame_tree_node_id(), navigation_ui_data,
+       request_info.is_primary_main_frame,
+       frame_tree_node->IsInFencedFrameTree(), request_info.sandbox_flags,
+@@ -1310,6 +1310,21 @@ NavigationURLLoaderImpl::CreateNonNetworkLoaderFactory(
+                 *request_info.initiator_document_token)
+           : nullptr,
+       request_info.isolation_info, &terminal_external_protocol);
++
++  if (!handled) {
++    handled = GetContentClient()->browser()->HandleExternalProtocol(
++        web_contents_getter, frame_tree_node->frame_tree_node_id(),
++        navigation_ui_data, request_info.is_primary_main_frame,
++        frame_tree_node->IsInFencedFrameTree(), request_info.sandbox_flags,
++        resource_request, initiating_origin,
++        request_info.initiator_document_token
++            ? RenderFrameHostImpl::FromDocumentToken(
++                  request_info.initiator_process_id,
++                  *request_info.initiator_document_token)
++            : nullptr,
++        request_info.isolation_info, &terminal_external_protocol);
++  }
++
+   if (terminal_external_protocol) {
+     return std::make_pair(
+         /*is_cacheable=*/false,
+diff --git content/public/browser/content_browser_client.cc content/public/browser/content_browser_client.cc
+index 9fdb8a4b7b54991e024a36338682c7129b59a7ad..03baa856aa733c065d09c2c585b820544bdb8266 100644
+--- content/public/browser/content_browser_client.cc
++++ content/public/browser/content_browser_client.cc
+@@ -1182,7 +1182,7 @@ ContentBrowserClient::URLLoaderRequestHandler ContentBrowserClient::
+ void ContentBrowserClient::OnNetworkServiceCreated(
+     network::mojom::NetworkService* network_service) {}
+ 
+-void ContentBrowserClient::ConfigureNetworkContextParams(
++bool ContentBrowserClient::ConfigureNetworkContextParams(
+     BrowserContext* context,
+     bool in_memory,
+     const base::FilePath& relative_partition_path,
+@@ -1191,6 +1191,7 @@ void ContentBrowserClient::ConfigureNetworkContextParams(
+         cert_verifier_creation_params) {
+   network_context_params->user_agent = GetUserAgent();
+   network_context_params->accept_language = "en-us,en";
++  return true;
+ }
+ 
+ std::vector<base::FilePath>
+diff --git content/public/browser/content_browser_client.h content/public/browser/content_browser_client.h
+index 6e730455c66df584a721a2b4720f25bf9844f16d..fb0901edce81040b593e89554dedd6b5334bb54b 100644
+--- content/public/browser/content_browser_client.h
++++ content/public/browser/content_browser_client.h
+@@ -1286,6 +1286,12 @@ class CONTENT_EXPORT ContentBrowserClient {
+       bool opener_suppressed,
+       bool* no_javascript_access);
+ 
++  // Called to report the result of new window creation after CanCreateWindow()
++  // returns true. There are cases where the new window may still be canceled.
++  virtual void CreateWindowResult(
++      RenderFrameHost* opener,
++      bool success) {}
++
+   // Allows the embedder to return a delegate for the SpeechRecognitionManager.
+   // The delegate will be owned by the manager. It's valid to return nullptr.
+   virtual SpeechRecognitionManagerDelegate*
+@@ -2159,7 +2165,7 @@ class CONTENT_EXPORT ContentBrowserClient {
+   //
+   // If |relative_partition_path| is the empty string, it means this needs to
+   // create the default NetworkContext for the BrowserContext.
+-  virtual void ConfigureNetworkContextParams(
++  virtual bool ConfigureNetworkContextParams(
+       BrowserContext* context,
+       bool in_memory,
+       const base::FilePath& relative_partition_path,
+@@ -2415,6 +2421,22 @@ class CONTENT_EXPORT ContentBrowserClient {
+       const net::IsolationInfo& isolation_info,
+       mojo::PendingRemote<network::mojom::URLLoaderFactory>* out_factory);
+ 
++  // Same as above, but exposing the whole ResourceRequest object.
++  virtual bool HandleExternalProtocol(
++      base::RepeatingCallback<WebContents*()> web_contents_getter,
++      FrameTreeNodeId frame_tree_node_id,
++      NavigationUIData* navigation_data,
++      bool is_primary_main_frame,
++      bool is_in_fenced_frame_tree,
++      network::mojom::WebSandboxFlags sandbox_flags,
++      const network::ResourceRequest& request,
++      const std::optional<url::Origin>& initiating_origin,
++      RenderFrameHost* initiator_document,
++      const net::IsolationInfo& isolation_info,
++      mojo::PendingRemote<network::mojom::URLLoaderFactory>* out_factory) {
++    return false;
++  }
++
+   // Creates an OverlayWindow to be used for video or Picture-in-Picture.
+   // This window will house the content shown when in Picture-in-Picture mode.
+   // This will return a new OverlayWindow.
+@@ -2489,6 +2511,10 @@ class CONTENT_EXPORT ContentBrowserClient {
+   // Used as part of the user agent string.
+   virtual std::string GetProduct();
+ 
++  // Returns the Chrome-specific product string. This is used for compatibility
++  // purposes with external tools like Selenium.
++  virtual std::string GetChromeProduct() { return GetProduct(); }
++
+   // Returns the user agent. Content may cache this value.
+   virtual std::string GetUserAgent();
+ 
+diff --git content/public/renderer/content_renderer_client.h content/public/renderer/content_renderer_client.h
+index ee1ba2eeb47f936cf1b7cb7634a9f1f91f0a5246..95fdb68064280d96b62e4be36a8758bfc31a9c73 100644
+--- content/public/renderer/content_renderer_client.h
++++ content/public/renderer/content_renderer_client.h
+@@ -110,6 +110,9 @@ class CONTENT_EXPORT ContentRendererClient {
+   // a crash handler (such as crashpad) is already in use.
+   virtual void SetUpWebAssemblyTrapHandler();
+ 
++  // Notifies that the RenderThread can now send sync IPC messages.
++  virtual void RenderThreadConnected() {}
++
+   // Notifies that a new RenderFrame has been created.
+   virtual void RenderFrameCreated(RenderFrame* render_frame) {}
+ 
+@@ -358,6 +361,10 @@ class CONTENT_EXPORT ContentRendererClient {
+   // This method may invalidate the frame.
+   virtual void RunScriptsAtDocumentIdle(RenderFrame* render_frame) {}
+ 
++  // Notifies that a DevTools agent has attached or detached.
++  virtual void DevToolsAgentAttached() {}
++  virtual void DevToolsAgentDetached() {}
++
+   // Allows subclasses to enable some runtime features before Blink has
+   // started.
+   virtual void SetRuntimeFeaturesDefaultsBeforeBlinkInitialization() {}
+diff --git content/renderer/render_thread_impl.cc content/renderer/render_thread_impl.cc
+index fe688f282a3c394b9f8ad52c9c6c7e7441c54e8f..e52db9b707642903c8cb9af104250acf424911d3 100644
+--- content/renderer/render_thread_impl.cc
++++ content/renderer/render_thread_impl.cc
+@@ -568,6 +568,8 @@ void RenderThreadImpl::Init() {
+       GetContentClient()->renderer()->CreateURLLoaderThrottleProvider(
+           blink::URLLoaderThrottleProviderType::kFrame);
+ 
++  GetContentClient()->renderer()->RenderThreadConnected();
++
+   GetAssociatedInterfaceRegistry()->AddInterface<mojom::Renderer>(
+       base::BindRepeating(&RenderThreadImpl::OnRendererInterfaceReceiver,
+                           base::Unretained(this)));
+diff --git content/renderer/renderer_blink_platform_impl.cc content/renderer/renderer_blink_platform_impl.cc
+index 4341f407c4fb27afd20162eee63157cb92ca6515..be8c62bfded40b11189230af947a68cfa77ac8c6 100644
+--- content/renderer/renderer_blink_platform_impl.cc
++++ content/renderer/renderer_blink_platform_impl.cc
+@@ -1113,6 +1113,15 @@ RendererBlinkPlatformImpl::GetCpuPerformanceTier() {
+ 
+ //------------------------------------------------------------------------------
+ 
++void RendererBlinkPlatformImpl::DevToolsAgentAttached() {
++  GetContentClient()->renderer()->DevToolsAgentAttached();
++}
++void RendererBlinkPlatformImpl::DevToolsAgentDetached() {
++  GetContentClient()->renderer()->DevToolsAgentDetached();
++}
++
++//------------------------------------------------------------------------------
++
+ std::unique_ptr<blink::WebV8ValueConverter>
+ RendererBlinkPlatformImpl::CreateWebV8ValueConverter() {
+   return std::make_unique<V8ValueConverterImpl>();
+diff --git content/renderer/renderer_blink_platform_impl.h content/renderer/renderer_blink_platform_impl.h
+index 2266ee880b69ca9c41bd72029b55852b476772e5..237ef903db8a2298105433ab9c8f775cb856b8e3 100644
+--- content/renderer/renderer_blink_platform_impl.h
++++ content/renderer/renderer_blink_platform_impl.h
+@@ -271,6 +271,9 @@ class CONTENT_EXPORT RendererBlinkPlatformImpl : public BlinkPlatformImpl {
+ #endif  // BUILDFLAG(IS_ANDROID)
+   void OnV8HeapLastResortGC() override;
+ 
++  void DevToolsAgentAttached() override;
++  void DevToolsAgentDetached() override;
++
+   // Tells this platform that the renderer is locked to a site (i.e., a scheme
+   // plus eTLD+1, such as https://google.com), or to a more specific origin.
+   void SetIsLockedToSite();
+diff --git content/shell/browser/shell_content_browser_client.cc content/shell/browser/shell_content_browser_client.cc
+index 1f730d3e774a311bdab058e4989dc6287c9089b9..0c42cde4fcfe6fba740fd54d380e859d8b7b596b 100644
+--- content/shell/browser/shell_content_browser_client.cc
++++ content/shell/browser/shell_content_browser_client.cc
+@@ -802,7 +802,7 @@ void ShellContentBrowserClient::OnNetworkServiceCreated(
+ #endif
+ }
+ 
+-void ShellContentBrowserClient::ConfigureNetworkContextParams(
++bool ShellContentBrowserClient::ConfigureNetworkContextParams(
+     BrowserContext* context,
+     bool in_memory,
+     const base::FilePath& relative_partition_path,
+@@ -811,6 +811,7 @@ void ShellContentBrowserClient::ConfigureNetworkContextParams(
+         cert_verifier_creation_params) {
+   ConfigureNetworkContextParamsForShell(context, network_context_params,
+                                         cert_verifier_creation_params);
++  return true;
+ }
+ 
+ std::vector<base::FilePath>
+diff --git content/shell/browser/shell_content_browser_client.h content/shell/browser/shell_content_browser_client.h
+index ace08e41a53419f04c44c22614df41eec6a3d817..0cfd0321349dd8a5b1e1faab4a7c3deaee3c1f1e 100644
+--- content/shell/browser/shell_content_browser_client.h
++++ content/shell/browser/shell_content_browser_client.h
+@@ -138,7 +138,7 @@ class ShellContentBrowserClient : public ContentBrowserClient {
+   GetGeolocationSystemPermissionManager() override;
+   void OnNetworkServiceCreated(
+       network::mojom::NetworkService* network_service) override;
+-  void ConfigureNetworkContextParams(
++  bool ConfigureNetworkContextParams(
+       BrowserContext* context,
+       bool in_memory,
+       const base::FilePath& relative_partition_path,
+diff --git headless/lib/browser/headless_content_browser_client.cc headless/lib/browser/headless_content_browser_client.cc
+index d1a6b4dff1a8bfc2e87d999742cd157a204c03a1..b4c8738ce654b60d7395db5ecb3ba73a26a90fbc 100644
+--- headless/lib/browser/headless_content_browser_client.cc
++++ headless/lib/browser/headless_content_browser_client.cc
+@@ -419,7 +419,7 @@ bool HeadlessContentBrowserClient::IsPrivacySandboxReportingDestinationAttested(
+   return command_line->HasSwitch(switches::kForceReportingDestinationAttested);
+ }
+ 
+-void HeadlessContentBrowserClient::ConfigureNetworkContextParams(
++bool HeadlessContentBrowserClient::ConfigureNetworkContextParams(
+     content::BrowserContext* context,
+     bool in_memory,
+     const base::FilePath& relative_partition_path,
+@@ -429,6 +429,7 @@ void HeadlessContentBrowserClient::ConfigureNetworkContextParams(
+   HeadlessBrowserContextImpl::From(context)->ConfigureNetworkContextParams(
+       in_memory, relative_partition_path, network_context_params,
+       cert_verifier_creation_params);
++  return true;
+ }
+ 
+ std::string HeadlessContentBrowserClient::GetProduct() {
+diff --git headless/lib/browser/headless_content_browser_client.h headless/lib/browser/headless_content_browser_client.h
+index e317e94d208e93cf823e77f4d1b1dab18dc4cd6c..1a66c7bbff726e5bf5f759495c172ed48fd98e04 100644
+--- headless/lib/browser/headless_content_browser_client.h
++++ headless/lib/browser/headless_content_browser_client.h
+@@ -86,7 +86,7 @@ class HeadlessContentBrowserClient : public content::ContentBrowserClient {
+       const url::Origin& destination_origin,
+       content::PrivacySandboxInvokingAPI invoking_api) override;
+ 
+-  void ConfigureNetworkContextParams(
++  bool ConfigureNetworkContextParams(
+       content::BrowserContext* context,
+       bool in_memory,
+       const base::FilePath& relative_partition_path,

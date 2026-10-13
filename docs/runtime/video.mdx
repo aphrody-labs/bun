@@ -1,0 +1,98 @@
+---
+title: Video
+description: Probe media, extract frames and reuse the native Image pipeline
+---
+
+`Bun.Video` uses the native Rust FilmCraft provider for media input and the
+[`Bun.Image`](/runtime/image) worker for frame transformations and encoding.
+It does not launch an external media executable.
+
+```ts
+if (!Bun.Video.available) throw new Error("This runtime has no native video provider");
+const video = new Bun.Video("episode.mp4");
+const metadata = await video.metadata();
+await video.frame(480).resize(640, 360).webp({ lossless: true }).write("frame.webp");
+```
+
+The provider is selected at build time (`--video-native=on`); `available` reports
+its inclusion, not support for every codec. MP4 with H264 video and AAC audio
+is the qualified input. Other containers, profiles and targets need separate
+qualification. Still-image import is owned by `Bun.Image`.
+
+## Sources and metadata
+
+The constructor accepts the same source types as `Bun.Image`: a local path,
+bytes, a data URL or a Blob. Local movies use bounded reads from a regular file;
+the file limit is 64 GiB. In-memory input is limited to 256 MiB. Treat path strings
+as filesystem access and validate them before accepting untrusted input.
+
+`metadata()` returns source `width`, `height`, `duration`, `codec`, `container`,
+`fpsNumerator`, `fpsDenominator`, `frameCount`, `fileBytes` and `audioStreams`.
+Each audio stream reports its sample rate, channels and codec. The source frame
+rate remains rational; do not round 24000/1001 to 24 when selecting frames.
+
+## Frame transformations and raw pixels
+
+`frame(seconds)` selects a non-negative presentation time. Chainable transforms
+record settings; a terminal method schedules work off the JavaScript thread.
+The order is shared with Image: `autoOrient → extract → rotate → flip/flop → resize → modulate`.
+
+```ts
+const pixels = await new Bun.Video("episode.mp4")
+  .frame(780)
+  .extract({ left: 320, top: 100, width: 800, height: 600 })
+  .resize(128, 96)
+  .rgba();
+// { width, height, channels: 4, data: Uint8Array, iccProfile }
+```
+
+`rgba()` returns owned RGBA8 bytes without encoding and decoding a PNG.
+Other terminals mirror Image: `bytes`, `buffer`/`toBuffer`, `blob`, `write`,
+`toBase64`, `dataurl`/`toDataURL` and `placeholder`. JPEG, PNG, WebP, HEIC and
+AVIF output use Image's encoders and platform support. `Video.backend` shares
+the Image transformation backend; it does not select a video decoder.
+
+## Bounded frame batches
+
+`frames({ start, end, step, maxFrames })` returns `{ time, bytes }` entries with
+source-resolution PNGs. `end` is exclusive. A batch is limited to 64 frames and
+64 MiB of encoded output; choose a smaller batch for large frames.
+
+```ts
+const meta = await video.metadata();
+const step = meta.fpsDenominator / meta.fpsNumerator;
+const frames = await video.frames({ start: 0, end: 3 * step, step, maxFrames: 3 });
+```
+
+Each batch owns one decoder session. Frame batches preserve source resolution;
+use `frame(time)` to transform an individual frame. This API does not keep an
+entire episode decoded in memory.
+
+## Audio, GIF and MP4 remux
+
+```ts
+await Bun.write("audio.wav", await video.audio({ start: 10, duration: 20, sampleRate: 16000 }));
+await Bun.write("moment.gif", await video.gif({ start: 638, duration: 5, fps: 12, width: 640 }));
+await video.remux("episode-remux.mp4");
+```
+
+Audio extraction returns PCM16 WAV and is bounded to 30 seconds and 64 MiB.
+GIF export is palette-quantized: it is a lossy derivative, limited to five
+seconds, 120 frames, 640×360 and 32 MiB. Remux preserves encoded access units
+and writes a new MP4; it refuses overwriting an existing destination.
+Remux is distinct from encoding a new composition or guaranteeing a smaller file.
+
+## Frame analysis with WebGPU
+
+The package extension `@aphrody/bun-video/frame-analysis` owns bounded WGSL
+histograms and detail metrics. Pass raw Image/Video pixels directly:
+
+```ts
+import { analyzeFrameRgba } from "@aphrody/bun-video/frame-analysis";
+const rgba = await video.frame(780).resize(128, 72).rgba();
+const metrics = await analyzeFrameRgba(rgba, { backend: "chromium", timeout: 5000 });
+```
+
+The extension reports the actual compute adapter and rejects unsupported
+backends. It accepts at most 65536 pixels and does not silently substitute CPU
+analysis. WGSL frame analysis does not establish hardware video decoding.

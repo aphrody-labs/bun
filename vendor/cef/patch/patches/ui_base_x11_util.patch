@@ -1,0 +1,16 @@
+diff --git ui/base/x/x11_util.h ui/base/x/x11_util.h
+index 508a3461d03309b8fac6d3bcf9df5d83335b2cc9..309a731ea5b720000b05772de26aa0080a794d15 100644
+--- ui/base/x/x11_util.h
++++ ui/base/x/x11_util.h
+@@ -245,8 +245,9 @@ x11::Future<void> SendClientMessage(
+     x11::Window target,
+     x11::Atom type,
+     const std::array<uint32_t, 5> data,
+-    x11::EventMask event_mask = x11::EventMask::SubstructureNotify |
+-                                x11::EventMask::SubstructureRedirect);
++    x11::EventMask event_mask = static_cast<x11::EventMask>(
++        static_cast<int>(x11::EventMask::SubstructureNotify) |
++        static_cast<int>(x11::EventMask::SubstructureRedirect)));
+ 
+ // Return true if VulkanSurface is supported.
+ COMPONENT_EXPORT(UI_BASE_X) bool IsVulkanSurfaceSupported();

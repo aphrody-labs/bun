@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { bunEnv, bunExe, isWindows, tempDir } from "harness";
-import { existsSync, readdirSync, rmSync, statSync } from "node:fs";
+import { closeSync, existsSync, openSync, readdirSync, rmSync, statSync, truncateSync } from "node:fs";
 import { join } from "path";
 
 // Minimal ustar tarball builder (pathnames must be <100 bytes). `name` accepts
@@ -87,6 +87,82 @@ function buildPaxTarball(entries: Array<{ name: string; data: Buffer | string }>
 }
 
 describe("Bun.Archive", () => {
+  describe("file-backed sources", () => {
+    for (const options of [{ mtime: 0 }, { format: "zip", mtime: 0 }, { compress: "gzip", mtime: 0 }] as const) {
+      test(`preserves sliced file bytes across all operations ${JSON.stringify(options)}`, async () => {
+        using dir = tempDir("archive-file-window");
+        const bytes = await new Bun.Archive({ "entry.txt": "file-backed content" }, options).bytes();
+        const framed = new Uint8Array(bytes.length + 11);
+        framed.set(bytes, 7);
+        const path = join(String(dir), "framed.archive");
+        await Bun.write(path, framed);
+        const input = Bun.file(path).slice(3).slice(4, 4 + bytes.length);
+        const archive = new Bun.Archive(input);
+        expect(await archive.bytes()).toEqual(bytes);
+        expect(await (await archive.blob()).bytes()).toEqual(bytes);
+        expect(await (await archive.files()).get("entry.txt")!.text()).toBe("file-backed content");
+        const extracted = join(String(dir), "extracted");
+        expect(await archive.extract(extracted)).toBe(1);
+        expect(await Bun.file(join(extracted, "entry.txt")).text()).toBe("file-backed content");
+        const copy = join(String(dir), "copy.archive");
+        await Bun.Archive.write(copy, input);
+        expect(await Bun.file(copy).bytes()).toEqual(bytes);
+        await Bun.Archive.write(copy, archive);
+        expect(await Bun.file(copy).bytes()).toEqual(bytes);
+        await Bun.write(copy, archive);
+        expect(await Bun.file(copy).bytes()).toEqual(bytes);
+        const memory = new Bun.Archive(new Blob([framed]).slice(7, 7 + bytes.length));
+        expect(await memory.bytes()).toEqual(bytes);
+        expect(await (await memory.blob()).bytes()).toEqual(bytes);
+      });
+    }
+
+    test("packs direct and descriptor file entries with their slice boundaries", async () => {
+      using dir = tempDir("archive-file-entries");
+      const path = join(String(dir), "source.txt");
+      await Bun.write(path, "prefix-content-suffix");
+      const input = Bun.file(path).slice(7, 14);
+      for (const format of ["tar", "zip"] as const) {
+        const archive = new Bun.Archive({ "direct.txt": input, "descriptor.txt": { data: input, mode: 0o600, mtime: 0 } }, { format, mtime: 0 });
+        const files = await archive.files();
+        expect(await files.get("direct.txt")!.text()).toBe("content");
+        expect(await files.get("descriptor.txt")!.text()).toBe("content");
+        const output = join(String(dir), `${format}.archive`);
+        await Bun.Archive.write(output, { "written.txt": input }, { format, mtime: 0 });
+        expect(await (await new Bun.Archive(Bun.file(output)).files()).get("written.txt")!.text()).toBe("content");
+      }
+    });
+
+    test("retains a supplied descriptor without consuming its file position", async () => {
+      using dir = tempDir("archive-file-descriptor");
+      const path = join(String(dir), "input.tar");
+      const bytes = buildTarball([{ name: "entry.txt", data: "retained descriptor" }]);
+      await Bun.write(path, bytes);
+      const fd = openSync(path, "r");
+      let archive: Bun.Archive;
+      try { archive = new Bun.Archive(Bun.file(fd)); } finally { closeSync(fd); }
+      expect(await archive.bytes()).toEqual(bytes);
+      expect(await (await archive.files()).get("entry.txt")!.text()).toBe("retained descriptor");
+      const output = join(String(dir), "copied.tar");
+      await Bun.write(output, archive);
+      expect(await Bun.file(output).bytes()).toEqual(bytes);
+    });
+
+    test("rejects missing files asynchronously and bounds synchronous file entry reads", async () => {
+      using dir = tempDir("archive-file-errors");
+      const archive = new Bun.Archive(Bun.file(join(String(dir), "missing")));
+      await expect(archive.bytes()).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(archive.blob()).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(archive.files()).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(archive.extract(join(String(dir), "out"))).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(Bun.Archive.write(join(String(dir), "copy"), archive)).rejects.toMatchObject({ code: "ENOENT" });
+      const oversized = join(String(dir), "oversized");
+      await Bun.write(oversized, "");
+      truncateSync(oversized, 64 * 1024 * 1024 + 1);
+      expect(() => new Bun.Archive({ "oversized.bin": Bun.file(oversized) })).toThrow("64 MiB");
+    });
+  });
+
   describe("new Archive()", () => {
     test("creates archive from object with string values", async () => {
       const archive = new Bun.Archive({

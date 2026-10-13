@@ -1,0 +1,97 @@
+diff --git components/prefs/pref_service.h components/prefs/pref_service.h
+index 7ac0cd7952128af52f896ac9013e2030b2b7bfd9..903749dac5fa1b5331226be9a6ca99cb947713d2 100644
+--- components/prefs/pref_service.h
++++ components/prefs/pref_service.h
+@@ -55,6 +55,10 @@ namespace base::i18n {
+ class LanguageTag;
+ }
+ 
++namespace pref_helper {
++class Registrar;
++}
++
+ namespace prefs {
+ class ScopedDictionaryPrefUpdate;
+ }
+@@ -442,6 +446,8 @@ class COMPONENTS_PREFS_EXPORT PrefService {
+   // declared as a friend, too.
+   friend class PrefChangeRegistrar;
+   friend class subtle::PrefMemberBase;
++  // CEF registration manager.
++  friend class pref_helper::Registrar;
+ 
+   // These are protected so they can only be accessed by the friend
+   // classes listed above.
+diff --git components/variations/BUILD.gn components/variations/BUILD.gn
+index a7acb2b272a3352e3a30471bf10b7e91a6ef61f9..79e3f7aa95da69826af9786997e31561a8535b83 100644
+--- components/variations/BUILD.gn
++++ components/variations/BUILD.gn
+@@ -136,6 +136,7 @@ component("variations") {
+     ":buildflags",
+     ":variations_mojom",
+     "proto",
++    "//cef/libcef/features:buildflags",
+     "//base:build_time",
+     "//components/crash/core/common:crash_key",
+     "//components/prefs",
+diff --git components/variations/synthetic_trials_active_group_id_provider.cc components/variations/synthetic_trials_active_group_id_provider.cc
+index 6d94012d58446be8e3513ec4a03df9f0b1983bbd..806460a88956e53d73abe73c7e6777b71b675786 100644
+--- components/variations/synthetic_trials_active_group_id_provider.cc
++++ components/variations/synthetic_trials_active_group_id_provider.cc
+@@ -27,7 +27,7 @@ SyntheticTrialsActiveGroupIdProvider::GetActiveGroupIds() {
+   return group_ids_;
+ }
+ 
+-#if !defined(NDEBUG)
++#if !defined(NDEBUG) || BUILDFLAG(ENABLE_CEF)
+ std::vector<SyntheticTrialGroup>
+ SyntheticTrialsActiveGroupIdProvider::GetGroups() {
+   base::AutoLock scoped_lock(lock_);
+@@ -38,7 +38,7 @@ SyntheticTrialsActiveGroupIdProvider::GetGroups() {
+ void SyntheticTrialsActiveGroupIdProvider::ResetForTesting() {
+   base::AutoLock scoped_lock(lock_);
+   group_ids_.clear();
+-#if !defined(NDEBUG)
++#if !defined(NDEBUG) || BUILDFLAG(ENABLE_CEF)
+   groups_.clear();
+ #endif  // !defined(NDEBUG)
+ }
+@@ -54,7 +54,7 @@ void SyntheticTrialsActiveGroupIdProvider::OnSyntheticTrialsChanged(
+     for (const auto& group : groups) {
+       group_ids_.push_back(group.id());
+     }
+-#if !defined(NDEBUG)
++#if !defined(NDEBUG) || BUILDFLAG(ENABLE_CEF)
+     groups_ = groups;
+ #endif  // !defined(NDEBUG)
+   }
+diff --git components/variations/synthetic_trials_active_group_id_provider.h components/variations/synthetic_trials_active_group_id_provider.h
+index b4a999731d9969b2ebd74ea2b7b4b8340dee92d7..0bbac173fddf17b3e752ac77cb37b0b7d697cbf1 100644
+--- components/variations/synthetic_trials_active_group_id_provider.h
++++ components/variations/synthetic_trials_active_group_id_provider.h
+@@ -10,6 +10,7 @@
+ #include "base/component_export.h"
+ #include "base/synchronization/lock.h"
+ #include "base/thread_annotations.h"
++#include "cef/libcef/features/features.h"
+ #include "components/variations/active_field_trials.h"
+ #include "components/variations/synthetic_trials.h"
+ 
+@@ -36,7 +37,7 @@ class COMPONENT_EXPORT(VARIATIONS) SyntheticTrialsActiveGroupIdProvider
+   // Returns currently active synthetic trial group IDs.
+   std::vector<ActiveGroupId> GetActiveGroupIds();
+ 
+-#if !defined(NDEBUG)
++#if !defined(NDEBUG) || BUILDFLAG(ENABLE_CEF)
+   // In debug mode, not only the group IDs are tracked but also the full group
+   // info, to display the names unhashed in chrome://version.
+   std::vector<SyntheticTrialGroup> GetGroups();
+@@ -60,7 +61,7 @@ class COMPONENT_EXPORT(VARIATIONS) SyntheticTrialsActiveGroupIdProvider
+ 
+   base::Lock lock_;
+   std::vector<ActiveGroupId> group_ids_;  // GUARDED_BY(lock_);
+-#if !defined(NDEBUG)
++#if !defined(NDEBUG) || BUILDFLAG(ENABLE_CEF)
+   // In debug builds, keep the full group information to be able to display it
+   // in chrome://version.
+   std::vector<SyntheticTrialGroup> groups_;  // GUARDED_BY(lock_);

@@ -7,7 +7,7 @@ import type { TranscribeProgress } from "./transcribe.js";
 it("splits a long run of words into lines under 16 KB and keeps every word in order", () => {
   const events: TranscribeProgress[] = [];
   const words = Array.from({ length: 2000 }, (_, i) => ({
-    text: `word${i}`,
+    text: `${"悟空".repeat(40)}word${i}`,
     start: i,
     end: i + 0.5,
   }));
@@ -15,7 +15,7 @@ it("splits a long run of words into lines under 16 KB and keeps every word in or
 
   expect(events.length).toBeGreaterThan(1);
   for (const event of events)
-    expect(new TextEncoder().encode(`${JSON.stringify(event).length}\n`)).toBeLessThan(16_384);
+    expect(Buffer.byteLength(`${JSON.stringify(event)}\n`, "utf8")).toBeLessThan(16_384);
   expect(events.flatMap((e) => (e.type === "words" ? e.words : []))).toEqual(words);
   expect(events.at(-1)).toMatchObject({ through: 2100 });
 });

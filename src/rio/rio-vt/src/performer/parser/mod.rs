@@ -48,6 +48,8 @@ pub struct Parser {
     /// to fit the largest non-ASCII ground-state chunk seen so far; empty
     /// in steady state when sessions are pure ASCII.
     decode_buf: Vec<u32>,
+    #[cfg(feature = "native-ui")]
+    apc_st_pending: bool,
 }
 
 /// OSC accumulator with a fixed-size inline buffer and a heap fallback.
@@ -430,6 +432,20 @@ impl Parser {
 
     #[inline(always)]
     fn advance_esc<P: Perform>(&mut self, performer: &mut P, byte: u8) {
+        #[cfg(feature = "native-ui")]
+        if self.apc_st_pending {
+            self.apc_st_pending = false;
+            if byte == b'\\' {
+                performer.apc_end();
+                self.state = State::Ground;
+                return;
+            }
+            if performer.apc_discarding() {
+                self.state = State::ApcString;
+                return;
+            }
+            performer.apc_abort();
+        }
         match byte {
             0x00..=0x17 | 0x19 | 0x1C..=0x1F => performer.execute(byte),
             0x20..=0x2F => {
@@ -629,11 +645,25 @@ impl Parser {
             0x00..=0x06 | 0x08..=0x17 | 0x19 | 0x1C..=0x1F => (), // Ignore control bytes
             0x07 => {
                 // Bell-terminated APC.
+                #[cfg(feature = "native-ui")]
+                if performer.apc_requires_st() {
+                    return;
+                }
                 performer.apc_end();
                 self.state = State::Ground;
             }
             0x18 | 0x1A => {
                 // C0 termination (CAN or SUB).
+                #[cfg(feature = "native-ui")]
+                if performer.apc_requires_st() {
+                    if performer.apc_discarding() {
+                        return;
+                    }
+                    performer.apc_abort();
+                    performer.execute(byte);
+                    self.state = State::Ground;
+                    return;
+                }
                 performer.apc_put(byte);
                 performer.apc_end();
                 performer.execute(byte);
@@ -641,6 +671,12 @@ impl Parser {
             }
             0x1B => {
                 // Start of ST termination (`\x1b\`).
+                #[cfg(feature = "native-ui")]
+                if performer.apc_requires_st() {
+                    self.apc_st_pending = true;
+                    self.state = State::Escape;
+                    return;
+                }
                 performer.apc_end();
                 self.state = State::Escape;
             }
@@ -1573,6 +1609,17 @@ pub trait Perform {
     /// Invoked when the end of an APC (Application Program Command) sequence is
     /// encountered.
     fn apc_end(&mut self) {}
+
+    #[cfg(feature = "native-ui")]
+    fn apc_requires_st(&self) -> bool {
+        false
+    }
+    #[cfg(feature = "native-ui")]
+    fn apc_discarding(&self) -> bool {
+        false
+    }
+    #[cfg(feature = "native-ui")]
+    fn apc_abort(&mut self) {}
 }
 
 #[cfg(test)]

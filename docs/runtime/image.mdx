@@ -82,6 +82,21 @@ img.resize(800, 600, { filter: "mitchell" });
 
 When the source is a JPEG and the target is at most half the source size, decode skips straight to the nearest M/8 IDCT scale. As a result, generating a thumbnail from a 24 MP photo never materializes the full-resolution buffer.
 
+## Extract
+
+Crop a rectangle in source coordinates before rotation and resizing:
+
+```ts
+await new Bun.Image("photo.png")
+  .extract({ left: 100, top: 80, width: 640, height: 480 })
+  .resize(320, 240)
+  .png()
+  .write("crop.png");
+```
+
+Coordinates must be non-negative integers; width and height must be positive.
+An out-of-bounds rectangle rejects with `ERR_IMAGE_INVALID_TRANSFORM`.
+
 ## Rotate · flip
 
 ```ts
@@ -121,6 +136,7 @@ A pipeline does no work until you await one of these:
 
 ```ts
 await img.bytes(); // Uint8Array
+await img.rgba(); // { width, height, channels: 4, data: Uint8Array, iccProfile }
 await img.buffer(); // Buffer
 await img.blob(); // Blob with .type set to the output MIME
 await img.toBase64(); // string
@@ -130,6 +146,10 @@ await img.write(Bun.s3.file("bucket/out.webp"));
 ```
 
 `.write()` accepts the same destinations as `Bun.write` — a path string, `Bun.file()`, `Bun.s3.file()`, or an fd. If you didn't chain a format method and the destination is a path string, the extension picks one (`.jpg`/`.png`/`.webp`/`.heic`/`.avif`).
+
+`rgba()` returns owned RGBA8 after the transform pipeline, with unassociated
+alpha and the source ICC profile when available. It bypasses image encoding;
+selecting `.png()` or `.jpeg()` does not change these raw pixels.
 
 ## Placeholders
 

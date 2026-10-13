@@ -9,6 +9,8 @@ pub mod iterm2_image_protocol;
 pub mod kitty_graphics_protocol;
 pub mod kitty_virtual;
 pub mod mode;
+#[cfg(feature = "native-ui")]
+pub mod native_ui;
 pub mod sixel;
 
 #[derive(Default, Clone, Serialize, Deserialize, Copy, Debug, Eq, PartialEq)]
