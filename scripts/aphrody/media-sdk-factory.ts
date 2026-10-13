@@ -1,5 +1,6 @@
 import { mkdir, realpath, readdir, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
+import { qualifyMediaELFs, type MediaELF } from "./media-sdk-abi";
 import {
   extractMediaSDKArchive,
   hashSDKFile,
@@ -161,6 +162,7 @@ async function archiveMediaSDKPrefix(
 ) {
   const plan = mediaSDKPlan(component, target);
   const layout = await verifyMediaSDKLayout(component, target, prefix);
+  const linuxABI = target.startsWith("linux-") ? await qualifyLinuxMediaSDK(target, prefix) : undefined;
   const entries: Record<string, Bun.ArchiveEntry> = {};
   const fileHashes: Record<string, string> = {};
   const canonical = await realpath(prefix);
@@ -199,6 +201,7 @@ async function archiveMediaSDKPrefix(
     symlinks: "materialized-contained-files",
     binaryNormalization: metadata.binaryNormalization,
     nativeRuntimeABI: metadata.nativeRuntimeABI ?? "not-yet-qualified",
+    ...(linuxABI ? { linuxABI } : {}),
     ...(metadata.nativeQualification ? { nativeQualification: metadata.nativeQualification } : {}),
     ...(metadata.dependencies ? { dependencies: metadata.dependencies } : {}),
   };
@@ -212,6 +215,32 @@ async function archiveMediaSDKPrefix(
   };
   await Bun.write(join(workspace, "distribution.json"), JSON.stringify({ ...receipt, asset: distribution }, null, 2));
   return { output, distribution, qualification: receipt.qualification };
+}
+
+export async function qualifyLinuxMediaSDK(target: MediaSDKTarget, prefix: string) {
+  if (process.platform !== "linux") throw new Error("SDK ELF inspection belongs to the Linux factory");
+  const readelf = Bun.which("llvm-readelf") ?? Bun.which("readelf");
+  if (!readelf) throw new Error("SDK ELF inspection requires the installed readelf owner");
+  const canonical = await realpath(prefix);
+  const inputs: MediaELF[] = [];
+  for await (const name of new Bun.Glob("{bin,lib}/*").scan({ cwd: prefix, onlyFiles: true, followSymlinks: true })) {
+    const path = await realpath(join(prefix, name));
+    const member = relative(canonical, path);
+    if (member.startsWith("..") || isAbsolute(member)) throw new Error("SDK ELF member escaped its prefix");
+    const magic = await Bun.file(path).slice(0, 4).bytes();
+    if (magic.length !== 4 || magic[0] !== 0x7f || magic[1] !== 0x45 || magic[2] !== 0x4c || magic[3] !== 0x46)
+      continue;
+    if (inputs.length >= 1024) throw new Error("SDK ELF inventory exceeds its bound");
+    inputs.push({
+      file: name.replaceAll("\\", "/"),
+      sha256: await hashSDKFile(path),
+      header: await nativeTool([readelf, "--file-header", path], prefix),
+      dynamic: await nativeTool([readelf, "--dynamic", path], prefix),
+      versions: await nativeTool([readelf, "--version-info", path], prefix),
+      programHeaders: await nativeTool([readelf, "--program-headers", path], prefix),
+    });
+  }
+  return qualifyMediaELFs(target, inputs);
 }
 
 /** Package a native source build without inventing a prebuilt upstream asset. */
@@ -263,6 +292,30 @@ export async function packageBuiltMediaSDK(
 }
 
 export async function runMediaSDKFactory(component: MediaSDKComponent): Promise<boolean> {
+  if (process.argv[2] === "sdk-build-linux") {
+    if (process.platform !== "linux") throw new Error("Portable SDK builds belong to the Linux factory");
+    const [target, sources, output, ffmpegPrefix] = process.argv.slice(3);
+    if (!target || !/^linux-(?:x64|arm64)(?:-musl)?$/.test(target) || !sources || !output)
+      throw new TypeError(
+        "sdk-build-linux requires Linux target, source owner root, output and optional FFmpeg prefix",
+      );
+    const bash = Bun.which("bash");
+    if (!bash) throw new Error("Portable SDK builds require the native Bash build owner");
+    await using child = Bun.spawn(
+      [
+        bash,
+        join(import.meta.dir, "media-sdk-linux.sh"),
+        target,
+        component,
+        resolve(sources),
+        resolve(output),
+        ...(ffmpegPrefix ? [resolve(ffmpegPrefix)] : []),
+      ],
+      { stdout: "inherit", stderr: "inherit", timeout: 10_800_000, killSignal: "SIGTERM" },
+    );
+    if ((await child.exited) !== 0) throw new Error("Portable SDK build failed; inspect its bounded factory log");
+    return true;
+  }
   if (process.argv[2] === "sdk-source") {
     const source = process.argv[3];
     if (!source) throw new TypeError("sdk-source requires a new source directory");

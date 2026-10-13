@@ -1,5 +1,49 @@
 # Native FFmpeg foundation
 
+## Portable Linux SDK factory
+
+The Linux source factory uses `scripts/aphrody/media-sdk-linux.sh` through
+`bun run ffmpeg sdk-build-linux` or `bun run libmpv sdk-build-linux`. It accepts
+`linux-x64`, `linux-arm64`, `linux-x64-musl`, and `linux-arm64-musl`, reuses the
+existing target sysroot, takes the host's `BUN_MEDIA_HEAVY_LOCK` without waiting,
+and compiles with two jobs. SDK stages have bounded timeouts.
+
+```sh
+BUN_MEDIA_HEAVY_LOCK="$MEDIA_HEAVY_LOCK" \
+BUN_MEDIA_ZLIB_PREFIX="$MEDIA_ZLIB_PREFIX" \
+  bun run ffmpeg sdk-build-linux linux-x64 "$MEDIA_SOURCE_ROOT" "$MEDIA_OUTPUT"
+
+BUN_MEDIA_HEAVY_LOCK="$MEDIA_HEAVY_LOCK" \
+BUN_MEDIA_VULKAN_HEADERS="$MEDIA_VULKAN_HEADERS" \
+  bun run libmpv sdk-build-linux linux-x64 "$MEDIA_SOURCE_ROOT" "$MPV_OUTPUT" "$MEDIA_OUTPUT/prefix"
+```
+
+Source roots contain the pinned FFmpeg/MPV owners and their recorded dependency
+sources. Zlib-ng reuses Bun's existing vendor at its configured pin; its static
+SDK prefix must include headers and license notices. The MPV profile builds
+FreeType, FriBidi, HarfBuzz, libass and libplacebo with GPU backends and system
+font discovery disabled. Vulkan headers are required by libplacebo's stubs;
+this profile does not link the Vulkan loader. C++ runtime archive sections are
+collected during linking so unused newer libc entry points stay outside the
+distribution. Source pins, dependency digests and runtime license notices
+remain part of the factory receipts.
+
+Before any Linux archive is written, `qualifyLinuxMediaSDK` checks every ELF,
+including bundled dependencies: matching architecture and loader, contained
+closure, relocatable search paths, and no private libc ABI. GNU artifacts must
+require GLIBC 2.17 or older and cannot use newer GNU packed relocations. Musl
+artifacts cannot require GNU libc. The factory does not bundle a system libc.
+
+The 2026-10-13 GNU x64 source qualification uses FFmpeg
+`7e93014c5bbb61e7c22afebb478bf92f7a08d59a` and MPV
+`c3ac7f39514c7f45bc38a18e66887240539ee33c`. Its receipts live under
+`factory/artifacts/runtime-release/linux-media-portable-20261013`. CPU/null
+playback and API 2.5 are separate from graphics, windowed playback, protected
+media and browser qualification. Functional execution on the VPS checks the
+new artifacts on the host libc; an ELF floor check does not constitute execution
+on an actual GLIBC 2.17 host. The arm64 and musl adapter probes are qualified
+with their four sysroots; complete SDK builds for those targets remain pending.
+
 ## Selected-frame provider and Bun.Image pipeline
 
 The runtime exposes `Bun.Video` with the same lazy source and worker pipeline
