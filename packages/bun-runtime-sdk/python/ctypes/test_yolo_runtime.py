@@ -11,7 +11,6 @@ import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
-
 from yolo_runtime import (
     Buffer,
     CreateInfo,
@@ -54,12 +53,15 @@ def test_c_layout():
 
 def test_native_stats_bench_and_reserved_capabilities(native):
     assert native.abi[0] == 1 and native.abi[1] >= 4
-    assert set(native.capabilities()) == {
+    expected = {
         "system.stats",
         "bench.compute",
         "process.supervise",
         "http.probe",
     }
+    if native.abi >= (1, 6):
+        expected |= {"process.stdin", "process.wait"}
+    assert set(native.capabilities()) == expected
     assert isinstance(native.stats(), dict)
     assert native.build_info()["target"] == host_target()
     with native.bench(100) as operation:
@@ -81,6 +83,53 @@ def test_native_binary_lossless_capture_env_cwd(native, tmp_path):
         assert process.read(stderr=True).decode() == str(tmp_path)
     with pytest.raises(RuntimeError, match="closed"):
         process.status()
+
+
+def test_native_private_stdin_and_completion_eof(native):
+    if native.abi < (1, 6):
+        pytest.skip("Private stdio requires the additive ABI 1.6")
+    payload = b"\x00\xffsynthetic-private-stdin"
+    with native.spawn(
+        sys.executable,
+        (
+            "-c",
+            "import sys;data=sys.stdin.buffer.read();sys.stdout.buffer.write(data);sys.stderr.buffer.write(b'done')",
+        ),
+        stdin=True,
+    ) as process:
+        process.write_stdin(payload[:2])
+        process.write_stdin(payload[2:])
+        process.close_stdin()
+        process.close_stdin()
+        with process.wait_start() as operation:
+            result = operation.wait(5000)
+        assert result["state"] == 1 and result["exit_code"] == 0
+        assert result["output_complete"] is True and result["stdin_complete"] is True
+        assert process.read() == payload
+        assert process.read(stderr=True) == b"done"
+        with pytest.raises(RuntimeError):
+            process.write_stdin(b"closed")
+
+
+def test_native_completion_timeout_then_cancel_owned_child(native):
+    if native.abi < (1, 6):
+        pytest.skip("Completion cancellation requires the additive ABI 1.6")
+    with native.spawn(
+        sys.executable,
+        ("-c", "import sys,threading;sys.stdin.buffer.read();threading.Event().wait()"),
+        stdin=True,
+    ) as process:
+        process.close_stdin()
+        with process.wait_start() as operation:
+            with pytest.raises(RuntimeError) as expired:
+                operation.wait(1)
+            assert expired.value.status == 5
+            operation.cancel()
+            with pytest.raises(RuntimeError) as cancelled:
+                operation.wait(3000)
+            assert cancelled.value.status == 4
+        assert process.status()["state"] == 1
+        assert process.output_complete()
 
 
 def test_native_stop_async_and_runtime_close(native):
@@ -276,7 +325,7 @@ def test_native_thread_safe_handle_lifetime(native):
     def worker():
         try:
             results.append(native.stats())
-        except Exception as exc:
+        except RuntimeError as exc:
             errors.append(exc)
 
     threads = [threading.Thread(target=worker) for _ in range(8)]

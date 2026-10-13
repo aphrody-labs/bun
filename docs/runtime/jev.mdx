@@ -1,0 +1,98 @@
+---
+name: Jev and System One
+description: Typed model judgments through Bun's single native Yolo validator and private SDK bridge
+---
+
+Jev supplies typed judgments. [`bun:yolo`](/docs/runtime/yolo) adapts them into
+Noul booleans, named Choice keys and finite Score values. Rust validates the
+request, provider response and primitive conversion. A judgment is a proposal;
+application permission rules still authorize any subsequent operation.
+
+```ts
+import { decide, noul, choice, score, jev } from "bun:yolo";
+
+const result = await decide({
+  state: { query: "How do Bun.Video frames become images?", passage: "A curated source excerpt." },
+  questions: {
+    relevant: noul("Does `passage` help answer `query`?"),
+    route: choice("Which source fits?", { docs: "API documentation", graph: "Source relationships" }),
+    support: score("How directly does `passage` support `query`?", ["None", "Partial", "Direct"]),
+  },
+}, { provider: jev(), timeout: 10000, maxRetries: 0 });
+// relevant: boolean; route: "docs" | "graph"; support: number in 0..2
+```
+
+One named batch shares one provider request. `inspect`, also exported as
+`systemOne`, retains validated probabilities, model and usage. `decide`
+returns primitives. A Noul becomes true only when its probability is greater
+than `threshold`, which defaults to `0.5`; equality returns false. Score can
+be fractional. Clients must not rebuild these conversions or silently accept
+unknown answers, enum keys, distributions or legends.
+
+## Providers and boundaries
+
+`jev()` uses Bun HTTP and `TYPESAFE_API_KEY` from the process environment. The
+default endpoint is `https://api.typesafe.ai/v1/systemone`; an explicit HTTPS
+root can be selected with `baseURL` or `TYPESAFE_BASE_URL`. Loopback HTTP is
+accepted for local services and tests. Redirects reject. Optional
+`TYPESAFE_DEFAULT_MODEL` selects the model; no credential files are searched.
+
+An official TypeSafe SDK client may own transport through `jev({ client })`.
+The client does not become the validator. `code` also uses native validation,
+and `local` borrows a caller-owned `bun-llama` context without downloading
+weights. Local outputs are model judgments and do not inherit Jev calibration.
+The native API and exact interfaces are in `packages/bun-types/yolo.d.ts`.
+
+Batches contain 1–64 questions; Choice has 2–255 options, Score has 2–10
+criteria. Request and response JSON are each bounded to 1 MiB. `timeout`
+bounds the complete operation, including retries, to 1–120000 ms.
+`maxRetries` is 0–3, default zero. A caller `AbortSignal` cancels pending work.
+Jev judgments do not generate an explanatory answer: an application may
+separately generate text and then check its grounding against cited evidence.
+
+## Python SDK
+
+The existing runtime SDK provides `bun_yolo.Yolo`, `noul`, `choice` and `score`
+from `packages/bun-runtime-sdk/python/ctypes`. It has no Python HTTP or model
+engine. Each call sends a private JSON envelope over stdin to a Bun worker,
+which calls `bun:yolo.inspect`, `decide` or `value`. Structured descriptions
+are preserved. Converted values return as Python `bool`, `str` or `float`.
+
+```python
+import os
+from pathlib import Path
+from bun_yolo import Yolo, noul, choice
+from yolo_runtime import Runtime
+
+# The release owner provisions a verified SDK manifest and qualified Bun.
+provider_environment = {"TYPESAFE_API_KEY": os.environ["TYPESAFE_API_KEY"]}
+with Runtime() as runtime:
+    client = Yolo(runtime, Path(os.environ["BUN_EXECUTABLE"]), env=provider_environment)
+    result = client.decide(
+        {"query": "Find native frame documentation"},
+        {"route": choice("Which source?", {"docs": "Docs", "graph": "Source graph"})},
+        options={"timeout": 10000, "maxRetries": 0},
+    )
+```
+
+`provider_environment` is supplied by the caller's protected configuration;
+no key is embedded in source. `Yolo` borrows the `Runtime`, accepts one active
+call per instance and never closes that borrowed handle. Each child has at
+most 1 MiB of input and captured output. `transport_timeout_ms` bounds the
+supervised wait (default 130000 ms); native `options.timeout` still bounds
+inference. `cancel()` cancels the native completion operation, stops the owned
+child and releases its handles. `await client.decide_async(...)` uses the
+same call and joins native cleanup when the Python task is cancelled.
+
+The supervisor must advertise `process.stdin` and `process.wait`, added in
+C ABI 1.6. A legacy ABI 1.4/1.5 installation is refused before private process
+creation. No state, token or provider body is put in argv, a temporary file
+or diagnostics. No polling fallback is used. Native errors return bounded
+names/codes; raw messages are deliberately not transported.
+
+Python transport fixtures do not qualify native execution. The native SDK
+and the Bun binary need separate per-target gates. Optional official Python
+TypeSafe compatibility, local-model execution, live provider accuracy and a
+published release remain separate qualifications. Existing application
+decision workflows and curated evals are retained until their consumer import
+switch passes; source migration alone does not authorize their removal.

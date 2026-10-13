@@ -1,0 +1,64 @@
+---
+name: bun-yolo
+description: "Use bun:yolo for typed Jev/System One judgments, named Noul/Choice/Score batches, native answer validation, and its private Python SDK bridge."
+---
+
+# Typed judgments through Bun
+
+Use `bun:yolo` when a decision needs a judgment about language, such as passage
+relevance, intent routing or evidence support. Deterministic rules remain in
+application code. A judgment proposes a value; it does not authorize an action.
+
+```ts
+import { decide, noul, choice, jev } from "bun:yolo";
+const result = await decide({
+  state: { query: "How does Bun.Video resize frames?", passage: "A curated public source excerpt." },
+  questions: {
+    relevant: noul("Does `passage` help answer `query`?"),
+    route: choice("Which source fits `query`?", { docs: "API docs", graph: "Source relationships" }),
+  },
+}, { provider: jev(), timeout: 10000, maxRetries: 0 });
+```
+
+Rust owns question, answer and primitive validation. Noul returns a boolean
+only when probability is greater than `threshold` (default `0.5`). Choice
+returns a named enum key. Score returns a finite, possibly fractional number
+between zero and the final criterion index. Never rebuild these conversions or
+confidence policies in a client. `inspect`/`systemOne` returns the validated
+response; `decide` returns one primitive per named question.
+
+One batch shares one provider request: 1–64 questions, 2–255 Choice options,
+2–10 Score criteria and 1 MiB per request/response. `timeout` bounds the full
+operation (1–120000 ms); `maxRetries` is 0–3. Use a caller `AbortSignal` for
+cancellation. Unknown names, mismatched legends, invalid probabilities or
+values outside their range reject.
+
+`jev()` uses the explicit process environment (`TYPESAFE_API_KEY`, optional
+`TYPESAFE_BASE_URL` and `TYPESAFE_DEFAULT_MODEL`) and Bun's bounded HTTP owner.
+It does not search credential files. Official TypeSafe clients can supply the
+transport; their results still pass through the same native validator. Use
+`code` for deterministic fixtures. `local` accepts an existing loaded
+`bun-llama` context; the caller owns its protected weights and lifetime.
+Local probabilities do not inherit Jev calibration.
+
+The Python client is `packages/bun-runtime-sdk/python/ctypes/bun_yolo.py`.
+It delegates to the same `bun:yolo` through a one-call private stdio worker.
+It requires a verified runtime SDK with `process.stdin` and `process.wait`
+(additive ABI 1.6), plus a separately qualified Bun executable. State goes
+only through stdin; credentials stay in process environment. The Runtime owns
+bounded pipes, wait, cancellation and child-group teardown. Python descriptor
+builders do not validate or infer; model values come back from Rust. Old SDKs
+are refused before spawning, with no argv, temporary-file or polling fallback.
+
+Read `docs/runtime/yolo.mdx`, `docs/runtime/jev.mdx` and
+`packages/bun-types/yolo.d.ts` before changing a contract. Source owners are
+`src/runtime/yolo`, the canonical Jev Rust owner and `src/js/bun/yolo.ts`;
+Python changes stay in the existing runtime SDK. Keep curated application
+workflow/evaluation contracts separate from native inference and transport.
+
+For runtime changes use `bun bd test test/js/bun/yolo/yolo.test.ts` and the
+SDK's adjacent worker/ctypes tests. Select the native bridge gates explicitly
+after the runtime SDK and Bun binary are built. Fixture transport success,
+optional official SDK compatibility, live Jev inference and per-target release
+qualification are separate evidence. Do not copy raw sessions, cookies,
+credentials, corpora or weights into request fixtures or plugin resources.

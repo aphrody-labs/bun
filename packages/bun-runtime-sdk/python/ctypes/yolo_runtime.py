@@ -15,7 +15,7 @@ import platform
 import re
 import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 ABI_MAJOR, ABI_MINOR = 1, 4
 MAX_CAPTURE = 67_108_864
@@ -84,8 +84,10 @@ def host_target() -> str:
         ("Darwin", "aarch64"): "aarch64-apple-darwin",
         ("Windows", "x86_64"): "x86_64-pc-windows-msvc",
     }
+    if arch is None:
+        raise RuntimeError("Unsupported Yolo platform")
     try:
-        return targets[(platform.system(), arch)]  # type: ignore[index]
+        return targets[(platform.system(), arch)]
     except KeyError as exc:
         raise RuntimeError("Unsupported Yolo platform") from exc
 
@@ -221,6 +223,18 @@ class Runtime:
         for name, (args, result) in signatures.items():
             function = getattr(self._lib, "yolo_" + name)
             function.argtypes, function.restype = args, result
+        if self.abi >= (1, 6):
+            additions = {
+                "process_stdin_write": (
+                    [h, c.POINTER(c.c_uint8), c.c_size_t],
+                    c.c_int32,
+                ),
+                "process_stdin_close": ([h], c.c_int32),
+                "process_wait_start": ([h, c.POINTER(h)], c.c_int32),
+            }
+            for name, (args, result) in additions.items():
+                function = getattr(self._lib, "yolo_" + name)
+                function.argtypes, function.restype = args, result
         info = CreateInfo(c.sizeof(CreateInfo), ABI_MAJOR, ABI_MINOR, max_operations)
         out = h()
         self._check(self._lib.yolo_runtime_create(c.byref(info), c.byref(out)))
@@ -321,10 +335,13 @@ class Runtime:
         env: dict[str, str] | None = None,
         cwd: Path | None = None,
         capture_limit: int = MAX_CAPTURE,
+        stdin: bool = False,
     ) -> Process:
         if not 1 <= capture_limit <= MAX_CAPTURE:
             raise ValueError("capture_limit must be 1..67108864")
         self.require("process.supervise")
+        if stdin:
+            self.require("process.stdin")
         argv = (c.c_char_p * (len(args) + 1))(*map(_utf8, args), None)
         entries = []
         for key, value in (env or {}).items():
@@ -335,7 +352,7 @@ class Runtime:
         info = SpawnInfoV14(
             SpawnInfo(
                 c.sizeof(SpawnInfoV14),
-                4,
+                4 | (8 if stdin else 0),
                 _utf8(program),
                 argv,
                 environ,
@@ -358,10 +375,10 @@ class Runtime:
                 self._check(self._lib.yolo_runtime_destroy(self._handle))
                 self._handle = 0
 
-    def __enter__(self) -> Runtime:
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: object) -> None:
         self.close()
 
 
@@ -377,10 +394,11 @@ class Operation:
 
     def wait(self, timeout_ms: int = 1000) -> Any:
         """Native TIMEOUT raises status 5; operation remains valid for retry."""
-        with self.runtime._lock:
-            return self.runtime._buffer(
-                "operation_wait", self._alive(), _u32(timeout_ms, "timeout_ms")
-            )
+        # Native wait clones its Arc before blocking; cancel/release/destroy are
+        # safe concurrently. Holding this lock would prevent cancellation.
+        return self.runtime._buffer(
+            "operation_wait", self._alive(), _u32(timeout_ms, "timeout_ms")
+        )
 
     def cancel(self) -> None:
         with self.runtime._lock:
@@ -394,10 +412,10 @@ class Operation:
                 )
             self._handle = 0
 
-    def __enter__(self) -> Operation:
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: object) -> None:
         self.close()
 
 
@@ -411,10 +429,10 @@ class Process:
             raise RuntimeError("Handle closed")
         return self._handle
 
-    def __enter__(self) -> Process:
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: object) -> None:
         self.close()
 
     def status(self) -> dict[str, int]:
@@ -427,6 +445,37 @@ class Process:
                 name: int(getattr(out, name))
                 for name in ("state", "exit_code", "signal", "pid")
             }
+
+    def write_stdin(self, data: bytes) -> None:
+        """Enqueue at most 1 MiB cumulatively; native wait reports pipe errors."""
+        self.runtime.require("process.stdin")
+        if not isinstance(data, bytes):
+            raise TypeError("stdin requires bytes")
+        buffer = (c.c_uint8 * len(data)).from_buffer_copy(data)
+        with self.runtime._lock:
+            self.runtime._check(
+                self.runtime._lib.yolo_process_stdin_write(
+                    self._alive(), buffer, len(data)
+                )
+            )
+
+    def close_stdin(self) -> None:
+        """Close the pipe after all enqueued input drains."""
+        self.runtime.require("process.stdin")
+        with self.runtime._lock:
+            self.runtime._check(
+                self.runtime._lib.yolo_process_stdin_close(self._alive())
+            )
+
+    def wait_start(self) -> Operation:
+        """Wait for exit and captured EOF; cancelling this wait stops the child."""
+        self.runtime.require("process.wait")
+        with self.runtime._lock:
+            out = c.c_uint64()
+            self.runtime._check(
+                self.runtime._lib.yolo_process_wait_start(self._alive(), c.byref(out))
+            )
+            return Operation(self.runtime, out.value)
 
     def read(self, *, stderr: bool = False, peek: bool = False) -> bytes:
         with self.runtime._lock:
