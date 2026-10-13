@@ -339,3 +339,15 @@ Owner lockfile iterator lot (2026-10-10): pooled RAII scratch removes four runti
 Owner launch/shell pointer lot (2026-10-10): four runtime Windows diagnostics removed (18 to14), GNU strict both targets zero, MSVC owned zero. Changed engine44 pass/14 inherited skips/0 fail,27 snapshots/121 assertions. See docs/project/launch-shell-pointer-qualification.md. Interactive console and full delivery gates remain open.
 
 Owner directive (2026-10-11): Obscura engine source moves from Aphrody into `packages/bun-obscura`, a standalone workspace on the `obscura` branch of `aphrody-labs/bun-os`. Product adapters remain in Aphrody and consume exact provider revisions. See [transfer plan](packages/bun-obscura/PLAN.md). V8, local patches and permission boundaries stay intact; no native Bun binding is implied by the source transfer.
+
+## Rio wrap cells — 2026-10-13
+
+Leading wrap spacers now have width zero and return no text through `text()` or
+`cellText()`. Commits `48781f957c5` (Windows linker response routing) and
+`c2943acb7d6` (Rio cell reads) are verified on `origin/main`.
+
+The native Windows debug CI gate passed 19 filtered Rio and link-generation
+tests, with two platform skips, six existing PTY todos and zero failures.
+The normal debug attempt hit a Rust layout ICE in `uv::run()`; qualification
+used `bun bd --ci=on -j2` with the missing `RUSTC_WRAPPER` unset for that command.
+Git hooks could not find `lefthook`; the scoped gates were run manually.
