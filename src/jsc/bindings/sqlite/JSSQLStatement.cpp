@@ -937,7 +937,9 @@ static inline bool rebindValue(JSC::JSGlobalObject* lexicalGlobalObject, sqlite3
             return false;
         }
 
-        if (!roped->is8Bit()) {
+        // SQLite consumes a leading UTF-16 BOM as encoding metadata, but JS strings retain it as text.
+        bool startsWithBOM = !roped->is8Bit() && roped->length() && (roped->span16()[0] == 0xFEFF || roped->span16()[0] == 0xFFFE);
+        if (!roped->is8Bit() && !startsWithBOM) {
             CHECK_BIND(sqlite3_bind_text64(stmt, i, reinterpret_cast<const char*>(roped->span16().data()), static_cast<sqlite3_uint64>(roped->length()) * sizeof(char16_t), SQLITE_TRANSIENT, SQLITE_UTF16));
         } else {
             // UTF8View borrows an 8-bit ASCII string, so SQLITE_TRANSIENT makes the only copy of it.
