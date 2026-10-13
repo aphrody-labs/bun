@@ -8,6 +8,7 @@ import mediaSDKManifest from "../../packages/bun-video/src/sdk-manifest.json";
 import { mediaSDKHostTarget } from "../../packages/bun-video/src/sdk-platform";
 import { verifyArtifactAsync } from "../../packages/bun-runtime-sdk/src/artifact";
 import type { HostPlatform, HostArch } from "../../packages/bun-runtime-sdk/src/target";
+import { readNginxReleaseArtifact } from "./release-native-nginx";
 
 export interface MediaReleaseInput {
   target?: string;
@@ -19,6 +20,7 @@ export interface MediaReleaseInput {
   output: string;
   sdkArchives: { directory: string; archive: string }[];
   runtimeSDKArtifact?: string;
+  nginxArtifact?: string;
 }
 
 export function mediaReleaseTarget(name: string) {
@@ -444,6 +446,17 @@ export async function packageMediaRelease(input: MediaReleaseInput) {
     const destination = `lib/runtime-sdk/${artifact.target}/current`;
     for (const name of [...Object.keys(artifact.files), "manifest.json"])
       await copy(join(input.runtimeSDKArtifact, name), `${destination}/${name}`);
+  }
+  if (input.nginxArtifact) {
+    const nginx = await readNginxReleaseArtifact(input.nginxArtifact, {
+      source: input.source,
+      target: target.target,
+      platform: target.platform,
+      arch: target.runtimeArch,
+    });
+    const destination = `lib/nginx/${target.sdkTarget}/current`;
+    for (const name of [...Object.keys(nginx.files), "nginx-sdk.json"])
+      await copy(join(input.nginxArtifact, name), `${destination}/${name}`, name === nginx.executable ? 0o755 : 0o644);
   }
   const media = await stageMediaBundle(directory, { apply: true, prefix: input.mediaPrefix, target: target.sdkTarget });
   for (const file of media.files) if (file.mode !== undefined) modes[file.name] = file.mode;

@@ -197,12 +197,13 @@ tool, not a qualification receipt for the new source.
 
 Complete normalized FFmpeg/mpv SDKs are still missing for Linux GNU ARM, both
 musl targets, both macOS targets and Windows ARM. Existing Windows x64 and
-portable Linux x64 evidence does not fill those six gaps. The SDK factory,
-native source/toolchain provisioning must complete these targets before any
-eight-full aggregate can pass. All eight catalogue SDK asset lists remain empty;
-the existing x64 evidence has not been registered as an immutable distribution
-descriptor. The current Sharp/Remotion packaging owner supports Windows x64 only.
-Mach-O media/runtime-SDK closure qualification still needs its native owner.
+portable Linux x64 evidence does not fill those six gaps. The SDK factory now
+has pinned source recipes for eight targets and ELF, PE and Mach-O closure
+owners. Native source/toolchain provisioning and actual builds must complete
+these targets before any eight-full aggregate can pass. All eight catalogue
+SDK asset lists remain empty; a source producer can use verified local inputs
+and the existing source recipe without requiring a published artifact first.
+The current Sharp/Remotion packaging owner supports Windows x64 only.
 Linux workers require the sysroots provisioned by `build-host.ts`/the CI image
 owner; the worker stops if those SDK artifacts are absent. Standalone GNU runtime
 SDK modules must also meet the 2.17 floor, and musl manifests must select an actual
@@ -215,6 +216,17 @@ It packs the verified runtime module, headers and source-bound manifest under
 `lib/runtime-sdk/<Rust-target>/current` in the full archive. The aggregate checks
 that module's byte hashes, source, panic recovery and header ABI as well as its
 native gate. Header-only or source-only SDK packs cannot replace it.
+
+Every full archive must also contain a source-bound native NGINX engine under
+`lib/nginx/<SDK-target>/current`, its module and closure receipts, source
+archives and notices. The aggregate checks every byte and requires the exact
+runtime revision to pass the controller, static Rust module and closure gates.
+The negative ABI fixture is a test input and cannot enter the release archive.
+Only the GNU Linux x64 portable engine recipe currently exists; the other seven
+targets fail with a missing recipe diagnostic. Its proven sysroot/LLVM owner
+paths remain prerequisites until that owner supports explicit provisioning.
+The existing engine's earlier qualification is not evidence for a new runtime
+revision or for the seven missing engines.
 
 `release-native-install.ts` serves the candidate archive on a loopback fixture
 and runs the existing `install.sh`/`install.ps1` owners into a disposable home.

@@ -1,13 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repository=$(cd -- "$(dirname -- "$0")/../../.." && pwd)
-owner="$repository/factory/artifacts/nginx-sdk/linux-x64-portable"
+owner=${BUN_NGINX_OUTPUT:-"$repository/factory/artifacts/nginx-sdk/linux-x64-portable"}
 dependencies="$owner/dependencies"
-sysroot=/opt/linux-sysroot-glibc
-llvm=/usr/lib/llvm-23/bin
-zlib=/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix
-runtime="$repository/build/release/bun-profile"
-exec 9>/home/ubuntu/build/locks/heavy.lock
+sysroot=${BUN_NGINX_SYSROOT:?Provide the pinned GNU x64 sysroot}
+llvm=${BUN_NGINX_LLVM_BIN:?Provide the pinned LLVM bin directory}
+zlib=${BUN_NGINX_ZLIB_PREFIX:?Provide the qualified canonical zlib SDK prefix}
+runtime=${BUN_NGINX_RUNTIME:-"$repository/build/release/bun-profile"}
+lock=${BUN_NGINX_HEAVY_LOCK:?Provide the host shared heavy lock}
+cpus=${BUN_NGINX_CPUS:?Provide two allocated native CPU IDs}
+[[ $(uname -s) == Linux && $(uname -m) == x86_64 && $(getconf GNU_LIBC_VERSION) == glibc\ * ]] || {
+  echo 'This recipe requires native GNU x64 Linux; other seven targets have no recipe' >&2; exit 65;
+}
+[[ $cpus =~ ^[0-9]+,[0-9]+$ ]] || exit 64
+for path in "$owner" "$sysroot" "$llvm" "$zlib" "$runtime" "$lock"; do
+  [[ $path =~ ^/[A-Za-z0-9_./+-]+$ ]] || exit 64
+done
+mkdir -p "$(dirname "$lock")"
+exec 9>"$lock"
 flock -n 9 || exit 75
 unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH LD_LIBRARY_PATH LD_PRELOAD
 export CARGO_BUILD_JOBS=2
@@ -29,7 +39,7 @@ timeout 120 cmake -S "$repository/vendor/boringssl" -B "$dependencies/boringssl-
   '-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -static-libgcc -static-libstdc++' \
   -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF \
   -DCMAKE_INSTALL_PREFIX="$dependencies/prefix"
-timeout 1200 taskset -c 0,1 cmake --build "$dependencies/boringssl-build" --target ssl crypto bssl --parallel 2
+timeout 1200 taskset -c "$cpus" cmake --build "$dependencies/boringssl-build" --target ssl crypto bssl --parallel 2
 timeout 120 cmake --install "$dependencies/boringssl-build"
 mkdir -p "$dependencies/prefix/share/licenses/boringssl"
 cp "$repository/vendor/boringssl/LICENSE" "$dependencies/prefix/share/licenses/boringssl/"
@@ -40,5 +50,5 @@ timeout 60 "$llvm/clang++" --target=x86_64-linux-gnu --sysroot="$sysroot" \
   -o "$dependencies/prefix/lib/bun-glibc-compat.o"
 timeout 60 "$runtime" "$repository/packages/bun-nginx/scripts/portable-sdk.ts" finalize "$dependencies" "$zlib"
 export BUN_NGINX_HEAVY_LOCK_EXECUTION=held
-timeout 2100 taskset -c 0,1 "$runtime" "$repository/packages/bun-nginx/scripts/build-provider.ts" locked-build "$owner" "$dependencies/sdk-receipt.json"
+timeout 2100 taskset -c "$cpus" "$runtime" "$repository/packages/bun-nginx/scripts/build-provider.ts" locked-build "$owner" "$dependencies/sdk-receipt.json"
 printf '%s\n' portable-build-complete > "$owner/build-status.txt"

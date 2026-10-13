@@ -53,6 +53,83 @@ async function fixture(run: (root: string) => Promise<void>) {
         },
       }),
     );
+    const nginxRoot = `lib/nginx/${target.sdkTarget}/current/`;
+    const nginxExecutable = target.os === "windows" ? "bin/nginx.exe" : "bin/nginx";
+    const nginxFiles: Record<string, { bytes: number; sha256: string }> = {};
+    const addNginx = (name: string, body: string) => {
+      add(nginxRoot + name, body);
+      nginxFiles[name] = files[nginxRoot + name]!;
+    };
+    addNginx(nginxExecutable, `validator static NGINX ${full.target}`);
+    addNginx("receipts/build-receipt.json", "validator source build receipt");
+    addNginx(
+      "receipts/closure.json",
+      JSON.stringify({
+        schema: 1,
+        target: target.sdkTarget,
+        ...(target.os === "linux"
+          ? {
+              libc: target.abi,
+              releaseGLIBCFloor: target.abi === "musl" ? null : "2.17",
+              maximumGLIBC: target.abi === "musl" ? null : "2.17",
+            }
+          : target.os === "darwin"
+            ? { qualification: "Mach-O-load-command-closure-only", releaseMacOSFloor: "13.0" }
+            : { qualification: "PE-architecture-and-import-closure-only" }),
+        files: [
+          {
+            file: nginxExecutable,
+            sha256: nginxFiles[nginxExecutable]!.sha256,
+            needed: [],
+            ...(target.os === "linux"
+              ? { minimumGLIBC: target.abi === "musl" ? null : "2.17" }
+              : target.os === "darwin"
+                ? { minimumMacOS: "13.0" }
+                : {}),
+          },
+        ],
+      }),
+    );
+    addNginx("share/licenses/nginx/LICENSE", "validator license");
+    addNginx("sources/nginx.tar", "validator source bytes");
+    addNginx(
+      "receipts/module-qualification.json",
+      JSON.stringify({
+        schema: 1,
+        kind: "bun-nginx-native-module-qualification",
+        nativeModuleQualified: true,
+        host: { platform: target.platform, arch: target.runtimeArch, bunRevision: source },
+        executable: nginxFiles[nginxExecutable],
+        gates: Object.fromEntries(
+          [
+            "nativeBunController",
+            "nativeRustModuleHTTP",
+            "head",
+            "clientAborted",
+            "timerCleanup",
+            "invalidConfigurationRejected",
+            "originalMasterSurvivesInvalidConfig",
+            "reloadSameMaster",
+            "abiMismatchRejected",
+            "gracefulQuit",
+          ].map(id => [id, true]),
+        ),
+      }),
+    );
+    add(
+      nginxRoot + "nginx-sdk.json",
+      JSON.stringify({
+        schema: 1,
+        kind: "bun-nginx-native-sdk",
+        source,
+        sourceDirty: false,
+        target: full.target,
+        platform: target.platform,
+        arch: target.runtimeArch,
+        executable: nginxExecutable,
+        files: nginxFiles,
+      }),
+    );
     const gates = fullMediaGates.map(id => {
       const log = `qualification/${id}.log`;
       add(log, `validator media evidence ${id}`);
@@ -234,3 +311,74 @@ test("rehashing all outer evidence cannot qualify a runtime SDK built from anoth
     );
   });
 });
+
+for (const mutation of [
+  "foreign-source",
+  "failed-module-gate",
+  "negative-abi-library",
+  "libc-floor",
+  "musl-glibc",
+  "macos-floor",
+] as const) {
+  test(`rehashing native NGINX evidence cannot hide ${mutation}`, async () => {
+    await fixture(async root => {
+      const full =
+        mutation === "musl-glibc"
+          ? targets.find(target => target.abi === "musl")!
+          : mutation === "macos-floor"
+            ? targets.find(target => target.os === "darwin")!
+            : targets[0]!;
+      const archivePath = join(root, `${full.triplet}.zip`);
+      const entries = await new Bun.Archive(await Bun.file(archivePath).bytes()).files();
+      const payload = Object.fromEntries(
+        await Promise.all([...entries].map(async ([name, file]) => [name, await file.bytes()])),
+      );
+      const receiptPath = join(root, `${full.triplet}.qualification.json`);
+      const receipt = await Bun.file(receiptPath).json();
+      const manifestName = Object.keys(receipt.files).find(
+        name => name.startsWith("lib/nginx/") && name.endsWith("/nginx-sdk.json"),
+      )!;
+      const nginxRoot = manifestName.slice(0, -"nginx-sdk.json".length);
+      const manifest = JSON.parse(new TextDecoder().decode(payload[`${full.triplet}/${manifestName}`]));
+      const replace = (name: string, value: unknown) => {
+        const bytes = new TextEncoder().encode(JSON.stringify(value));
+        payload[`${full.triplet}/${nginxRoot}${name}`] = bytes;
+        manifest.files[name] = { bytes: bytes.length, sha256: hash(bytes) };
+        receipt.files[nginxRoot + name] = manifest.files[name];
+      };
+      if (mutation === "negative-abi-library") replace("bin/libngx_http_bun_module.so", "negative ABI fixture");
+      else if (["libc-floor", "musl-glibc", "macos-floor"].includes(mutation)) {
+        const evidenceName = "receipts/closure.json";
+        const evidence = JSON.parse(new TextDecoder().decode(payload[`${full.triplet}/${nginxRoot}${evidenceName}`]));
+        if (mutation === "macos-floor") evidence.files[0].minimumMacOS = "14.0";
+        else {
+          evidence.maximumGLIBC = mutation === "musl-glibc" ? "2.17" : "2.43";
+          evidence.files[0].minimumGLIBC = evidence.maximumGLIBC;
+        }
+        replace(evidenceName, evidence);
+      } else {
+        const evidenceName = "receipts/module-qualification.json";
+        const evidence = JSON.parse(new TextDecoder().decode(payload[`${full.triplet}/${nginxRoot}${evidenceName}`]));
+        if (mutation === "foreign-source") evidence.host.bunRevision = "b".repeat(40);
+        else evidence.gates.abiMismatchRejected = false;
+        replace(evidenceName, evidence);
+      }
+      const manifestBytes = new TextEncoder().encode(JSON.stringify(manifest));
+      payload[`${full.triplet}/${manifestName}`] = manifestBytes;
+      receipt.files[manifestName] = { bytes: manifestBytes.length, sha256: hash(manifestBytes) };
+      const { archive: _archive, ...inner } = receipt;
+      payload[`${full.triplet}/bun-media-release.json`] = new TextEncoder().encode(JSON.stringify(inner));
+      const bytes = await new Bun.Archive(payload, { format: "zip" }).bytes();
+      await Bun.write(archivePath, bytes);
+      receipt.archive = { name: `${full.triplet}.zip`, bytes: bytes.length, sha256: hash(bytes) };
+      await Bun.write(receiptPath, JSON.stringify(receipt));
+      await expect(aggregateFullRelease(root, source, version)).rejects.toThrow(
+        mutation === "negative-abi-library"
+          ? "Invalid native NGINX release member"
+          : ["libc-floor", "musl-glibc", "macos-floor"].includes(mutation)
+            ? "closure exceeds or differs"
+            : "controller/module evidence differs",
+      );
+    });
+  });
+}

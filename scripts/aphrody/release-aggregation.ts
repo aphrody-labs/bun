@@ -4,6 +4,7 @@ import { assertPublicMediaPath, mediaReleaseTarget } from "./media-release";
 import { fullIntegrationPolicy, runtimeReleaseMatrix } from "./release-matrix";
 import mediaSDKManifest from "../../packages/bun-video/src/sdk-manifest.json";
 import { targetFor } from "../../packages/bun-runtime-sdk/src/target";
+import { nginxReleaseManifest, nginxModuleQualification, nginxClosureQualification } from "./release-native-nginx";
 
 const fullTargets = runtimeReleaseMatrix().filter(target => target.flavor === "full");
 const sha256 = /^[a-f0-9]{64}$/;
@@ -25,6 +26,9 @@ export const fullMediaGates = [
 export const fullPlatformGates = [
   "runtime-regressions",
   "native-runtime-sdk",
+  "native-nginx-controller",
+  "native-nginx-module",
+  "native-nginx-closure",
   "native-closure",
   "native-install",
   "native-path",
@@ -229,6 +233,24 @@ export async function aggregateFullRelease(directory: string, source: string, ve
     const abiMinor = headerText.match(/#define YOLO_ABI_MINOR (\d+)u/)?.[1];
     if (!abiMajor || !abiMinor || artifact.abi !== `${abiMajor}.${abiMinor}`)
       throw new Error(`Native runtime SDK header ABI differs: ${full.target}`);
+    const nginxRoot = `lib/nginx/${target.sdkTarget}/current/`;
+    const nginxFile = members.get(`${full.triplet}/${nginxRoot}nginx-sdk.json`);
+    if (!nginxFile || nginxFile.size > maximumJSONBytes)
+      throw new Error(`Native NGINX sidecar missing: ${full.target}`);
+    const nginxContext = { source, target: full.target, platform: target.platform, arch: target.runtimeArch };
+    const nginx = nginxReleaseManifest(await nginxFile.json(), nginxContext);
+    for (const [name, expected] of Object.entries(nginx.files))
+      if (
+        receipt.files[nginxRoot + name]?.sha256 !== expected.sha256 ||
+        receipt.files[nginxRoot + name]?.bytes !== expected.bytes
+      )
+        throw new Error(`Native NGINX archived member differs: ${full.target}/${name}`);
+    const nginxEvidence = members.get(`${full.triplet}/${nginxRoot}receipts/module-qualification.json`);
+    if (!nginxEvidence || nginxEvidence.size > maximumJSONBytes) throw new Error("Native NGINX module evidence absent");
+    nginxModuleQualification(await nginxEvidence.json(), nginxContext, nginx.files[nginx.executable]!);
+    const nginxClosure = members.get(`${full.triplet}/${nginxRoot}receipts/closure.json`);
+    if (!nginxClosure || nginxClosure.size > maximumJSONBytes) throw new Error("Native NGINX closure evidence absent");
+    nginxClosureQualification(await nginxClosure.json(), nginxContext, nginx.files[nginx.executable]!);
     const nativeBytes = await read(`${full.triplet}.platform-gates.json`);
     const native: NativePlatformQualification = JSON.parse(
       new TextDecoder("utf-8", { fatal: true }).decode(nativeBytes),
