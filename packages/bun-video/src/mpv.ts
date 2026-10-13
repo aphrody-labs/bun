@@ -1,4 +1,4 @@
-import { CString, FFIType, dlopen, ptr, type FFIFunction, type Pointer } from "bun:ffi";
+import { CString, FFIType, dlopen, ptr, toArrayBuffer, type FFIFunction, type Pointer } from "bun:ffi";
 import { dirname, join } from "node:path";
 
 const functionABI = <
@@ -70,6 +70,13 @@ export const mpvABI = {
 type MpvSymbols = typeof mpvABI;
 
 export type MpvLibraryOptions = { libraryPath?: string; options?: Readonly<Record<string, string>> };
+
+export interface MpvEvent {
+  readonly id: number;
+  readonly name: string;
+  readonly error: number;
+  readonly replyUserdata: bigint;
+}
 
 export function mpvLibraryPath(directory = dirname(process.execPath)): string {
   return join(
@@ -165,6 +172,19 @@ export class MpvClient {
     if (!Number.isFinite(timeoutSeconds) || timeoutSeconds < 0)
       throw new TypeError("mpv timeout must be finite and nonnegative");
     return this.#library.symbols.mpv_wait_event(this.#handle, timeoutSeconds) as Pointer | null;
+  }
+
+  nextEvent(timeoutSeconds = 0): MpvEvent {
+    const pointer = this.waitEvent(timeoutSeconds);
+    if (!pointer) throw new Error("mpv_wait_event returned no event structure");
+    // mpv owns this structure only until the next wait; copy its scalar fields now.
+    const view = new DataView(toArrayBuffer(pointer, 0, 16));
+    const id = view.getInt32(0, true);
+    const error = view.getInt32(4, true);
+    const replyUserdata = view.getBigUint64(8, true);
+    const namePointer = this.#library.symbols.mpv_event_name(id);
+    const name = namePointer ? new CString(Number(namePointer) as Pointer).toString() : "unknown";
+    return { id, name, error, replyUserdata };
   }
 
   close(): void {

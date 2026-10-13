@@ -16,8 +16,7 @@ export function resolveVideoSource(source: VideoSource): ResolvedVideoSource {
     if (!source.body) return { kind: "bytes", data: new Uint8Array() };
     throw new TypeError("ReadableStream sources must be consumed with response.arrayBuffer() before normalization");
   }
-  if (typeof source !== "string" && !(source instanceof URL))
-    throw new TypeError("Unsupported video source shape");
+  if (typeof source !== "string" && !(source instanceof URL)) throw new TypeError("Unsupported video source shape");
   if (typeof source === "string") {
     if (!source || source.includes("\0")) throw new TypeError("Video source must be nonempty and contain no NUL");
     if (/^[A-Za-z]:[\\/]/.test(source) || !/^[A-Za-z][A-Za-z0-9+.-]*:/.test(source))

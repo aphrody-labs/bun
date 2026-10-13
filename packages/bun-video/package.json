@@ -14,7 +14,7 @@
     "bun-video-engine": "./umbrella-src/cli.ts"
   },
   "scripts": {
-    "check:types": "bun check --project tsconfig.json",
+    "check:types": "bunx tsgo --project tsconfig.json --noEmit",
     "check:engines": "bun scripts/check-engines.ts",
     "repair:engines": "bun scripts/repair-engine-migration.ts",
     "lint": "bunx oxlint src labs test",

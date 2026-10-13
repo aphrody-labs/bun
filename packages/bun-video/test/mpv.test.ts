@@ -12,8 +12,21 @@ describe.skipIf(!process.env.BUN_VIDEO_MEDIA_DIR)("native libmpv", () => {
     }
     expect(player.pointer).toBeGreaterThan(0);
     expect(player.getProperty("idle-active")).toBe("yes");
+    const events = [];
+    for (let index = 0; index < 64; index++) {
+      const event = player.nextEvent();
+      events.push(event);
+      if (event.id === 0) break;
+    }
+    const none = events.at(-1)!;
+    expect(none).toEqual({ id: 0, name: "none", error: 0, replyUserdata: 0n });
+    expect(player.nextEvent()).toEqual(none);
+    expect(none).toEqual({ id: 0, name: "none", error: 0, replyUserdata: 0n });
+    expect(() => player.nextEvent(-1)).toThrow("mpv timeout");
+    expect(() => player.nextEvent(Number.NaN)).toThrow("mpv timeout");
     player.close();
     expect(() => player.pointer).toThrow("mpv client is closed");
     expect(() => player.symbols).toThrow("mpv client is closed");
+    expect(() => player.nextEvent()).toThrow("mpv client is closed");
   });
 });
