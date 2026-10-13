@@ -116,7 +116,8 @@ def verify_artifact(directory: Path) -> tuple[Path, dict[str, Any]]:
     directory = directory.expanduser().resolve()
     try:
         manifest = json.loads((directory / "manifest.json").read_text())
-        if manifest["schema"] != 1 or manifest["name"] != "yolo-runtime":
+        producer = {"buv-runtime": "bun", "yolo-runtime": "yolo"}.get(manifest["name"])
+        if manifest["schema"] != 1 or producer is None:
             raise ValueError("unsupported artifact schema/name")
         if (
             manifest["target"] != host_target()
@@ -126,7 +127,7 @@ def verify_artifact(directory: Path) -> tuple[Path, dict[str, Any]]:
         major, minor = map(int, manifest["abi"].split("."))
         if major != ABI_MAJOR or minor < ABI_MINOR:
             raise ValueError("ABI 1.4 or newer required")
-        source = manifest["sources"]["yolo"]
+        source = manifest["sources"][producer]
         if (
             not re.fullmatch(r"[0-9a-f]{40}", source["rev"])
             or source["dirty"] is not False
@@ -187,6 +188,9 @@ class Runtime:
         self._lock = threading.RLock()
         self._handle = 0
         self._lib = c.CDLL(str(library))
+        self._producer_namespace = (
+            "buv" if self.manifest["name"] == "buv-runtime" else "yolo"
+        )
         abi = self._lib.yolo_abi_version
         abi.argtypes, abi.restype = [], c.c_uint32
         version = abi()
@@ -221,7 +225,10 @@ class Runtime:
             "buffer_free": ([b], None),
         }
         for name, (args, result) in signatures.items():
-            function = getattr(self._lib, "yolo_" + name)
+            namespace = (
+                self._producer_namespace if name == "runtime_build_info" else "yolo"
+            )
+            function = getattr(self._lib, namespace + "_" + name)
             function.argtypes, function.restype = args, result
         if self.abi >= (1, 6):
             additions = {
@@ -242,10 +249,12 @@ class Runtime:
         try:
             build = self.build_info()
             embedded = build.get("git_rev", "")
+            producer = "bun" if self.manifest["name"] == "buv-runtime" else "yolo"
             if (
                 not isinstance(embedded, str)
                 or not re.fullmatch(r"[0-9a-f]{12,40}", embedded)
-                or not self.manifest["sources"]["yolo"]["rev"].startswith(embedded)
+                or not self.manifest["sources"][producer]["rev"].startswith(embedded)
+                or build.get("name") != self.manifest["name"]
                 or build.get("target") != self.manifest["target"]
                 or build.get("abi") != self.manifest["abi"]
                 or build.get("panic_recovery") is not True
@@ -274,10 +283,12 @@ class Runtime:
             raise RuntimeError("Runtime closed")
         return self._handle
 
-    def _buffer(self, name: str, *args: Any, decode: bool = True) -> Any:
+    def _buffer(
+        self, name: str, *args: Any, decode: bool = True, namespace: str = "yolo"
+    ) -> Any:
         out = Buffer()
         try:
-            self._check(getattr(self._lib, "yolo_" + name)(*args, c.byref(out)))
+            self._check(getattr(self._lib, namespace + "_" + name)(*args, c.byref(out)))
             data = c.string_at(out.data, out.len) if out.len else b""
             return json.loads(data) if decode else data
         finally:
@@ -286,7 +297,9 @@ class Runtime:
     def build_info(self) -> dict[str, Any]:
         with self._lock:
             self._alive()
-            return self._buffer("runtime_build_info")  # type: ignore[no-any-return]
+            return self._buffer(
+                "runtime_build_info", namespace=self._producer_namespace
+            )  # type: ignore[no-any-return]
 
     def capabilities(self) -> list[str]:
         with self._lock:

@@ -272,6 +272,33 @@ def test_accept_either_header_name(tmp_path, header_name):
     assert library == (tmp_path / "libyolo_runtime.so").resolve()
 
 
+@pytest.mark.parametrize(
+    ("name", "owner"), [("buv-runtime", "bun"), ("yolo-runtime", "yolo")]
+)
+def test_accept_canonical_and_compatible_producer_pairs(tmp_path, name, owner):
+    manifest = synthetic_artifact(tmp_path)
+    manifest["name"] = name
+    manifest["sources"] = {owner: {"rev": "a" * 40, "dirty": False}}
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    _, checked = verify_artifact(tmp_path)
+    assert checked["sources"][owner]["rev"] == "a" * 40
+
+
+@pytest.mark.parametrize(
+    ("name", "owner"), [("buv-runtime", "yolo"), ("yolo-runtime", "bun")]
+)
+def test_refuse_crossed_producer_pairs_before_cdll(tmp_path, monkeypatch, name, owner):
+    manifest = synthetic_artifact(tmp_path)
+    manifest["name"] = name
+    manifest["sources"] = {owner: {"rev": "a" * 40, "dirty": False}}
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    monkeypatch.setattr(
+        ctypes, "CDLL", lambda *_: pytest.fail("crossed producer executed native code")
+    )
+    with pytest.raises(RuntimeError, match="Invalid Yolo artifact"):
+        Runtime(tmp_path)
+
+
 def test_refuse_artifact_without_header(tmp_path):
     synthetic_artifact(tmp_path, "notes.txt")
     with pytest.raises(RuntimeError, match="versioned header required"):
@@ -346,7 +373,8 @@ def test_manifest_provenance_mismatch_refused_after_load(tmp_path, monkeypatch):
     shutil.copytree(source, tmp_path / "artifact")
     directory = tmp_path / "artifact"
     manifest = json.loads((directory / "manifest.json").read_text())
-    manifest["sources"]["yolo"]["rev"] = "b" * 40
+    producer = "bun" if manifest["name"] == "buv-runtime" else "yolo"
+    manifest["sources"][producer]["rev"] = "b" * 40
     (directory / "manifest.json").write_text(json.dumps(manifest))
     with pytest.raises(RuntimeError, match="Embedded producer revision"):
         Runtime(directory)
