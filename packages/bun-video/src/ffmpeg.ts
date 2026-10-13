@@ -42,9 +42,25 @@ export const ffmpegABI = {
     av_opt_set_int: functionABI([p, p, "i64", i], i),
     av_hwdevice_ctx_create: functionABI([p, i, p, p, i], i),
     av_hwframe_transfer_data: functionABI([p, p, i], i),
+    av_hwdevice_find_type_by_name: functionABI([p], i),
+    av_hwdevice_get_type_name: functionABI([i], p),
+    av_hwdevice_iterate_types: functionABI([i], i),
+    av_hwframe_ctx_alloc: functionABI([p], p),
+    av_hwframe_ctx_init: functionABI([p], i),
+    av_hwframe_get_buffer: functionABI([p, p, i], i),
+    av_buffer_ref: functionABI([p], p),
+    av_buffer_unref: functionABI([p], v),
+    av_get_pix_fmt: functionABI([p], i),
+    av_get_pix_fmt_name: functionABI([i], p),
+    av_get_sample_fmt: functionABI([p], i),
+    av_get_sample_fmt_name: functionABI([i], p),
+    av_get_bytes_per_sample: functionABI([i], i),
+    av_sample_fmt_is_planar: functionABI([i], i),
+    av_image_get_buffer_size: functionABI([i, i, i, i], i),
   },
   avcodec: {
     avcodec_version: functionABI([], "u32"),
+    avcodec_get_name: functionABI([i], p),
     avcodec_find_decoder: functionABI([i], p),
     avcodec_find_encoder: functionABI([i], p),
     avcodec_find_decoder_by_name: functionABI([p], p),
@@ -396,6 +412,24 @@ export class FFmpeg {
     if (status === -541478725) return false;
     this.check(status);
     return true;
+  }
+
+  findStream(input: FFmpegInput, type: "video" | "audio" | "subtitle"): number {
+    const mediaTypes = { video: 0, audio: 1, subtitle: 3 } as const;
+    if (!Object.hasOwn(mediaTypes, type)) throw new TypeError("Unknown FFmpeg media type");
+    return this.check(
+      this.libraries.avformat.symbols.av_find_best_stream(input.pointer, mediaTypes[type], -1, -1, null, 0),
+    );
+  }
+
+  seek(input: FFmpegInput, timestampMicroseconds: bigint): void {
+    if (
+      typeof timestampMicroseconds !== "bigint" ||
+      timestampMicroseconds < -(1n << 63n) ||
+      timestampMicroseconds > (1n << 63n) - 1n
+    )
+      throw new TypeError("FFmpeg seek timestamp must be a signed 64-bit bigint in microseconds");
+    this.check(this.libraries.avformat.symbols.av_seek_frame(input.pointer, -1, timestampMicroseconds, 1));
   }
 
   close(): void {

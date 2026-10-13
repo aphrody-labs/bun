@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { ptr } from "bun:ffi";
 import { FFmpeg, ffmpegABI, ffmpegLibraryPath } from "../src/ffmpeg";
 import { openVideoPipeline } from "../src/pipeline";
 import { materializeVideoSource, resolveVideoSource } from "../src/source";
@@ -82,8 +83,14 @@ describe.skipIf(!process.env.BUN_VIDEO_MEDIA_DIR)("native FFmpeg ownership", () 
         webgpu: false,
       });
       using packet = pipeline.ffmpeg.allocatePacket();
+      expect(pipeline.ffmpeg.findStream(pipeline.input, "audio")).toBe(0);
+      expect(() => pipeline.ffmpeg.findStream(pipeline.input, "video")).toThrow("FFmpeg:");
       expect(pipeline.ffmpeg.readPacket(pipeline.input, packet)).toBe(true);
       expect(pipeline.ffmpeg.readPacket(pipeline.input, packet)).toBe(false);
+      pipeline.ffmpeg.seek(pipeline.input, 0n);
+      expect(pipeline.ffmpeg.readPacket(pipeline.input, packet)).toBe(true);
+      expect(pipeline.ffmpeg.readPacket(pipeline.input, packet)).toBe(false);
+      expect(() => pipeline.ffmpeg.seek(pipeline.input, 1n << 63n)).toThrow("signed 64-bit bigint");
       pipeline.close();
       expect(() => pipeline.input.pointer).toThrow("FFmpeg input is closed");
     }
@@ -99,6 +106,15 @@ describe.skipIf(!process.env.BUN_VIDEO_MEDIA_DIR)("native FFmpeg ownership", () 
       }
       const frame = ffmpeg.allocateFrame();
       const packet = ffmpeg.allocatePacket();
+      const util = ffmpeg.libraries.avutil.symbols;
+      const rgba = util.av_get_pix_fmt(ptr(new TextEncoder().encode("rgba\0")));
+      expect(rgba).toBeGreaterThanOrEqual(0);
+      expect(util.av_image_get_buffer_size(rgba, 16, 16, 1)).toBe(1024);
+      expect(ffmpeg.libraries.swscale.symbols.sws_isSupportedInput(rgba)).toBe(1);
+      expect(ffmpeg.libraries.swscale.symbols.sws_isSupportedOutput(rgba)).toBe(1);
+      const sample = util.av_get_sample_fmt(ptr(new TextEncoder().encode("s16\0")));
+      expect(util.av_get_bytes_per_sample(sample)).toBe(2);
+      expect(util.av_sample_fmt_is_planar(sample)).toBe(0);
       expect(frame.pointer).toBeGreaterThan(0);
       expect(packet.pointer).toBeGreaterThan(0);
       frame.unref();

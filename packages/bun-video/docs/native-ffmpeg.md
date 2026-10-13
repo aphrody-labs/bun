@@ -52,6 +52,13 @@ demuxer and exposes it as `pipeline.input`. Closing the pipeline stops its mpv
 client and releases the input before unloading FFmpeg. With `playback: true`,
 mpv receives the same selected media URL through `loadfile`.
 
+`findStream(input, "video" | "audio" | "subtitle")` selects the native best
+stream index and throws FFmpeg's error when no matching stream exists.
+`seek(input, timestampMicroseconds)` seeks backward to a suitable keyframe
+using a signed 64-bit integer timestamp in the global microsecond time base.
+Flush attached decoders after seeking; decoding forward establishes the exact
+requested frame. Demuxer seeking alone is not frame-accurate rendering.
+
 Direct file paths and native media URLs bypass yt-dlp. Set `ytDlp` options
 explicitly to extract a website into a playable URL. Arrays, Blob objects,
 Request objects and Response streams use the native custom AVIO adapter through
