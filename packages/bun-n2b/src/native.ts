@@ -16,6 +16,9 @@ export interface NativeScanOptions {
   jobs?: number;
   dryRun?: boolean;
   since?: string;
+  submodules?: boolean;
+  maxFiles?: number;
+  maxReportBytes?: number;
 }
 
 export interface NativeTransformResult {

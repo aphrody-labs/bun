@@ -111,6 +111,18 @@ pub(crate) struct Cli {
     #[arg(long, value_parser = clap::value_parser!(u8).range(1..=6))]
     pub jobs: Option<u8>,
 
+    /// Include initialized nested Git repositories/submodules. Their edits stay independently owned.
+    #[arg(long)]
+    pub submodules: bool,
+
+    /// Maximum eligible files processed. Exceeding the limit fails with an incomplete-scan error.
+    #[arg(long, default_value_t = aphrody_n2b_core::run::DEFAULT_MAX_FILES)]
+    pub max_files: usize,
+
+    /// Maximum retained scan/report bytes. Exceeding the limit fails instead of truncating findings.
+    #[arg(long, default_value_t = aphrody_n2b_core::run::DEFAULT_MAX_REPORT_BYTES)]
+    pub max_report_bytes: usize,
+
     /// Preview fixes without writing source files. With --migrate, prints the
     /// migration plan (files written/deleted, bun install) and runs nothing.
     #[arg(long)]

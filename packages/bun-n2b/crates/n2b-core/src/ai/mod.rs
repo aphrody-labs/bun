@@ -230,11 +230,18 @@ pub fn context_lines(source: &str, line: u32) -> Context {
     let before_start = i.saturating_sub(3);
     let after_end = (i + 4).min(lines.len());
     let cur = lines.get(i).copied().unwrap_or("");
+    let excerpt = |line: &&str| {
+        let mut end = line.len().min(512);
+        while !line.is_char_boundary(end) {
+            end -= 1;
+        }
+        line[..end].to_string()
+    };
     Context {
-        before: lines[before_start..i].iter().map(|s| s.to_string()).collect(),
-        line: cur.to_string(),
+        before: lines[before_start..i].iter().map(excerpt).collect(),
+        line: excerpt(&cur),
         after: if i + 1 < after_end {
-            lines[i + 1..after_end].iter().map(|s| s.to_string()).collect()
+            lines[i + 1..after_end].iter().map(excerpt).collect()
         } else {
             Vec::new()
         },

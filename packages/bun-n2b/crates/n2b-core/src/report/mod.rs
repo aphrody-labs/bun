@@ -45,6 +45,14 @@ fn sev_mark(s: Severity) -> String {
 }
 
 pub fn render_text(fixes: &[FileFix], opts: &RunOptions) -> String {
+    render_text_with_count(fixes, opts, fixes.len())
+}
+
+pub fn render_text_with_count(
+    fixes: &[FileFix],
+    opts: &RunOptions,
+    files_scanned: usize,
+) -> String {
     let mut out = String::new();
     let total_findings: usize = fixes.iter().map(|f| f.findings.len()).sum();
     let changed: usize = fixes.iter().filter(|f| f.before != f.after).count();
@@ -57,7 +65,7 @@ pub fn render_text(fixes: &[FileFix], opts: &RunOptions) -> String {
 
     out.push_str(&format!("{} {}\n", "node2bun".bold(), format!("(mode: {mode_str})").dimmed()));
     out.push_str(&format!("  racine : {}\n", opts.root.display()));
-    out.push_str(&format!("  fichiers scannés : {}\n", fixes.len()));
+    out.push_str(&format!("  fichiers scannés : {files_scanned}\n"));
     out.push_str(&format!("  findings : {total_findings}\n"));
     out.push_str(&format!("  fichiers modifiés : {changed}\n\n"));
 
@@ -204,10 +212,6 @@ fn render_compat_text(c: &CompatInfo) -> String {
     s
 }
 
-fn meta(opts: &RunOptions, fixes: &[FileFix]) -> Value {
-    meta_counts(opts, fixes.len(), fixes.iter().map(|f| f.findings.len()).sum())
-}
-
 fn meta_counts(opts: &RunOptions, files_scanned: usize, findings_total: usize) -> Value {
     let mut meta = json!({
         "schema_version": SCHEMA_VERSION,
@@ -245,13 +249,21 @@ pub fn render_json_with_migration(
     card: Option<&Value>,
     plan: Option<&Value>,
 ) -> String {
-    let files = fixes
-        .iter()
-        .map(json_file)
-        .collect::<Result<Vec<_>, _>>()
-        .expect("N2B report fields are serializable primitives");
+    render_json_with_scan(fixes, opts, card, plan, fixes.len(), usize::MAX).unwrap_or_default()
+}
 
-    let mut m = json_report(files, opts);
+/// Keep output allocation within the same explicit scan budget.
+pub fn render_json_with_scan(
+    fixes: &[FileFix],
+    opts: &RunOptions,
+    card: Option<&Value>,
+    plan: Option<&Value>,
+    files_scanned: usize,
+    max_bytes: usize,
+) -> Result<String, serde_json::Error> {
+    let files = fixes.iter().map(json_file).collect::<Result<Vec<_>, _>>()?;
+
+    let mut m = json_report_with_count(files, opts, files_scanned);
     if let Some(obj) = m.as_object_mut()
         && let Some(c) = card
         && let Ok(v) = serde_json::to_value(c)
@@ -263,7 +275,50 @@ pub fn render_json_with_migration(
     {
         obj.insert("migration_plan".to_string(), plan.clone());
     }
-    serde_json::to_string_pretty(&m).unwrap_or_default()
+    let mut output = BoundedReport { bytes: Vec::new(), max_bytes };
+    serde_json::to_writer_pretty(&mut output, &m)?;
+    String::from_utf8(output.bytes).map_err(|error| {
+        serde_json::Error::io(std::io::Error::new(std::io::ErrorKind::InvalidData, error))
+    })
+}
+
+struct BoundedReport {
+    bytes: Vec<u8>,
+    max_bytes: usize,
+}
+
+impl std::io::Write for BoundedReport {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        if bytes.len() > self.max_bytes.saturating_sub(self.bytes.len()) {
+            return Err(std::io::Error::other("scan incomplete: report byte limit exceeded"));
+        }
+        self.bytes.extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+pub fn check_json_report_size(report: &Value, max_bytes: usize) -> Result<(), serde_json::Error> {
+    struct CountBytes {
+        bytes: usize,
+        max_bytes: usize,
+    }
+    impl std::io::Write for CountBytes {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            if bytes.len() > self.max_bytes.saturating_sub(self.bytes) {
+                return Err(std::io::Error::other("scan incomplete: report byte limit exceeded"));
+            }
+            self.bytes += bytes.len();
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    serde_json::to_writer(CountBytes { bytes: 0, max_bytes }, report)
 }
 
 /// Enrich one file while its original source is available; retain no full source texts.
@@ -286,10 +341,14 @@ pub fn json_file(file: &FileFix) -> Result<Value, serde_json::Error> {
 }
 
 /// Assemble entries produced by json_file without rendering or parsing JSON text.
-/// files_scanned retains the existing report meaning: entries with findings/edits.
 pub fn json_report(files: Vec<Value>, opts: &RunOptions) -> Value {
+    let files_scanned = files.len();
+    json_report_with_count(files, opts, files_scanned)
+}
+
+pub fn json_report_with_count(files: Vec<Value>, opts: &RunOptions, files_scanned: usize) -> Value {
     let total = files.iter().map(|file| file["findings"].as_array().map_or(0, Vec::len)).sum();
-    let mut report = meta_counts(opts, files.len(), total);
+    let mut report = meta_counts(opts, files_scanned, total);
     report
         .as_object_mut()
         .expect("report metadata is an object")
@@ -322,8 +381,17 @@ pub fn render_report_card_text<C: serde::Serialize>(card: &C) -> String {
 /// Ligne 1 = `{"type":"meta", ...}`
 /// Lignes suivantes = `{"type":"finding", "file":..., ...enriched}`
 pub fn render_jsonl(fixes: &[FileFix], opts: &RunOptions) -> String {
+    render_jsonl_with_count(fixes, opts, fixes.len())
+}
+
+pub fn render_jsonl_with_count(
+    fixes: &[FileFix],
+    opts: &RunOptions,
+    files_scanned: usize,
+) -> String {
     let mut out = String::new();
-    let mut m = meta(opts, fixes);
+    let mut m =
+        meta_counts(opts, files_scanned, fixes.iter().map(|file| file.findings.len()).sum());
     if let Some(obj) = m.as_object_mut() {
         obj.insert("type".to_string(), Value::String("meta".to_string()));
     }

@@ -35,6 +35,11 @@ Up to six worker threads scan files (`--jobs`). `run::run_map_with_jobs` maps ea
 worker, so the native addon builds the JSON envelope once without keeping file texts. Callbacks
 must not enter JavaScript or start another scan.
 
+`run::run_with_settings` and `run::run_map_with_settings` return a scan summary with the actual
+eligible-file count. Legacy vector APIs remain available. One shared budget covers nested source
+scopes, retained file text and report contexts. Nested Git repositories require explicit opt-in;
+generated inputs, toolchains and isolated stores are pruned before traversal.
+
 ## Migration side effects
 
 Only `crates/n2b/src/commands/migrate.rs` runs side effects: `bun install`, rival lockfile removal,

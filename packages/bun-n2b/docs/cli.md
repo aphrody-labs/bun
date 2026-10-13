@@ -14,22 +14,26 @@ n2b --migrate                # --aggressive plus migration side effects
 n2b --fix --dry-run          # compute the rewrites without writing files
 n2b --migrate --dry-run      # print the migration plan without touching the project
 n2b --since origin/main      # scan only what changed since a git ref
+n2b monorepo --submodules --jobs 2 --max-files 100000 --max-report-bytes 67108864 --dry-run
 ```
 
-| Flag                   | Effect                                                                                            |
-| ---------------------- | ------------------------------------------------------------------------------------------------- |
-| `[ROOT]`               | Project root. Defaults to `.`.                                                                    |
-| `--fix`                | Applies findings with `autofix = true`. Excludes `--aggressive` and `--migrate`.                  |
-| `--aggressive`         | Also applies findings marked `aggressive`. Excludes `--fix` and `--migrate`.                      |
-| `--migrate`            | Runs `--aggressive`, then the side effects listed below.                                          |
-| `--scaffold-polyfills` | With `--migrate`, runs `bunpp scaffold <module>` for each module that Bun lacks.                  |
-| `--report <fmt>`       | `text` (default), `json`, `jsonl`, `md`, `markdown` or `sarif`. `md` and `markdown` are the same. |
-| `--ignore <glob>`      | Excludes paths. Repeatable. `.gitignore` is always honoured.                                      |
-| `--jobs <1..6>`        | Number of scan workers. Defaults to the available parallelism, capped at 6.                       |
-| `--dry-run`            | Computes fixes without writing files or running side effects. With `--migrate`, reports the plan. |
-| `--since <GIT_REF>`    | Scans only files changed in `<ref>...HEAD`, local edits, untracked files and the root manifests.  |
-| `--quiet`              | Prints nothing on stdout. The exit code stays meaningful.                                         |
-| `--agent`              | Disables colours, logs to stderr and keeps stdout for the payload. A `text` report becomes JSON.  |
+| Flag                     | Effect                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------- |
+| `[ROOT]`                 | Project root. Defaults to `.`.                                                                    |
+| `--fix`                  | Applies findings with `autofix = true`. Excludes `--aggressive` and `--migrate`.                  |
+| `--aggressive`           | Also applies findings marked `aggressive`. Excludes `--fix` and `--migrate`.                      |
+| `--migrate`              | Runs `--aggressive`, then the side effects listed below.                                          |
+| `--scaffold-polyfills`   | With `--migrate`, runs `bunpp scaffold <module>` for each module that Bun lacks.                  |
+| `--report <fmt>`         | `text` (default), `json`, `jsonl`, `md`, `markdown` or `sarif`. `md` and `markdown` are the same. |
+| `--ignore <glob>`        | Excludes paths. Repeatable. `.gitignore` is always honoured.                                      |
+| `--jobs <1..6>`          | Number of scan workers. Defaults to the available parallelism, capped at 6.                       |
+| `--submodules`           | Includes initialized nested Git repositories. Without it, their source edits are excluded.        |
+| `--max-files <N>`        | Maximum eligible files processed, including clean files. Defaults to 100000.                      |
+| `--max-report-bytes <N>` | Retained scan and serialized report budget. Defaults to 64 MiB.                                   |
+| `--dry-run`              | Computes fixes without writing files or running side effects. With `--migrate`, reports the plan. |
+| `--since <GIT_REF>`      | Scans only files changed in `<ref>...HEAD`, local edits, untracked files and the root manifests.  |
+| `--quiet`                | Prints nothing on stdout. The exit code stays meaningful.                                         |
+| `--agent`                | Disables colours, logs to stderr and keeps stdout for the payload. A `text` report becomes JSON.  |
 
 `--migrate` runs these steps in order:
 
@@ -51,6 +55,22 @@ Every file it touches is backed up first, and n2b restores the backups if the mi
 
 Fix mode is not transactional. When a later file fails, files already processed stay written. Run
 `--dry-run` first to review a migration.
+
+Large scans fail explicitly as incomplete when a file or report limit is reached. They never return
+a truncated report as success. `files_scanned` counts eligible files processed; `files[]` retains only
+findings or edits. JSON context lines are excerpts of at most 512 UTF-8 bytes.
+
+Generated directories, vendor/toolchain inputs and isolated `.aphrody`, `.codex`, `.local` and
+provider session stores are excluded. Local `.env` files are protected; `.env.example`, `.sample`
+and `.template` remain inspectable. Invalid ignore globs fail instead of silently widening the scan.
+Nested Bun runtime source trees are excluded; applying Node-to-Bun rewrites to Bun itself fails.
+With `--since --submodules`, a changed initialized Git link is scanned as a bounded source scope.
+Git path collection shares the report byte limit; each local Git command has a 30-second deadline.
+Publish each source repository before updating its parent Git link. Migration install/lockfile side
+effects still belong to the selected root.
+
+Aggressive mode keeps Buffer conversions advisory when buffer-specific methods, escaped ownership
+or the argument type cannot be proven safe. It also refuses partial calls and invalid await scopes.
 
 ## Exit codes
 

@@ -756,9 +756,11 @@ pub fn scan_package_json_in(
 
     // 5. Root-only checks : pnpm-workspace.yaml à côté → workspace/root-missing
     //    + @types/bun manquant quand code utilise Bun.*
-    let is_root_pkg = !path.contains('/');
+    let package_path = on_disk(path);
+    let package_root = package_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let pnpm_ws = package_root.join("pnpm-workspace.yaml");
+    let is_root_pkg = !path.contains('/') || package_root.join(".git").exists() || pnpm_ws.exists();
     if is_root_pkg {
-        let pnpm_ws = on_disk("pnpm-workspace.yaml");
         let ws_packages = std::fs::read_to_string(&pnpm_ws)
             .ok()
             .and_then(|c| crate::scanners::pnpm_workspace::parse_pnpm_workspace(&c))

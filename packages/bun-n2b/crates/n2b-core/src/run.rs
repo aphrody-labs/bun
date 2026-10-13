@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::path::Path;
+use std::{
+    path::Path,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 use anyhow::{Context, Result};
 use crossbeam_channel::bounded;
@@ -70,7 +73,120 @@ const DEFAULT_IGNORE: &[&str] = &[
     "**/.nuxt/**",
     "**/.output/**",
     "**/.n2b/**",
+    "**/toolchains/**",
+    "**/vendor/**",
+    "**/generated/**",
+    "**/gen/**",
+    "**/.aphrody/**",
+    "**/.codex/**",
+    "**/.claude/projects/**",
+    "**/.local/**",
 ];
+
+pub const DEFAULT_MAX_FILES: usize = 100_000;
+pub const DEFAULT_MAX_REPORT_BYTES: usize = 64 * 1024 * 1024;
+
+/// Limits belong to one scan, including every opted-in nested repository.
+#[derive(Debug, Clone, Copy)]
+pub struct ScanSettings {
+    pub max_files: usize,
+    pub max_report_bytes: usize,
+    pub submodules: bool,
+}
+
+impl Default for ScanSettings {
+    fn default() -> Self {
+        Self {
+            max_files: DEFAULT_MAX_FILES,
+            max_report_bytes: DEFAULT_MAX_REPORT_BYTES,
+            submodules: false,
+        }
+    }
+}
+
+pub struct ScanSummary<T> {
+    pub files: Vec<T>,
+    /// Eligible files processed, including files without findings.
+    pub files_scanned: usize,
+}
+
+#[derive(Default)]
+struct ScanBudget {
+    files: AtomicUsize,
+    retained: AtomicUsize,
+}
+
+impl ScanBudget {
+    fn count_file(&self, settings: ScanSettings) -> Result<()> {
+        if self.files.fetch_add(1, Ordering::Relaxed) >= settings.max_files {
+            anyhow::bail!(
+                "scan incomplete: --max-files limit exceeded; narrow the scan or raise the limit"
+            );
+        }
+        Ok(())
+    }
+
+    // try_update was stabilized in Rust 1.99: rust-lang/rust#148590.
+    #[allow(deprecated, reason = "Keep the declared Rust 1.97 minimum.")]
+    fn retain(&self, fix: &FileFix, settings: ScanSettings) -> Result<()> {
+        // Source texts and bounded JSON context coexist during report rendering.
+        let bytes = fix.findings.iter().fold(
+            fix.file.len().saturating_add(fix.before.len()).saturating_add(fix.after.len()),
+            |bytes, finding| {
+                bytes
+                    .saturating_add(finding.message.len())
+                    .saturating_add(finding.original.len())
+                    .saturating_add(finding.replacement.as_ref().map_or(0, String::len))
+                    .saturating_add(7 * 512 * 6 + 1024)
+            },
+        );
+        if self
+            .retained
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |used| {
+                used.checked_add(bytes).filter(|total| *total <= settings.max_report_bytes)
+            })
+            .is_err()
+        {
+            anyhow::bail!(
+                "scan incomplete: --max-report-bytes limit exceeded; narrow the scan or raise the limit"
+            );
+        }
+        Ok(())
+    }
+}
+
+fn is_bun_source(root: &Path) -> bool {
+    root.join("src/js/node").is_dir() && root.join("src/runtime/bin_entry").is_dir()
+}
+
+fn protected_file(path: &Path) -> bool {
+    let name = path.file_name().and_then(|name| name.to_str()).unwrap_or("");
+    name.starts_with(".env")
+        && ![".example", ".sample", ".template"].iter().any(|suffix| name.ends_with(suffix))
+}
+
+fn excluded_path(root: &Path, rel: &str, ignores: &GlobSet, settings: ScanSettings) -> bool {
+    let path = Path::new(rel);
+    let mut prefix = std::path::PathBuf::new();
+    for component in path.components() {
+        if !matches!(component, std::path::Component::Normal(_)) {
+            return true;
+        }
+        prefix.push(component);
+        let local = prefix.to_string_lossy().replace('\\', "/");
+        let absolute = root.join(&prefix);
+        if ignores.is_match(&local) || ignores.is_match(format!("{local}/")) {
+            return true;
+        }
+        if absolute.is_dir()
+            && (is_bun_source(&absolute)
+                || (!settings.submodules && absolute.join(".git").exists()))
+        {
+            return true;
+        }
+    }
+    protected_file(&root.join(path))
+}
 
 fn is_workflow(rel: &str) -> bool {
     // .github/workflows/*.yml | *.yaml
@@ -107,6 +223,37 @@ where
     T: Send,
     F: Fn(FileFix) -> Result<T> + Sync,
 {
+    Ok(run_map_with_settings(opts, jobs, ScanSettings::default(), map)?.files)
+}
+
+pub fn run_with_settings(
+    opts: &RunOptions,
+    jobs: usize,
+    settings: ScanSettings,
+) -> Result<ScanSummary<FileFix>> {
+    run_map_with_settings(opts, jobs, settings, Ok)
+}
+
+pub fn run_map_with_settings<T, F>(
+    opts: &RunOptions,
+    jobs: usize,
+    settings: ScanSettings,
+    map: F,
+) -> Result<ScanSummary<T>>
+where
+    T: Send,
+    F: Fn(FileFix) -> Result<T> + Sync,
+{
+    if settings.max_files == 0 || settings.max_report_bytes == 0 {
+        anyhow::bail!("scan limits must be positive");
+    }
+    if !opts.root.is_dir() {
+        anyhow::bail!("scan root must be a directory");
+    }
+    if opts.mode != Mode::Check && is_bun_source(&opts.root) {
+        anyhow::bail!("Bun runtime sources are not a Node-to-Bun migration target");
+    }
+    let budget = ScanBudget::default();
     // Repository mapping and N2B share this owner across native/JS callers.
     let _lease = crate::util::resources::acquire_scan_lease(jobs)?;
     // Phase 4 §4.7 : résout n2b.json (parent-first, borné au dépôt), valide,
@@ -121,16 +268,12 @@ where
         gsb.add(Glob::new(p)?);
     }
     for p in opts.ignore.iter() {
-        if let Ok(g) = Glob::new(p) {
-            gsb.add(g);
-        }
+        gsb.add(Glob::new(p).with_context(|| format!("invalid ignore glob: {p}"))?);
     }
     // Merge ignore globs depuis le manifeste (additif aux flags CLI).
     if let Some(m) = manifest.as_ref() {
         for p in &m.manifest.ignore {
-            if let Ok(g) = Glob::new(p) {
-                gsb.add(g);
-            }
+            gsb.add(Glob::new(p).with_context(|| format!("invalid manifest ignore glob: {p}"))?);
         }
         // n2b ignore lui-même son manifeste + .n2b/.
         for p in &["**/n2b.json", "**/.n2b/**"] {
@@ -140,11 +283,14 @@ where
     let ignore_set = gsb.build()?;
 
     let scan = |abs: &Path, rel: &str| -> Result<Option<(String, T)>> {
-        let fix = process_file(abs, rel, opts)
+        let fix = process_file(abs, rel, opts, &budget, settings)
             .and_then(|fix| {
-                fix.map(|fix| finalize_file(abs, fix, opts, &overrides))
-                    .transpose()
-                    .map(Option::flatten)
+                fix.map(|fix| {
+                    budget.retain(&fix, settings)?;
+                    finalize_file(abs, fix, opts, &overrides)
+                })
+                .transpose()
+                .map(Option::flatten)
             })
             .with_context(|| format!("scan {}", abs.display()))?;
         fix.map(|fix| {
@@ -156,18 +302,39 @@ where
 
     let mut fixes = match opts.since.as_deref() {
         Some(since) => {
-            let files: Vec<String> = crate::since::changed_files(&opts.root, since)?
-                .into_iter()
-                .filter(|rel| !ignore_set.is_match(rel))
-                .collect();
-            scan_listed(&opts.root, &files, jobs, &scan)?
+            let files: Vec<String> = crate::since::changed_paths_with_limit(
+                &opts.root,
+                since,
+                settings.submodules,
+                settings.max_report_bytes,
+            )?
+            .into_iter()
+            .filter(|rel| !excluded_path(&opts.root, rel, &ignore_set, settings))
+            .collect();
+            let (directories, files): (Vec<_>, Vec<_>) =
+                files.into_iter().partition(|rel| opts.root.join(rel).is_dir());
+            let mut fixes = scan_listed(&opts.root, &files, jobs, &scan)?;
+            for directory in directories {
+                fixes.extend(scan_tree(
+                    &opts.root.join(directory),
+                    &opts.root,
+                    &ignore_set,
+                    jobs,
+                    settings,
+                    &scan,
+                )?);
+            }
+            fixes
         },
-        None => scan_tree(&opts.root, &ignore_set, jobs, &scan)?,
+        None => scan_tree(&opts.root, &opts.root, &ignore_set, jobs, settings, &scan)?,
     };
     // Restore deterministic order (parallel walk produces non-deterministic order).
     fixes.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
-    Ok(fixes.into_iter().map(|(_, value)| value).collect())
+    Ok(ScanSummary {
+        files: fixes.into_iter().map(|(_, value)| value).collect(),
+        files_scanned: budget.files.load(Ordering::Relaxed),
+    })
 }
 
 type ScanFn<'a, T> = dyn Fn(&Path, &str) -> Result<Option<(String, T)>> + Sync + 'a;
@@ -206,9 +373,11 @@ fn scan_listed<T: Send>(
 /// Scan complet : parcours parallèle de l'arbre, `.gitignore` respecté,
 /// dossiers ignorés élagués avant d'être lus.
 fn scan_tree<T: Send>(
+    walk_root: &Path,
     root: &Path,
     ignore_set: &GlobSet,
     jobs: usize,
+    settings: ScanSettings,
     scan: &ScanFn<'_, T>,
 ) -> Result<Vec<(String, T)>> {
     let (tx, rx) = bounded::<Result<(String, T)>>(jobs * 2);
@@ -232,7 +401,7 @@ fn scan_tree<T: Send>(
         });
         let directory_root = root.to_path_buf();
         let directory_ignores = ignore_set.clone();
-        WalkBuilder::new(root)
+        WalkBuilder::new(walk_root)
             .hidden(false)
             .git_ignore(true)
             .git_exclude(true)
@@ -251,7 +420,9 @@ fn scan_tree<T: Send>(
                     .replace('\\', "/");
                 rel.is_empty()
                     || !(directory_ignores.is_match(&rel)
-                        || directory_ignores.is_match(format!("{rel}/")))
+                        || directory_ignores.is_match(format!("{rel}/"))
+                        || is_bun_source(entry.path())
+                        || (!settings.submodules && entry.path().join(".git").exists()))
             })
             .build_parallel()
             .run(|| {
@@ -270,7 +441,7 @@ fn scan_tree<T: Send>(
                     let abs = entry.into_path();
                     let rel =
                         abs.strip_prefix(root).unwrap_or(&abs).to_string_lossy().replace('\\', "/");
-                    if ignore_set.is_match(&rel) {
+                    if ignore_set.is_match(&rel) || protected_file(&abs) {
                         return WalkState::Continue;
                     }
                     match scan(&abs, &rel) {
@@ -320,7 +491,13 @@ fn finalize_file(
     Ok(Some(fix))
 }
 
-fn process_file(abs: &Path, rel: &str, opts: &RunOptions) -> Result<Option<FileFix>> {
+fn process_file(
+    abs: &Path,
+    rel: &str,
+    opts: &RunOptions,
+    budget: &ScanBudget,
+    settings: ScanSettings,
+) -> Result<Option<FileFix>> {
     let name = abs.file_name().and_then(|s| s.to_str()).unwrap_or("");
     let ext = abs
         .extension()
@@ -329,6 +506,7 @@ fn process_file(abs: &Path, rel: &str, opts: &RunOptions) -> Result<Option<FileF
         .unwrap_or_default();
 
     if RIVAL_LOCKFILES.contains(&name) {
+        budget.count_file(settings)?;
         if let Some(f) = check_lockfile(rel, name) {
             return Ok(Some(FileFix {
                 file: rel.to_string(),
@@ -391,6 +569,7 @@ fn process_file(abs: &Path, rel: &str, opts: &RunOptions) -> Result<Option<FileF
     if meta.len() > 2 * 1024 * 1024 {
         return Ok(None);
     }
+    budget.count_file(settings)?;
     let bytes = std::fs::read(abs).context("read source bytes")?;
     let before = std::str::from_utf8(&bytes).context("source is not valid UTF-8")?.to_string();
 

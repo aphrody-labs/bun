@@ -24,6 +24,12 @@ export interface ScanOptions {
   dryRun?: boolean;
   /** Incremental scan: only files changed since this git ref (`<ref>...HEAD`, local edits, untracked files) plus root manifests. */
   since?: string;
+  /** Include initialized nested Git repositories/submodules. Defaults to false. */
+  submodules?: boolean;
+  /** Maximum eligible files processed. Defaults to 100000. */
+  maxFiles?: number;
+  /** Retained scan/report byte limit. Defaults to 64 MiB. */
+  maxReportBytes?: number;
 }
 
 /** Scans the project under `root` and returns the n2b JSON report (schema v2). */
@@ -34,6 +40,9 @@ export function scan(root: string, options: ScanOptions = {}): N2BReport {
   if (options.jobs !== undefined) opts.jobs = options.jobs;
   if (options.dryRun !== undefined) opts.dryRun = options.dryRun;
   if (options.since !== undefined) opts.since = options.since;
+  if (options.submodules !== undefined) opts.submodules = options.submodules;
+  if (options.maxFiles !== undefined) opts.maxFiles = options.maxFiles;
+  if (options.maxReportBytes !== undefined) opts.maxReportBytes = options.maxReportBytes;
   return native().scan(resolve(root), opts);
 }
 

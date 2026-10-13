@@ -50,10 +50,18 @@ pub(crate) fn run(cli: &Cli) -> Result<ExitCode> {
         since: cli.since.clone(),
     };
 
-    let fixes = match cli.jobs {
-        Some(jobs) => run::run_with_jobs(&opts, usize::from(jobs))?,
-        None => run::run(&opts)?,
+    let settings = run::ScanSettings {
+        max_files: cli.max_files,
+        max_report_bytes: cli.max_report_bytes,
+        submodules: cli.submodules,
     };
+    let summary = run::run_with_settings(
+        &opts,
+        cli.jobs.map_or_else(run::default_jobs, usize::from),
+        settings,
+    )?;
+    let files_scanned = summary.files_scanned;
+    let fixes = summary.files;
 
     // Mode --migrate : applique les side-effects après le scan+fix +
     // génère/persiste le report card (Phase 5 §5.4 + §5.6).
@@ -84,26 +92,33 @@ pub(crate) fn run(cli: &Cli) -> Result<ExitCode> {
 
     let card_value = report_card.as_ref().and_then(|c| serde_json::to_value(c).ok());
     let plan_value = migration_plan.as_ref().and_then(|p| serde_json::to_value(p).ok());
-    match opts.report {
-        Report::Json => println!(
-            "{}",
-            report::render_json_with_migration(
-                &fixes,
-                &opts,
-                card_value.as_ref(),
-                plan_value.as_ref()
-            )
-        ),
-        Report::Jsonl => print!("{}", report::render_jsonl(&fixes, &opts)),
-        Report::Markdown => println!("{}", report::render_markdown(&fixes, &opts)),
-        Report::Sarif => println!("{}", report::render_sarif(&fixes, &opts)),
-        Report::Text if !opts.quiet => {
-            print!("{}", report::render_text(&fixes, &opts));
-            if let Some(card) = &report_card {
-                print!("{}", report::render_report_card_text(card));
-            }
-        },
-        _ => {},
+    let mut output = match opts.report {
+        Report::Json => report::render_json_with_scan(
+            &fixes,
+            &opts,
+            card_value.as_ref(),
+            plan_value.as_ref(),
+            files_scanned,
+            settings.max_report_bytes,
+        )?,
+        Report::Jsonl => report::render_jsonl_with_count(&fixes, &opts, files_scanned),
+        Report::Markdown => report::render_markdown(&fixes, &opts),
+        Report::Sarif => report::render_sarif(&fixes, &opts),
+        Report::Text => report::render_text_with_count(&fixes, &opts, files_scanned),
+    };
+    if matches!(opts.report, Report::Text)
+        && let Some(card) = &report_card
+    {
+        output.push_str(&report::render_report_card_text(card));
+    }
+    if output.len() > settings.max_report_bytes {
+        anyhow::bail!("scan incomplete: --max-report-bytes limit exceeded");
+    }
+    if !opts.quiet {
+        match opts.report {
+            Report::Text | Report::Jsonl => print!("{output}"),
+            _ => println!("{output}"),
+        }
     }
 
     let has_errors = fixes.iter().any(|f| f.findings.iter().any(|x| x.severity == Severity::Error));

@@ -112,10 +112,10 @@ aggressive  = false
 [[apis]]
 id          = "api/fs-readFile-promise"
 pattern     = "\\bfsPromises\\.readFile\\s*\\(\\s*([^,)]+?)\\s*,\\s*['\"]utf-?8['\"]\\s*\\)"
-message     = "remplacer fsPromises.readFile(path, 'utf8') par await Bun.file(path).text()"
+message     = "replace fsPromises.readFile(path, 'utf8') with Bun.file(path).text(), preserving the promise"
 severity    = "warn"
 replace     = "template"
-replacement = "await Bun.file($1).text()"
+replacement = "Bun.file($1).text()"
 aggressive  = true
 
 [[apis]]
@@ -173,11 +173,10 @@ aggressive  = false
 [[apis]]
 id          = "api/buffer-alloc"
 pattern     = '\bBuffer\.alloc\s*\(\s*([^)]+?)\s*\)'
-message     = "remplacer Buffer.alloc(n) par new Uint8Array(n) (Web-standard)"
+message     = "Buffer.alloc works in Bun; migrate to Uint8Array manually after checking fill behavior, Buffer methods and external/FFI uses"
 severity    = "warn"
-replace     = "template"
-replacement = "new Uint8Array($1)"
-aggressive  = true
+replace     = "none"
+aggressive  = false
 
 [[apis]]
 id          = "api/buffer-concat"
@@ -190,11 +189,10 @@ aggressive  = false
 [[apis]]
 id          = "api/buffer-from-string"
 pattern     = "\\bBuffer\\.from\\s*\\(\\s*([^,)]+?)\\s*,\\s*['\"]utf-?8['\"]\\s*\\)"
-message     = "remplacer Buffer.from(str, 'utf8') par new TextEncoder().encode(str)"
+message     = "Buffer.from(str, 'utf8') works in Bun; TextEncoder.encode returns Uint8Array, requiring checks of Buffer methods and external/FFI uses"
 severity    = "warn"
-replace     = "template"
-replacement = "new TextEncoder().encode($1)"
-aggressive  = true
+replace     = "none"
+aggressive  = false
 
 [[apis]]
 id          = "api/process-stdout-write"
@@ -272,8 +270,8 @@ aggressive  = false
 
 [[apis]]
 id          = "api/buffer-byteLength"
-pattern     = "\\bBuffer\\.byteLength\\s*\\(\\s*([^,)]+?)\\s*(?:,\\s*['\"]utf-?8['\"]\\s*)?\\)"
-message     = "remplacer Buffer.byteLength(str) par new TextEncoder().encode(str).length (Web-standard)"
+pattern     = '\bBuffer\.byteLength\s*\(\s*([^,)]+?)\s*(?:,\s*([^)]+?)\s*)?\)'
+message     = "replace Buffer.byteLength(str) with new TextEncoder().encode(str).length only for UTF-8 strings; preserve other types and encodings"
 severity    = "warn"
 replace     = "template"
 replacement = "new TextEncoder().encode($1).length"

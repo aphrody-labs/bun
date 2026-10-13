@@ -32,12 +32,28 @@ function fail(what: string, stderr: string, code: number): N2BError {
 /** `n2b <root> --report=json [--fix|--aggressive]`. Exit 1 (findings in check mode) is not an error. */
 export async function scan(
   root: string,
-  opts: { mode?: Mode; ignore?: string[]; cwd?: string } = {},
+  opts: {
+    mode?: Mode;
+    ignore?: string[];
+    cwd?: string;
+    jobs?: number;
+    since?: string;
+    dryRun?: boolean;
+    submodules?: boolean;
+    maxFiles?: number;
+    maxReportBytes?: number;
+  } = {},
 ): Promise<N2BReport> {
   const args = [root, "--report=json"];
   if (opts.mode === "fix") args.push("--fix");
   else if (opts.mode === "aggressive") args.push("--aggressive");
   for (const glob of opts.ignore ?? []) args.push(`--ignore=${glob}`);
+  if (opts.jobs !== undefined) args.push(`--jobs=${opts.jobs}`);
+  if (opts.since !== undefined) args.push(`--since=${opts.since}`);
+  if (opts.dryRun) args.push("--dry-run");
+  if (opts.submodules) args.push("--submodules");
+  if (opts.maxFiles !== undefined) args.push(`--max-files=${opts.maxFiles}`);
+  if (opts.maxReportBytes !== undefined) args.push(`--max-report-bytes=${opts.maxReportBytes}`);
   const { stdout, stderr, code } = await run(args, opts.cwd);
   if (code !== 0 && code !== 1) throw fail("scan", stderr, code);
   return JSON.parse(stdout) as N2BReport;

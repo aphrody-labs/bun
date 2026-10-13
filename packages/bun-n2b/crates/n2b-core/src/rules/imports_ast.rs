@@ -24,14 +24,17 @@ use aphrody_n2b_registry::{BindingKind, ImportBinding, ImportGraph};
 use oxc_allocator::Allocator;
 use oxc_ast::AstKind;
 use oxc_ast::ast::{
-    BindingPattern, Declaration, Expression, ImportDeclarationSpecifier, Statement,
-    VariableDeclarator,
+    Argument, BindingPattern, Expression, ImportDeclarationSpecifier, SimpleAssignmentTarget,
+    Statement, VariableDeclarator,
 };
 use oxc_ast_visit::Visit;
 use oxc_parser::Parser;
 use oxc_span::{GetSpan, SourceType};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, ops::Range};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Range,
+};
 
 #[derive(Debug, Clone)]
 pub struct Specifier {
@@ -216,9 +219,17 @@ pub fn extract_specifiers(path: &str, source: &str) -> Vec<Specifier> {
 /// Visitor qui résout les bindings locaux → (specifier, kind).
 pub(crate) struct SourceContext {
     pub imports: ImportGraph,
+    pub parsed: bool,
+    pub ambiguous_bindings: HashSet<String>,
     pub ignored_starts: Vec<Range<u32>>,
     pub spawn_calls: Vec<usize>,
-    /// Function bodies, static blocks and class field initializers, with
+    pub call_spans: Vec<Range<u32>>,
+    pub argument_spans: Vec<Range<u32>>,
+    pub string_argument_spans: Vec<Range<u32>>,
+    pub utf8_argument_spans: Vec<Range<u32>>,
+    pub await_parentheses: Vec<Range<u32>>,
+    pub discarded_call_spans: Vec<Range<u32>>,
+    /// Function bodies, parameters, static blocks and class field initializers, with
     /// whether `await` is valid directly inside them.
     pub await_scopes: Vec<(Range<u32>, bool)>,
     /// `await` is valid at the top level (ES module with import/export).
@@ -226,6 +237,40 @@ pub(crate) struct SourceContext {
 }
 
 impl SourceContext {
+    pub fn matches_call(&self, start: usize, end: usize) -> bool {
+        self.call_spans.iter().any(|span| span.start as usize == start && span.end as usize == end)
+    }
+
+    pub fn matches_argument(&self, start: usize, end: usize) -> bool {
+        self.argument_spans
+            .iter()
+            .any(|span| span.start as usize == start && span.end as usize == end)
+    }
+
+    pub fn await_needs_parentheses(&self, start: usize, end: usize) -> bool {
+        self.await_parentheses
+            .iter()
+            .any(|span| span.start as usize == start && span.end as usize == end)
+    }
+
+    pub fn matches_string_argument(&self, start: usize, end: usize) -> bool {
+        self.string_argument_spans
+            .iter()
+            .any(|span| span.start as usize == start && span.end as usize == end)
+    }
+
+    pub fn matches_utf8_argument(&self, start: usize, end: usize) -> bool {
+        self.utf8_argument_spans
+            .iter()
+            .any(|span| span.start as usize == start && span.end as usize == end)
+    }
+
+    pub fn call_result_discarded(&self, start: usize, end: usize) -> bool {
+        self.discarded_call_spans
+            .iter()
+            .any(|span| span.start as usize == start && span.end as usize == end)
+    }
+
     /// Whether an `await` written at byte `index` is valid: the innermost
     /// enclosing function is async, or there is none and the file is an ES module.
     pub fn await_allowed(&self, index: usize) -> bool {
@@ -254,6 +299,10 @@ impl<'a> Visit<'a> for AwaitScopes {
                 let span = f.body.span();
                 self.0.push((span.start..span.end, f.r#async));
             },
+            AstKind::FormalParameters(p) => {
+                let span = p.span();
+                self.0.push((span.start..span.end, false));
+            },
             AstKind::StaticBlock(b) => {
                 let span = b.span();
                 self.0.push((span.start..span.end, false));
@@ -274,6 +323,12 @@ struct GraphCollect {
     ignored_starts: Vec<Range<u32>>,
     bindings: HashMap<String, usize>,
     calls: Vec<(usize, String, Option<String>)>,
+    call_spans: Vec<Range<u32>>,
+    argument_spans: Vec<Range<u32>>,
+    string_argument_spans: Vec<Range<u32>>,
+    utf8_argument_spans: Vec<Range<u32>>,
+    await_parentheses: Vec<Range<u32>>,
+    discarded_call_spans: Vec<Range<u32>>,
 }
 
 impl GraphCollect {
@@ -331,8 +386,42 @@ fn extract_require_arg<'a>(call: &oxc_ast::ast::CallExpression<'a>) -> Option<St
 }
 
 impl<'a> Visit<'a> for GraphCollect {
+    fn enter_node(&mut self, kind: AstKind<'a>) {
+        let expression = match kind {
+            AstKind::StaticMemberExpression(member) => Some(&member.object),
+            AstKind::ComputedMemberExpression(member) => Some(&member.object),
+            AstKind::CallExpression(call) => Some(&call.callee),
+            AstKind::NewExpression(call) => Some(&call.callee),
+            AstKind::TaggedTemplateExpression(template) => Some(&template.tag),
+            AstKind::BinaryExpression(binary) => Some(&binary.left),
+            _ => None,
+        };
+        if let Some(Expression::CallExpression(call)) =
+            expression.map(Expression::get_inner_expression)
+        {
+            let span = call.span();
+            self.await_parentheses.push(span.start..span.end);
+        }
+        let discarded = match kind {
+            AstKind::ExpressionStatement(statement) => Some(&statement.expression),
+            AstKind::UnaryExpression(unary) if unary.operator.is_void() => Some(&unary.argument),
+            _ => None,
+        };
+        if let Some(Expression::CallExpression(call)) =
+            discarded.map(Expression::get_inner_expression)
+        {
+            self.discarded_call_spans.push(call.span.start..call.span.end);
+        }
+    }
+
     fn visit_binding_identifier(&mut self, it: &oxc_ast::ast::BindingIdentifier<'a>) {
         *self.bindings.entry(it.name.to_string()).or_default() += 1;
+    }
+    fn visit_simple_assignment_target(&mut self, it: &SimpleAssignmentTarget<'a>) {
+        if let SimpleAssignmentTarget::AssignmentTargetIdentifier(id) = it {
+            *self.bindings.entry(id.name.to_string()).or_default() += 1;
+        }
+        oxc_ast_visit::walk::walk_simple_assignment_target(self, it);
     }
     fn visit_string_literal(&mut self, it: &oxc_ast::ast::StringLiteral<'a>) {
         self.ignored_starts.push(it.span.start..it.span.end);
@@ -352,6 +441,22 @@ impl<'a> Visit<'a> for GraphCollect {
         oxc_ast_visit::walk::walk_static_member_expression(self, it);
     }
     fn visit_call_expression(&mut self, it: &oxc_ast::ast::CallExpression<'a>) {
+        self.call_spans.push(it.span.start..it.span.end);
+        self.argument_spans.extend(it.arguments.iter().map(|arg| {
+            let span = arg.span();
+            span.start..span.end
+        }));
+        for arg in &it.arguments {
+            if let Argument::StringLiteral(literal) = arg {
+                let span = literal.span.start..literal.span.end;
+                self.string_argument_spans.push(span.clone());
+                if literal.value.as_str().eq_ignore_ascii_case("utf8")
+                    || literal.value.as_str().eq_ignore_ascii_case("utf-8")
+                {
+                    self.utf8_argument_spans.push(span);
+                }
+            }
+        }
         match &it.callee {
             Expression::Identifier(id) => {
                 self.calls.push((it.callee.span().start as usize, id.name.to_string(), None))
@@ -444,6 +549,12 @@ pub(crate) fn build_source_context(path: &str, source: &str) -> SourceContext {
             .collect(),
         bindings: HashMap::new(),
         calls: Vec::new(),
+        call_spans: Vec::new(),
+        argument_spans: Vec::new(),
+        string_argument_spans: Vec::new(),
+        utf8_argument_spans: Vec::new(),
+        await_parentheses: Vec::new(),
+        discarded_call_spans: Vec::new(),
     };
 
     // Statements top-level — couvre le cas commun (imports en tête de fichier
@@ -460,16 +571,26 @@ pub(crate) fn build_source_context(path: &str, source: &str) -> SourceContext {
             // descend via le walker générique.
             other => oxc_ast_visit::walk::walk_statement(&mut collect, other),
         }
-        // Visit the export-from declarations which can re-export bindings.
-        if let Statement::ExportDeclaration(end) = stmt
-            && let Declaration::VariableDeclaration(vd) = &end.declaration
-        {
-            for decl in &vd.declarations {
-                collect.visit_variable_declarator(decl);
-            }
-        }
     }
 
+    let mut ambiguous_bindings: HashSet<String> = collect
+        .bindings
+        .iter()
+        .filter(|(name, declarations)| {
+            let allowed = collect
+                .graph
+                .bindings
+                .get(*name)
+                .map_or(0, |binding| usize::from(matches!(binding.kind, BindingKind::Require)));
+            **declarations > allowed
+        })
+        .map(|(name, _)| name.clone())
+        .collect();
+    if ambiguous_bindings.contains("require") || collect.graph.bindings.contains_key("require") {
+        ambiguous_bindings.extend(collect.graph.bindings.iter().filter_map(|(name, binding)| {
+            matches!(binding.kind, BindingKind::Require).then_some(name.clone())
+        }));
+    }
     let spawn_calls = collect
         .calls
         .iter()
@@ -478,11 +599,9 @@ pub(crate) fn build_source_context(path: &str, source: &str) -> SourceContext {
             if binding.specifier.trim_start_matches("node:") != "child_process" {
                 return None;
             }
-            let declarations = collect.bindings.get(root).copied().unwrap_or_default();
             // Conservative when a local declaration shadows an import anywhere in
             // the file. Without scope resolution, never rewrite an ambiguous call.
-            let allowed_declarations = usize::from(matches!(binding.kind, BindingKind::Require));
-            if declarations > allowed_declarations {
+            if ambiguous_bindings.contains(root) {
                 return None;
             }
             let is_spawn = match (&binding.kind, member.as_deref()) {
@@ -504,8 +623,16 @@ pub(crate) fn build_source_context(path: &str, source: &str) -> SourceContext {
         && ret.program.body.iter().any(Statement::is_module_declaration);
     SourceContext {
         imports: collect.graph,
+        parsed: !ret.fatal_error && ret.diagnostics.is_empty(),
+        ambiguous_bindings,
         ignored_starts: collect.ignored_starts,
         spawn_calls,
+        call_spans: collect.call_spans,
+        argument_spans: collect.argument_spans,
+        string_argument_spans: collect.string_argument_spans,
+        utf8_argument_spans: collect.utf8_argument_spans,
+        await_parentheses: collect.await_parentheses,
+        discarded_call_spans: collect.discarded_call_spans,
         await_scopes: await_scopes.0,
         top_level_await,
     }

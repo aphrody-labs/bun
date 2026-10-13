@@ -26,7 +26,7 @@
 use std::collections::HashSet;
 
 use crate::util::{Edit, apply_edits, line_offsets, make_finding};
-use aphrody_n2b_registry::{APIS, ApiEntry, ImportGraph, MODULES};
+use aphrody_n2b_registry::{APIS, ApiEntry, BindingKind, ImportGraph, MODULES};
 use aphrody_n2b_types::types::{Finding, MakeFindingOpts, Severity};
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
@@ -127,6 +127,37 @@ pub(crate) fn apply_bun_api_rules_with_context(
             if r.id == "api/child-process-spawn" && !context.spawn_calls.contains(&index) {
                 continue;
             }
+            if matches!(
+                r.id.as_str(),
+                "api/buffer-alloc" | "api/buffer-from-string" | "api/buffer-byteLength"
+            ) && (context.ambiguous_bindings.contains("Buffer")
+                || imports
+                    .bindings
+                    .get("Buffer")
+                    .is_some_and(|binding| strip_node_prefix(&binding.specifier) != "buffer"))
+            {
+                continue;
+            }
+            let fs_binding = match r.id.as_str() {
+                "api/fs-readFileSync"
+                | "api/fs-writeFileSync"
+                | "api/json-parse-readFileSync"
+                | "api/fs-existsSync" => Some(("fs", "fs")),
+                "api/fs-readFile-promise" => Some(("fsPromises", "fs/promises")),
+                _ => None,
+            };
+            if let Some((name, specifier)) = fs_binding
+                && (context.ambiguous_bindings.contains(name)
+                    || !fs_binding_resolves(imports, name, specifier))
+            {
+                continue;
+            }
+            if r.id == "api/json-parse-readFileSync"
+                && (context.ambiguous_bindings.contains("JSON")
+                    || imports.bindings.contains_key("JSON"))
+            {
+                continue;
+            }
 
             // Phase 2 : filtre AST. Le finding n'est émis que si :
             //  (a) le pattern matché commence par `<from>.` — usage
@@ -162,7 +193,7 @@ pub(crate) fn apply_bun_api_rules_with_context(
             }
 
             let original_len = original.len();
-            let replacement = match &r.replace {
+            let mut replacement = match &r.replace {
                 ReplaceKind::None => None,
                 ReplaceKind::Static(s) => Some(s.clone()),
                 ReplaceKind::Template(t) => Some(expand(&mat, t)),
@@ -178,9 +209,49 @@ pub(crate) fn apply_bun_api_rules_with_context(
                 });
             // A synchronous call rewritten to `await …` only compiles inside an
             // async function or at the top level of an ES module.
-            let await_invalid = replacement.as_deref().is_some_and(|r| r.starts_with("await "))
-                && !context.await_allowed(index);
-            let skip_autofix = dir_context || await_invalid;
+            let inserts_await = replacement.as_deref().is_some_and(|r| r.starts_with("await "));
+            let await_invalid = inserts_await && !context.await_allowed(index);
+            // Regex captures must cover actual AST arguments and the complete call.
+            let call_context_invalid = fs_binding.is_some()
+                && (!context.matches_call(index, whole.end())
+                    || mat.iter().skip(1).flatten().any(|capture| {
+                        let text = capture.as_str();
+                        let start = capture.start() + text.len() - text.trim_start().len();
+                        let end = capture.end() - text.len() + text.trim_end().len();
+                        !context.matches_argument(start, end)
+                    }));
+            let buffer_byte_length_invalid = r.id == "api/buffer-byteLength"
+                && (!context.matches_call(index, whole.end())
+                    || !mat.get(1).is_some_and(|capture| {
+                        context.matches_string_argument(capture.start(), capture.end())
+                    })
+                    || mat.get(2).is_some_and(|capture| {
+                        !context.matches_utf8_argument(capture.start(), capture.end())
+                    }));
+            let write_result_used = r.id == "api/fs-writeFileSync"
+                && !context.call_result_discarded(index, whole.end());
+            let target_shadowed = replacement.as_deref().is_some_and(|replacement| {
+                let target =
+                    if replacement.starts_with("await Bun.") || replacement.starts_with("Bun.") {
+                        "Bun"
+                    } else if r.id == "api/buffer-byteLength" {
+                        "TextEncoder"
+                    } else {
+                        return false;
+                    };
+                context.ambiguous_bindings.contains(target) || imports.bindings.contains_key(target)
+            });
+            let parse_invalid = !context.parsed;
+            let skip_autofix = dir_context
+                || await_invalid
+                || call_context_invalid
+                || buffer_byte_length_invalid
+                || write_result_used
+                || target_shadowed
+                || parse_invalid;
+            if inserts_await && context.await_needs_parentheses(index, whole.end()) {
+                replacement = replacement.map(|value| format!("({value})"));
+            }
 
             let has_repl = replacement.is_some() && !skip_autofix;
             let replacement_for_edit = if aggressive && r.aggressive && !skip_autofix {
@@ -199,9 +270,23 @@ pub(crate) fn apply_bun_api_rules_with_context(
                      recursive: true }))"
                         .to_string()
                 } else if await_invalid {
+                    format!("{} — not applied: await is invalid in this scope", r.message)
+                } else if call_context_invalid || parse_invalid {
+                    format!("{} — not applied: unsupported call syntax", r.message)
+                } else if buffer_byte_length_invalid {
                     format!(
-                        "{} — non appliqué : `await` invalide ici (fonction synchrone ou \
-                         CommonJS)",
+                        "{} — not applied: a string literal and UTF-8 encoding are required",
+                        r.message
+                    )
+                } else if target_shadowed {
+                    format!(
+                        "{} — not applied: target API is shadowed by a local binding",
+                        r.message
+                    )
+                } else if write_result_used {
+                    format!(
+                        "{} — not applied: Bun.write returns a byte count; \
+                         fs.writeFileSync returns undefined",
                         r.message
                     )
                 } else {
@@ -286,6 +371,16 @@ fn first_meaningful_ident(matched: &str) -> Option<&str> {
 ///
 /// Compare après normalisation `node:` pour préserver le zero-drift sur
 /// `import { readFileSync } from "node:fs"` ↔ `import_from = "fs"`.
+fn fs_binding_resolves(imports: &ImportGraph, root: &str, from: &str) -> bool {
+    if binding_resolves(imports, root, from) {
+        return true;
+    }
+    root == "fsPromises" && imports.bindings.get(root).is_some_and(|binding| {
+        strip_node_prefix(&binding.specifier) == "fs"
+            && matches!(&binding.kind, BindingKind::Named { imported } if imported == "promises")
+    })
+}
+
 fn binding_resolves(imports: &ImportGraph, root: &str, from: &str) -> bool {
     let from_norm = strip_node_prefix(from);
     if let Some(b) = imports.bindings.get(root) {

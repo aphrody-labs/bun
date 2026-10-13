@@ -32,7 +32,16 @@ fn options(
     dry_run: bool,
     since: Option<String>,
 ) -> RunOptions {
-    RunOptions { root, mode, report: Report::Json, quiet: true, ignore, agent: true, dry_run, since }
+    RunOptions {
+        root,
+        mode,
+        report: Report::Json,
+        quiet: true,
+        ignore,
+        agent: true,
+        dry_run,
+        since,
+    }
 }
 
 /// Version of the n2b crates compiled into this addon.
@@ -59,6 +68,12 @@ pub struct ScanOptions {
     pub dry_run: Option<bool>,
     /// Incremental scan: only files changed since this git ref, plus root manifests.
     pub since: Option<String>,
+    /// Include initialized nested Git repositories/submodules. Defaults to false.
+    pub submodules: Option<bool>,
+    /// Maximum eligible files processed. Defaults to 100000.
+    pub max_files: Option<u32>,
+    /// Retained scan/report byte limit. Defaults to 64 MiB.
+    pub max_report_bytes: Option<u32>,
 }
 
 /// Scans the project under `root` and returns the n2b JSON report (schema v2).
@@ -77,7 +92,17 @@ pub fn scan(root: String, options: Option<ScanOptions>) -> Result<serde_json::Va
         jobs: None,
         dry_run: None,
         since: None,
+        submodules: None,
+        max_files: None,
+        max_report_bytes: None,
     });
+    let settings = run::ScanSettings {
+        max_files: options.max_files.map_or(run::DEFAULT_MAX_FILES, |limit| limit as usize),
+        max_report_bytes: options
+            .max_report_bytes
+            .map_or(run::DEFAULT_MAX_REPORT_BYTES, |limit| limit as usize),
+        submodules: options.submodules.unwrap_or(false),
+    };
     let opts = self::options(
         root,
         mode(options.mode.as_deref())?,
@@ -86,9 +111,13 @@ pub fn scan(root: String, options: Option<ScanOptions>) -> Result<serde_json::Va
         options.since,
     );
     let jobs = options.jobs.map_or_else(run::default_jobs, |jobs| jobs as usize);
-    let files = run::run_map_with_jobs(&opts, jobs, |fix| Ok(report::json_file(&fix)?))
-        .map_err(|error| Error::from_reason(format!("{error:#}")))?;
-    Ok(report::json_report(files, &opts))
+    let summary =
+        run::run_map_with_settings(&opts, jobs, settings, |fix| Ok(report::json_file(&fix)?))
+            .map_err(|error| Error::from_reason(format!("{error:#}")))?;
+    let report = report::json_report_with_count(summary.files, &opts, summary.files_scanned);
+    report::check_json_report_size(&report, settings.max_report_bytes)
+        .map_err(|error| Error::from_reason(error.to_string()))?;
+    Ok(report)
 }
 
 #[napi(object)]
