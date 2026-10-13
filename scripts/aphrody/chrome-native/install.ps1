@@ -1,10 +1,12 @@
 param(
     [ValidateSet('Plan', 'Install')][string]$Mode = 'Plan',
     [Parameter(Mandatory = $true)][ValidatePattern('^[a-p]{32}$')][string]$ExtensionId,
-    [string]$Executable = 'C:\bun\build\chromium\qualification\chrome-native\host.exe',
+    [string]$Executable,
     [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ExecutableSha256
 )
 $ErrorActionPreference = 'Stop'
+$checkout = if ($env:APHRODY_BUN_CHECKOUT) { [IO.Path]::GetFullPath($env:APHRODY_BUN_CHECKOUT) } else { [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..')) }
+if (!$Executable) { $Executable = Join-Path $checkout 'build\chromium\qualification\chrome-native\host.exe' }
 $privateRoot = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'BunChromium'))
 $native = Join-Path $privateRoot 'NativeMessaging'
 $exports = Join-Path $privateRoot 'Exports'

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
- * Loader for `bun_wasm.wasm` (C:\bun\src\wasm, wasm32-wasip1-threads): Bun's
+ * Loader for `bun_wasm.wasm` (Bun checkout's src/wasm, wasm32-wasip1-threads): Bun's
  * own semver, shell parser and markdown, called through the C ABI. WASI comes
  * from browser_wasi_shim; results are packed `ptr << 32 | len` with a status byte.
  */

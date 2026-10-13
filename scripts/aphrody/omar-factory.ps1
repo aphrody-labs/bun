@@ -2,9 +2,10 @@ param([ValidateSet('Plan', 'Apply', 'Verify')][string]$Mode = 'Plan')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $bun = Join-Path $env:SystemRoot 'System32\bun.exe'
-$state = 'C:\bun\build\chromium\omar-factory'
+$checkout = if ($env:APHRODY_BUN_CHECKOUT) { [IO.Path]::GetFullPath($env:APHRODY_BUN_CHECKOUT) } else { [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..')) }
+$state = Join-Path $checkout 'build\chromium\omar-factory'
 if ($env:COMPUTERNAME -ne 'OMAR') { throw 'This setup is scoped to the catalog host OMAR' }
-if (!(Test-Path -LiteralPath 'C:\bun\.git') -or !(Test-Path -LiteralPath $bun)) { throw 'Existing Bun checkout and native runtime required' }
+if (!(Test-Path -LiteralPath (Join-Path $checkout '.git')) -or !(Test-Path -LiteralPath $bun)) { throw 'Existing Bun checkout and native runtime required' }
 function Checked([string]$Executable, [string[]]$Arguments) {
     & $Executable @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Executable failed with exit $LASTEXITCODE" }
@@ -14,7 +15,7 @@ $elevated = ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Se
 if ($Mode -eq 'Plan') {
     [pscustomobject]@{
         Host = $env:COMPUTERNAME; User = $identity.Name; Elevated = $elevated
-        Checkout = 'C:\bun'; State = $state
+        Checkout = $checkout; State = $state
         Actions = @('Complete existing VS2026 through bun msvc setup: ATL/MFC and SDK28000', 'Install missing Mozilla.sccache 0.18.0 through winget', 'Back up and deduplicate machine/user PATH through bun:windows with compare-before-write', 'Keep System32 first; scope INCLUDE/LIB to bun msvc exec', 'Verify existing SSH configuration and automatic sshd service')
         SourceTransfer = 'Public native helpers only; no browser profile or credential transfer'
         Chromium = 'Keep existing owner PC build/cache; no Chromium download or duplicate build on this host'
@@ -24,10 +25,10 @@ if ($Mode -eq 'Plan') {
 }
 if ($Mode -eq 'Apply') {
     if (!$elevated) { throw 'Apply requires an existing elevated SSH token; no interactive UAC flow is started' }
-    $origin = & git -C C:\bun remote get-url origin
+    $origin = & git -C $checkout remote get-url origin
     if ($LASTEXITCODE -ne 0 -or $origin -ne 'https://github.com/aphrody-labs/bun.git') { throw 'Existing authorized Bun origin required' }
     foreach ($setting in @(@('core.longpaths', 'true'), @('core.preloadindex', 'true'), @('core.fscache', 'true'), @('fetch.prune', 'true'), @('pull.ff', 'only'), @('push.default', 'simple'))) {
-        Checked 'git.exe' @('-C', 'C:\bun', 'config', '--local', $setting[0], $setting[1])
+        Checked 'git.exe' @('-C', $checkout, 'config', '--local', $setting[0], $setting[1])
     }
     [IO.Directory]::CreateDirectory($state) | Out-Null
     Checked $bun @('msvc', 'setup', '--add', 'Microsoft.VisualStudio.Component.VC.ATLMFC', '--add', 'Microsoft.VisualStudio.Component.Windows11SDK.28000')
@@ -40,7 +41,7 @@ import windows from "bun:windows";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { dlopen, ptr } from "bun:ffi";
-const root = "C:\\bun\\build\\chromium\\omar-factory";
+const root = "__BUN_FACTORY_STATE__";
 const machineKey = "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment";
 const userKey = "HKCU\\Environment";
 const before = { machine: windows.registry.get(machineKey, "Path"), user: windows.registry.get(userKey, "Path") };
@@ -70,6 +71,7 @@ let broadcast;
 try { broadcast = user32.symbols.SendMessageTimeoutW(0xffff, 0x1a, 0n, ptr(message), 2, 5000, ptr(result)) !== 0n; } finally { user32.close(); }
 console.log(JSON.stringify({ backup, machineEntries: machine.length, userEntries: user.length, system32First: normalize(machine[0]) === normalize(join(system, "System32")), broadcast }));
 '@
+    $pathScript = $pathScript.Replace('const root = "__BUN_FACTORY_STATE__";', "const root = $(ConvertTo-Json -InputObject $state -Compress);")
     $pathFile = Join-Path $state 'path-apply.mjs'
     [IO.File]::WriteAllText($pathFile, $pathScript, [Text.UTF8Encoding]::new($false))
     Checked $bun @('run', $pathFile)
@@ -85,7 +87,7 @@ $inventory = @(& $bun msvc info) | Out-String | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) { throw 'Toolchain inventory failed' }
 $receipt = [pscustomobject]@{
     DateUtc = [DateTime]::UtcNow.ToString('o'); Host = $env:COMPUTERNAME
-    BunRevision = (& $bun --revision); SourceRevision = (& git -C C:\bun rev-parse HEAD)
+    BunRevision = (& $bun --revision); SourceRevision = (& git -C $checkout rev-parse HEAD)
     MSVC = $inventory.msvc.version; SDK = $inventory.sdk.version
     ATL = !!(@($inventory.instance.components) | Where-Object { $_ -eq 'Microsoft.VisualStudio.Component.VC.ATLMFC' })
     SDK28000 = !!(@($inventory.sdks) | Where-Object { $_.version -eq '10.0.28000.0' -and $_.complete })

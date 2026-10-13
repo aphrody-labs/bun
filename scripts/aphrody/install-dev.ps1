@@ -5,7 +5,7 @@
 #   & ([scriptblock]::Create((irm https://aphrody.app/bun/setup.ps1))) --dry-run   # any setup.ts option
 #
 # Installs the fork's bun when the machine has none (or an upstream one), then runs scripts/aphrody/setup.ts,
-# which clones the repository (default C:\bun, or APHRODY_BUN_CHECKOUT), installs Git, CMake, NASM and
+# which clones the repository (default workspace/bun or APHRODY_BUN_CHECKOUT), installs Git, CMake, NASM and
 # PowerShell 7 (winget), LLVM, rustup and the pinned nightly, MSVC and the Windows SDK (`bun msvc setup`),
 # fetches the native dependencies and ends with `bun bd --version`. Safe to run again: finished steps are skipped.
 # Through `| iex` options come from $env:APHRODY_BUN_SETUP_ARGS (e.g. "--dry-run --no-build").
@@ -38,7 +38,16 @@ if (-not (Test-ForkBun)) {
 }
 
 # A --dir among the arguments comes last and wins over this default.
-$Checkout = if ($env:APHRODY_BUN_CHECKOUT) { $env:APHRODY_BUN_CHECKOUT } else { "C:\bun" }
+$Checkout = $env:APHRODY_BUN_CHECKOUT
+if (-not $Checkout) {
+  $Workspace = (Get-Location).Path
+  while ($Workspace -and -not (Test-Path -LiteralPath (Join-Path $Workspace 'WORKSPACE.md'))) {
+    $Parent = Split-Path $Workspace -Parent
+    if ($Parent -eq $Workspace) { $Workspace = $null; break }
+    $Workspace = $Parent
+  }
+  $Checkout = if ($Workspace) { Join-Path $Workspace 'bun' } else { Join-Path $HOME 'bun' }
+}
 $Local = Join-Path $Checkout "scripts\aphrody\setup.ts"
 # No exit: under `irm | iex` it would close the calling PowerShell.
 if (Test-Path $Local) {

@@ -30,7 +30,8 @@ $r = New-Object W+RECT; [W]::GetWindowRect($h, [ref]$r) | Out-Null
 $w = $r.R - $r.L; $hh = $r.B - $r.T
 $bmp = New-Object System.Drawing.Bitmap $w, $hh
 $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($r.L, $r.T, 0, 0, $bmp.Size)
-$png = "C:\bun\docs\aphrody\merge\img\cosmic-win-$Name.png"
+$checkout = if ($env:APHRODY_BUN_CHECKOUT) { [IO.Path]::GetFullPath($env:APHRODY_BUN_CHECKOUT) } else { [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..')) }
+$png = Join-Path $checkout "docs\aphrody\merge\img\cosmic-win-$Name.png"
 New-Item -ItemType Directory -Force (Split-Path $png) | Out-Null
 $bmp.Save($png, [System.Drawing.Imaging.ImageFormat]::Png)
 # Responds: UIA still reaches the window and the process is not hung.

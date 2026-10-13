@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /** Messages between the WebOS page and its bun_wasm REPL worker. */
 
-/** Served by startWebOS from its wasmDir; bun_wasm is built from C:\bun\src\wasm (wasm32-wasip1-threads). */
+/** Served by startWebOS from its wasmDir; bun_wasm is built from the Bun checkout's src/wasm target. */
 export const WASM_BASE = "/dist/wasm";
 export const BUN_WASM = `${WASM_BASE}/bun/bun_wasm.wasm`;
 /** Page workers, bundled on demand by startWebOS. */

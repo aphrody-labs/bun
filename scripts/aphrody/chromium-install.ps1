@@ -1,17 +1,23 @@
 param(
     [ValidateSet('Plan', 'Profile', 'Payload', 'Install')][string]$Mode = 'Plan',
     [string]$UserHome = $env:USERPROFILE,
-    [string]$BuildDirectory = 'C:\bun\vendor\chromium\src\out\bun',
-    [string]$QualificationReceipt = 'C:\bun\build\chromium\qualification.json',
-    [string]$RuntimeDependencies = 'C:\bun\build\chromium\install\chrome.runtime_deps'
+    [string]$BuildDirectory,
+    [string]$QualificationReceipt,
+    [string]$RuntimeDependencies
 )
 $ErrorActionPreference = 'Stop'
+$checkout = if ($env:APHRODY_BUN_CHECKOUT) { [IO.Path]::GetFullPath($env:APHRODY_BUN_CHECKOUT) } else { [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..')) }
+if (!$BuildDirectory) { $BuildDirectory = Join-Path $checkout 'vendor\chromium\src\out\bun' }
+if (!$QualificationReceipt) { $QualificationReceipt = Join-Path $checkout 'build\chromium\qualification.json' }
+if (!$RuntimeDependencies) { $RuntimeDependencies = Join-Path $checkout 'build\chromium\install\chrome.runtime_deps' }
 $source = Join-Path $UserHome 'AppData\Local\Google\Chrome\User Data'
 $destination = Join-Path $UserHome 'AppData\Local\Chromium\User Data'
 $privateRoot = Join-Path $UserHome 'AppData\Local\BunChromium'
 $application = 'C:\Program Files\BunChromium\Application'
 $launcher = 'C:\Windows\System32\bun-chromium.exe'
-$tools = 'C:\bun\build\chromium\install'
+$tools = Join-Path $checkout 'build\chromium\install'
+$depotTools = Join-Path $checkout 'vendor\depot_tools'
+$launcherSource = Join-Path $PSScriptRoot 'chromium-launcher.c'
 $sevenZip = 'C:\Program Files\7-Zip\7z.exe'
 
 function Invoke-Checked([string]$Executable, [string[]]$Arguments, [int]$MaximumExit = 0) {
@@ -56,7 +62,7 @@ if ($Mode -eq 'Payload') {
     $start.EnvironmentVariables['DEPOT_TOOLS_WIN_TOOLCHAIN'] = '0'
     $start.EnvironmentVariables['DEPOT_TOOLS_UPDATE'] = '0'
     $start.EnvironmentVariables['vs2026_install'] = $vs.path
-    $start.EnvironmentVariables['PATH'] = 'C:\bun\vendor\depot_tools;' + $start.EnvironmentVariables['PATH']
+    $start.EnvironmentVariables['PATH'] = $depotTools + ';' + $start.EnvironmentVariables['PATH']
     if (!$start.EnvironmentVariables['PROCESSOR_ARCHITECTURE']) {
         $architecture = $start.EnvironmentVariables['PROCESSOR_ARCHITEW6432']
         if (!$architecture) {
@@ -213,8 +219,8 @@ Copy-Item -LiteralPath $license -Destination "$stage\LICENSE.chromium"
 $licenseHash = (Get-FileHash -LiteralPath $license -Algorithm SHA256).Hash
 if ($licenseHash -ne (Get-FileHash -LiteralPath "$stage\LICENSE.chromium" -Algorithm SHA256).Hash) { throw 'Chromium license copy differs' }
 $manifest += [pscustomobject]@{ Path = 'LICENSE.chromium'; Bytes = (Get-Item -LiteralPath "$stage\LICENSE.chromium").Length; Sha256 = $licenseHash }
-Invoke-Checked 'C:\Windows\System32\bun.exe' @('msvc', 'exec', 'cl', '/nologo', '/W4', '/WX', '/O2', '/guard:cf', 'C:\bun\scripts\aphrody\chromium-launcher.c', "/Fo$tools\launcher.obj", "/Fe$tools\bun-chromium.exe", '/link', '/SUBSYSTEM:WINDOWS', '/DYNAMICBASE', '/NXCOMPAT', 'shell32.lib', 'ole32.lib', 'uuid.lib')
-Invoke-Checked 'C:\Windows\System32\bun.exe' @('msvc', 'exec', 'cl', '/nologo', '/W4', '/WX', '/O2', '/DBUN_CHROMIUM_LAUNCHER_TEST', 'C:\bun\scripts\aphrody\chromium-launcher.c', "/Fo$tools\launcher-test.obj", "/Fe$tools\launcher-test.exe", '/link', 'shell32.lib')
+Invoke-Checked 'C:\Windows\System32\bun.exe' @('msvc', 'exec', 'cl', '/nologo', '/W4', '/WX', '/O2', '/guard:cf', $launcherSource, "/Fo$tools\launcher.obj", "/Fe$tools\bun-chromium.exe", '/link', '/SUBSYSTEM:WINDOWS', '/DYNAMICBASE', '/NXCOMPAT', 'shell32.lib', 'ole32.lib', 'uuid.lib')
+Invoke-Checked 'C:\Windows\System32\bun.exe' @('msvc', 'exec', 'cl', '/nologo', '/W4', '/WX', '/O2', '/DBUN_CHROMIUM_LAUNCHER_TEST', $launcherSource, "/Fo$tools\launcher-test.obj", "/Fe$tools\launcher-test.exe", '/link', 'shell32.lib')
 Invoke-Checked "$tools\launcher-test.exe" @()
 $installedReceipt = [pscustomobject]@{ InstalledUtc = [DateTime]::UtcNow.ToString('o'); Browser = "$application\chrome.exe"; Launcher = $launcher; Profile = $destination; Qualification = $qualified; Dependencies = $dependencyReceipt; Files = $manifest }
 $installedReceipt | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath "$stage\bun-chromium-install.json" -Encoding UTF8

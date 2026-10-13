@@ -5,7 +5,7 @@
 //   bun scripts/aphrody/setup.ts deps [--write|--check]   the dependency inventory, scripts/aphrody/deps.json
 //
 // Options:
-//   --dir <path>     checkout (default: this script's checkout, else $APHRODY_BUN_CHECKOUT, else ~/bun or C:\bun)
+//   --dir <path>     checkout (default: this script's checkout, else $APHRODY_BUN_CHECKOUT, else workspace/bun or ~/bun)
 //   --ref <ref>      branch or tag to clone (default main)
 //   --dry-run        print every step with its state and what it would run; changes nothing
 //   --json           with --dry-run: the plan as JSON
@@ -794,7 +794,18 @@ function isCheckout(dir: string): boolean {
 
 function defaultDir(): string {
   if (process.env.APHRODY_BUN_CHECKOUT) return resolve(process.env.APHRODY_BUN_CHECKOUT);
-  return windows ? "C:\\bun" : join(homedir(), "bun");
+
+  for (const start of [process.cwd(), scriptCheckout]) {
+    let current = resolve(start);
+    while (true) {
+      if (existsSync(join(current, "WORKSPACE.md"))) return join(current, "bun");
+      const parent = dirname(current);
+      if (parent === current) break;
+      current = parent;
+    }
+  }
+
+  return join(homedir(), "bun");
 }
 
 async function ensureGit(o: Options) {
