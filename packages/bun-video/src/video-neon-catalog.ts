@@ -6,6 +6,8 @@ import type {
   VideoProvider,
   VideoSource,
 } from "./video-catalog";
+import { join } from "node:path";
+import type { NormalizedCapturedRequest } from "./video-capture";
 
 type Row = Record<string, unknown>;
 
@@ -182,6 +184,46 @@ export class NeonVideoCatalog {
         Date.now(),
       ],
     );
+  }
+
+  async recordCapture(input: {
+    sourceId: string;
+    captureIndexPath: string;
+    directory: string;
+    requests: readonly NormalizedCapturedRequest[];
+  }): Promise<void> {
+    await this.#sql.begin(async tx => {
+      await tx.unsafe(
+        'INSERT INTO bun_video.sources ("id","url","privateRef","providerId","kind","title") VALUES ($1,NULL,$2,NULL,\'capture\',\'Captured video network\')',
+        [input.sourceId, input.captureIndexPath],
+      );
+      for (const row of input.requests) {
+        const bodyRef = row.bodyFile ? join(input.directory, row.bodyFile) : null;
+        await tx.unsafe(
+          'INSERT INTO bun_video.capture_entries ("id","sourceId","entryIndex","method","host","mimeType","status","encodedBytes","bytes","bodyRef","manifestKind","encrypted","complete") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
+          [
+            `${input.sourceId}:${row.entryIndex}`,
+            input.sourceId,
+            row.entryIndex,
+            row.request.method,
+            new URL(row.request.url).hostname,
+            row.response.mimeType,
+            row.response.status,
+            row.encodedBytes,
+            row.bytes,
+            bodyRef,
+            row.manifestKind,
+            Number(row.encrypted),
+            Number(row.complete),
+          ],
+        );
+        if (bodyRef)
+          await tx.unsafe(
+            'INSERT INTO bun_video.captured_resources ("id","sourceId","entryIndex","kind","bodyRef","bytes") VALUES ($1,$2,$3,$4,$5,$6)',
+            [`${input.sourceId}:${row.entryIndex}`, input.sourceId, row.entryIndex, row.kind, bodyRef, row.bytes],
+          );
+      }
+    });
   }
 
   async close(): Promise<void> {

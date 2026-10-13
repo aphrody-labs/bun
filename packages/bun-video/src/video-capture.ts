@@ -3,6 +3,7 @@ import { isAbsolute, join, resolve } from "node:path";
 import { CapturedHar } from "./har";
 import { inspectDashManifest } from "./dash";
 import type { VideoCatalog } from "./video-catalog";
+import type { NeonVideoCatalog } from "./video-neon-catalog";
 
 interface HarHeader {
   name: string;
@@ -174,7 +175,7 @@ function kindFor(
 /** Extract all recorded response bodies; raw HAR stays at its original path. No site is contacted. */
 export async function importCapturedVideoNetwork(
   inputPath: string,
-  options: { catalog?: VideoCatalog; outputDirectory?: string } = {},
+  options: { catalog?: VideoCatalog | NeonVideoCatalog; outputDirectory?: string } = {},
 ): Promise<CapturedVideoNetworkSummary> {
   if (!isAbsolute(inputPath) || inputPath.includes("\0"))
     throw new TypeError("HAR input must be an absolute path without NUL");
@@ -370,42 +371,45 @@ export async function importCapturedVideoNetwork(
   );
   if (options.catalog) {
     const catalog = options.catalog;
-    catalog.db.transaction(() => {
-      catalog.db
-        .exec(`CREATE TABLE IF NOT EXISTS capture_entries(id TEXT PRIMARY KEY,sourceId TEXT NOT NULL REFERENCES sources(id),entryIndex INTEGER NOT NULL,method TEXT NOT NULL,host TEXT NOT NULL,mimeType TEXT NOT NULL,status INTEGER NOT NULL,encodedBytes INTEGER NOT NULL,bytes INTEGER NOT NULL,bodyRef TEXT,manifestKind TEXT,encrypted INTEGER NOT NULL,complete INTEGER NOT NULL,UNIQUE(sourceId,entryIndex));
+    if ("recordCapture" in catalog) {
+      await catalog.recordCapture({ sourceId, captureIndexPath, directory, requests });
+    } else
+      catalog.db.transaction(() => {
+        catalog.db
+          .exec(`CREATE TABLE IF NOT EXISTS capture_entries(id TEXT PRIMARY KEY,sourceId TEXT NOT NULL REFERENCES sources(id),entryIndex INTEGER NOT NULL,method TEXT NOT NULL,host TEXT NOT NULL,mimeType TEXT NOT NULL,status INTEGER NOT NULL,encodedBytes INTEGER NOT NULL,bytes INTEGER NOT NULL,bodyRef TEXT,manifestKind TEXT,encrypted INTEGER NOT NULL,complete INTEGER NOT NULL,UNIQUE(sourceId,entryIndex));
       CREATE TABLE IF NOT EXISTS captured_resources(id TEXT PRIMARY KEY,sourceId TEXT NOT NULL REFERENCES sources(id),entryIndex INTEGER NOT NULL,kind TEXT NOT NULL,bodyRef TEXT NOT NULL,bytes INTEGER NOT NULL,UNIQUE(sourceId,entryIndex));
       CREATE INDEX IF NOT EXISTS capture_entries_source ON capture_entries(sourceId);`);
-      catalog.registerSource({
-        id: sourceId,
-        privateRef: captureIndexPath,
-        kind: "capture",
-        title: "Captured video network",
-      });
-      for (const row of requests) {
-        const bodyRef = row.bodyFile ? join(directory, row.bodyFile) : null;
-        catalog.db
-          .query("INSERT INTO capture_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
-          .run(
-            `${sourceId}:${row.entryIndex}`,
-            sourceId,
-            row.entryIndex,
-            row.request.method,
-            new URL(row.request.url).hostname,
-            row.response.mimeType,
-            row.response.status,
-            row.encodedBytes,
-            row.bytes,
-            bodyRef,
-            row.manifestKind,
-            Number(row.encrypted),
-            Number(row.complete),
-          );
-        if (bodyRef)
+        catalog.registerSource({
+          id: sourceId,
+          privateRef: captureIndexPath,
+          kind: "capture",
+          title: "Captured video network",
+        });
+        for (const row of requests) {
+          const bodyRef = row.bodyFile ? join(directory, row.bodyFile) : null;
           catalog.db
-            .query("INSERT INTO captured_resources VALUES(?,?,?,?,?,?)")
-            .run(`${sourceId}:${row.entryIndex}`, sourceId, row.entryIndex, row.kind, bodyRef, row.bytes);
-      }
-    })();
+            .query("INSERT INTO capture_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+            .run(
+              `${sourceId}:${row.entryIndex}`,
+              sourceId,
+              row.entryIndex,
+              row.request.method,
+              new URL(row.request.url).hostname,
+              row.response.mimeType,
+              row.response.status,
+              row.encodedBytes,
+              row.bytes,
+              bodyRef,
+              row.manifestKind,
+              Number(row.encrypted),
+              Number(row.complete),
+            );
+          if (bodyRef)
+            catalog.db
+              .query("INSERT INTO captured_resources VALUES(?,?,?,?,?,?)")
+              .run(`${sourceId}:${row.entryIndex}`, sourceId, row.entryIndex, row.kind, bodyRef, row.bytes);
+        }
+      })();
   }
   return summary;
 }

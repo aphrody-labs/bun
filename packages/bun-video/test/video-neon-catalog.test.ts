@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createNeonClient } from "../../bun-plugin-neon/src";
 import { VideoCatalog } from "../src/video-catalog";
+import { importCapturedVideoNetwork } from "../src/video-capture";
 import { NeonVideoCatalog } from "../src/video-neon-catalog";
 import { importVideoCatalog, snapshotVideoCatalog } from "../src/video-neon-migrate";
 import { VideoWorkerPool } from "../src/video-workers";
@@ -59,6 +60,40 @@ test.skipIf(!connectionString)(
         expect((await catalog.listJobs("completed")).length).toBe(1);
         expect((await catalog.listArtifacts()).length).toBe(1);
         expect((await catalog.listSources()).length).toBe(1);
+        const harPath = join(directory, "synthetic.har");
+        await Bun.write(
+          harPath,
+          JSON.stringify({
+            log: {
+              entries: [
+                {
+                  request: {
+                    url: "https://media.example.org/video.mp4?signed=private",
+                    method: "GET",
+                    headers: [{ name: "Cookie", value: "private-cookie" }],
+                  },
+                  response: {
+                    status: 200,
+                    headers: [],
+                    content: { mimeType: "video/mp4", text: "synthetic-body" },
+                  },
+                },
+              ],
+            },
+          }),
+        );
+        const capture = await importCapturedVideoNetwork(harPath, {
+          catalog,
+          outputDirectory: join(directory, "capture"),
+        });
+        const entries = await sql.unsafe<Record<string, unknown>[]>(
+          'SELECT * FROM bun_video.capture_entries WHERE "sourceId"=$1',
+          [capture.sourceId],
+        );
+        expect(entries).toHaveLength(1);
+        expect(JSON.stringify(entries)).not.toContain("private-cookie");
+        expect(JSON.stringify(entries)).not.toContain("signed=private");
+        expect((await catalog.listSources()).length).toBe(2);
       } finally {
         await sql.close();
       }

@@ -31,6 +31,12 @@ artefact dans Neon. Le test a passé ; la branche a été supprimée. Cela quali
 le parcours des workers avec injection explicite du catalogue, pas les autres
 consommateurs ni la production.
 
+L'import HAR peut aussi recevoir `NeonVideoCatalog`. Il écrit la source et les
+tables `capture_entries`/`captured_resources` dans une transaction PostgreSQL,
+en ne conservant que l'hôte, les comptages et les chemins privés vers les corps.
+Une branche synthétique a validé cette écriture et l'absence des cookies et
+paramètres d'URL signés dans les lignes SQL ; elle a été supprimée.
+
 La bascule exige de convertir les writers et lecteurs de `VideoCatalog`,
 actuellement synchrones sur `bun:sqlite`, vers des opérations `Bun.SQL`
 asynchrones, puis de figer les writers SQLite, importer un dernier snapshot,
