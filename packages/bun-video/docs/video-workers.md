@@ -35,7 +35,7 @@ Ne jamais présenter ces octets comme une lecture, un rendu ou une comparaison
 pixel-perfect réussis.
 
 Le propriétaire applicatif unifié est `src/video-workflow.ts` :
-`createUnifiedVideoPipeline()` expose `.apis()` (47 familles), `.api(family)`
+`createUnifiedVideoPipeline()` expose `.apis()` (familles du registre courant), `.api(family)`
 (chargement paresseux du propriétaire natif), `.render(task)` (pool de processus),
 `.catalog`, `.capture()` (Chrome actif), `.qualifySites()` et `.close()`.
 `.archiveCapture(options)` capture le graphe HTTP Archive explicite ;

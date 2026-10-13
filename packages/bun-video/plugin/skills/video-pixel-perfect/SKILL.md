@@ -14,7 +14,7 @@ canonical plugin target; do not interpret `..` relative to the home installation
 Resolve the checkout
 and Aphrody home from the current context rather than a historical machine path.
 Use `createUnifiedVideoPipeline` from `src/video-workflow.ts` for application
-integration: `.apis()` describes the 47 families, `.api(family)` loads their
+integration: `.apis()` describes the current registered families, `.api(family)` loads their
 existing owners, `.render()` uses the subprocess pool and `.catalog` stores
 evidence. Close owned resources with `.close()` or async disposal.
 
