@@ -13,6 +13,11 @@ import { join, relative } from "node:path";
 
 import { BuildError } from "../../scripts/build/error.ts";
 import { type ManifestEdge, Ninja, readManifest } from "../../scripts/build/ninja.ts";
+import {
+  nativeSDKArtifacts,
+  validateNativeSDKGate,
+  type NativeSDKGate,
+} from "../../scripts/aphrody/native-sdk-factory";
 import { rustcPhasesPath } from "../../scripts/build/rust/units.ts";
 import {
   type Build,
@@ -60,7 +65,7 @@ beforeAll(async () => {
   });
   n.rule("rust_rustc", { command: "rustc $manifest", description: "rustc $crate $what" });
   n.rule("cxx", { command: "c++ $cxxflags -c $in -o $out", description: "cxx $out" });
-  n.rule("link", { command: "ld $ldflags $in $lazy -o $out", description: "link $out" });
+  n.rule("link", { command: "ld $driverflags $ldflags $in $lazy -o $out", description: "link $out" });
 
   n.build({
     outputs: [ref],
@@ -93,7 +98,7 @@ beforeAll(async () => {
     outputs: [out("exe")],
     rule: "link",
     inputs: [out("x.o"), out("libroot.a")],
-    vars: { ldflags: "", lazy: "" },
+    vars: { ldflags: "", lazy: "", driverflags: "" },
   });
   n.phony("all", [out("exe")]);
   await n.write();
@@ -205,6 +210,40 @@ describe("readManifest", () => {
       vars: { cwd: ".", args: "--match '^a$'$", desc: "a" },
     });
     expect(readManifest(n.toString()).edges[0]!.bindings).toEqual({ cwd: ".", args: "--match '^a$'$", desc: "a" });
+  });
+});
+
+describe("native SDK artifact selection", () => {
+  test("selects the complete dependency object set without adjacent libraries or codegen files", () => {
+    const manifest = readManifest(
+      "build codec: phony codec-objects\nbuild codec-objects: phony obj/a/same.c.o obj/b/same.c.o codec-ready\nbuild codec-ready: phony generated/config.h\nbuild foreign: phony libforeign.a\n",
+    );
+    expect(nativeSDKArtifacts(manifest, "codec")).toEqual(["obj/a/same.c.o", "obj/b/same.c.o"]);
+    expect(() => nativeSDKArtifacts(manifest, "missing")).toThrow("No compiled dependency target");
+    expect(() => nativeSDKArtifacts(manifest, "../codec")).toThrow("Invalid native SDK component");
+  });
+  test("keeps nested library names and refuses source-only dependencies", () => {
+    const manifest = readManifest(
+      "build library: phony deps/a/libone.a deps/a/libtwo.a\nbuild headers: phony generated/header.h\n",
+    );
+    expect(nativeSDKArtifacts(manifest, "library")).toEqual(["deps/a/libone.a", "deps/a/libtwo.a"]);
+    expect(() => nativeSDKArtifacts(manifest, "headers")).toThrow("no compiled SDK library");
+  });
+  test("rejects stale or absent native qualification instead of publishing a compiled-looking file", () => {
+    const gate: NativeSDKGate = {
+      schema: 1,
+      nativeLink: "passed",
+      runtimeQualification: "native-tests-passed",
+      configureSHA256: "1".repeat(64),
+      ninjaSHA256: "2".repeat(64),
+      sourceReceiptSHA256: "3".repeat(64),
+      evidence: ["native-runtime-gate.json"],
+    };
+    expect(() => validateNativeSDKGate(gate, "1".repeat(64), "2".repeat(64))).not.toThrow();
+    expect(() => validateNativeSDKGate(gate, "4".repeat(64), "2".repeat(64))).toThrow("matching linked build");
+    expect(() => validateNativeSDKGate({ ...gate, evidence: [] }, "1".repeat(64), "2".repeat(64))).toThrow(
+      "qualification receipt",
+    );
   });
 });
 
