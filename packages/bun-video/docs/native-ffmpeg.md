@@ -37,6 +37,16 @@ Without that explicit artifact directory the native test is skipped.
 
 ## Media pipeline
 
+`FFmpeg.openDecoder(name, codecParameters?)` owns an opened native decoder.
+The optional parameters pointer must reference valid `AVCodecParameters` from
+the matching FFmpeg ABI for the duration of the call; FFmpeg copies them into
+the context. `sendPacket(packet)` returns `ok`, `again`, or `eof`. On `again`,
+receive pending frames before retrying the same packet. Send `null` to drain
+the decoder, receive frames until `eof`, and call `flush()` before restarting
+after a seek. `receiveFrame(frame)` reports the same states and clears the
+previous frame reference. Disposal releases the codec before unloading its DLL.
+Codec configuration and packet/frame native pointers remain directly accessible.
+
 `openVideoPipeline` opens the normalized media source with the owned FFmpeg
 demuxer and exposes it as `pipeline.input`. Closing the pipeline stops its mpv
 client and releases the input before unloading FFmpeg. With `playback: true`,
@@ -63,6 +73,15 @@ integrators; both reject access after disposal. Raw client and render contexts,
 callback lifetimes and native node contents remain the caller's responsibility.
 Render functions that pass `mpv_render_param` by value require a native bridge
 and are not represented as scalar Bun FFI functions.
+
+`MpvClient.commandAsync(requestId, ...arguments)` queues a native command with
+an unsigned 64-bit `bigint` identifier. Queue rejection throws immediately;
+execution errors arrive in the `command-reply` event's `error` field.
+`nextEvent(timeoutSeconds)` copies the event ID, name, error and request ID
+before libmpv reuses its event structure. It does not expose event payload
+pointers. A zero timeout polls; a positive timeout blocks the calling thread.
+Drain events regularly to avoid overflowing the native event queue, and use
+unique request identifiers when multiple commands are outstanding.
 
 `bun bd test packages/bun-video/test/mpv.test.ts` uses the same
 `BUN_VIDEO_MEDIA_DIR` directory. Its null-output client checks symbol loading

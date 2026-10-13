@@ -34,6 +34,26 @@ test("response ingestion retains binary data and honors cancellation", async () 
 });
 
 describe.skipIf(!process.env.BUN_VIDEO_MEDIA_DIR)("native FFmpeg ownership", () => {
+  test("owns decoder contexts and preserves draining and flush states", () => {
+    using ffmpeg = FFmpeg.open(process.env.BUN_VIDEO_MEDIA_DIR);
+    using decoder = ffmpeg.openDecoder("h264");
+    using frame = ffmpeg.allocateFrame();
+    expect(decoder.pointer).toBeGreaterThan(0);
+    expect(decoder.receiveFrame(frame)).toBe("again");
+    expect(decoder.sendPacket(null)).toBe("ok");
+    expect(decoder.receiveFrame(frame)).toBe("eof");
+    expect(decoder.sendPacket(null)).toBe("eof");
+    decoder.flush();
+    expect(decoder.receiveFrame(frame)).toBe("again");
+    expect(() => ffmpeg.openDecoder("missing-bun-video-decoder")).toThrow("decoder not found");
+    expect(() => ffmpeg.openDecoder("ffv1\0")).toThrow("NUL");
+    ffmpeg.close();
+    expect(() => decoder.pointer).toThrow("decoder is closed");
+    expect(() => decoder.sendPacket(null)).toThrow("decoder is closed");
+    expect(() => decoder.receiveFrame(frame)).toThrow("decoder is closed");
+    expect(() => decoder.flush()).toThrow("decoder is closed");
+  });
+
   test("pipeline opens a native WAV source and closes its demuxer", async () => {
     const bytes = new Uint8Array(46);
     const view = new DataView(bytes.buffer);

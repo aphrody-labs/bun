@@ -318,8 +318,49 @@ export class FFmpeg {
     return this.#ownReference("packet", api.av_packet_alloc(), api.av_packet_free, api.av_packet_unref);
   }
 
+  openDecoder(name: string, parameters?: Pointer): FFmpegDecoder {
+    if (!name || name.includes("\0")) throw new TypeError("FFmpeg decoder name must be nonempty and contain no NUL");
+    const api = this.libraries.avcodec.symbols;
+    const encoded = new TextEncoder().encode(`${name}\0`);
+    const codec = api.avcodec_find_decoder_by_name(ptr(encoded));
+    if (!codec) throw new Error(`FFmpeg decoder not found: ${name}`);
+    const context = this.#ownReference(
+      "decoder",
+      api.avcodec_alloc_context3(codec),
+      api.avcodec_free_context,
+      api.avcodec_flush_buffers,
+    );
+    try {
+      if (parameters !== undefined) this.check(api.avcodec_parameters_to_context(context.pointer, parameters));
+      this.check(api.avcodec_open2(context.pointer, codec, null));
+    } catch (error) {
+      context.close();
+      throw error;
+    }
+    const outcome = (status: number): FFmpegCodecStatus => {
+      if (status === -11) return "again";
+      if (status === -541478725) return "eof";
+      this.check(status);
+      return "ok";
+    };
+    return {
+      get pointer() {
+        return context.pointer;
+      },
+      sendPacket: packet => outcome(api.avcodec_send_packet(context.pointer, packet?.pointer ?? null)),
+      receiveFrame: frame => {
+        const pointer = context.pointer;
+        frame.unref();
+        return outcome(api.avcodec_receive_frame(pointer, frame.pointer));
+      },
+      flush: () => context.unref(),
+      close: context.close,
+      [Symbol.dispose]: context.close,
+    };
+  }
+
   #ownReference(
-    kind: "frame" | "packet",
+    kind: "frame" | "packet" | "decoder",
     allocated: Pointer | number | bigint | null,
     free: (slot: Pointer) => void,
     unref: (value: Pointer) => void,
@@ -381,4 +422,12 @@ export interface FFmpegPacket extends FFmpegInput {
 
 export interface FFmpegFrame extends FFmpegInput {
   unref(): void;
+}
+
+export type FFmpegCodecStatus = "ok" | "again" | "eof";
+
+export interface FFmpegDecoder extends FFmpegInput {
+  sendPacket(packet: FFmpegPacket | null): FFmpegCodecStatus;
+  receiveFrame(frame: FFmpegFrame): FFmpegCodecStatus;
+  flush(): void;
 }

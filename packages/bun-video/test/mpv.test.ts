@@ -2,6 +2,32 @@ import { describe, expect, test } from "bun:test";
 import { MpvClient, mpvABI, mpvLibraryPath } from "../src/mpv";
 
 describe.skipIf(!process.env.BUN_VIDEO_MEDIA_DIR)("native libmpv", () => {
+  test("correlates asynchronous commands without losing 64-bit request identities", () => {
+    using player = MpvClient.open({
+      libraryPath: mpvLibraryPath(process.env.BUN_VIDEO_MEDIA_DIR),
+      options: { vo: "null", ao: "null", idle: "yes", config: "no" },
+    });
+    const identity = 0xfedcba9876543210n;
+    player.commandAsync(identity, "set", "pause", "yes");
+    const deadline = performance.now() + 1000;
+    let reply;
+    while (performance.now() < deadline) {
+      const event = player.nextEvent(0.01);
+      if (event.name === "command-reply" && event.replyUserdata === identity) {
+        reply = event;
+        break;
+      }
+    }
+    expect(reply).toEqual({ id: 5, name: "command-reply", error: 0, replyUserdata: identity });
+    expect(player.getProperty("pause")).toBe("yes");
+    expect(() => player.commandAsync(-1n, "stop")).toThrow("unsigned 64-bit bigint");
+    expect(() => player.commandAsync(1n << 64n, "stop")).toThrow("unsigned 64-bit bigint");
+    expect(() => player.commandAsync(0n)).toThrow("at least one argument");
+    expect(() => player.commandAsync(0n, "stop\0")).toThrow("NUL");
+    player.close();
+    expect(() => player.commandAsync(0n, "stop")).toThrow("mpv client is closed");
+  });
+
   test("loads the client, render and custom-stream APIs from the same artifact", () => {
     using player = MpvClient.open({
       libraryPath: mpvLibraryPath(process.env.BUN_VIDEO_MEDIA_DIR),

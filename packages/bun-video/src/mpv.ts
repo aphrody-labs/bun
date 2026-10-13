@@ -138,6 +138,17 @@ export class MpvClient {
   }
 
   command(...args: string[]): void {
+    this.#command(args);
+  }
+
+  commandAsync(replyUserdata: bigint, ...args: string[]): void {
+    this.#assertOpen();
+    if (typeof replyUserdata !== "bigint" || replyUserdata < 0n || replyUserdata > 0xffffffffffffffffn)
+      throw new TypeError("mpv reply userdata must be an unsigned 64-bit bigint");
+    this.#command(args, replyUserdata);
+  }
+
+  #command(args: readonly string[], replyUserdata?: bigint): void {
     this.#assertOpen();
     if (args.length === 0) throw new TypeError("mpv command requires at least one argument");
     const encoded = args.map(cstring);
@@ -145,8 +156,11 @@ export class MpvClient {
     const pointers = new DataView(argv.buffer);
     for (let index = 0; index < encoded.length; index++)
       pointers.setBigUint64(index * 8, BigInt(ptr(encoded[index])), true);
-    const status = this.#library.symbols.mpv_command(this.#handle, ptr(argv));
-    if (status < 0) throw new Error(`mpv_command failed: ${status}`);
+    const status =
+      replyUserdata === undefined
+        ? this.#library.symbols.mpv_command(this.#handle, ptr(argv))
+        : this.#library.symbols.mpv_command_async(this.#handle, replyUserdata, ptr(argv));
+    if (status < 0) throw new Error(`mpv command failed: ${status}`);
   }
 
   setProperty(name: string, value: string): void {
