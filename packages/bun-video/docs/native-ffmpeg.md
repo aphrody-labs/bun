@@ -37,6 +37,12 @@ Without that explicit artifact directory the native test is skipped.
 
 ## Media pipeline
 
+`openInput(url, options?)` passes string options directly to the native demuxer
+through an owned `AVDictionary`. For example, network protocols supporting
+`rw_timeout` accept its value in microseconds. Protocol-specific support still
+depends on FFmpeg; this is not an asynchronous JavaScript cancellation hook.
+The dictionary and failed input contexts are released on every error path.
+
 `FFmpeg.openDecoder(name, codecParameters?)` owns an opened native decoder.
 The optional parameters pointer must reference valid `AVCodecParameters` from
 the matching FFmpeg ABI for the duration of the call; FFmpeg copies them into
@@ -51,6 +57,13 @@ Codec configuration and packet/frame native pointers remain directly accessible.
 demuxer and exposes it as `pipeline.input`. Closing the pipeline stops its mpv
 client and releases the input before unloading FFmpeg. With `playback: true`,
 mpv receives the same selected media URL through `loadfile`.
+
+With the native GPU backend enabled, `pipeline.gpuRuntime` retains the SDK GPU
+provider and directly exposes its WGSL/CUDA operations. `pipeline.gpu` contains
+the adapter report. Closing the pipeline stops mpv, closes the GPU runtime and
+releases FFmpeg, including when another cleanup step fails. This compute access
+does not establish shared FFmpeg/mpv/wgpu textures. Chromium GPU probing remains
+a separate browser API, not this native runtime provider.
 
 `findStream(input, "video" | "audio" | "subtitle")` selects the native best
 stream index and throws FFmpeg's error when no matching stream exists.

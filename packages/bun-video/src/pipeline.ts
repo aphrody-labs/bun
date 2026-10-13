@@ -1,7 +1,8 @@
 import type { YtDlpOptions, YtDlpResult } from "./ytdlp";
+import { GpuRuntime, type GpuReport } from "@aphrody/bun-runtime-sdk/gpu";
 import { MpvClient, mpvLibraryPath } from "./mpv";
 import { FFmpeg, type FFmpegInput } from "./ffmpeg";
-import { nativeWebGpuInfo, type WebGpuOptions } from "./webgpu";
+import type { WebGpuOptions } from "./webgpu";
 import { materializeVideoSource, type VideoSource } from "./source";
 
 export interface VideoPipelineOptions {
@@ -17,7 +18,8 @@ export interface VideoPipelineOptions {
 
 export interface VideoPipelineResult {
   readonly source: unknown;
-  readonly gpu: Awaited<ReturnType<typeof nativeWebGpuInfo>> | null;
+  readonly gpu: GpuReport | null;
+  readonly gpuRuntime: GpuRuntime | null;
   readonly player: MpvClient | null;
   readonly ffmpeg: FFmpeg;
   readonly input: FFmpegInput;
@@ -43,12 +45,33 @@ export async function openVideoPipeline(options: VideoPipelineOptions): Promise<
   options.signal?.throwIfAborted();
   const ffmpeg = FFmpeg.open(options.mediaDirectory);
   let player: MpvClient | null = null;
+  let gpuRuntime: GpuRuntime | null = null;
+  const close = () => {
+    try {
+      player?.close();
+    } finally {
+      try {
+        gpuRuntime?.close();
+      } finally {
+        ffmpeg.close();
+      }
+    }
+  };
   try {
     const nativeInput =
       input.kind === "bytes"
         ? ffmpeg.openMemory(input.data instanceof Blob ? await input.data.arrayBuffer() : input.data)
         : ffmpeg.openInput(media!);
-    const gpu = options.webgpu === false ? null : await nativeWebGpuInfo(options.webgpu ?? {});
+    let gpu: VideoPipelineResult["gpu"] = null;
+    if (options.webgpu !== false) {
+      if (options.webgpu?.backend === "chromium")
+        throw new TypeError("The native video pipeline requires the native GPU backend");
+      gpuRuntime = GpuRuntime.load(
+        options.webgpu?.libraryPath === undefined ? {} : { libraryPath: options.webgpu.libraryPath },
+      );
+      const signals = [options.signal, options.webgpu?.signal].filter((signal): signal is AbortSignal => !!signal);
+      gpu = await gpuRuntime.info(signals.length ? { signal: AbortSignal.any(signals) } : undefined);
+    }
     options.signal?.throwIfAborted();
     player =
       options.playback || options.mpvLibraryPath
@@ -58,20 +81,9 @@ export async function openVideoPipeline(options: VideoPipelineOptions): Promise<
           })
         : null;
     if (player && options.playback) player.command("loadfile", media!);
-    const close = () => {
-      try {
-        player?.close();
-      } finally {
-        ffmpeg.close();
-      }
-    };
-    return { source, gpu, player, ffmpeg, input: nativeInput, close, [Symbol.dispose]: close };
+    return { source, gpu, gpuRuntime, player, ffmpeg, input: nativeInput, close, [Symbol.dispose]: close };
   } catch (error) {
-    try {
-      player?.close();
-    } finally {
-      ffmpeg.close();
-    }
+    close();
     throw error;
   }
 }

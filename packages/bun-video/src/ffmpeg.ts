@@ -243,19 +243,38 @@ export class FFmpeg {
     throw new Error(`FFmpeg: ${detail} (${status})`);
   }
 
-  openInput(url: string): FFmpegInput {
+  #withOptions<T>(options: Readonly<Record<string, string>> | undefined, operation: (dictionary: Pointer) => T): T {
+    const api = this.libraries.avutil.symbols;
+    const dictionary = new BigUint64Array(1);
+    try {
+      for (const [key, value] of Object.entries(options ?? {})) {
+        if (!key || key.includes("\0") || typeof value !== "string" || value.includes("\0"))
+          throw new TypeError("FFmpeg options require nonempty keys and string values without NUL");
+        const encodedKey = new TextEncoder().encode(`${key}\0`);
+        const encodedValue = new TextEncoder().encode(`${value}\0`);
+        this.check(api.av_dict_set(ptr(dictionary), ptr(encodedKey), ptr(encodedValue), 0));
+      }
+      return operation(ptr(dictionary));
+    } finally {
+      api.av_dict_free(ptr(dictionary));
+    }
+  }
+
+  openInput(url: string, options?: Readonly<Record<string, string>>): FFmpegInput {
     if (url.includes("\0")) throw new TypeError("FFmpeg input must not contain NUL");
     const api = this.libraries.avformat.symbols;
     const slot = new BigUint64Array(1);
     const encoded = new TextEncoder().encode(`${url}\0`);
-    this.check(api.avformat_open_input(ptr(slot), ptr(encoded), null, null));
-    const context = Number(slot[0]) as Pointer;
     try {
-      this.check(api.avformat_find_stream_info(context, null));
+      this.#withOptions(options, dictionary =>
+        this.check(api.avformat_open_input(ptr(slot), ptr(encoded), null, dictionary)),
+      );
+      this.check(api.avformat_find_stream_info(Number(slot[0]) as Pointer, null));
     } catch (error) {
       api.avformat_close_input(ptr(slot));
       throw error;
     }
+    const context = Number(slot[0]) as Pointer;
     let closed = false;
     const close = () => {
       if (closed) return;

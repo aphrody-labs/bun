@@ -83,6 +83,13 @@ describe.skipIf(!process.env.BUN_VIDEO_MEDIA_DIR)("native FFmpeg ownership", () 
         webgpu: false,
       });
       using packet = pipeline.ffmpeg.allocatePacket();
+      expect(pipeline.gpuRuntime).toBeNull();
+      if (typeof source === "string") {
+        using configured = pipeline.ffmpeg.openInput(source, { probesize: "32", analyzeduration: "0" });
+        using configuredPacket = pipeline.ffmpeg.allocatePacket();
+        expect(pipeline.ffmpeg.readPacket(configured, configuredPacket)).toBe(true);
+        expect(pipeline.ffmpeg.readPacket(configured, configuredPacket)).toBe(false);
+      }
       expect(pipeline.ffmpeg.findStream(pipeline.input, "audio")).toBe(0);
       expect(() => pipeline.ffmpeg.findStream(pipeline.input, "video")).toThrow("FFmpeg:");
       expect(pipeline.ffmpeg.readPacket(pipeline.input, packet)).toBe(true);
@@ -107,6 +114,8 @@ describe.skipIf(!process.env.BUN_VIDEO_MEDIA_DIR)("native FFmpeg ownership", () 
       const frame = ffmpeg.allocateFrame();
       const packet = ffmpeg.allocatePacket();
       const util = ffmpeg.libraries.avutil.symbols;
+      expect(() => ffmpeg.openInput("unused", { "bad\0": "value" })).toThrow("without NUL");
+      expect(() => ffmpeg.openInput("unused", { probesize: "32\0" })).toThrow("without NUL");
       const rgba = util.av_get_pix_fmt(ptr(new TextEncoder().encode("rgba\0")));
       expect(rgba).toBeGreaterThanOrEqual(0);
       expect(util.av_image_get_buffer_size(rgba, 16, 16, 1)).toBe(1024);
