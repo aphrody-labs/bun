@@ -64,10 +64,10 @@ pub fn render_text_with_count(
     };
 
     out.push_str(&format!("{} {}\n", "node2bun".bold(), format!("(mode: {mode_str})").dimmed()));
-    out.push_str(&format!("  racine : {}\n", opts.root.display()));
-    out.push_str(&format!("  fichiers scannés : {files_scanned}\n"));
-    out.push_str(&format!("  findings : {total_findings}\n"));
-    out.push_str(&format!("  fichiers modifiés : {changed}\n\n"));
+    out.push_str(&format!("  root: {}\n", opts.root.display()));
+    out.push_str(&format!("  files scanned: {files_scanned}\n"));
+    out.push_str(&format!("  findings: {total_findings}\n"));
+    out.push_str(&format!("  files changed: {changed}\n\n"));
 
     let (mut errors, mut warns, mut infos) = (0usize, 0usize, 0usize);
     for fx in fixes {
@@ -123,16 +123,15 @@ pub fn render_text_with_count(
 
     out.push('\n');
     out.push_str(&format!(
-        "{} : {}, {}, {}\n",
-        "Bilan".bold(),
+        "{}: {}, {}, {}\n",
+        "Summary".bold(),
         format!("{errors} errors").red(),
-        format!("{warns} warns").yellow(),
-        format!("{infos} infos").dimmed(),
+        format!("{warns} warnings").yellow(),
+        format!("{infos} info").dimmed(),
     ));
     if opts.mode == Mode::Check && total_findings > 0 {
         out.push_str(
-            &"(relancer avec --fix pour appliquer les corrections sûres, --aggressive pour migrer \
-              les APIs)"
+            &"(run with --fix for safe corrections or --aggressive for API migrations)"
                 .dimmed()
                 .to_string(),
         );
