@@ -113,7 +113,7 @@ function serviceFromEnv(service: ServiceName): ServiceInfo | null {
           `BUN_TEST_SERVICE_${service}: single port in "${raw}" is ambiguous for a ${meta.ports.length}-port service; use cport=hport pairs`,
         );
       }
-      ports[meta.ports[0]] = Number(spec);
+      ports[meta.ports[0]!] = Number(spec);
     }
   }
 
@@ -269,7 +269,7 @@ class DockerComposeHelper {
       throw new Error(`Invalid port output: ${stdout}`);
     }
 
-    return parseInt(match[1], 10);
+    return parseInt(match[1]!, 10);
   }
 
   private get testHost(): string {
@@ -393,7 +393,7 @@ class DockerComposeHelper {
       case "postgres_tls":
       case "postgres_auth":
         env.PGHOST = info.host;
-        env.PGPORT = info.ports[5432].toString();
+        env.PGPORT = info.ports[5432]!.toString();
         env.PGUSER = "bun_sql_test";
         env.PGDATABASE = "bun_sql_test";
 
@@ -408,7 +408,7 @@ class DockerComposeHelper {
       case "mysql_native_password":
       case "mysql_tls":
         env.MYSQL_HOST = info.host;
-        env.MYSQL_PORT = info.ports[3306].toString();
+        env.MYSQL_PORT = info.ports[3306]!.toString();
         env.MYSQL_USER = "root";
         env.MYSQL_PASSWORD = service === "mysql_plain" ? "" : "bun";
         env.MYSQL_DATABASE = "bun_sql_test";
@@ -421,7 +421,7 @@ class DockerComposeHelper {
       case "redis_plain":
       case "redis_unified":
         env.REDIS_HOST = info.host;
-        env.REDIS_PORT = info.ports[6379].toString();
+        env.REDIS_PORT = info.ports[6379]!.toString();
         env.REDIS_URL = `redis://${info.host}:${info.ports[6379]}`;
 
         if (info.ports[6380]) {
@@ -615,7 +615,7 @@ export async function withRedis(
   const tlsUrl = info.ports[6380] ? `rediss://${info.host}:${info.ports[6380]}` : undefined;
 
   try {
-    await fn({ ...info, url, tlsUrl });
+    await fn({ ...info, url, ...(tlsUrl === undefined ? {} : { tlsUrl }) });
   } finally {
     // Services persist - no teardown
   }

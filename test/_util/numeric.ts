@@ -98,7 +98,7 @@ export namespace stats {
     const n = xs.length;
     const sumX = xs.reduce((a, b) => a + b, 0);
     const sumY = ys.reduce((a, b) => a + b, 0);
-    const sumXY = xs.reduce((sum, x, i) => sum + x * ys[i], 0);
+    const sumXY = xs.reduce((sum, x, i) => sum + x * ys[i]!, 0);
     const sumX2 = xs.reduce((sum, x) => sum + x * x, 0);
     const sumY2 = ys.reduce((sum, y) => sum + y * y, 0);
 
@@ -129,7 +129,7 @@ export namespace stats {
     const n = xs.length;
     const sumX = xs.reduce((a, b) => a + b, 0);
     const sumY = ys.reduce((a, b) => a + b, 0);
-    const sumXY = xs.reduce((sum, x, i) => sum + x * ys[i], 0);
+    const sumXY = xs.reduce((sum, x, i) => sum + x * ys[i]!, 0);
     const sumX2 = xs.reduce((sum, x) => sum + x * x, 0);
 
     // Compute the slope (m) using the formula:

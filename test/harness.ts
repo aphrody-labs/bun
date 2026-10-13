@@ -1017,7 +1017,7 @@ Received ${JSON.stringify({ name: onDisk.name, version: onDisk.version })}`,
                   }
                   break;
               }
-            } catch (e) {
+            } catch {
               return {
                 pass: false,
                 message: () => `Expected ${dep.name} to be resolvable in ${treeDepPath}`,
@@ -1062,7 +1062,7 @@ Received ${JSON.stringify({ name: onDisk.name, version: onDisk.version })}`,
                   }
                   break;
               }
-            } catch (e) {
+            } catch {
               return {
                 pass: false,
                 message: () => `Expected ${dep.name} to be resolvable in ${treeDepPath}`,
@@ -1094,7 +1094,10 @@ export function toHaveBins(actual: any, expectedBins: string[]) {
     return { pass: true, message };
   }
 
-  return { pass: actual.length === expectedBins.length && actual.every((bin: string, i: number) => bin === expectedBins[i]), message };
+  return {
+    pass: actual.length === expectedBins.length && actual.every((bin: string, i: number) => bin === expectedBins[i]),
+    message,
+  };
 }
 
 export function toBeValidBin(actual: any, expectedLinkPath: string) {
@@ -1249,8 +1252,8 @@ export async function describeWithContainer(
   {
     image,
     env = {},
-    args = [],
-    archs,
+    args: _args = [],
+    archs: _archs,
     concurrent = false,
   }: {
     image: string;
@@ -1345,7 +1348,9 @@ export async function describeWithContainer(
     beforeAll(async () => {
       const info = await startPromise;
       _host = info.host;
-      _port = info.ports[servicePort];
+      const mappedPort = info.ports[servicePort];
+      if (mappedPort === undefined) throw new Error(`Service ${actualService} did not map port ${servicePort}`);
+      _port = mappedPort;
       console.log(`Container ready via docker-compose: ${image} at ${_host}:${_port}`);
       readyResolver!();
       // Cold container start is bounded by `compose up --wait-timeout 180` plus
@@ -1394,7 +1399,7 @@ function failTestsOnBlockingWriteCall() {
     if (prop) {
       Object.defineProperty(proto, "write", {
         ...prop,
-        value(chunk: unknown, encoding?: unknown, cb?: unknown) {
+        value(_chunk: unknown, _encoding?: unknown, _cb?: unknown) {
           const start = performance.now();
           const rc = prop.value.apply(this, arguments);
           const end = performance.now();
@@ -1778,6 +1783,7 @@ export function getGlibcVersion() {
   } catch (error) {
     console.warn("Failed to detect glibc version", error);
   }
+  return undefined;
 }
 
 export function isGlibcVersionAtLeast(version: string): boolean {
@@ -1802,6 +1808,7 @@ export function getMacOSVersion(): string | undefined {
   } catch (error) {
     console.warn("Failed to detect macOS version:", error);
   }
+  return undefined;
 }
 
 export function isMacOSVersionAtLeast(minVersion: number): boolean {
@@ -2211,9 +2218,9 @@ export const exampleHtml = Buffer.from(
 export function exampleSite(protocol: "https" | "http" = "https") {
   const server = Bun.serve({
     port: 0,
-    tls: protocol === "https" ? tls : undefined,
+    ...(protocol === "https" ? { tls } : {}),
     hostname: "127.0.0.1",
-    fetch(req) {
+    fetch() {
       return new Response(exampleHtml, {
         headers: {
           "Content-Type": "text/html",
@@ -2302,7 +2309,7 @@ export function nodeModulesPackages(nodeModulesPath: string): string {
           scanDirectory(fullPath, newRelativePath);
         }
       }
-    } catch (err) {
+    } catch {
       // Ignore errors for directories we can't read
     }
   }
