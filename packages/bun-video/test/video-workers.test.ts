@@ -40,7 +40,7 @@ test("job pool limits parallel work and persists independent success/failure", a
     if (count === 2) started.resolve();
     try {
       await gates[index]!.promise;
-      if (index === 1) throw new Error("Controlled renderer failure");
+      if (input.output === join(root, "2.mp4")) throw new Error("Controlled renderer failure");
       return result(input);
     } finally {
       active--;
@@ -82,7 +82,7 @@ test("queued cancellation settles immediately without waiting for occupied slot"
   await started.promise;
   const abort = new AbortController();
   const second = pool.submit(task(5), abort.signal);
-  const cancelled = second.catch(error=>error);
+  const cancelled = second.catch(error => error);
   abort.abort();
   expect(String(await cancelled)).toContain("cancelled");
   expect(catalog.listJobs("cancelled")).toHaveLength(1);

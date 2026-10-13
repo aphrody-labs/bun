@@ -12,6 +12,28 @@ import { transformSync as esbuildTransformSync } from "./build-deps/node_modules
 
 const root = resolve(import.meta.dir, "..");
 
+/** Let the final browser bundler decide production versus development branches. */
+export function transpileRemotionBrowserSource(
+  source: string,
+  loader: "ts" | "tsx" | "jsx",
+  sourceFile: string,
+): string {
+  const transformed = new Bun.Transpiler({
+    loader,
+    target: "browser",
+    define: { "process.env.NODE_ENV": "process.env.NODE_ENV" },
+    tsconfig: { compilerOptions: { jsx: "react" } },
+  }).transformSync(source);
+  if (!transformed.includes('"bun:wrap"')) return transformed;
+  return esbuildTransformSync(source, {
+    loader,
+    target: "es2022",
+    format: "esm",
+    jsx: "transform",
+    sourcefile: sourceFile,
+  }).code;
+}
+
 /** Isolated transpilation cannot infer a type-only re-export from another file. */
 export function rewriteIsolatedTypeExports(text: string, sourceFile: string): string {
   return text.replace(
@@ -95,20 +117,7 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
               ? "jsx"
               : "ts";
           const sourceText = rewriteIsolatedTypeExports(readFileSync(from, "utf8"), from);
-          let transformed = new Bun.Transpiler({
-            loader,
-            target: "browser",
-            tsconfig: { compilerOptions: { jsx: "react" } },
-          }).transformSync(sourceText);
-          if (transformed.includes('"bun:wrap"')) {
-            transformed = esbuildTransformSync(sourceText, {
-              loader,
-              target: "es2022",
-              format: "esm",
-              jsx: "transform",
-              sourcefile: from,
-            }).code;
-          }
+          const transformed = transpileRemotionBrowserSource(sourceText, loader, from);
           writeFileSync(
             output,
             transformed.replace(

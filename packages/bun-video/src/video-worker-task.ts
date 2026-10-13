@@ -33,6 +33,8 @@ export interface VideoRenderResult {
   codec?: string;
   pixelFormat?: string;
   lossless?: boolean;
+  sourceCodec?: string;
+  rendererSourceMode?: "video" | "decoded-frames";
 }
 
 export function videoTaskFrameRate(fps: VideoRenderTask["fps"]) {
@@ -270,20 +272,85 @@ async function makeComposition(
   task: VideoRenderTask,
   sourcePath: string,
   directory: string,
-  mediaUrl: string,
   hasAudio: boolean,
+  sourceCodec: string | undefined,
+  signal: AbortSignal,
 ): Promise<string> {
   if (task.composition) {
     if (!(await Bun.file(task.composition.entry).exists())) throw new Error("Composition entry is missing");
     return task.composition.entry;
   }
   if (task.engine === "remotion") {
-    const core = join(packageRoot(), "packages", "remotion", "packages", "core", "src", "index.ts");
-    if (!(await Bun.file(core).exists()))
-      throw new Error("Remotion sources are missing; configure BUN_VIDEO_PACKAGE_ROOT or provide composition.entry");
-    const react = Bun.resolveSync("react", packageRoot());
+    const publicDirectory = join(directory, "public");
+    mkdirSync(publicDirectory, { recursive: true });
+    if (sourceCodec === "ffv1") {
+      const ffmpeg = task.ffmpegExecutable ?? Bun.env.BUN_VIDEO_FFMPEG ?? Bun.which("ffmpeg");
+      if (!ffmpeg || !isAbsolute(ffmpeg))
+        throw new Error("FFV1 source frames require an absolute native FFmpeg executable");
+      const sourceFrames = join(publicDirectory, "source-frames");
+      mkdirSync(sourceFrames, { recursive: true });
+      await runProcess(
+        [
+          ffmpeg,
+          "-v",
+          "error",
+          "-i",
+          sourcePath,
+          "-map",
+          "0:v:0",
+          "-vf",
+          `fps=${videoTaskFrameRate(task.fps).argument}`,
+          "-frames:v",
+          String(task.durationFrames),
+          "-start_number",
+          "0",
+          "-pix_fmt",
+          "rgba",
+          "-n",
+          join(sourceFrames, "frame_%06d.png"),
+        ],
+        directory,
+        signal,
+        "decode-source-frames",
+      );
+      const frames = await Array.fromAsync(new Bun.Glob("*.png").scan({ cwd: sourceFrames, onlyFiles: true }));
+      validatePNGSequence(frames, task.durationFrames);
+      if (hasAudio)
+        await runProcess(
+          [
+            ffmpeg,
+            "-v",
+            "error",
+            "-i",
+            sourcePath,
+            "-map",
+            "0:a:0",
+            "-vn",
+            "-t",
+            String(task.durationFrames / videoTaskFrameRate(task.fps).value),
+            "-c:a",
+            "pcm_s16le",
+            "-n",
+            join(publicDirectory, "source-audio.wav"),
+          ],
+          directory,
+          signal,
+          "decode-source-audio",
+        );
+      const entry = join(directory, "composition.tsx");
+      const audio = hasAudio ? `React.createElement(Audio,{src:staticFile("source-audio.wav")})` : "null";
+      await Bun.write(
+        entry,
+        `import React from "react";\nimport {registerRoot,Composition,AbsoluteFill,Img,Audio,useCurrentFrame,staticFile} from "remotion";\nconst Clip=()=>{const frame=useCurrentFrame();return React.createElement(AbsoluteFill,{style:{backgroundColor:'black'}},React.createElement(Img,{src:staticFile("source-frames/frame_"+String(frame).padStart(6,"0")+".png"),style:{width:'100%',height:'100%',objectFit:'contain'}}),${audio});};\nregisterRoot(()=>React.createElement(Composition,{id:'VideoSource',component:Clip,width:${task.width},height:${task.height},fps:${videoTaskFrameRate(task.fps).value},durationInFrames:${task.durationFrames}}));\n`,
+      );
+      return entry;
+    }
+    const assetName = `media${extname(sourcePath) || ".mp4"}`;
+    const assetPath = join(publicDirectory, assetName);
+    if (resolve(assetPath) !== resolve(sourcePath)) await Bun.write(assetPath, Bun.file(sourcePath));
     const entry = join(directory, "composition.tsx");
-    const code = `import React from ${JSON.stringify(react.replaceAll("\\", "/"))};\nimport {registerRoot,Composition,AbsoluteFill,OffthreadVideo} from ${JSON.stringify(core.replaceAll("\\", "/"))};\nconst Clip=()=>React.createElement(AbsoluteFill,{style:{backgroundColor:'black'}},React.createElement(OffthreadVideo,{src:${JSON.stringify(mediaUrl)},style:{width:'100%',height:'100%',objectFit:'contain'}}));\nregisterRoot(()=>React.createElement(Composition,{id:'VideoSource',component:Clip,width:${task.width},height:${task.height},fps:${videoTaskFrameRate(task.fps).value},durationInFrames:${task.durationFrames}}));\n`;
+    // The engine aliases these package IDs to one materialized React/Remotion instance.
+    const code = `import React from "react";\nimport {registerRoot,Composition,AbsoluteFill,OffthreadVideo,staticFile} from "remotion";\nconst Clip=()=>React.createElement(AbsoluteFill,{style:{backgroundColor:'black'}},React.createElement(OffthreadVideo,{src:staticFile(${JSON.stringify(assetName)}),style:{width:'100%',height:'100%',objectFit:'contain'}}));\nregisterRoot(()=>React.createElement(Composition,{id:'VideoSource',component:Clip,width:${task.width},height:${task.height},fps:${videoTaskFrameRate(task.fps).value},durationInFrames:${task.durationFrames}}));\n`;
     await Bun.write(entry, code);
     return entry;
   }
@@ -310,40 +377,6 @@ async function makeComposition(
     `<!doctype html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=${task.width}, height=${task.height}"><title>Video source</title><script src="gsap.min.js"></script><style>html,body{width:${task.width}px;height:${task.height}px;margin:0;background:#000}#root{position:relative;width:100%;height:100%;overflow:hidden}.clip{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}</style></head><body><div id="root" data-composition-id="VideoSource" data-start="0" data-width="${task.width}" data-height="${task.height}" data-fps="${videoTaskFrameRate(task.fps).argument}" data-duration="${seconds}"><video id="source-video" class="clip" src="${Bun.escapeHTML(basename(asset))}" data-start="0" data-duration="${seconds}" data-media-start="0" data-track-index="0" data-has-audio="${hasAudio}"></video></div><script>window.__timelines=window.__timelines||{};window.__timelines["VideoSource"]=gsap.timeline({paused:true});</script></body></html>`,
   );
   return entry;
-}
-
-function serveMedia(sourcePath: string) {
-  const token = crypto.randomUUID();
-  const file = Bun.file(sourcePath);
-  const server = Bun.serve({
-    hostname: "127.0.0.1",
-    port: 0,
-    fetch(request) {
-      if (new URL(request.url).pathname !== `/${token}`) return new Response("Not found", { status: 404 });
-      if (!["GET", "HEAD"].includes(request.method)) return new Response(null, { status: 405 });
-      const range = request.headers.get("range");
-      if (range) {
-        const match = /^bytes=(\d+)-(\d*)$/.exec(range);
-        if (!match) return new Response(null, { status: 416, headers: { "content-range": `bytes */${file.size}` } });
-        const start = Number(match[1]);
-        const end = Math.min(Number(match[2] || file.size - 1), file.size - 1);
-        if (start > end || start >= file.size) return new Response(null, { status: 416 });
-        return new Response(request.method === "HEAD" ? null : file.slice(start, end + 1), {
-          status: 206,
-          headers: {
-            "content-range": `bytes ${start}-${end}/${file.size}`,
-            "content-length": String(end - start + 1),
-            "content-type": file.type,
-            "accept-ranges": "bytes",
-          },
-        });
-      }
-      return new Response(request.method === "HEAD" ? null : file, {
-        headers: { "content-length": String(file.size), "content-type": file.type, "accept-ranges": "bytes" },
-      });
-    },
-  });
-  return { server, url: `${server.url}${token}` };
 }
 
 async function runProcess(
@@ -395,199 +428,200 @@ export async function executeVideoTask(
   const sourcePath = await acquireSource(task, directory, signal);
   if (!ffprobe) throw new Error("A qualified ffprobe executable is required to inspect and verify video media");
   await runProcess(
-    [ffprobe, "-v", "error", "-show_entries", "stream=codec_type", "-of", "json", sourcePath],
+    [ffprobe, "-v", "error", "-show_entries", "stream=codec_type,codec_name", "-of", "json", sourcePath],
     directory,
     signal,
     "source-probe",
   );
   const sourceProbe = (await Bun.file(join(directory, "source-probe.stdout.log")).json()) as {
-    streams?: { codec_type?: string }[];
+    streams?: { codec_type?: string; codec_name?: string }[];
   };
   const hasAudio = sourceProbe.streams?.some(stream => stream.codec_type === "audio") ?? false;
-  const media = serveMedia(sourcePath);
-  try {
-    const compositionEntry = await makeComposition(task, sourcePath, directory, media.url, hasAudio);
-    const workers = task.frameWorkers ?? 1;
-    const lossless = extname(task.output).toLowerCase() === ".mkv";
-    const frameDirectory = join(directory, "rendered-frames");
-    const renderOutput = lossless ? frameDirectory : task.output;
-    let expectedAudio = hasAudio;
-    const ffmpeg = task.ffmpegExecutable ?? Bun.env.BUN_VIDEO_FFMPEG ?? Bun.which("ffmpeg");
-    if (lossless && (!ffmpeg || !isAbsolute(ffmpeg)))
-      throw new Error("Lossless MKV output requires an absolute FFmpeg executable");
-    const args =
-      task.engine === "remotion"
-        ? [
-            executable,
-            ...prefix,
-            "render",
-            compositionEntry,
-            task.composition?.id ?? "VideoSource",
-            renderOutput,
-            "--frames",
-            `0-${task.durationFrames - 1}`,
-            "--concurrency",
-            String(workers),
-            ...(extname(task.output).toLowerCase() === ".mov" ? ["--codec", "prores"] : []),
-            ...(lossless ? ["--sequence", "--image-format", "png"] : []),
-            ...(task.browserExecutable ? ["--browser-executable", task.browserExecutable] : []),
-          ]
-        : [
-            executable,
-            ...prefix,
-            "render",
-            dirname(compositionEntry),
-            "--composition",
-            basename(compositionEntry),
-            "--output",
-            renderOutput,
-            ...(extname(task.output).toLowerCase() === ".mov" ? ["--format", "mov"] : []),
-            ...(lossless ? ["--format", "png-sequence"] : []),
-            "--fps",
-            videoTaskFrameRate(task.fps).argument,
-            "--workers",
-            String(workers),
-            "--video-frame-format",
-            lossless ? "png" : (task.videoFrameFormat ?? "png"),
-          ];
-    await runProcess(args, directory, signal, "render", {
-      ...(task.browserExecutable
-        ? { HYPERFRAMES_BROWSER_PATH: task.browserExecutable, PUPPETEER_EXECUTABLE_PATH: task.browserExecutable }
-        : {}),
-      ...(task.ffmpegExecutable
-        ? { HYPERFRAMES_FFMPEG_PATH: task.ffmpegExecutable, BUN_VIDEO_FFMPEG: task.ffmpegExecutable }
-        : {}),
-      ...(task.ffprobeExecutable ? { HYPERFRAMES_FFPROBE_PATH: task.ffprobeExecutable } : {}),
-      BUN_VIDEO_SOURCE: sourcePath,
-    });
-    if (lossless) {
-      const files = await Array.fromAsync(new Bun.Glob("*.png").scan({ cwd: frameDirectory, onlyFiles: true }));
-      const sequence = validatePNGSequence(files, task.durationFrames);
-      let audioPath = join(frameDirectory, "audio.m4a");
-      if (task.engine === "remotion" && (hasAudio || task.composition)) {
-        audioPath = join(directory, "composition-audio.wav");
-        await runProcess(
-          [
-            executable,
-            ...prefix,
-            "render",
-            compositionEntry,
-            task.composition?.id ?? "VideoSource",
-            audioPath,
-            "--codec",
-            "wav",
-            "--frames",
-            `0-${task.durationFrames - 1}`,
-            "--concurrency",
-            String(workers),
-            ...(task.composition ? ["--enforce-audio-track"] : []),
-            ...(task.browserExecutable ? ["--browser-executable", task.browserExecutable] : []),
-          ],
-          directory,
-          signal,
-          "render-audio",
-          { BUN_VIDEO_SOURCE: sourcePath },
-        );
-      }
-      const hasMixedAudio = await Bun.file(audioPath).exists();
-      expectedAudio = hasMixedAudio;
-      if (hasAudio && !hasMixedAudio)
-        throw new Error("Renderer did not provide the composition audio for lossless muxing");
+  const sourceCodec = sourceProbe.streams?.find(stream => stream.codec_type === "video")?.codec_name;
+  const compositionEntry = await makeComposition(task, sourcePath, directory, hasAudio, sourceCodec, signal);
+  const workers = task.frameWorkers ?? 1;
+  const lossless = extname(task.output).toLowerCase() === ".mkv";
+  const frameDirectory = join(directory, "rendered-frames");
+  const renderOutput = lossless ? frameDirectory : task.output;
+  let expectedAudio = hasAudio;
+  const ffmpeg = task.ffmpegExecutable ?? Bun.env.BUN_VIDEO_FFMPEG ?? Bun.which("ffmpeg");
+  if (lossless && (!ffmpeg || !isAbsolute(ffmpeg)))
+    throw new Error("Lossless MKV output requires an absolute FFmpeg executable");
+  const args =
+    task.engine === "remotion"
+      ? [
+          executable,
+          ...prefix,
+          "render",
+          compositionEntry,
+          task.composition?.id ?? "VideoSource",
+          renderOutput,
+          "--frames",
+          `0-${task.durationFrames - 1}`,
+          "--concurrency",
+          String(workers),
+          ...(!task.composition ? ["--public-dir", join(directory, "public")] : []),
+          ...(extname(task.output).toLowerCase() === ".mov" ? ["--codec", "prores"] : []),
+          ...(lossless ? ["--sequence", "--image-format", "png"] : []),
+          ...(task.browserExecutable ? ["--browser-executable", task.browserExecutable] : []),
+        ]
+      : [
+          executable,
+          ...prefix,
+          "render",
+          dirname(compositionEntry),
+          "--composition",
+          basename(compositionEntry),
+          "--output",
+          renderOutput,
+          ...(extname(task.output).toLowerCase() === ".mov" ? ["--format", "mov"] : []),
+          ...(lossless ? ["--format", "png-sequence"] : []),
+          "--fps",
+          videoTaskFrameRate(task.fps).argument,
+          "--workers",
+          String(workers),
+          "--video-frame-format",
+          lossless ? "png" : (task.videoFrameFormat ?? "png"),
+        ];
+  await runProcess(args, directory, signal, "render", {
+    ...(task.browserExecutable
+      ? { HYPERFRAMES_BROWSER_PATH: task.browserExecutable, PUPPETEER_EXECUTABLE_PATH: task.browserExecutable }
+      : {}),
+    ...(task.ffmpegExecutable
+      ? { HYPERFRAMES_FFMPEG_PATH: task.ffmpegExecutable, BUN_VIDEO_FFMPEG: task.ffmpegExecutable }
+      : {}),
+    ...(task.ffprobeExecutable ? { HYPERFRAMES_FFPROBE_PATH: task.ffprobeExecutable } : {}),
+    BUN_VIDEO_SOURCE: sourcePath,
+  });
+  if (lossless) {
+    const files = await Array.fromAsync(new Bun.Glob("*.png").scan({ cwd: frameDirectory, onlyFiles: true }));
+    const sequence = validatePNGSequence(files, task.durationFrames);
+    let audioPath = join(frameDirectory, "audio.m4a");
+    if (task.engine === "remotion" && (hasAudio || task.composition)) {
+      audioPath = join(directory, "composition-audio.wav");
       await runProcess(
         [
-          ffmpeg!,
-          "-v",
-          "error",
-          "-framerate",
-          videoTaskFrameRate(task.fps).argument,
-          "-start_number",
-          String(sequence.startNumber),
-          "-i",
-          join(frameDirectory, sequence.pattern),
-          ...(hasMixedAudio ? ["-i", audioPath] : []),
-          "-map",
-          "0:v:0",
-          ...(hasMixedAudio ? ["-map", "1:a:0"] : []),
-          "-frames:v",
-          String(task.durationFrames),
-          "-c:v",
-          "ffv1",
-          "-level",
-          "3",
-          "-pix_fmt",
-          "bgra",
-          ...(hasMixedAudio ? ["-c:a", "copy"] : []),
-          "-n",
-          task.output,
+          executable,
+          ...prefix,
+          "render",
+          compositionEntry,
+          task.composition?.id ?? "VideoSource",
+          audioPath,
+          "--codec",
+          "wav",
+          "--frames",
+          `0-${task.durationFrames - 1}`,
+          "--concurrency",
+          String(workers),
+          ...(!task.composition ? ["--public-dir", join(directory, "public")] : []),
+          ...(task.composition ? ["--enforce-audio-track"] : []),
+          ...(task.browserExecutable ? ["--browser-executable", task.browserExecutable] : []),
         ],
         directory,
         signal,
-        "encode-lossless",
+        "render-audio",
+        { BUN_VIDEO_SOURCE: sourcePath },
       );
     }
-    const output = Bun.file(task.output);
-    if (!(await output.exists()) || !output.size) throw new Error("Engine produced no video output");
+    const hasMixedAudio = await Bun.file(audioPath).exists();
+    expectedAudio = hasMixedAudio;
+    if (hasAudio && !hasMixedAudio)
+      throw new Error("Renderer did not provide the composition audio for lossless muxing");
     await runProcess(
       [
-        ffprobe,
+        ffmpeg!,
         "-v",
         "error",
-        "-count_frames",
-        "-show_entries",
-        "stream=codec_type,codec_name,pix_fmt,width,height,nb_read_frames,r_frame_rate",
-        "-of",
-        "json",
+        "-framerate",
+        videoTaskFrameRate(task.fps).argument,
+        "-start_number",
+        String(sequence.startNumber),
+        "-i",
+        join(frameDirectory, sequence.pattern),
+        ...(hasMixedAudio ? ["-i", audioPath] : []),
+        "-map",
+        "0:v:0",
+        ...(hasMixedAudio ? ["-map", "1:a:0"] : []),
+        "-frames:v",
+        String(task.durationFrames),
+        "-c:v",
+        "ffv1",
+        "-level",
+        "3",
+        "-pix_fmt",
+        "bgra",
+        ...(hasMixedAudio ? ["-c:a", "copy"] : []),
+        "-n",
         task.output,
       ],
       directory,
       signal,
-      "probe",
+      "encode-lossless",
     );
-    const probe = (await Bun.file(join(directory, "probe.stdout.log")).json()) as {
-      streams?: {
-        codec_type?: string;
-        codec_name?: string;
-        pix_fmt?: string;
-        width: number;
-        height: number;
-        nb_read_frames?: string;
-        r_frame_rate?: string;
-      }[];
-    };
-    const stream = probe.streams?.find(value => value.codec_type === "video");
-    const frames = Number(stream?.nb_read_frames);
-    const [numerator, denominator] = (stream?.r_frame_rate ?? "0/1").split("/").map(Number);
-    const fps = (numerator ?? 0) / (denominator ?? 1);
-    if (
-      !stream ||
-      stream.width !== task.width ||
-      stream.height !== task.height ||
-      frames !== task.durationFrames ||
-      Math.abs(fps - videoTaskFrameRate(task.fps).value) > 0.000001
-    )
-      throw new Error("Encoded output does not match the requested dimensions, fps and frame count");
-    if (lossless && (stream.codec_name !== "ffv1" || stream.pix_fmt !== "bgra"))
-      throw new Error("Lossless output must be verified FFV1 BGRA video");
-    if (expectedAudio && !probe.streams?.some(value => value.codec_type === "audio"))
-      throw new Error("Encoded output is missing the expected composition audio");
-    const hasher = new Bun.CryptoHasher("sha256");
-    for await (const chunk of output.stream()) {
-      signal.throwIfAborted();
-      hasher.update(chunk);
-    }
-    return {
-      output: task.output,
-      engine: task.engine,
-      sourcePath,
-      compositionEntry,
-      frames,
-      sha256: hasher.digest("hex"),
-      bytes: output.size,
-      codec: stream.codec_name,
-      pixelFormat: stream.pix_fmt,
-      lossless,
-    };
-  } finally {
-    media.server.stop(true);
   }
+  const output = Bun.file(task.output);
+  if (!(await output.exists()) || !output.size) throw new Error("Engine produced no video output");
+  await runProcess(
+    [
+      ffprobe,
+      "-v",
+      "error",
+      "-count_frames",
+      "-show_entries",
+      "stream=codec_type,codec_name,pix_fmt,width,height,nb_read_frames,r_frame_rate",
+      "-of",
+      "json",
+      task.output,
+    ],
+    directory,
+    signal,
+    "probe",
+  );
+  const probe = (await Bun.file(join(directory, "probe.stdout.log")).json()) as {
+    streams?: {
+      codec_type?: string;
+      codec_name?: string;
+      pix_fmt?: string;
+      width: number;
+      height: number;
+      nb_read_frames?: string;
+      r_frame_rate?: string;
+    }[];
+  };
+  const stream = probe.streams?.find(value => value.codec_type === "video");
+  const frames = Number(stream?.nb_read_frames);
+  const [numerator, denominator] = (stream?.r_frame_rate ?? "0/1").split("/").map(Number);
+  const fps = (numerator ?? 0) / (denominator ?? 1);
+  if (
+    !stream ||
+    stream.width !== task.width ||
+    stream.height !== task.height ||
+    frames !== task.durationFrames ||
+    Math.abs(fps - videoTaskFrameRate(task.fps).value) > 0.000001
+  )
+    throw new Error("Encoded output does not match the requested dimensions, fps and frame count");
+  if (lossless && (stream.codec_name !== "ffv1" || stream.pix_fmt !== "bgra"))
+    throw new Error("Lossless output must be verified FFV1 BGRA video");
+  if (expectedAudio && !probe.streams?.some(value => value.codec_type === "audio"))
+    throw new Error("Encoded output is missing the expected composition audio");
+  const hasher = new Bun.CryptoHasher("sha256");
+  for await (const chunk of output.stream()) {
+    signal.throwIfAborted();
+    hasher.update(chunk);
+  }
+  return {
+    output: task.output,
+    engine: task.engine,
+    sourcePath,
+    compositionEntry,
+    frames,
+    sha256: hasher.digest("hex"),
+    bytes: output.size,
+    codec: stream.codec_name,
+    pixelFormat: stream.pix_fmt,
+    lossless,
+    sourceCodec,
+    rendererSourceMode:
+      !task.composition && task.engine === "remotion" && sourceCodec === "ffv1" ? "decoded-frames" : "video",
+  };
 }

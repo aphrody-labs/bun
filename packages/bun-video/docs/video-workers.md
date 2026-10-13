@@ -257,6 +257,14 @@ l'exactitude des pixels du fichier final.
 Les snapshots et mesures sont propres au navigateur, polices et codecs du
 host qualifié. Une mesure locale ne constitue pas une garantie universelle.
 
+Pour une source FFV1 locale, le compositor Remotion épinglé ne possède pas le
+décodeur. Le worker utilise FFmpeg natif pour décoder le nombre borné de vraies
+frames PNG, puis React `Img`, `useCurrentFrame` et `staticFile` pour les placer.
+Une piste audio présente est décodée en WAV et composée par `Audio`; la référence
+artistique qualifiée n'en contient aucune. Les sources vidéo prises en charge
+par le compositor utilisent `OffthreadVideo`. Ce placement et cet échantillonnage
+ne reconstituent pas une scène créative ni un film complet.
+
 `src/pixel-verify.ts` possède `compareRGBAFrames(reference, candidate, limits)`
 pour les octets déjà décodés et `verifyPixelFrames(input)` pour les fichiers
 de frames. Les seuils `channelTolerance` et `maxDifferingPixelRatio` sont nuls

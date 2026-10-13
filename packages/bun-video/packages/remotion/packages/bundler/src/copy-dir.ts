@@ -1,6 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+export const directoryExists = async (directory: string): Promise<boolean> => {
+	try {
+		return (await fs.promises.stat(directory)).isDirectory();
+	} catch (error) {
+		if (
+			error instanceof Error &&
+			'code' in error &&
+			(error.code === 'ENOENT' || error.code === 'ENOTDIR')
+		) {
+			return false;
+		}
+		throw error;
+	}
+};
+
 export async function copyDir({
 	src,
 	dest,

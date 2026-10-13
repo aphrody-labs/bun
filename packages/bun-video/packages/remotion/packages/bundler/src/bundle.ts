@@ -7,7 +7,9 @@ import type {GitSource, RenderDefaults} from '@remotion/studio-shared';
 import {getProjectName} from '@remotion/studio-shared';
 import {NoReactInternals} from 'remotion/no-react';
 import webpack from 'webpack';
-import {copyDir} from './copy-dir';
+import faviconAsset from '../favicon.ico' with {type: 'file'};
+import {formatCompilationError} from './compilation-error';
+import {copyDir, directoryExists} from './copy-dir';
 import {indexHtml} from './index-html';
 import type {
 	BundlerOverrideFn,
@@ -208,7 +210,7 @@ export const convertBundleArgumentsIntoOptions = (
 			return {
 				entryPoint: firstArg,
 				onProgress: args[1],
-				...(args[2] ?? {}),
+				...args[2],
 			};
 		}
 
@@ -330,7 +332,7 @@ export const internalBundle = async (
 
 		const {errors} = rspackOutput.toJson({});
 		if (errors !== undefined && errors.length > 0) {
-			throw new Error(errors[0].message + '\n' + errors[0].details);
+			throw new Error(errors.map(formatCompilationError).join('\n\n'));
 		}
 	} else {
 		const runWebpack = async () => {
@@ -347,7 +349,7 @@ export const internalBundle = async (
 
 			const {errors} = output.toJson();
 			if (errors !== undefined && errors.length > 0) {
-				throw new Error(errors[0].message + '\n' + errors[0].details);
+				throw new Error(errors.map(formatCompilationError).join('\n\n'));
 			}
 		};
 
@@ -401,7 +403,7 @@ export const internalBundle = async (
 		);
 	};
 
-	if (await Bun.file(from).exists()) {
+	if (await directoryExists(from)) {
 		if (actualArgs.symlinkPublicDir && process.platform !== 'win32') {
 			await fs.promises.symlink(from, to);
 		} else {
@@ -479,10 +481,7 @@ export const internalBundle = async (
 	});
 
 	await Bun.write(path.join(outDir, 'index.html'), html);
-	fs.copyFileSync(
-		path.join(__dirname, '../favicon.ico'),
-		path.join(outDir, 'favicon.ico'),
-	);
+	await Bun.write(path.join(outDir, 'favicon.ico'), Bun.file(faviconAsset));
 	return outDir;
 };
 

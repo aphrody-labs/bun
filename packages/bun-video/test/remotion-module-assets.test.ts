@@ -1,5 +1,19 @@
 import { expect, test } from "bun:test";
-import { rewriteIsolatedTypeExports } from "../packages/remotion/.aphrody/module-assets";
+import {
+  rewriteIsolatedTypeExports,
+  transpileRemotionBrowserSource,
+} from "../packages/remotion/.aphrody/module-assets";
+
+test("browser materialization preserves environment branches for the final renderer bundle", () => {
+  const source = "if (process.env.NODE_ENV !== 'production') { require('react-refresh/runtime'); }";
+  const transformed = transpileRemotionBrowserSource(source, "ts", "setup-sequence-stack-traces.ts");
+  const modules: string[] = [];
+  const execute = new Function("process", "require", transformed);
+  execute({ env: { NODE_ENV: "production" } }, (name: string) => modules.push(name));
+  expect(modules).toEqual([]);
+  execute({ env: { NODE_ENV: "development" } }, (name: string) => modules.push(name));
+  expect(modules).toEqual(["react-refresh/runtime"]);
+});
 
 test("isolated Remotion assets erase referenced types while retaining runtime exports", async () => {
   const path = Bun.fileURLToPath(new URL("../packages/remotion/packages/media-utils/src/index.ts", import.meta.url));

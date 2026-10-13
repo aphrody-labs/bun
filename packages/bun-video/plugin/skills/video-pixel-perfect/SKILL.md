@@ -110,3 +110,11 @@ Deliver the source composition, qualified output, SQLite receipt and short
 qualification result. Do not include protected source captures in Git. Native
 Windows is the workstation target; do not start WSL. On other qualified targets,
 probe their own browser/media providers and permissions separately.
+
+For FFV1 sources unsupported by the pinned Remotion compositor, use the worker's
+bounded native FFmpeg PNG decoding and real React `Img`/`useCurrentFrame`/
+`staticFile` composition. Preserve actual audio through native WAV decoding and
+`Audio` when present. Supported source codecs retain `OffthreadVideo`. Report
+source placement and sampled frames accurately; this is not creative scene
+reconstruction or proof of a complete movie. The qualified artwork source has
+no audio; zero RGBA differences apply only to its measured frames 0, 3 and 5.
