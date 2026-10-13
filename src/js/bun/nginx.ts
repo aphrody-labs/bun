@@ -13,7 +13,7 @@ const native = $newRustFunction("nginx/bindings.rs", "jsNginx", 3) as (
 ) => Promise<any>;
 const construction = {};
 
-export class Nginx {
+class Nginx {
   #handle: object | undefined = undefined;
 
   constructor(handle: object, token: object) {
@@ -55,5 +55,8 @@ export class Nginx {
   }
 }
 
-export const create = Nginx.create;
-export const probe = Nginx.probe;
+export default Object.defineProperties(Nginx, {
+  Nginx: { value: Nginx, enumerable: true },
+  create: { value: Nginx.create, enumerable: true },
+  probe: { value: Nginx.probe, enumerable: true },
+});

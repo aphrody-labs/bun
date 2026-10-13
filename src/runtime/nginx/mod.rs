@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::{
     Arc, Mutex, OnceLock,
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicU64, Ordering},
 };
 use std::time::Duration;
 
@@ -404,6 +404,43 @@ impl Ownership {
     }
 }
 
+struct ValidationPid(Option<Ownership>);
+impl ValidationPid {
+    fn claim(prefix: &Path) -> Result<Self> {
+        static NEXT_ID: AtomicU64 = AtomicU64::new(1);
+        let path = prefix.join(format!(
+            ".bun-nginx-validate-{}-{}.pid",
+            std::process::id(),
+            NEXT_ID.fetch_add(1, Ordering::Relaxed)
+        ));
+        let file = File::openat(
+            Fd::cwd(),
+            path_bytes(&path)?,
+            O::RDWR | O::CREAT | O::EXCL | O::NOFOLLOW,
+            0o600,
+        )
+        .map_err(native)?;
+        Ok(Self(Some(Ownership {
+            path,
+            file,
+            contents: Vec::new(),
+        })))
+    }
+    fn path(&self) -> &Path {
+        &self.0.as_ref().expect("live validation PID owner").path
+    }
+    fn release(mut self) -> Result<()> {
+        self.0.take().expect("live validation PID owner").release()
+    }
+}
+impl Drop for ValidationPid {
+    fn drop(&mut self) {
+        if let Some(owner) = self.0.take() {
+            let _ = owner.release();
+        }
+    }
+}
+
 pub(super) struct Controller {
     pub runtime: &'static Runtime,
     provider: ProviderOptions,
@@ -458,7 +495,7 @@ impl Controller {
         let file = File::openat(
             Fd::cwd(),
             path_bytes(&path)?,
-            O::WRONLY | O::CREAT | O::EXCL | O::NOFOLLOW,
+            O::RDWR | O::CREAT | O::EXCL | O::NOFOLLOW,
             0o600,
         )
         .map_err(|error| {
@@ -511,6 +548,9 @@ impl Controller {
         Ok(())
     }
     fn command(&self) -> Result<Command> {
+        self.command_with_pid(&self.pid_file)
+    }
+    fn command_with_pid(&self, pid: &Path) -> Result<Command> {
         self.check_scope()?;
         let mut command = self.provider.command();
         command
@@ -522,7 +562,7 @@ impl Controller {
             .arg("-e")
             .arg("stderr")
             .arg("-g")
-            .arg(format!("daemon off; pid {};", quote_path(&self.pid_file)?));
+            .arg(format!("daemon off; pid {};", quote_path(pid)?));
         Ok(command)
     }
     fn verify_pid(&self) -> Result<()> {
@@ -580,9 +620,12 @@ impl Controller {
         )
     }
     async fn validate(&self) -> Result<Value> {
-        let mut command = self.command()?;
+        // NGINX -t creates an empty PID file; it must never touch the master's PID.
+        let pid = ValidationPid::claim(&self.prefix)?;
+        let mut command = self.command_with_pid(pid.path())?;
         command.arg("-t");
         let output = capture(command, self.provider.max_output_bytes).await?;
+        pid.release()?;
         if !output.success {
             return Err(fail("ERR_NGINX_CONFIG", output.stderr));
         }
@@ -631,6 +674,10 @@ impl Controller {
             )
             .is_ok()
             {
+                // A real master opens/truncates its PID before writing its identity.
+                if read_small(&self.pid_file, 32)?.is_empty() {
+                    continue;
+                }
                 self.verify_pid()?;
                 return self.status();
             }
@@ -839,6 +886,7 @@ async fn capture(mut command: Command, limit: usize) -> Result<Output> {
         Err(error) => {
             let _ = tree.terminate();
             let _ = child.start_kill();
+            let _ = tokio::time::timeout(Duration::from_secs(1), child.wait()).await;
             Err(error)
         }
     }

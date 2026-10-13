@@ -1,14 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import Nginx, { probe } from "bun:nginx";
+import Nginx from "bun:nginx";
 import Alias from "bun:Nginixx";
 import { bunExe, tempDir } from "harness";
-import { mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { setImmediate } from "node:timers/promises";
 
 const fixture = join(import.meta.dir, "fixture.ts");
 const binary = bunExe();
+const probe = Nginx.probe;
 function isolated(mode?: string) {
   const prefix = mkdtempSync(join(tmpdir(), "bun-nginx-"));
   const configFile = join(prefix, "nginx.conf");
@@ -64,9 +65,9 @@ function fixtureSignal(prefix: string, signal: string) {
   renameSync(path + ".tmp", path);
 }
 async function ready(prefix: string, name = "fixture-ready.json") {
-  const file = Bun.file(join(prefix, name));
-  await eventually(() => file.exists(), Boolean);
-  return file.json();
+  const path = join(prefix, name);
+  await eventually(() => Bun.file(path).exists(), Boolean);
+  return Bun.file(path).json();
 }
 async function assertStopped(url: string) {
   await eventually(async () => {
@@ -80,6 +81,14 @@ async function assertStopped(url: string) {
 }
 
 describe("native NGINX controller with explicit process-protocol fixture", () => {
+  test("default class, named helpers and alias expose the same owner", async () => {
+    const module = await import("bun:nginx");
+    expect(module.default).toBe(Nginx);
+    expect(module.Nginx).toBe(Nginx);
+    expect(module.probe).toBe(Nginx.probe);
+    expect(module.create).toBe(Nginx.create);
+    expect(Alias).toBe(Nginx);
+  });
   test("both module spellings share the owner; unavailable provider is explicit", async () => {
     expect(Alias).toBe(Nginx);
     const directory = String(tempDir("bun-nginx-missing-", {}));
@@ -114,6 +123,7 @@ describe("native NGINX controller with explicit process-protocol fixture", () =>
   test("validate, start, reload, quit and restart keep one owned child", async () => {
     using scope = isolated();
     await using nginx = await Nginx.create(scope.options);
+    expect(nginx instanceof Nginx).toBe(true);
     expect(await nginx.validate()).toMatchObject({ valid: true, exitCode: 0 });
     const initial = await nginx.status();
     expect(initial).toMatchObject({ running: false, pid: null, closed: false });
@@ -141,6 +151,21 @@ describe("native NGINX controller with explicit process-protocol fixture", () =>
     expect(await Bun.file(join(scope.prefix, ".bun-nginx-owner")).exists()).toBe(false);
     await using next = await Nginx.create(scope.options);
     expect((await next.status()).running).toBe(false);
+  });
+
+  test("configuration validation isolates and removes NGINX's empty test PID", async () => {
+    using scope = isolated("test-pidfile");
+    await using nginx = await Nginx.create(scope.options);
+    expect(await nginx.validate()).toMatchObject({ valid: true });
+    expect(await Bun.file(join(scope.prefix, "bun-nginx.pid")).exists()).toBe(false);
+    expect(readdirSync(scope.prefix).filter(name => name.startsWith(".bun-nginx-validate-"))).toEqual([]);
+    const started = await nginx.start();
+    expect(started.running).toBe(true);
+    const master = await ready(scope.prefix);
+    expect(started.pid).toBe(master.pid);
+    expect(await body(master.url)).toBe("first");
+    expect((await nginx.quit()).running).toBe(false);
+    expect(readdirSync(scope.prefix).filter(name => name.endsWith(".pid"))).toEqual([]);
   });
 
   test("invalid config blocks startup and reload without changing the live child", async () => {

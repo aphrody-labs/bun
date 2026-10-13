@@ -7,7 +7,7 @@ const argument = (name: string) => args[args.indexOf(name) + 1];
 const mode = args.find(value => value.startsWith("--fixture-mode="))?.slice("--fixture-mode=".length);
 if (mode === "worker-child") {
   const worker = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("worker") });
-  await Bun.write(
+  await atomicWrite(
     join(argument("-p"), "worker-ready.json"),
     JSON.stringify({ pid: process.pid, url: worker.url.href }),
   );
@@ -33,6 +33,11 @@ if (args.includes("-t")) {
     process.exit(1);
   }
   JSON.parse(settings);
+  if (mode === "test-pidfile") {
+    const pid = /\bpid "([^"]+)";/.exec(argument("-g"))?.[1];
+    if (!pid) throw new Error("Process fixture did not receive its configured PID path");
+    await Bun.write(pid, "");
+  }
   process.stderr.write("nginx: configuration file syntax is ok\nnginx: configuration file test is successful\n");
   process.exit(0);
 }
