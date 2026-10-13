@@ -3,17 +3,17 @@
 use std::sync::{Arc, Mutex, PoisonError};
 
 use bun_jsc::{
-    ArrayBuffer, CallFrame, IntegerRange, JSGlobalObject, JSType, JSValue, JsCell, JsResult,
-    bun_string_jsc,
+    bun_string_jsc, ArrayBuffer, CallFrame, IntegerRange, JSGlobalObject, JSType, JSValue, JsCell,
+    JsResult,
 };
 use rio_vt::{
     ansi::CursorShape,
     config::colors::AnsiColor,
     crosswords::{
-        Crosswords, CrosswordsSize, Mode,
         grid::Scroll,
         pos::{Column, Line, Pos},
         square::{Square, Wide},
+        Crosswords, CrosswordsSize, Mode,
     },
     event::{EventListener, RioEvent, WindowId},
     performer::handler::Processor,
@@ -31,12 +31,35 @@ const MAX_SCROLLBACK: i128 = 1_000_000;
 pub(crate) struct RioTerminal {
     parser: JsCell<Processor>,
     terminal: JsCell<Crosswords<ReplyListener>>,
-    replies: Arc<Mutex<Vec<String>>>,
+    replies: Arc<Mutex<ReplyQueue>>,
     scrollback: usize,
 }
 
 #[derive(Clone)]
-struct ReplyListener(Arc<Mutex<Vec<String>>>);
+struct ReplyListener(Arc<Mutex<ReplyQueue>>);
+
+#[derive(Default)]
+struct ReplyQueue {
+    values: Vec<String>,
+    string_capacity: usize,
+}
+
+impl ReplyQueue {
+    fn push(&mut self, reply: String) {
+        self.string_capacity += reply.capacity();
+        self.values.push(reply);
+    }
+
+    fn clear(&mut self) {
+        self.values.clear();
+        self.string_capacity = 0;
+    }
+
+    fn take(&mut self) -> Vec<String> {
+        self.string_capacity = 0;
+        std::mem::take(&mut self.values)
+    }
+}
 
 impl EventListener for ReplyListener {
     fn send_event(&self, event: RioEvent, _id: WindowId) {
@@ -53,7 +76,7 @@ fn make_terminal(
     cols: usize,
     rows: usize,
     scrollback: usize,
-    replies: Arc<Mutex<Vec<String>>>,
+    replies: Arc<Mutex<ReplyQueue>>,
 ) -> Crosswords<ReplyListener> {
     Crosswords::new(
         CrosswordsSize::new(cols, rows),
@@ -121,13 +144,15 @@ impl RioTerminal {
                 )? as usize;
             }
         }
-        let replies = Arc::new(Mutex::new(Vec::new()));
-        Ok(Box::new(Self {
+        let replies = Arc::new(Mutex::new(ReplyQueue::default()));
+        let terminal = Box::new(Self {
             parser: JsCell::new(Processor::default()),
             terminal: JsCell::new(make_terminal(cols, rows, scrollback, Arc::clone(&replies))),
             replies,
             scrollback,
-        }))
+        });
+        global.vm().report_extra_memory(terminal.memory_cost());
+        Ok(terminal)
     }
 
     #[bun_jsc::host_fn(method)]
@@ -267,9 +292,12 @@ impl RioTerminal {
         global: &JSGlobalObject,
         _callframe: &CallFrame,
     ) -> JsResult<JSValue> {
-        let replies =
-            std::mem::take(&mut *self.replies.lock().unwrap_or_else(PoisonError::into_inner))
-                .join("");
+        let replies = self
+            .replies
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take()
+            .join("");
         bun_string_jsc::owned_utf8_into_js(global, replies.into_bytes())
     }
 
@@ -324,16 +352,17 @@ impl RioTerminal {
     pub(crate) fn memory_cost(&self) -> usize {
         core::mem::size_of::<Self>() + self.terminal.get().memory_cost()
             - core::mem::size_of::<Crosswords<ReplyListener>>()
-            + core::mem::size_of::<Mutex<Vec<String>>>()
-            + replies.capacity() * core::mem::size_of::<String>()
-            + replies.iter().map(String::capacity).sum::<usize>()
-            + self.buffer_memory_cost() - self.terminal.get().title.capacity()
+            + self.buffer_memory_cost()
+            - self.terminal.get().title.capacity()
     }
 
     fn buffer_memory_cost(&self) -> usize {
         let replies = self.replies.lock().unwrap_or_else(PoisonError::into_inner);
         self.parser.get().memory_cost() - core::mem::size_of::<Processor>()
             + self.terminal.get().title.capacity()
+            + core::mem::size_of::<Mutex<ReplyQueue>>()
+            + replies.values.capacity() * core::mem::size_of::<String>()
+            + replies.string_capacity
     }
 
     #[bun_jsc::host_fn(getter)]

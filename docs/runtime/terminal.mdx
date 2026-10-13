@@ -82,12 +82,15 @@ history. Alternate-screen content is separate from the normal screen.
 starts at `4 * (row * cols + col)`. Mutating this array does not alter the terminal,
 and subsequent writes do not alter an earlier snapshot. The first word stores
 the first code point, while `cellText(col, row)` retains the full grapheme.
-Wide-character spacer cells, including wrap fillers, have width zero and empty
+An untouched empty cell uses code point zero; a wide-character spacer uses 32.
+Wide-character continuation cells have width zero and empty
 `cellText()` output. See the public type declaration for packed colors and flags.
 
 Terminal queries enqueue replies. `takeReplies()` concatenates and drains them;
 the caller decides whether to send those bytes back to its child process. Rio
-does not send them to any host process automatically. Synchronized updates
+does not send them to any host process automatically. Kitty image transfers
+backed by host files, temporary files or shared memory are rejected with an
+unsupported-medium reply before host access. Synchronized updates
 (`CSI ? 2026 h`) buffer input until their matching end sequence (`CSI ? 2026 l`).
 Timeout expiry is processed on a subsequent `write()` call, including an empty
 write; reading a snapshot does not drive an event loop.

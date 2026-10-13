@@ -1,5 +1,18 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## Rio stability and upstream source coverage — 2026-10-13
+
+GitHub `raphamorim/rio/main` matches pin `59203ccd5fa1e6b760a738c1ad653bb29f2f3465`:
+620 source blobs present, 607 unchanged and 13 Bun adaptations. Eight ignored
+upstream files are explicitly tracked for fresh clones and source archives.
+Parser allocation and reply-queue memory accounting are integrated with GC;
+host-backed Kitty transfers require the `host-graphics` feature, disabled in Bun.
+Native Windows debug qualification: 14 Rio tests pass (108 assertions); standalone
+VT suites pass 532 tests without host access and 533 with explicit host access.
+The debug gate uses `--ci=on -j1` after incremental/compiler and pipelined metadata
+failures. VPS/DBFR installed runtimes still lack `bun:rio`; no service was changed.
+See [upstream coverage](docs/project/rio-upstream-integration.md) and its hash receipt.
+
 ## Owner execution constraint — 2026-10-11
 
 Keep this work in the existing `C:/bun` directory. Do not create additional

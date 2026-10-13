@@ -1,0 +1,137 @@
+{
+  "repository": "https://github.com/raphamorim/rio",
+  "ref": "main",
+  "commit": "59203ccd5fa1e6b760a738c1ad653bb29f2f3465",
+  "committer_date": "2026-10-03T08:39:11Z",
+  "tree_sha": "09473c7c28a49ad547375cf0a8690ef7ebd7d879",
+  "checked_on": "2026-10-13",
+  "tree_truncated": false,
+  "counts": {
+    "upstream_blobs": 620,
+    "identical": 607,
+    "modified": 13
+  },
+  "missing": [],
+  "ignored_at_audit": [
+    {
+      "path": ".cargo/config.toml",
+      "sha": "7ac3e94cef963e8a50bb5d47ff050cd7bb13b2cc",
+      "mode": "100644"
+    },
+    {
+      "path": ".envrc",
+      "sha": "086df9e76d7e4ea83c71222eaa4b5cc5cab0536e",
+      "mode": "100644"
+    },
+    {
+      "path": "sugarloaf/src/components/core/buffer.rs",
+      "sha": "237780756ba1e5fa0324ebb5e1f963bd2bbf2b47",
+      "mode": "100644"
+    },
+    {
+      "path": "sugarloaf/src/components/core/image.rs",
+      "sha": "ed2ba026c64eec313b3debe89c80f70a545d4721",
+      "mode": "100644"
+    },
+    {
+      "path": "sugarloaf/src/components/core/mod.rs",
+      "sha": "2cceaf6360fbe665540775076abdd71d62e61fa0",
+      "mode": "100644"
+    },
+    {
+      "path": "sugarloaf/src/components/core/shapes.rs",
+      "sha": "e640c0cf1ea1d1e55c5d1c8826a106c60614d447",
+      "mode": "100644"
+    },
+    {
+      "path": "sugarloaf/src/components/core/svg.rs",
+      "sha": "0c7f9e10f7419d9e1887102953e0417100fbcf2c",
+      "mode": "100644"
+    },
+    {
+      "path": "sugarloaf/src/components/core/uniforms.rs",
+      "sha": "752bedf60c83d8d1bd2925b032c46402f458b33f",
+      "mode": "100644"
+    }
+  ],
+  "modified_paths": [
+    {
+      "path": "Cargo.lock",
+      "mode": "100644",
+      "upstream_blob_sha": "dc1cef71bb666e6005485ee04572623b6db6dfae",
+      "local_blob_sha": "51d963be9de79854de3802dffd3b73b4b82eebe3"
+    },
+    {
+      "path": "Cargo.toml",
+      "mode": "100644",
+      "upstream_blob_sha": "0aea7840635062bdd5aa358aacb6527191937e1c",
+      "local_blob_sha": "334258bc4d8137e5f3e4c2535b46cde30b34d306"
+    },
+    {
+      "path": "rio-vt/Cargo.toml",
+      "mode": "100644",
+      "upstream_blob_sha": "172628f5599a314692fd2aa7d14efced49028f72",
+      "local_blob_sha": "63eceb3ade92ca4d8a7b9561026b0738065f3ac7"
+    },
+    {
+      "path": "rio-vt/src/ansi/kitty_graphics_protocol.rs",
+      "mode": "100644",
+      "upstream_blob_sha": "26010d29002dba76fcce726a360e6e84d605dccb",
+      "local_blob_sha": "f50227acb4af1a6f86d689120f28b30fc3119d4f"
+    },
+    {
+      "path": "rio-vt/src/crosswords/grid/mod.rs",
+      "mode": "100644",
+      "upstream_blob_sha": "b7d510c763aa75c6e2afdba968b2bd33d05f071b",
+      "local_blob_sha": "a4e97caa5b2a465df853e40c6ffbb42e0fa73215"
+    },
+    {
+      "path": "rio-vt/src/crosswords/grid/storage.rs",
+      "mode": "100644",
+      "upstream_blob_sha": "8974326b805a596050c2cc94909285079ba59c1f",
+      "local_blob_sha": "8853a6a5a927b9c79243ff2e401935e4f690fa2e"
+    },
+    {
+      "path": "rio-vt/src/crosswords/mod.rs",
+      "mode": "100644",
+      "upstream_blob_sha": "14c732e5ba8f799387307e8697971938a871e3b2",
+      "local_blob_sha": "157c62bc112ada7489a96fc7fb8f823e4ef6e3be"
+    },
+    {
+      "path": "rio-vt/src/crosswords/square.rs",
+      "mode": "100644",
+      "upstream_blob_sha": "d33d5bcb22ccdac00b7fbb7d29b8b1cf8af341ef",
+      "local_blob_sha": "bd695d4160cd28a5032667a7a820c0edf38c1be5"
+    },
+    {
+      "path": "rio-vt/src/crosswords/style.rs",
+      "mode": "100644",
+      "upstream_blob_sha": "eae5f1973e30c4888970726d1b51e1c7b39f8e8b",
+      "local_blob_sha": "e09bfc68d39513db7e7785da675a507d5ec6d3c1"
+    },
+    {
+      "path": "rio-vt/src/performer/handler.rs",
+      "mode": "100644",
+      "upstream_blob_sha": "bd2c2e89d4f5c22499b77d1424fc1db13494c2de",
+      "local_blob_sha": "aa299709b8d889a39b03b0421fc1618accb19540"
+    },
+    {
+      "path": "rio-vt/src/performer/parser/mod.rs",
+      "mode": "100644",
+      "upstream_blob_sha": "d966dd20802dd2a61cdf32507b40593cf08cea88",
+      "local_blob_sha": "31183126142485d63592cf9553d331c9dd36a9fe"
+    },
+    {
+      "path": "rio-vt/src/simd_base64.rs",
+      "mode": "100644",
+      "upstream_blob_sha": "aed35cf80659b9aaa82c54bd41daddb4eea3ceaa",
+      "local_blob_sha": "3f3cfcd10442bbbae5ff0904beacad26966d16d8"
+    },
+    {
+      "path": "rio-vt/src/simd_utf8.rs",
+      "mode": "100644",
+      "upstream_blob_sha": "73db84c2c993530c33e31c4f45dc3c61921e7e47",
+      "local_blob_sha": "5bcb79940f2736ed0d93e982fab86675975d32a3"
+    }
+  ]
+}

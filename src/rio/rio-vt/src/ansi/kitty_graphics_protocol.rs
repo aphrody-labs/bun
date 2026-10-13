@@ -1022,6 +1022,11 @@ impl GraphicError {
 }
 
 fn create_graphic_data(cmd: &KittyGraphicsCommand) -> Result<GraphicData, GraphicError> {
+    #[cfg(not(feature = "host-graphics"))]
+    if cmd.medium != TransmissionMedium::Direct {
+        return Err(GraphicError::UnsupportedMedium);
+    }
+
     // Early dimension guard — applies to every non-PNG path. PNG
     // commands may transmit without declaring width/height (we pick
     // them up after decoding); we re-check post-decode.
@@ -2299,6 +2304,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "host-graphics")]
     fn test_file_transmission_medium() {
         // Create a temporary file
         use std::io::Write;
@@ -2322,6 +2328,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "host-graphics")]
     fn test_temp_file_transmission_medium() {
         // Create a temporary file with required naming
         use std::io::Write;
@@ -2342,6 +2349,51 @@ mod tests {
         assert!(result.is_some());
         let response = result.unwrap();
         assert!(response.graphic_data.is_some());
+    }
+
+    #[test]
+    #[cfg(not(feature = "host-graphics"))]
+    fn test_host_transmission_media_disabled() {
+        let temp_path = std::env::temp_dir().join(format!(
+            "tty-graphics-protocol-disabled-{}.rgba",
+            std::process::id()
+        ));
+        let pixel = [255, 0, 0, 255];
+        std::fs::write(&temp_path, pixel).unwrap();
+        let encoded_path = BASE64.encode(temp_path.to_str().unwrap().as_bytes());
+
+        for medium in ["f", "t", "s"] {
+            let response = parse_kitty_graphics_protocol(
+                &format!("a=t,t={medium},f=32,s=1,v=1,i=1"),
+                &encoded_path,
+            )
+            .expect("disabled host medium must produce a protocol error");
+            assert!(response.graphic_data.is_none());
+            assert!(
+                response
+                    .response
+                    .unwrap()
+                    .contains("EINVAL: unsupported medium")
+            );
+            assert_eq!(std::fs::read(&temp_path).unwrap(), pixel);
+        }
+        std::fs::remove_file(&temp_path).unwrap();
+
+        for medium in [
+            TransmissionMedium::File,
+            TransmissionMedium::TempFile,
+            TransmissionMedium::SharedMemory,
+        ] {
+            let cmd = KittyGraphicsCommand {
+                medium,
+                payload: smallvec::smallvec![0xff],
+                ..Default::default()
+            };
+            assert!(matches!(
+                create_graphic_data(&cmd),
+                Err(GraphicError::UnsupportedMedium)
+            ));
+        }
     }
 
     #[test]

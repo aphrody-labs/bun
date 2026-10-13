@@ -1783,6 +1783,34 @@ describe("Bun.TerminalScreen", () => {
 });
 
 describe("bun:rio", () => {
+  test("rejects host-backed Kitty image transfer without deleting files", async () => {
+    using dir = tempDir("rio-host-transfer", {
+      "tty-graphics-protocol-image.rgba": "RGBA",
+    });
+    const path = join(String(dir), "tty-graphics-protocol-image.rgba");
+    const encodedPath = Buffer.from(path).toString("base64");
+    const terminal = new RioTerminal({ cols: 4, rows: 1 });
+    for (const medium of ["t", "f", "s"]) {
+      terminal.write(`\x1b_Ga=t,t=${medium},f=32,s=1,v=1,i=7;${encodedPath}\x1b\\`);
+      const replies = terminal.takeReplies();
+      expect(await Bun.file(path).exists()).toBe(true);
+      expect(await Bun.file(path).text()).toBe("RGBA");
+      expect(replies).toContain("EINVAL: unsupported medium");
+    }
+  });
+
+  test("preserves reply order across repeated drain and reset cycles", () => {
+    const terminal = new RioTerminal({ cols: 4, rows: 1 });
+    for (let cycle = 0; cycle < 3; cycle++) {
+      terminal.write("\x1b[6n".repeat(64));
+      expect(terminal.takeReplies()).toBe("\x1b[1;1R".repeat(64));
+      expect(terminal.takeReplies()).toBe("");
+      terminal.write("\x1b[6n");
+      terminal.reset();
+      expect(terminal.takeReplies()).toBe("");
+    }
+  });
+
   test("consumes only the supplied buffer view and returns independent snapshots", () => {
     const terminal = new RioTerminal({ cols: 4, rows: 1 });
     const bytes = new TextEncoder().encode("!é?");
@@ -1794,7 +1822,7 @@ describe("bun:rio", () => {
     expect(terminal.cellText(0, 0)).toBe("é");
     terminal.write("Z");
     expect(terminal.cellText(1, 0)).toBe("Z");
-    expect(snapshot[4]).toBe(32);
+    expect(snapshot[4]).toBe(0);
   });
 
   test("reset discards partial input, alternate screen, title and queued replies", () => {

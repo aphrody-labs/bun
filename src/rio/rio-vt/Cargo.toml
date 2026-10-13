@@ -63,7 +63,10 @@ default = ["pty"]
 # and browser embedders keep the scalar UTF-8/base64 fallback.
 bun-simdutf = ["dep:bun_simdutf_sys"]
 # The PTY event loop (`performer::Machine`). VT-only embedders turn this off.
-pty = ["dep:corcovado", "dep:teletypewriter"]
+pty = ["dep:corcovado", "dep:teletypewriter", "host-graphics"]
+# Allow Kitty graphics to read host files and shared memory. VT-only
+# embedders must opt in independently of image decoding.
+host-graphics = []
 # Expose the app-level `RioErrorType::FontsNotFound` variant (needs a
 # sugarloaf font type). Enabled by rio-backend's own `renderer` feature.
 renderer = ["dep:sugarloaf"]
