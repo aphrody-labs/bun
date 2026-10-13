@@ -280,7 +280,8 @@ describe("native NGINX controller with explicit process-protocol fixture", () =>
 
   test("a live master keeps a Bun subprocess alive until its actual exit", async () => {
     using scope = isolated();
-    const script = `import Nginx from 'bun:nginx'; globalThis.nginx = await Nginx.create(${JSON.stringify(scope.options)}); await globalThis.nginx.start();`;
+    const startedPath = join(scope.prefix, "controller-started.json");
+    const script = `import Nginx from 'bun:nginx'; globalThis.nginx = await Nginx.create(${JSON.stringify(scope.options)}); const status = await globalThis.nginx.start(); await Bun.write(${JSON.stringify(startedPath)}, JSON.stringify(status));`;
     await using child = Bun.spawn([binary, "-e", script], {
       stdout: "pipe",
       stderr: "pipe",
@@ -288,13 +289,16 @@ describe("native NGINX controller with explicit process-protocol fixture", () =>
       timeout: 5000,
     });
     const output = Promise.all([Bun.readableStreamToText(child.stdout), Bun.readableStreamToText(child.stderr)]);
+    const started = await ready(scope.prefix, "controller-started.json");
     const master = await ready(scope.prefix);
+    expect(started).toMatchObject({ running: true, pid: master.pid });
     expect(await body(master.url)).toBe("first");
     expect(child.exitCode).toBeNull();
     fixtureSignal(scope.prefix, "quit");
-    expect(await child.exited).toBe(0);
+    const exitCode = await child.exited;
     const [, stderr] = await output;
     expect(stderr).toBe("");
+    expect(exitCode).toBe(0);
     await assertStopped(master.url);
   });
 
