@@ -3,7 +3,7 @@ import { ptr, suffix } from "bun:ffi";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { defaultLibraryPath, libraryFile, Runtime, SYMBOLS } from "../src/index.ts";
+import { defaultLibraryPath, libraryFile, Runtime, SYMBOLS, STDIO_SYMBOLS } from "../src/index.ts";
 import { hostTarget } from "../src/target.ts";
 import { NativeTooling } from "../src/tooling.ts";
 import { runtimeHome } from "../src/paths.ts";
@@ -338,13 +338,15 @@ describe("yolo_runtime.h contract", () => {
       const params = m[2]!.trim();
       declared.set(m[1]!, params === "" || params === "void" ? 0 : params.split(",").length);
     }
-    const drift = Object.entries(SYMBOLS)
+    const drift = Object.entries({ ...SYMBOLS, ...STDIO_SYMBOLS })
       .filter(([name, def]) => declared.get(name) !== def.args.length)
       .map(([name, def]) => `${name}: sdk ${def.args.length}, header ${declared.get(name)}`);
     expect(drift).toEqual([]);
 
     // Optional browser/gpu ABI: own dlopen tables, never in the core SYMBOLS.
-    const bound = new Map<string, number>(Object.entries(SYMBOLS).map(([name, def]) => [name, def.args.length]));
+    const bound = new Map<string, number>(
+      Object.entries({ ...SYMBOLS, ...STDIO_SYMBOLS }).map(([name, def]) => [name, def.args.length]),
+    );
     for (const file of ["browser.ts", "gpu.ts"]) {
       const source = await Bun.file(join(import.meta.dir, "../src", file)).text();
       for (const m of source.matchAll(/^ {2}(yolo_\w+): \{\s*args: \[([^\]]*)\]/gm)) {
@@ -360,6 +362,9 @@ describe("yolo_runtime.h contract", () => {
       "yolo_browser_call_start",
       "yolo_browser_close",
       "yolo_gpu_call_start",
+      "yolo_process_stdin_write",
+      "yolo_process_stdin_close",
+      "yolo_process_wait_start",
     ]) {
       expect(name in SYMBOLS).toBe(false);
     }

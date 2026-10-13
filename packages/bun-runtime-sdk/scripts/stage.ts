@@ -6,6 +6,8 @@ import { $ } from "bun";
 import { copyFileSync, mkdirSync, realpathSync, rmSync } from "node:fs";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { Runtime, standaloneLibraryFile, type BuildInfo } from "../src/index.ts";
+import { hostTargetInfo } from "../src/target.ts";
+import { validateArtifactManifest } from "../src/artifact.ts";
 
 const root = resolve(import.meta.dir, "..");
 const defaultLibrary = join(
@@ -25,9 +27,12 @@ if (!(await Bun.file(library).exists())) {
   process.exit(1);
 }
 
-const triple = (await $`rustc -vV`.cwd(root).text()).match(/^host: (.+)$/m)![1].trim();
+const compilerHost = (await $`rustc -vV`.cwd(root).text()).match(/^host: (.+)$/m)![1].trim();
+const host = hostTargetInfo(),
+  triple = host.target;
 const rev = (await $`git rev-parse HEAD`.cwd(root).text()).trim();
 const dirty = (await $`git status --porcelain -- .`.cwd(root).text()).trim().length > 0;
+if (dirty) throw new Error("Commit the runtime SDK source before staging a pinned native artifact");
 const abi = (await Bun.file(header).text()).match(/YOLO_ABI_MAJOR (\d+)u[\s\S]*?YOLO_ABI_MINOR (\d+)u/)!;
 const cargo = Bun.TOML.parse(await Bun.file(join(root, "Cargo.toml")).text()) as {
   workspace: { package: { version: string } };
@@ -78,25 +83,22 @@ for (const source of [library, header, canonicalHeader]) {
   if (source === library && files[name]!.sha256 !== librarySha256)
     throw new Error("Native runtime changed while staging its verified bytes");
 }
-await Bun.write(
-  join(out, "manifest.json"),
-  JSON.stringify(
-    {
-      schema: 1,
-      name: "buv-runtime",
-      version: cargo.workspace.package.version,
-      target: triple,
-      abi: `${abi[1]}.${abi[2]}`,
-      compatibility: { abiMajor: Number(abi[1]) },
-      sources: { bun: { rev, dirty } },
-      build: { panicRecovery: nativeBuild.panic_recovery, profile: "runtime", native: nativeBuild },
-      capabilities,
-      files,
-    },
-    null,
-    2,
-  ),
-);
+const manifest = {
+  schema: 1,
+  name: "buv-runtime",
+  version: cargo.workspace.package.version,
+  target: triple,
+  abi: `${abi[1]}.${abi[2]}`,
+  compatibility: { abiMajor: Number(abi[1]) },
+  toolchain: compilerHost,
+  ...(host.libc ? { libc: host.libc } : {}),
+  sources: { bun: { rev, dirty } },
+  build: { panicRecovery: nativeBuild.panic_recovery, profile: "runtime", native: nativeBuild },
+  capabilities,
+  files,
+};
+validateArtifactManifest(manifest, triple);
+await Bun.write(join(out, "manifest.json"), JSON.stringify(manifest, null, 2));
 // Remove the known retired library name only after the replacement's manifest is written.
 const legacyName =
   process.platform === "win32"
@@ -104,4 +106,3 @@ const legacyName =
     : `libyolo_runtime.${process.platform === "darwin" ? "dylib" : "so"}`;
 if (legacyName !== standaloneLibraryFile()) rmSync(join(out, legacyName), { force: true });
 console.log(join(out, standaloneLibraryFile()));
-if (dirty) console.warn("warning: uncommitted changes, the Python binding refuses a dirty artifact");

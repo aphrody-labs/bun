@@ -3,10 +3,22 @@
 // `cargo build -p aphrody-ffi --profile runtime --features gpu` (or `cuda`). Skipped otherwise.
 import { describe, expect, it } from "bun:test";
 import { existsSync } from "node:fs";
-import { GpuRuntime } from "../src/gpu";
+import { GpuRuntime, GPU_CAPABILITIES } from "../src/gpu";
+import { Runtime } from "../src/index";
 
 const library = process.env["YOLO_RUNTIME_LIB"];
-const available = library !== undefined && existsSync(library);
+const supplied = library !== undefined && existsSync(library);
+const available =
+  supplied &&
+  (() => {
+    using runtime = Runtime.load({ libraryPath: library });
+    const capabilities = runtime.capabilities();
+    return GPU_CAPABILITIES.every(capability => capabilities.includes(capability));
+  })();
+
+it.skipIf(!supplied || available)("a core provider explicitly refuses unavailable GPU capabilities", () => {
+  expect(() => GpuRuntime.load({ libraryPath: library })).toThrow("does not provide GPU capabilities");
+});
 
 const DOUBLE = `
 @group(0) @binding(0) var<storage, read_write> data: array<u32>;

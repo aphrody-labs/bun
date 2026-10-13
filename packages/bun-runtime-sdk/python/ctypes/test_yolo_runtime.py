@@ -195,8 +195,19 @@ def test_native_http_probe(native):
         server.server_close()
 
 
+def synthetic_library_name():
+    target = host_target()
+    return (
+        "yolo_runtime.dll"
+        if "windows" in target
+        else "libyolo_runtime.dylib"
+        if "darwin" in target
+        else "libyolo_runtime.so"
+    )
+
+
 def synthetic_artifact(tmp_path, header_name="yolo_runtime.h"):
-    library = tmp_path / "libyolo_runtime.so"
+    library = tmp_path / synthetic_library_name()
     header = tmp_path / header_name
     library.write_bytes(b"synthetic library: must never load")
     header.write_bytes(b"synthetic header")
@@ -205,9 +216,22 @@ def synthetic_artifact(tmp_path, header_name="yolo_runtime.h"):
         "name": "yolo-runtime",
         "target": host_target(),
         "abi": "1.4",
+        "version": "1.0.0",
+        "capabilities": ["system.stats"],
         "compatibility": {"abiMajor": 1},
         "sources": {"yolo": {"rev": "a" * 40, "dirty": False}},
-        "build": {"panicRecovery": True},
+        "build": {
+            "panicRecovery": True,
+            "native": {
+                "name": "yolo-runtime",
+                "target": host_target(),
+                "abi": "1.4",
+                "version": "1.0.0",
+                "rustc": "rustc synthetic fixture",
+                "git_rev": "a" * 12,
+                "panic_recovery": True,
+            },
+        },
         "files": {},
     }
     for path in (library, header):
@@ -221,14 +245,28 @@ def synthetic_artifact(tmp_path, header_name="yolo_runtime.h"):
 
 @pytest.mark.parametrize(
     "mutation",
-    ["hash", "size", "target", "major", "minor", "dirty", "revision", "path", "panic"],
+    [
+        "hash",
+        "size",
+        "target",
+        "major",
+        "minor",
+        "dirty",
+        "revision",
+        "path",
+        "panic",
+        "native-target",
+        "native-source",
+        "native-abi",
+    ],
 )
 def test_refuse_invalid_artifact_before_cdll(tmp_path, monkeypatch, mutation):
+    monkeypatch.delenv("YOLO_RUNTIME_LIB", raising=False)
     manifest = synthetic_artifact(tmp_path)
     if mutation == "hash":
-        manifest["files"]["libyolo_runtime.so"]["sha256"] = "0" * 64
+        manifest["files"][synthetic_library_name()]["sha256"] = "0" * 64
     elif mutation == "size":
-        manifest["files"]["libyolo_runtime.so"]["bytes"] = 0
+        manifest["files"][synthetic_library_name()]["bytes"] = 0
     elif mutation == "target":
         manifest["target"] = "foreign"
     elif mutation == "major":
@@ -241,8 +279,16 @@ def test_refuse_invalid_artifact_before_cdll(tmp_path, monkeypatch, mutation):
         manifest["sources"]["yolo"]["rev"] = "unpinned"
     elif mutation == "panic":
         manifest["build"]["panicRecovery"] = False
+    elif mutation == "native-target":
+        manifest["build"]["native"]["target"] = "foreign"
+    elif mutation == "native-source":
+        manifest["build"]["native"]["git_rev"] = "b" * 12
+    elif mutation == "native-abi":
+        manifest["build"]["native"]["abi"] = "1.6"
     else:
-        manifest["files"]["../outside.so"] = manifest["files"].pop("libyolo_runtime.so")
+        manifest["files"]["../outside.so"] = manifest["files"].pop(
+            synthetic_library_name()
+        )
     (tmp_path / "manifest.json").write_text(json.dumps(manifest))
     monkeypatch.setattr(
         ctypes, "CDLL", lambda *_: pytest.fail("invalid artifact executed native code")
@@ -266,18 +312,23 @@ def test_discovery_home_and_explicit_library(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("header_name", ["aphrody.h", "yolo_runtime.h"])
-def test_accept_either_header_name(tmp_path, header_name):
+def test_accept_either_header_name(tmp_path, header_name, monkeypatch):
+    monkeypatch.delenv("YOLO_RUNTIME_LIB", raising=False)
     synthetic_artifact(tmp_path, header_name)
     library, _ = verify_artifact(tmp_path)
-    assert library == (tmp_path / "libyolo_runtime.so").resolve()
+    assert library == (tmp_path / synthetic_library_name()).resolve()
 
 
 @pytest.mark.parametrize(
     ("name", "owner"), [("buv-runtime", "bun"), ("yolo-runtime", "yolo")]
 )
-def test_accept_canonical_and_compatible_producer_pairs(tmp_path, name, owner):
+def test_accept_canonical_and_compatible_producer_pairs(
+    tmp_path, name, owner, monkeypatch
+):
+    monkeypatch.delenv("YOLO_RUNTIME_LIB", raising=False)
     manifest = synthetic_artifact(tmp_path)
     manifest["name"] = name
+    manifest["build"]["native"]["name"] = name
     manifest["sources"] = {owner: {"rev": "a" * 40, "dirty": False}}
     (tmp_path / "manifest.json").write_text(json.dumps(manifest))
     _, checked = verify_artifact(tmp_path)
@@ -307,7 +358,7 @@ def test_refuse_artifact_without_header(tmp_path):
 
 def test_reject_payload_symlink(tmp_path):
     synthetic_artifact(tmp_path)
-    library = tmp_path / "libyolo_runtime.so"
+    library = tmp_path / synthetic_library_name()
     other = tmp_path / "other"
     shutil.move(library, other)
     try:
@@ -375,6 +426,7 @@ def test_manifest_provenance_mismatch_refused_after_load(tmp_path, monkeypatch):
     manifest = json.loads((directory / "manifest.json").read_text())
     producer = "bun" if manifest["name"] == "buv-runtime" else "yolo"
     manifest["sources"][producer]["rev"] = "b" * 40
+    manifest["build"]["native"]["git_rev"] = "b" * 12
     (directory / "manifest.json").write_text(json.dumps(manifest))
     with pytest.raises(RuntimeError, match="Embedded producer revision"):
         Runtime(directory)

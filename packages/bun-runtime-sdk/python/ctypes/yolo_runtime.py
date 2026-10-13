@@ -13,9 +13,10 @@ import json
 import os
 import platform
 import re
+import sysconfig
 import threading
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Literal, NotRequired, Self, TypedDict
 
 ABI_MAJOR, ABI_MINOR = 1, 4
 MAX_CAPTURE = 67_108_864
@@ -69,6 +70,73 @@ class ProcessStatus(c.Structure):
     ]
 
 
+LinuxABI = Literal["gnu", "musl"]
+HostArchitecture = Literal["x86_64", "aarch64"]
+
+
+class LibcInfo(TypedDict):
+    abi: LinuxABI
+    source: Literal["os.confstr.CS_GNU_LIBC_VERSION", "/proc/self/maps"]
+    version: NotRequired[str]
+    loader: NotRequired[str]
+
+
+def target_for(system: str, arch: str, abi: LinuxABI | None = None) -> str:
+    if arch not in {"x86_64", "aarch64"}:
+        raise RuntimeError("Unsupported runtime architecture")
+    if system == "Linux":
+        if abi not in {"gnu", "musl"}:
+            raise RuntimeError("Linux target requires a qualified GNU/musl ABI")
+        return f"{arch}-unknown-linux-{abi}"
+    if abi is not None:
+        raise RuntimeError("A Linux ABI cannot select a non-Linux target")
+    if system == "Windows":
+        return f"{arch}-pc-windows-msvc"
+    if system == "Darwin":
+        return f"{arch}-apple-darwin"
+    raise RuntimeError("Unsupported runtime platform")
+
+
+def linux_abi_for(
+    arch: str, *, gnu_version: str | None = None, mapped_libraries: str = ""
+) -> LibcInfo:
+    if arch not in {"x86_64", "aarch64"}:
+        raise RuntimeError("Unsupported Linux runtime architecture")
+    if gnu_version is not None:
+        match = re.fullmatch(r"glibc (\d+\.\d+(?:\.\d+)?)", gnu_version)
+        if not match:
+            raise RuntimeError("Invalid GNU libc runtime probe")
+        return {
+            "abi": "gnu",
+            "version": match[1],
+            "source": "os.confstr.CS_GNU_LIBC_VERSION",
+        }
+    loaders = re.findall(
+        r"(?:^|\n)[^\n]*\s(/[^\s]*/(?:ld-musl-|libc\.musl-)(x86_64|aarch64)\.so\.1)(?: \(deleted\))?(?=\n|$)",
+        mapped_libraries,
+    )
+    if not loaders or any(machine != arch for _, machine in loaders):
+        raise RuntimeError("Linux libc could not be qualified from the running process")
+    return {"abi": "musl", "source": "/proc/self/maps", "loader": loaders[0][0]}
+
+
+def _linux_abi(arch: str) -> LibcInfo:
+    try:
+        version = os.confstr("CS_GNU_LIBC_VERSION")
+    except (AttributeError, OSError, ValueError):
+        version = None
+    if version:
+        return linux_abi_for(arch, gnu_version=version)
+    try:
+        with Path("/proc/self/maps").open("rb") as stream:
+            maps = stream.read(1024 * 1024 + 1)
+        if len(maps) > 1024 * 1024:
+            raise RuntimeError("Runtime libc probe exceeds its byte bound")
+        return linux_abi_for(arch, mapped_libraries=maps.decode("utf-8"))
+    except (OSError, UnicodeError) as exc:
+        raise RuntimeError("Native Linux libc probe unavailable") from exc
+
+
 def host_target() -> str:
     machine = platform.machine().lower()
     arch = {
@@ -77,19 +145,17 @@ def host_target() -> str:
         "arm64": "aarch64",
         "aarch64": "aarch64",
     }.get(machine)
-    targets = {
-        ("Linux", "x86_64"): "x86_64-unknown-linux-gnu",
-        ("Linux", "aarch64"): "aarch64-unknown-linux-gnu",
-        ("Darwin", "x86_64"): "x86_64-apple-darwin",
-        ("Darwin", "aarch64"): "aarch64-apple-darwin",
-        ("Windows", "x86_64"): "x86_64-pc-windows-msvc",
-    }
+    system = platform.system()
+    if system == "Windows":
+        # Kernel architecture can differ from an emulated CPython's actual ABI.
+        arch = {"win-amd64": "x86_64", "win-arm64": "aarch64"}.get(
+            sysconfig.get_platform()
+        )
     if arch is None:
         raise RuntimeError("Unsupported Yolo platform")
-    try:
-        return targets[(platform.system(), arch)]
-    except KeyError as exc:
-        raise RuntimeError("Unsupported Yolo platform") from exc
+    return target_for(
+        system, arch, _linux_abi(arch)["abi"] if system == "Linux" else None
+    )
 
 
 def artifact_directory() -> Path:
@@ -124,6 +190,8 @@ def verify_artifact(directory: Path) -> tuple[Path, dict[str, Any]]:
             or manifest["compatibility"]["abiMajor"] != ABI_MAJOR
         ):
             raise ValueError("artifact target/ABI mismatch")
+        if not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)", manifest["abi"]):
+            raise ValueError("invalid runtime ABI version")
         major, minor = map(int, manifest["abi"].split("."))
         if major != ABI_MAJOR or minor < ABI_MINOR:
             raise ValueError("ABI 1.4 or newer required")
@@ -135,6 +203,33 @@ def verify_artifact(directory: Path) -> tuple[Path, dict[str, Any]]:
             raise ValueError("clean pinned producer revision required")
         if manifest["build"]["panicRecovery"] is not True:
             raise ValueError("panic recovery required")
+        native = manifest["build"]["native"]
+        if (
+            any(
+                native[field] != manifest[field]
+                for field in ("name", "version", "target", "abi")
+            )
+            or native["panic_recovery"] is not True
+            or not isinstance(native["rustc"], str)
+            or not native["rustc"].startswith("rustc ")
+            or not re.fullmatch(r"[a-f0-9]{12,40}", native["git_rev"])
+            or not source["rev"].startswith(native["git_rev"])
+        ):
+            raise ValueError("native build identity differs from runtime manifest")
+        capabilities = manifest["capabilities"]
+        if (
+            not isinstance(capabilities, list)
+            or not capabilities
+            or any(
+                not isinstance(item, str)
+                or not re.fullmatch(r"[a-zA-Z0-9_.-]{1,128}", item)
+                for item in capabilities
+            )
+            or len(set(capabilities)) != len(capabilities)
+            or minor >= 6
+            and not {"process.stdin", "process.wait"}.issubset(capabilities)
+        ):
+            raise ValueError("invalid runtime capabilities")
         files = manifest["files"]
         if not isinstance(files, dict) or not files:
             raise ValueError("empty file manifest")
@@ -154,6 +249,15 @@ def verify_artifact(directory: Path) -> tuple[Path, dict[str, Any]]:
         # aphrody.h is the single header of the library; older artifacts carry yolo_runtime.h only.
         if len(libraries) != 1 or not ({"aphrody.h", "yolo_runtime.h"} & set(files)):
             raise ValueError("one library and versioned header required")
+        extension = (
+            ".dll"
+            if "windows" in manifest["target"]
+            else ".dylib"
+            if "darwin" in manifest["target"]
+            else ".so"
+        )
+        if libraries[0].suffix != extension:
+            raise ValueError("runtime library differs from its target")
         explicit = os.environ.get("YOLO_RUNTIME_LIB")
         if explicit and Path(explicit).expanduser().resolve() != libraries[0]:
             raise ValueError("explicit library differs from verified manifest")
@@ -258,8 +362,22 @@ class Runtime:
                 or build.get("target") != self.manifest["target"]
                 or build.get("abi") != self.manifest["abi"]
                 or build.get("panic_recovery") is not True
+                or any(
+                    build.get(field) != self.manifest["build"]["native"][field]
+                    for field in (
+                        "name",
+                        "version",
+                        "target",
+                        "abi",
+                        "rustc",
+                        "git_rev",
+                        "panic_recovery",
+                    )
+                )
             ):
                 raise RuntimeError("Embedded producer revision differs from manifest")
+            if sorted(self.capabilities()) != sorted(self.manifest["capabilities"]):
+                raise RuntimeError("Loaded runtime capabilities differ from manifest")
         except BaseException:
             self.close()
             raise

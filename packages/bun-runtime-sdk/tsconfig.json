@@ -9,7 +9,7 @@
     "allowImportingTsExtensions": true,
     "types": [],
     "typeRoots": ["../bun-types/node_modules/@types"],
-    "paths": { "bun": ["../bun-types/bun.d.ts"] },
+    "paths": { "bun": ["../bun-types/bun.d.ts"], "harness": ["../../test/harness.ts"] },
     "lib": ["ESNext"]
   },
   "include": ["src/**/*", "runtime.d.ts", "examples/**/*", "test/**/*", "../bun-types/index.d.ts"]

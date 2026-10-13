@@ -1,5 +1,47 @@
 # @aphrody/bun-runtime-sdk
 
+## Eight native targets and libc identity
+
+`targetFor(platform, arch, abi)` maps the release matrix without loading a native
+module. Linux requires the explicit build ABI; architecture alone never selects
+GNU or musl. `hostTarget()` uses the running process instead: Bun's native
+`process.report` GNU runtime version, or an architecture-matching musl loader
+actually mapped in `/proc/self/maps`. Python uses `os.confstr` for GNU and the
+same positive mapped-loader evidence for musl. Missing or contradictory evidence
+fails before installed-library selection. Windows Python uses its compiled
+`sysconfig` platform, including ARM64, rather than an emulated kernel's machine.
+
+| Release target | Native Rust target |
+| --- | --- |
+| Linux x64 GNU | `x86_64-unknown-linux-gnu` |
+| Linux ARM64 GNU | `aarch64-unknown-linux-gnu` |
+| Linux x64 musl | `x86_64-unknown-linux-musl` |
+| Linux ARM64 musl | `aarch64-unknown-linux-musl` |
+| Darwin x64 | `x86_64-apple-darwin` |
+| Darwin ARM64 | `aarch64-apple-darwin` |
+| Windows x64 | `x86_64-pc-windows-msvc` |
+| Windows ARM64 | `aarch64-pc-windows-msvc` |
+
+`hostTargetInfo()` exports only target/platform/architecture and reduced libc
+evidence: ABI, observed GNU version or musl loader path, and probe source. It
+never exports the full process report, environment or process maps. A static
+binary without positive libc evidence is refused. The observed host GNU version
+does not establish the native module's minimum supported GLIBC version.
+
+Artifact verification checks hashes before loading and binds the target, clean
+source revision, ABI, unwind/panic recovery, native build identity and declared
+capabilities. `loadArtifact` and its async form compare the loaded C ABI's build
+identity/capabilities with that manifest and close a mismatch. Staging requires a
+clean pinned source; the actual native `TARGET` must match the probed host. The
+compiler's `rustc -vV` host is metadata, not a substitute for a cross-build target.
+
+These matrix fixtures do not qualify native modules for eight hosts. The selected
+Windows x64 ABI 1.6 module is exercised explicitly with
+`BUV_RUNTIME_SDK_GATE_DIR`. Every other native module needs its own execution,
+SHA/source receipt and canonical ELF/dependency gate: GNU GLIBC at most 2.17,
+musl without GNU symbols, matching loader and a closed dependency set. No native
+module is built or installed by the target helper or artifact verifier.
+
 ## Native system and process ownership
 
 `@aphrody/bun-runtime-sdk/system` gets statistics and executable identity from

@@ -12,6 +12,7 @@ import { embeddedNativeLibraryPath } from "./ffi.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { runtimeHome } from "./paths.ts";
+import { hostTarget } from "./target.ts";
 
 /** ABI major this SDK was written for. A library with another major is refused before any call. */
 export const EXPECTED_ABI_MAJOR = 1;
@@ -98,7 +99,7 @@ export function defaultLibraryPath(): string {
     embeddedNativeLibraryPath("yolo_runtime");
   if (embedded !== null) return embedded;
   const base = runtimeHome();
-  const current = resolve(base, installedTarget(), "current");
+  const current = resolve(base, hostTarget(), "current");
   const installed = join(current, libraryFile());
   if (existsSync(installed)) return installed;
   // A release artifact names its shared library in its manifest (`libyolo_runtime.so`).
@@ -115,17 +116,6 @@ export function defaultLibraryPath(): string {
   const canonical = join(directory, standaloneLibraryFile());
   const legacy = join(directory, process.platform === "win32" ? "yolo_runtime.dll" : `libyolo_runtime.${suffix}`);
   return existsSync(canonical) ? canonical : existsSync(legacy) ? legacy : canonical;
-}
-
-function installedTarget(): string {
-  const targets: Record<string, string> = {
-    "linux-x64": "x86_64-unknown-linux-gnu",
-    "linux-arm64": "aarch64-unknown-linux-gnu",
-    "darwin-x64": "x86_64-apple-darwin",
-    "darwin-arm64": "aarch64-apple-darwin",
-    "win32-x64": "x86_64-pc-windows-msvc",
-  };
-  return targets[`${process.platform}-${process.arch}`] ?? "unsupported";
 }
 
 /** bun:ffi table of the yolo_* ABI; test/runtime-ffi.test.ts keeps it in step with aphrody.h. */
@@ -159,6 +149,13 @@ export const SYMBOLS = {
   },
   yolo_buffer_free: { args: [FFIType.ptr], returns: FFIType.void },
   yolo_last_error: { args: [FFIType.ptr], returns: FFIType.i32 },
+} as const;
+
+/** Additive ABI 1.6 table. Load explicitly only after pipe/wait capability negotiation. */
+export const STDIO_SYMBOLS = {
+  yolo_process_stdin_write: { args: [FFIType.u64, FFIType.ptr, FFIType.u64], returns: FFIType.i32 },
+  yolo_process_stdin_close: { args: [FFIType.u64], returns: FFIType.i32 },
+  yolo_process_wait_start: { args: [FFIType.u64, FFIType.ptr], returns: FFIType.i32 },
 } as const;
 
 type BuvSymbols = {
