@@ -6,12 +6,7 @@ import { join } from "path";
 type Json = any;
 
 /** `bun mcp` over stdio with an isolated home, agent directory and memory database. */
-function mcp(
-  cwd: string,
-  home: string,
-  extraEnv: Record<string, string> = {},
-  args: string[] = [],
-) {
+function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, args: string[] = []) {
   const env: Record<string, string | undefined> = {
     ...bunEnv,
     HOME: home,
@@ -23,13 +18,7 @@ function mcp(
     BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "0",
     ...extraEnv,
   };
-  for (const k of [
-    "CLAUDECODE",
-    "CLAUDE_CODE_ENTRYPOINT",
-    "REDIS_URL",
-    "VALKEY_URL",
-    "BUN_MCP_MAX_TOKENS",
-  ])
+  for (const k of ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "REDIS_URL", "VALKEY_URL", "BUN_MCP_MAX_TOKENS"])
     if (!(k in extraEnv)) delete env[k];
   const proc = Bun.spawn({
     cmd: [bunExe(), "mcp", ...args],
@@ -79,9 +68,7 @@ function mcp(
       capabilities: {},
       clientInfo: { name: "test-client", version: "1.0.0" },
     });
-    proc.stdin.write(
-      JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n",
-    );
+    proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
     proc.stdin.flush();
     return reply;
   }
@@ -99,26 +86,23 @@ function mcp(
 }
 
 describe.concurrent("bun mcp", () => {
-  test.each(["generic", "codex", "claude", "agy"])(
-    "reads installed plugin skills for %s",
-    async (profile) => {
-      const target = profile === "generic" ? "codex" : profile;
-      using dir = tempDir("mcp-installed-skills", {
-        "runtime-install/agent/skills/installed-probe/SKILL.md": "# Legacy skill body",
-        [`runtime-install/agent-plugin/${target}/skills/installed-probe/SKILL.md`]:
-          "---\nname: installed-probe\ndescription: Installed plugin probe\n---\n# Installed skill body",
-      });
-      await using server = mcp(String(dir), String(dir), {
-        BUN_INSTALL: join(String(dir), "runtime-install"),
-        BUN_MCP_PROFILE: profile,
-      });
-      await server.initialize();
-      const skill = await server.call("skill_read", { name: "installed-probe" });
-      expect(skill.isError).toBe(false);
-      expect(skill.content[0].text).toContain("Installed skill body");
-      expect(skill.content[0].text).not.toContain("Legacy skill body");
-    },
-  );
+  test.each(["generic", "codex", "claude", "agy"])("reads installed plugin skills for %s", async profile => {
+    const target = profile === "generic" ? "codex" : profile;
+    using dir = tempDir("mcp-installed-skills", {
+      "runtime-install/agent/skills/installed-probe/SKILL.md": "# Legacy skill body",
+      [`runtime-install/agent-plugin/${target}/skills/installed-probe/SKILL.md`]:
+        "---\nname: installed-probe\ndescription: Installed plugin probe\n---\n# Installed skill body",
+    });
+    await using server = mcp(String(dir), String(dir), {
+      BUN_INSTALL: join(String(dir), "runtime-install"),
+      BUN_MCP_PROFILE: profile,
+    });
+    await server.initialize();
+    const skill = await server.call("skill_read", { name: "installed-probe" });
+    expect(skill.isError).toBe(false);
+    expect(skill.content[0].text).toContain("Installed skill body");
+    expect(skill.content[0].text).not.toContain("Legacy skill body");
+  });
 
   test("initialize handshake", async () => {
     using dir = tempDir("mcp-init", {});
@@ -127,16 +111,9 @@ describe.concurrent("bun mcp", () => {
     expect(reply.result.protocolVersion).toBe("2025-06-18");
     expect(reply.result.serverInfo.name).toBe("bun");
     expect(reply.result.serverInfo.version).toStartWith(Bun.version);
-    expect(Object.keys(reply.result.capabilities).sort()).toEqual([
-      "logging",
-      "prompts",
-      "resources",
-      "tools",
-    ]);
+    expect(Object.keys(reply.result.capabilities).sort()).toEqual(["logging", "prompts", "resources", "tools"]);
     expect(reply.result.instructions).toContain("profile generic");
-    expect(reply.result.instructions).toContain(
-      "Experimental native file and shell tools are disabled",
-    );
+    expect(reply.result.instructions).toContain("Experimental native file and shell tools are disabled");
     for (const name of ["read_file", "write_file", "edit_file", "shell"]) {
       const reply = await server.request("tools/call", { name, arguments: {} });
       expect(reply.error.code).toBe(-32602);
@@ -200,8 +177,7 @@ describe.concurrent("bun mcp", () => {
       "test",
     ])
       expect(names).toContain(name);
-    for (const name of ["read_file", "write_file", "edit_file", "shell"])
-      expect(names).not.toContain(name);
+    for (const name of ["read_file", "write_file", "edit_file", "shell"]) expect(names).not.toContain(name);
   });
 
   test("native browser MCP parses inert HTML using the shared browser DOM", async () => {
@@ -288,9 +264,7 @@ describe.concurrent("bun mcp", () => {
       max_tokens: 50000,
     });
     expect(reply.isError).toBe(false);
-    expect(new TextEncoder().encode(reply.content[0].text).byteLength).toBeLessThanOrEqual(
-      48 * 1024,
-    );
+    expect(new TextEncoder().encode(reply.content[0].text).byteLength).toBeLessThanOrEqual(48 * 1024);
     const result = JSON.parse(reply.content[0].text);
     expect(result.matches).toBe(150);
     expect(result.returned).toBeGreaterThan(0);
@@ -371,9 +345,7 @@ describe.concurrent("bun mcp", () => {
     const applied = await server.call("vfs_apply", { plan });
     expect(applied.content[0].text).toStartWith("Applied.");
     expect(applied.isError).toBe(false);
-    expect(readFileSync(join(String(dir), "src/a.ts"), "utf8")).toBe(
-      "export const greeting = 'bonjour';\n",
-    );
+    expect(readFileSync(join(String(dir), "src/a.ts"), "utf8")).toBe("export const greeting = 'bonjour';\n");
     expect(readFileSync(join(String(dir), "src/b.ts"), "utf8")).toContain("'bonjour'");
     expect((await server.call("vfs_apply", { plan })).isError).toBe(true);
 
@@ -403,9 +375,7 @@ describe.concurrent("bun mcp", () => {
     await Bun.write(join(String(dir), "a.txt"), "concurrent owner edit\n");
     expect((await server.call("vfs_apply", { plan })).isError).toBe(true);
     expect(await Bun.file(join(String(dir), "a.txt")).text()).toBe("concurrent owner edit\n");
-    expect(
-      (await server.call("write_file", { path: "a.txt", revision, content: "lost edit" })).isError,
-    ).toBe(true);
+    expect((await server.call("write_file", { path: "a.txt", revision, content: "lost edit" })).isError).toBe(true);
     const fresh = await server.call("read_file", { path: "a.txt" });
     const freshRevision = Number(fresh.content[0].text.match(/revision: (\d+)/)![1]);
     const guarded = await server.call("write_file", {
@@ -505,10 +475,8 @@ describe.concurrent("bun mcp", () => {
         description: "String left pad",
         license: "WTFPL",
       }),
-      "node_modules/left-pad/README.md":
-        "# left-pad\n\nPads strings.\n\n## Usage\n\nleftPad('foo', 5)\n",
-      "node_modules/left-pad/index.js":
-        "module.exports = leftPad;\nfunction leftPad(str, len) {}\n",
+      "node_modules/left-pad/README.md": "# left-pad\n\nPads strings.\n\n## Usage\n\nleftPad('foo', 5)\n",
+      "node_modules/left-pad/index.js": "module.exports = leftPad;\nfunction leftPad(str, len) {}\n",
     });
     await using server = mcp(String(dir), String(dir));
     await server.initialize();
@@ -519,25 +487,17 @@ describe.concurrent("bun mcp", () => {
     expect(ingest).not.toContain("secret");
 
     const list = JSON.parse((await server.call("deps_list", { ecosystem: "npm" })).content[0].text);
-    expect(list.dependencies.map((d: Json) => [d.name, d.version])).toEqual([
-      ["left-pad", "1.3.0"],
-    ]);
+    expect(list.dependencies.map((d: Json) => [d.name, d.version])).toEqual([["left-pad", "1.3.0"]]);
 
-    const read = JSON.parse(
-      (await server.call("deps_read", { name: "left-pad", path: "index.js" })).content[0].text,
-    );
+    const read = JSON.parse((await server.call("deps_read", { name: "left-pad", path: "index.js" })).content[0].text);
     expect(read.content).toStartWith("module.exports = leftPad;");
-    expect(
-      (await server.call("deps_read", { name: "left-pad", path: "../package.json" })).isError,
-    ).toBe(true);
+    expect((await server.call("deps_read", { name: "left-pad", path: "../package.json" })).isError).toBe(true);
 
     const hits = JSON.parse(
       (await server.call("deps_search", { query: "leftPad", names: ["left-pad"] })).content[0].text,
     );
     expect(hits.matches.length).toBe(3);
-    const docs = JSON.parse(
-      (await server.call("deps_docs", { query: "usage", names: ["left-pad"] })).content[0].text,
-    );
+    const docs = JSON.parse((await server.call("deps_docs", { query: "usage", names: ["left-pad"] })).content[0].text);
     expect(docs.results[0].heading).toBe("## Usage");
   });
 
@@ -605,11 +565,7 @@ describe.concurrent("bun mcp install", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect(stderr).toBe("");
     expect(stdout).toContain("installed claude");
     expect(stdout).toContain("installed codex");
@@ -626,14 +582,10 @@ describe.concurrent("bun mcp install", () => {
     expect(codex).toContain("[mcp_servers.bun]");
     expect(codex).toContain('args = ["mcp"]');
 
-    const agy = JSON.parse(
-      readFileSync(join(home, ".gemini", "config", "mcp_config.json"), "utf8"),
-    );
+    const agy = JSON.parse(readFileSync(join(home, ".gemini", "config", "mcp_config.json"), "utf8"));
     expect(agy.mcpServers.bun.args).toEqual(["mcp"]);
 
-    const manifest = JSON.parse(
-      readFileSync(join(home, ".bun", "agent", "mcp", "manifest.json"), "utf8"),
-    );
+    const manifest = JSON.parse(readFileSync(join(home, ".bun", "agent", "mcp", "manifest.json"), "utf8"));
     expect(manifest.installed).toEqual(["agy", "claude", "codex"]);
     expect(manifest.tools.map((t: Json) => t.name)).toContain("docs_search");
     expect(exitCode).toBe(0);
@@ -712,4 +664,135 @@ test("bun mcp --http serves streamable HTTP", async () => {
   });
   expect(foreign.status).toBe(403);
   proc.kill();
+});
+
+const jevFixtureEnv = {
+  APHRODY_JEV_MODE: "api-key",
+  TYPESAFE_API_KEY: "",
+  TYPESAFE_API_KEY_FILE: "",
+  TYPESAFE_BASE_URL: "http://127.0.0.1:1",
+  CLOUDFLARE_ACCOUNT_ID: "",
+  CLOUDFLARE_API_TOKEN: "",
+  JEFF_BASE_URL: "",
+  JEFF_API_KEY: "",
+  APHRODY_JEV_ENGINE_URL: "",
+  APHRODY_JEV_ENGINE_KEY: "",
+};
+
+const jevFixtureRequest = {
+  state: { ticket: ["refund", null] },
+  questions: {
+    tool: { type: "choice", criteria: { read: null, search: { kind: "web" } } },
+  },
+  minimum_confidence: 0.8,
+};
+
+describe("native MCP Jev", () => {
+  test("aliases share Rust validation, abstention and the process budget", async () => {
+    using dir = tempDir("mcp-jev", {});
+    let calls = 0;
+    const provider = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      async fetch(request) {
+        expect(new URL(request.url).pathname).toBe("/v1/systemone");
+        expect(request.headers.get("authorization")).toBe("Bearer fixture-key");
+        const body = await request.json();
+        expect(body.state).toEqual(jevFixtureRequest.state);
+        expect(body.questions).toEqual(jevFixtureRequest.questions);
+        calls++;
+        return Response.json({
+          model: "fixture",
+          usage: null,
+          answers: {
+            tool: {
+              type: "choice",
+              choice: "read",
+              confidence: 0.7,
+              probabilities: { read: 0.7, search: 0.3 },
+            },
+          },
+        });
+      },
+    });
+    try {
+      await using server = mcp(String(dir), String(dir), {
+        ...jevFixtureEnv,
+        TYPESAFE_API_KEY: "fixture-key",
+        TYPESAFE_BASE_URL: provider.url.href,
+      });
+      await server.initialize();
+      for (const alias of ["yolo_decide", "jev_decide"]) {
+        const output = await server.call(alias, jevFixtureRequest);
+        expect(output.isError).toBe(false);
+        const decision = JSON.parse(output.content[0].text);
+        expect(decision.selections.tool).toBeNull();
+        expect(decision.answers.tool).toEqual({
+          type: "choice",
+          choice: "read",
+          confidence: 0.7,
+          probabilities: { read: 0.7, search: 0.3 },
+        });
+      }
+      const invalid = await server.call("yolo_decide", {
+        ...jevFixtureRequest,
+        minimum_confidence: 1.1,
+      });
+      expect(invalid.isError).toBe(true);
+      expect(calls).toBe(2);
+      for (let i = calls; i < 20; i++) {
+        expect((await server.call("jev_decide", jevFixtureRequest)).isError).toBe(false);
+      }
+      const exhausted = await server.call("yolo_decide", jevFixtureRequest);
+      expect(exhausted.isError).toBe(true);
+      expect(exhausted.content[0].text).toContain("budget exhausted");
+      expect(calls).toBe(20);
+    } finally {
+      provider.stop(true);
+    }
+  });
+
+  test("missing authentication and bad thresholds fail without a provider call", async () => {
+    using dir = tempDir("mcp-jev-noauth", {});
+    await using server = mcp(String(dir), String(dir), jevFixtureEnv);
+    await server.initialize();
+    const missing = await server.call("yolo_decide", jevFixtureRequest);
+    expect(missing.isError).toBe(true);
+    expect(missing.content[0].text).toContain("Jev authentication or configuration is unavailable");
+    const invalid = await server.call("jev_decide", {
+      ...jevFixtureRequest,
+      minimum_confidence: "0.8",
+    });
+    expect(invalid.isError).toBe(true);
+    expect(invalid.content[0].text).toContain("minimum_confidence");
+    expect(invalid.content[0].text).not.toContain("http://127.0.0.1:1");
+  });
+
+  test("explicit protected key references work and auth errors hide provider data", async () => {
+    using dir = tempDir("mcp-jev-keyref", { "protected-key.txt": "fixture-key\n" });
+    const provider = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch(request) {
+        expect(request.headers.get("authorization")).toBe("Bearer fixture-key");
+        return Response.json({ detail: "fixture-key https://credential.example.invalid" }, { status: 401 });
+      },
+    });
+    try {
+      await using server = mcp(String(dir), String(dir), {
+        ...jevFixtureEnv,
+        TYPESAFE_API_KEY_FILE: join(String(dir), "protected-key.txt"),
+        TYPESAFE_BASE_URL: provider.url.href,
+      });
+      await server.initialize();
+      const output = await server.call("jev_decide", jevFixtureRequest);
+      expect(output.isError).toBe(true);
+      expect(output.content[0].text).toContain("Jev authentication or configuration is unavailable");
+      expect(output.content[0].text).not.toContain("fixture-key");
+      expect(output.content[0].text).not.toContain("credential.example.invalid");
+      expect(output.content[0].text).not.toContain(provider.url.href);
+    } finally {
+      provider.stop(true);
+    }
+  });
 });

@@ -14,6 +14,7 @@ pub(crate) mod memory;
 pub(crate) mod run;
 pub(crate) mod skills;
 pub(crate) mod vfs;
+pub(crate) mod yolo;
 
 /// Tool slices in `tools/list` order.
 pub(crate) const BUILTIN: &[&[Tool]] = &[
@@ -28,4 +29,5 @@ pub(crate) const BUILTIN: &[&[Tool]] = &[
     run::TOOLS,
     browser::TOOLS,
     agent::TOOLS,
+    yolo::TOOLS,
 ];
