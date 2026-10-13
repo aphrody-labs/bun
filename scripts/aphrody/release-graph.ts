@@ -1,7 +1,6 @@
 import { BunPython } from "bun:graph";
-import { indexCodebase } from "bun:graph-index";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, extname, join, posix } from "node:path";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { delimiter, dirname, extname, join, posix } from "node:path";
 import { createHash } from "node:crypto";
 import { GitTree } from "../../packages/web/site/collect.ts";
 import { writeGraphDocs } from "./graph-docs.ts";
@@ -50,6 +49,32 @@ export function resolvedImport(path: string, specifier: string, available: Set<s
   );
 }
 
+/** Exported Git blobs have their own identity; an ancestor checkout does not own them. */
+export async function indexDetachedRelease(registry: BunPython, snapshot: string, revision: string, out: string) {
+  const directory = realpathSync(snapshot);
+  if (existsSync(join(directory, ".git"))) throw new Error("Release snapshot must be a detached Git export");
+  if (process.env.GIT_DIR || process.env.GIT_WORK_TREE)
+    throw new Error("Explicit Git environment cannot index a release export");
+  const parent = dirname(directory);
+  const gitParent = (parent.startsWith("\\\\?\\") ? parent.slice(4) : parent).replaceAll("\\", "/");
+  if (registry.path === ":memory:") throw new Error("Release graph requires a persisted registry");
+  // Set Git discovery before the process starts; native subprocesses inherit this environment.
+  await using child = Bun.spawn({
+    cmd: [process.execPath, join(import.meta.dir, "release-graph-index.ts"), registry.path, directory, revision, out],
+    env: {
+      ...process.env,
+      GIT_CEILING_DIRECTORIES: [gitParent, process.env.GIT_CEILING_DIRECTORIES].filter(Boolean).join(delimiter),
+    },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [output, error, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  if (code !== 0) throw new Error("Detached release graph failed: " + error.slice(-4096));
+  const result = JSON.parse(output) as import("bun:graph-index").IndexResult;
+  if (result.revision !== revision || result.profile !== "bun") throw new Error("Detached graph identity differs");
+  return result;
+}
+
 export async function buildReleaseGraph(tree: GitTree, snapshot: string, out: string) {
   const dbPath = join(out, "monorepo.sqlite");
   using registry = new BunPython(dbPath);
@@ -95,13 +120,7 @@ export async function buildReleaseGraph(tree: GitTree, snapshot: string, out: st
       }
     }
   }
-  const native = await indexCodebase(registry, snapshot, {
-    profile: "bun",
-    revision: tree.sha,
-    concurrency: 1,
-    artifactDirectory: join(out, "snapshots"),
-    maxFiles: 500000,
-  });
+  const native = await indexDetachedRelease(registry, snapshot, tree.sha, out);
   const documents: { domain: string; directory: string }[] = [];
   for (const domain of native.domains) {
     const document = await writeGraphDocs(registry, {
