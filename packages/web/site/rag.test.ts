@@ -3,6 +3,7 @@ import { TypeSafeClient } from "@typesafe-ai/sdk";
 import { buildBunRag } from "./rag";
 import { RAG_POLICY } from "./rag-policy";
 import type { SiteDocumentHit, SiteQuery } from "./site-neon";
+import { publicSiteAPI } from "./site-api";
 
 const snapshot = {
   id: "a".repeat(64),
@@ -61,6 +62,29 @@ function jev(
   });
   return { client, requests };
 }
+
+test("HEAD reads public evidence without invoking Jev or generation", async () => {
+  const db = database([document("video")]);
+  const provider = jev(() => ({ relevant: 1, injection: 0 }));
+  let generated = false;
+  const result = await publicSiteAPI(
+    new Request("https://aphrody.app/api/site/rag?q=Bun.Video", { method: "HEAD" }),
+    db.sql,
+    {
+      rag: {
+        client: provider.client,
+        generate: async () => {
+          generated = true;
+          return { text: "fixture [S1]", model: "fixture" };
+        },
+      },
+    },
+  );
+  expect(result.status).toBe(200);
+  expect(await result.text()).toBe("");
+  expect(provider.requests).toHaveLength(0);
+  expect(generated).toBe(false);
+});
 
 test("native retrieval pins source and graph, and no Jev key returns bounded cited extracts", async () => {
   const db = database(

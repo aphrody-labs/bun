@@ -32,7 +32,7 @@ export async function publicSiteAPI(
         value = await buildBunRag(
           sql,
           {
-            ...options.rag,
+            ...(head ? {} : options.rag),
             query: query.get("q") ?? "",
             limit: query.has("limit") ? Number(query.get("limit")) : undefined,
           },

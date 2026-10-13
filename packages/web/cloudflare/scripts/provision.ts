@@ -44,8 +44,6 @@ export const zones = ["aphrody.app", "aphrody.com", "dragonballfr.com", "rosegri
 // Objects are cached 30 days at the edge; on hosts with `channels`, versioned paths a year and the channel files
 // (latest.json, manifest.json, rewritten in place by scripts/aphrody/release-r2.ts) a minute. r2.dev stays off.
 export const cdn: { bucket: string; domain: string; channels?: boolean }[] = [
-  { bucket: "aphrody", domain: "cdn.aphrody.app" },
-  { bucket: "dragonballfr", domain: "dragonballfr.aphrody.app" },
   { bucket: "aphrody-assets", domain: "assets.aphrody.app" },
   { bucket: "aphrody-dist", domain: "dist.aphrody.app", channels: true },
 ];

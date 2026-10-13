@@ -232,11 +232,3 @@ export async function buildBunRag(sql: SiteQuery, options: RagOptions, signal?: 
     generation,
   };
 }
-
-let client: TypeSafeClient | undefined;
-export function configuredJevClient(): TypeSafeClient | undefined {
-  const environment = (globalThis as typeof globalThis & { process?: { env?: { TYPESAFE_API_KEY?: string } } }).process
-    ?.env;
-  if (!environment?.TYPESAFE_API_KEY) return undefined;
-  return (client ??= new TypeSafeClient({ timeout: RAG_POLICY.judgementTimeoutMilliseconds, logLevel: "warn" }));
-}

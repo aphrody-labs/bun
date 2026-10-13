@@ -7,7 +7,7 @@
 // (APHRODY_CLOUDFLARE_ENV overrides); only the Worker's required secrets are uploaded.
 import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
-import { homedir, tmpdir } from "node:os";
+import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { wrangler } from "../../../bun-cloudflare/src/wrangler.ts";
 
@@ -115,18 +115,13 @@ async function main() {
   const missing = Object.keys(secrets).filter(name => !secrets[name]);
   if (missing.length) throw new Error(`${envFile()} is missing ${missing.join(", ")}`);
 
-  const secretsFile = join(tmpdir(), `aphrody-app-secrets-${crypto.randomUUID()}.json`);
-  await Bun.write(secretsFile, JSON.stringify(secrets));
-  const run = async (wranglerArgs: string[]) => {
-    const code = await wrangler(wranglerArgs, { cwd: app, env }).exited;
+  const run = async (wranglerArgs: string[], input?: string) => {
+    const code = await wrangler(wranglerArgs, { cwd: app, env, input }).exited;
     if (code !== 0) throw new Error(`wrangler ${wranglerArgs[0]} exited with ${code}`);
   };
-  try {
-    await run(["deploy", "--assets", assets, "--secrets-file", secretsFile, ...args]);
-    if (!args.includes("--dry-run")) await run(["d1", "migrations", "apply", "aphrody-app", "--remote"]);
-  } finally {
-    await rm(secretsFile, { force: true });
-  }
+  if (!args.includes("--dry-run")) await run(["secret", "bulk"], JSON.stringify(secrets));
+  await run(["deploy", "--assets", assets, "--keep-vars", ...args]);
+  if (!args.includes("--dry-run")) await run(["d1", "migrations", "apply", "aphrody-app", "--remote"]);
 }
 
 if (import.meta.main) await main();

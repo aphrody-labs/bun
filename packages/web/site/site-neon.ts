@@ -30,6 +30,23 @@ export type SiteGraphResult = {
     coverage: { nodes: number; edges: number; sourceNodes: number; sourceEdges: number; truncated: boolean };
   };
 };
+
+const SEARCH_CONNECTIVES = new Set(
+  "a an and are as at avec ce ces comment dans de des do does du en est et for how is la le les of on or ou par pour que quel quelle the to un une use using with".split(
+    " ",
+  ),
+);
+function searchAlternatives(query: string): string {
+  const terms = [
+    ...new Set(
+      (query.match(/[\p{L}\p{N}][\p{L}\p{N}_.:-]*/gu) ?? []).filter(
+        term => term.length > 1 && !SEARCH_CONNECTIVES.has(term.toLowerCase()),
+      ),
+    ),
+  ].slice(0, 16);
+  const apiNames = terms.filter(term => /^(?:Bun[.:]|bun:|node:)/i.test(term));
+  return (apiNames.length ? apiNames : terms).map(term => `"${term}"`).join(" OR ");
+}
 export async function getPublicSiteSnapshot(sql: SiteQuery, id?: string): Promise<SiteSnapshotInfo | null> {
   if (id !== undefined && !/^[a-f0-9]{64}$/.test(id)) throw new TypeError("Invalid public snapshot identifier");
   const rows = await sql.query<SiteSnapshotInfo & Record<string, unknown>>(
@@ -49,26 +66,27 @@ export async function searchPublicSiteDocs(
     throw new TypeError("Invalid public documentation query");
   const snapshot = await getPublicSiteSnapshot(sql, options.snapshotId);
   if (!snapshot) return { snapshot, documents: [] as SiteDocumentHit[] };
-  const rows = await sql.query<
-    {
-      path: string;
-      title: string;
-      description: string;
-      sha256: string;
-      score: number;
-      chunks: SiteDocumentHit["chunks"];
-    } & Record<string, unknown>
-  >(
-    `WITH ranked AS (
+  type Row = {
+    path: string;
+    title: string;
+    description: string;
+    sha256: string;
+    score: number;
+    chunks: SiteDocumentHit["chunks"];
+  } & Record<string, unknown>;
+  const statement = `WITH ranked AS (
        SELECT c.path,c.ordinal,c.body,c.sha256,ts_rank_cd(c.search,websearch_to_tsquery('simple',$2)) AS score,
          row_number() OVER (PARTITION BY c.path ORDER BY ts_rank_cd(c.search,websearch_to_tsquery('simple',$2)) DESC,c.ordinal) AS position
        FROM aphrody_site.doc_chunks c WHERE c.snapshot_id=$1 AND c.search @@ websearch_to_tsquery('simple',$2)
      ), hits AS (SELECT path,max(score) AS score,jsonb_agg(jsonb_build_object('ordinal',ordinal,'body',body,'sha256',sha256) ORDER BY score DESC,ordinal) AS chunks
        FROM ranked WHERE position<=2 GROUP BY path)
      SELECT d.path,d.title,d.description,d.sha256,h.score,h.chunks FROM hits h JOIN aphrody_site.documents d ON d.snapshot_id=$1 AND d.path=h.path
-     ORDER BY h.score DESC,d.path LIMIT $3`,
-    [snapshot.id, query, limit],
-  );
+     ORDER BY h.score DESC,d.path LIMIT $3`;
+  let rows = await sql.query<Row>(statement, [snapshot.id, query, limit]);
+  if (!rows.length) {
+    const alternatives = searchAlternatives(query);
+    if (alternatives) rows = await sql.query<Row>(statement, [snapshot.id, alternatives, limit]);
+  }
   return {
     snapshot,
     documents: rows.map(row => ({

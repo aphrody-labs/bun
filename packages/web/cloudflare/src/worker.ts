@@ -2,6 +2,7 @@ import { bucketFor, buckets, isBucket } from "./buckets.ts";
 import type { IngestParams } from "./ingest.ts";
 import { createNeonHTTPClient } from "@aphrody/bun-plugin-neon/http";
 import { publicSiteAPI } from "../../site/site-api.ts";
+import { siteRag } from "./site-rag.ts";
 
 export { Ingest } from "./ingest.ts";
 export { Room } from "./room.ts";
@@ -155,10 +156,15 @@ async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<R
 
   switch (section) {
     case "site": {
-      const connectionString = (env as Env & { NEON_DATABASE_URL?: string }).NEON_DATABASE_URL;
+      const connectionString = env.NEON_DATABASE_URL;
       if (!connectionString) return error(503, "public site database unavailable");
+      if (url.pathname === "/api/site/rag" && request.method === "GET") {
+        const ip = request.headers.get("CF-Connecting-IP") ?? "local";
+        const { success } = await env.RAG_LIMITER.limit({ key: ip });
+        if (!success) return error(429, "rate limited");
+      }
       const sql = createNeonHTTPClient({ connectionString, expectedDatabase: "bun_site" });
-      return publicSiteAPI(request, sql);
+      return publicSiteAPI(request, sql, request.method === "GET" ? { rag: siteRag(env) } : {});
     }
     case "health":
       return json({ ok: true, version: env.VERSION.id, tag: env.VERSION.tag, buckets });

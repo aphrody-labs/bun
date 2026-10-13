@@ -244,9 +244,9 @@ async function publish(args: string[]) {
 async function wranglerCommand(args: string[]) {
   const pkg = join(import.meta.dir, "..", "..", "..", APP);
   const { envFile, parseEnv } = await import(join(pkg, "scripts/deploy.ts"));
-  const { wrangler } = await import(join(pkg, "src/wrangler.ts"));
+  const { wrangler } = await import(join(pkg, "..", "..", "bun-cloudflare", "src", "wrangler.ts"));
   const env = parseEnv(readFileSync(envFile(), "utf8"));
-  const code = await wrangler(args, { cwd: join(pkg, "app"), env }).exited;
+  const code = await wrangler(args, { cwd: pkg, env }).exited;
   if (code !== 0) process.exit(code);
 }
 

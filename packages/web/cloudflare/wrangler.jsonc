@@ -33,10 +33,9 @@
     "AI_GATEWAY": "aphrody",
     "EMBEDDING_MODEL": "@cf/baai/bge-m3",
   },
-  "secrets": { "required": ["APP_SECRET"] },
+  "secrets": { "required": ["APP_SECRET", "NEON_DATABASE_URL", "TYPESAFE_API_KEY"] },
   "r2_buckets": [
-    { "binding": "APHRODY", "bucket_name": "aphrody" },
-    { "binding": "DRAGONBALLFR", "bucket_name": "dragonballfr" },
+    { "binding": "APHRODY", "bucket_name": "aphrody-assets" },
   ],
   "d1_databases": [{ "binding": "DB", "database_name": "aphrody-app", "migrations_dir": "migrations" }],
   "kv_namespaces": [{ "binding": "CACHE" }],
@@ -50,7 +49,10 @@
   "ai": { "binding": "AI" },
   // bun-native dataset vectors (scripts/aphrody/dataset/publish.ts), created by provision.ts --only vectorize.
   "vectorize": [{ "binding": "BUN_NATIVE", "index_name": "bun-native" }],
-  "ratelimits": [{ "name": "WRITE_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } }],
+  "ratelimits": [
+    { "name": "WRITE_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } },
+    { "name": "RAG_LIMITER", "namespace_id": "1002", "simple": { "limit": 6, "period": 60 } },
+  ],
   "version_metadata": { "binding": "VERSION" },
   "triggers": { "crons": ["17 3 * * *"] },
 }
