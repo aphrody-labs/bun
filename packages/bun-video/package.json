@@ -45,7 +45,21 @@
     "packages/yt-dlp",
     "README.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "!**/.claude/**",
+    "!**/.codex/**",
+    "!**/.ssh/**",
+    "!**/.env*",
+    "!**/cookies/**",
+    "!**/sessions/**",
+    "!**/*.har",
+    "!**/*.sqlite*",
+    "!**/*.db",
+    "!**/*.pem",
+    "!**/*.p12",
+    "!**/*.safetensors",
+    "!**/*.gguf",
+    "!packages/yt-dlp/test/testdata/certificate/**"
   ],
   "type": "module",
   "workspaces": [

@@ -39,7 +39,7 @@ describe("standalone source package", () => {
     for (const entry of Object.values(manifest.bin) as string[]) {
       expect((await Bun.file(resolve(root, entry)).text()).startsWith("#!/usr/bin/env bun")).toBe(true);
     }
-    expect(manifest.files).toEqual([
+    expect(manifest.files.filter((entry: string) => !entry.startsWith("!"))).toEqual([
       "src",
       "umbrella-src",
       "packages/remotion",
@@ -58,6 +58,10 @@ describe("standalone source package", () => {
       "LICENSE",
       "THIRD_PARTY_NOTICES.md",
     ]);
+    const exclusions = manifest.files.filter((entry: string) => entry.startsWith("!"));
+    expect(exclusions).toContain("!**/.env*");
+    expect(exclusions).toContain("!**/cookies/**");
+    expect(exclusions).toContain("!packages/yt-dlp/test/testdata/certificate/**");
   });
 
   test("direct engine exports resolve to the absorbed source", async () => {
