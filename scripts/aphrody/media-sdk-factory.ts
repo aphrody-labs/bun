@@ -149,6 +149,17 @@ export async function normalizeMediaSDK(
       executables: "$ORIGIN/../lib",
     };
   }
+  return archiveMediaSDKPrefix(component, target, prefix, workspace, { upstream: asset, binaryNormalization });
+}
+
+async function archiveMediaSDKPrefix(
+  component: MediaSDKComponent,
+  target: MediaSDKTarget,
+  prefix: string,
+  workspace: string,
+  metadata: Record<string, unknown>,
+) {
+  const plan = mediaSDKPlan(component, target);
   const layout = await verifyMediaSDKLayout(component, target, prefix);
   const entries: Record<string, Bun.ArchiveEntry> = {};
   const fileHashes: Record<string, string> = {};
@@ -181,13 +192,15 @@ export async function normalizeMediaSDK(
     target,
     version: plan.version,
     sourceRevision: plan.sourceRevision,
-    upstream: asset,
+    ...(metadata.source ? { source: metadata.source } : { upstream: metadata.upstream }),
     qualification: layout.qualification,
     licenses: layout.licenses,
     files: fileHashes,
     symlinks: "materialized-contained-files",
-    binaryNormalization,
-    nativeRuntimeABI: "not-yet-qualified",
+    binaryNormalization: metadata.binaryNormalization,
+    nativeRuntimeABI: metadata.nativeRuntimeABI ?? "not-yet-qualified",
+    ...(metadata.nativeQualification ? { nativeQualification: metadata.nativeQualification } : {}),
+    ...(metadata.dependencies ? { dependencies: metadata.dependencies } : {}),
   };
   entries["bun-sdk-receipt.json"] = { data: JSON.stringify(receipt, null, 2), mode: 0o644, mtime: 0 };
   await Bun.write(output, await new Bun.Archive(entries, { format: "zip", mtime: 0 }).blob());
@@ -199,6 +212,54 @@ export async function normalizeMediaSDK(
   };
   await Bun.write(join(workspace, "distribution.json"), JSON.stringify({ ...receipt, asset: distribution }, null, 2));
   return { output, distribution, qualification: receipt.qualification };
+}
+
+/** Package a native source build without inventing a prebuilt upstream asset. */
+export async function packageBuiltMediaSDK(
+  component: MediaSDKComponent,
+  target: MediaSDKTarget,
+  source: string,
+  prefix: string,
+  workspace: string,
+  metadata: { nativeQualification: Record<string, unknown>; dependencies: Record<string, unknown> },
+) {
+  if (process.platform !== "linux") throw new Error("Source SDK packaging belongs to the qualified Linux factory");
+  if (![source, prefix, workspace].every(isAbsolute)) throw new TypeError("Source SDK paths must be absolute");
+  const plan = mediaSDKPlan(component, target);
+  if (
+    metadata.nativeQualification.target !== target ||
+    metadata.nativeQualification.sourceRevision !== plan.sourceRevision ||
+    metadata.nativeQualification.sourceClean !== true
+  )
+    throw new Error("Native SDK qualification differs from its target or clean source pin");
+  await verifyMediaSource(component, source);
+  const sourceFiles: Record<string, { sha256: string; bytes: number }> = {};
+  const canonicalSource = await realpath(source);
+  const names = (await nativeTool(["git", "ls-files", "-z"], source)).split("\0").filter(Boolean);
+  let bytes = 0;
+  for (const name of names) {
+    const path = await realpath(join(source, name));
+    const member = relative(canonicalSource, path);
+    if (member.startsWith("..") || isAbsolute(member)) throw new Error("SDK source escaped its owner checkout");
+    const info = await stat(path);
+    bytes += info.size;
+    if (!info.isFile() || names.length > 100_000 || bytes > 512 * 1024 * 1024)
+      throw new Error("SDK source byte or file budget exceeded");
+    sourceFiles[name] = { sha256: await hashSDKFile(path), bytes: info.size };
+  }
+  return archiveMediaSDKPrefix(component, target, prefix, workspace, {
+    source: {
+      repository: plan.sourceRepository,
+      commit: plan.sourceRevision,
+      tree: (await nativeTool(["git", "rev-parse", "HEAD^{tree}"], source)).trim(),
+      files: sourceFiles,
+      fileBytes: bytes,
+      clean: true,
+    },
+    binaryNormalization: { libraries: "$ORIGIN", executables: "$ORIGIN/../lib" },
+    nativeRuntimeABI: "qualified-by-native-source-build-probes",
+    ...metadata,
+  });
 }
 
 export async function runMediaSDKFactory(component: MediaSDKComponent): Promise<boolean> {

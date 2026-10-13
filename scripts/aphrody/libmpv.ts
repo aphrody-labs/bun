@@ -27,6 +27,8 @@ const setup = [
   "-Dbuild-date=false",
   "-Dgpl=false",
   "-Dauto_features=disabled",
+  "-Dgl=disabled",
+  "-Dvulkan=disabled",
   "--wrap-mode=nodownload",
   `--pkg-config-path=${[prefix, ...dependencyPrefixes].map(path => join(path, "lib/pkgconfig")).join(delimiter)}`,
 ];
