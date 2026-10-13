@@ -13,7 +13,7 @@ test("portable catalog strips private paths, credentials and job configuration",
     catalog.registerSource({
       id: "source",
       url: "https://www.crunchyroll.com/",
-      kind: "page",
+      kind: "url",
       privateRef: "C:/secret/cookies.json",
     });
     const output = join(work, "public.sqlite");
@@ -21,7 +21,7 @@ test("portable catalog strips private paths, credentials and job configuration",
     expect(result.records).toBeGreaterThan(0);
     const publicDB = new Database(output, { readonly: true });
     try {
-      expect(publicDB.query("SELECT * FROM sources").get()).toEqual({ id: "source", providerId: null, kind: "page" });
+      expect(publicDB.query("SELECT * FROM sources").get()).toEqual({ id: "source", providerId: null, kind: "url" });
       expect(
         publicDB
           .query<{ name: string }, []>("PRAGMA table_info(sources)")

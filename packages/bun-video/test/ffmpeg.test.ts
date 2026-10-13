@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { ptr } from "bun:ffi";
 import { FFmpeg, ffmpegABI, ffmpegLibraryPath } from "../src/ffmpeg";
+import { openVideoPipeline } from "../src/pipeline";
 import { materializeVideoSource, resolveVideoSource } from "../src/source";
 import { mediaSDKLibraryDirectory, mediaSDKPlan, mediaSDKPrefix, validateSDKAsset } from "../src/sdk";
 import { dirname, join } from "node:path";

@@ -61,6 +61,8 @@ describe("yt-dlp Bun Python bridge", () => {
     expect(parsed.options.skip_download).toBe(true);
     const cli = await runYtDlpCli(["--version"]);
     expect(cli.exitCode).toBe(0);
+    if (typeof cli.stdout !== "string") throw new Error("yt-dlp did not capture standard output");
+    if (typeof info.ytDlpVersion !== "string") throw new Error("yt-dlp did not report its installed version");
     expect(cli.stdout.trim()).toBe(info.ytDlpVersion);
   });
 });
