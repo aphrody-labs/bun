@@ -13,7 +13,7 @@ export class UnifiedVideoPipeline {
   readonly catalog: VideoCatalog;
   readonly workers: VideoWorkerPool;
   readonly #ownsCatalog: boolean;
-  constructor(options: VideoWorkerPoolOptions & { dbPath?: string } = {}) {
+  constructor(options: Omit<VideoWorkerPoolOptions, "catalog"> & { catalog?: VideoCatalog; dbPath?: string } = {}) {
     this.#ownsCatalog = !options.catalog;
     this.catalog = options.catalog ?? new VideoCatalog(options.dbPath);
     this.workers = new VideoWorkerPool({ ...options, catalog: this.catalog });
@@ -146,6 +146,8 @@ export class UnifiedVideoPipeline {
   }
 }
 
-export function createUnifiedVideoPipeline(options: VideoWorkerPoolOptions & { dbPath?: string } = {}) {
+export function createUnifiedVideoPipeline(
+  options: Omit<VideoWorkerPoolOptions, "catalog"> & { catalog?: VideoCatalog; dbPath?: string } = {},
+) {
   return new UnifiedVideoPipeline(options);
 }

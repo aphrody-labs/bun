@@ -23,6 +23,14 @@ empreinte SHA-256 avant le commit. Une branche Neon éphémère contenant seulem
 une fixture synthétique a passé l'import et la comparaison des 11 tables ; elle
 est supprimée après le contrôle. Le catalogue privé réel n'a pas été copié.
 
+`NeonVideoCatalog` implémente maintenant les lectures et écritures des fournisseurs,
+sources, jobs, artefacts et qualifications sur le schéma Neon. `VideoWorkerPool`
+accepte ce catalogue asynchrone : sur une branche éphémère, une fixture a été
+importée, puis un job synthétique a écrit sa source, son état terminé et son
+artefact dans Neon. Le test a passé ; la branche a été supprimée. Cela qualifie
+le parcours des workers avec injection explicite du catalogue, pas les autres
+consommateurs ni la production.
+
 La bascule exige de convertir les writers et lecteurs de `VideoCatalog`,
 actuellement synchrones sur `bun:sqlite`, vers des opérations `Bun.SQL`
 asynchrones, puis de figer les writers SQLite, importer un dernier snapshot,

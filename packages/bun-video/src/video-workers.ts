@@ -1,6 +1,13 @@
 import { join, dirname, resolve } from "node:path";
 import { mkdir } from "node:fs/promises";
-import { VideoCatalog, defaultVideoCatalogPath } from "./video-catalog";
+import {
+  VideoCatalog,
+  defaultVideoCatalogPath,
+  type VideoArtifact,
+  type VideoJob,
+  type VideoJobStatus,
+  type VideoSource,
+} from "./video-catalog";
 import { validateVideoTask, type VideoRenderTask, type VideoRenderResult } from "./video-worker-task";
 
 export interface VideoWorkerEvent {
@@ -14,11 +21,22 @@ export interface VideoWorkerContext {
   signal: AbortSignal;
 }
 export type VideoTaskRunner = (task: VideoRenderTask, context: VideoWorkerContext) => Promise<VideoRenderResult>;
+type MaybePromise<T> = T | Promise<T>;
+export interface VideoJobCatalog {
+  registerSource(input: Parameters<VideoCatalog["registerSource"]>[0]): MaybePromise<VideoSource>;
+  addJob(input: Parameters<VideoCatalog["addJob"]>[0]): MaybePromise<VideoJob>;
+  updateJob(
+    id: string,
+    patch: { status: VideoJobStatus; workerId?: string; error?: string; result?: unknown },
+  ): MaybePromise<VideoJob>;
+  recordArtifact(input: Parameters<VideoCatalog["recordArtifact"]>[0]): MaybePromise<VideoArtifact>;
+  close(): MaybePromise<void>;
+}
 export interface VideoWorkerPoolOptions {
   workers?: number;
   timeoutMs?: number;
   frameWorkerBudget?: number;
-  catalog?: VideoCatalog;
+  catalog?: VideoJobCatalog;
   workRoot?: string;
   onEvent?: (event: VideoWorkerEvent) => void;
   runner?: VideoTaskRunner;
@@ -98,7 +116,7 @@ export async function runVideoTaskProcess(
 }
 
 export class VideoWorkerPool {
-  readonly catalog: VideoCatalog;
+  readonly catalog: VideoJobCatalog;
   readonly #ownsCatalog: boolean;
   readonly #options: Required<Pick<VideoWorkerPoolOptions, "workers" | "timeoutMs" | "frameWorkerBudget">> &
     VideoWorkerPoolOptions;
@@ -107,6 +125,7 @@ export class VideoWorkerPool {
   readonly #idle = new Set<() => void>();
   #activeFrames = 0;
   #sequence = 0;
+  #initializing = 0;
   #closed = false;
 
   constructor(options: VideoWorkerPoolOptions = {}) {
@@ -133,12 +152,33 @@ export class VideoWorkerPool {
     const id = crypto.randomUUID();
     const workRoot = this.#options.workRoot ?? join(dirname(defaultVideoCatalogPath()), "jobs");
     const directory = join(resolve(workRoot), id);
+    this.#initializing++;
+    const result = this.#submitStored(task, id, directory, signal);
+    void result.then(
+      () => {
+        this.#initializing--;
+        this.#notifyIdle();
+      },
+      () => {
+        this.#initializing--;
+        this.#notifyIdle();
+      },
+    );
+    return result;
+  }
+
+  async #submitStored(
+    task: VideoRenderTask,
+    id: string,
+    directory: string,
+    signal?: AbortSignal,
+  ): Promise<VideoRenderResult> {
     // Full URLs, headers and acquired media stay in the private request file.
-    const source = this.catalog.registerSource({
+    const source = await this.catalog.registerSource({
       privateRef: join(directory, "request.json"),
       kind: task.source.kind === "file" ? "file" : task.source.kind === "capture" ? "capture" : "url",
     });
-    this.catalog.addJob({
+    await this.catalog.addJob({
       id,
       sourceId: source.id,
       engine: task.engine,
@@ -151,20 +191,26 @@ export class VideoWorkerPool {
         requestRef: source.privateRef,
       },
     });
+    if (this.#closed || signal?.aborted) {
+      await this.catalog.updateJob(id, { status: "cancelled", error: "Cancelled before execution" });
+      throw new Error("Video job cancelled");
+    }
     const controller = new AbortController();
     const abort = () => {
       controller.abort(signal?.reason ?? new Error("Video job cancelled"));
       const index = this.#pending.findIndex(item => item.id === id);
       if (index >= 0) {
         const pending = this.#pending.splice(index, 1)[0]!;
-        try {
-          this.catalog.updateJob(id, { status: "cancelled", error: "Cancelled before execution" });
-        } finally {
-          pending.detach();
-          pending.reject(new Error("Video job cancelled"));
-          this.#emit({ type: "cancelled", jobId: id });
-          this.#notifyIdle();
-        }
+        void Promise.resolve(this.catalog.updateJob(id, { status: "cancelled", error: "Cancelled before execution" }))
+          .then(
+            () => pending.reject(new Error("Video job cancelled")),
+            error => pending.reject(error),
+          )
+          .finally(() => {
+            pending.detach();
+            this.#emit({ type: "cancelled", jobId: id });
+            this.#notifyIdle();
+          });
       }
     };
     signal?.addEventListener("abort", abort, { once: true });
@@ -202,10 +248,18 @@ export class VideoWorkerPool {
       }
       this.#pending.splice(index, 1);
       if (next.controller.signal.aborted) {
-        this.catalog.updateJob(next.id, { status: "cancelled", error: "Cancelled before execution" });
-        next.detach();
-        next.reject(new Error("Video job cancelled"));
-        this.#emit({ type: "cancelled", jobId: next.id });
+        void Promise.resolve(
+          this.catalog.updateJob(next.id, { status: "cancelled", error: "Cancelled before execution" }),
+        )
+          .then(
+            () => next.reject(new Error("Video job cancelled")),
+            error => next.reject(error),
+          )
+          .finally(() => {
+            next.detach();
+            this.#emit({ type: "cancelled", jobId: next.id });
+            this.#notifyIdle();
+          });
         continue;
       }
       this.#active.set(next.id, next);
@@ -225,7 +279,7 @@ export class VideoWorkerPool {
     const timer = setTimeout(() => pending.controller.abort(new Error("Video job deadline exceeded")), timeout);
     const { task, id, directory, controller } = pending;
     try {
-      this.catalog.updateJob(id, { status: "running", workerId });
+      await this.catalog.updateJob(id, { status: "running", workerId });
       this.#emit({ type: "started", jobId: id, workerId });
       await mkdir(directory, { recursive: true });
       await Bun.write(join(directory, "request.json"), JSON.stringify({ ...task, workDirectory: directory }));
@@ -235,14 +289,14 @@ export class VideoWorkerPool {
         signal: controller.signal,
       });
       controller.signal.throwIfAborted();
-      this.catalog.recordArtifact({
+      await this.catalog.recordArtifact({
         jobId: id,
         kind: "video",
         path: result.output,
         sha256: result.sha256,
         metadata: { bytes: result.bytes, frames: result.frames },
       });
-      this.catalog.updateJob(id, {
+      await this.catalog.updateJob(id, {
         status: "completed",
         result: { output: result.output, sha256: result.sha256, bytes: result.bytes, frames: result.frames },
       });
@@ -258,7 +312,7 @@ export class VideoWorkerPool {
           evidence,
           JSON.stringify({ name: error instanceof Error ? error.name : "Error", message: String(error) }),
         );
-        this.catalog.updateJob(id, { status, error: `${status}; private evidence: ${evidence}` });
+        await this.catalog.updateJob(id, { status, error: `${status}; private evidence: ${evidence}` });
       } catch (evidenceError) {
         console.error(
           `Video job evidence unavailable: ${evidenceError instanceof Error ? evidenceError.name : "Error"}`,
@@ -274,14 +328,14 @@ export class VideoWorkerPool {
   }
 
   #notifyIdle() {
-    if (!this.#active.size && !this.#pending.length) {
+    if (!this.#active.size && !this.#pending.length && !this.#initializing) {
       for (const resolve of this.#idle) resolve();
       this.#idle.clear();
     }
   }
 
   idle(): Promise<void> {
-    if (!this.#active.size && !this.#pending.length) return Promise.resolve();
+    if (!this.#active.size && !this.#pending.length && !this.#initializing) return Promise.resolve();
     return new Promise(resolve => this.#idle.add(resolve));
   }
 
@@ -291,7 +345,7 @@ export class VideoWorkerPool {
       pending.controller.abort(new Error("Video pool closed"));
     this.#pump();
     await this.idle();
-    if (this.#ownsCatalog) this.catalog.close();
+    if (this.#ownsCatalog) await this.catalog.close();
   }
   async [Symbol.asyncDispose]() {
     await this.close();
