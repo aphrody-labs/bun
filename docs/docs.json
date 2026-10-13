@@ -123,9 +123,7 @@
           {
             "group": "VPN",
             "icon": "shield",
-            "pages": [
-              "/vpn/index"
-            ]
+            "pages": ["/vpn/index"]
           },
           {
             "group": "Data & Storage",
@@ -196,6 +194,9 @@
               "/runtime/html-rewriter",
               "/runtime/image",
               "/runtime/video",
+              "/runtime/yolo",
+              "/runtime/jev",
+              "/runtime/nginx",
               "/runtime/hashing",
               "/runtime/glob",
               "/runtime/semver",
