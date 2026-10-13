@@ -254,7 +254,8 @@ test("native source index preserves domain snapshots, file hashes and unresolved
       .get(`${runtime.snapshot}:file:lib.rs`)!.metadata,
   ).toBe(file.metadata);
   expect(registry.snapshots(runtime.repository)).toHaveLength(2);
-});
+  // The first index also hashes the native executable before starting its workers.
+}, 15_000);
 
 test("native source index retains depth-limited and invalid UTF-8 files without dropping valid neighbours", async () => {
   const { BunPython } = await import("bun:graph");
