@@ -1,0 +1,502 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@hyperframes/aws-lambda/sdk": [
+        "./packages/hyperframes/packages/aws-lambda/src/sdk/index.ts"
+      ],
+      "@hyperframes/core": [
+        "./packages/hyperframes/packages/core/src/index.ts"
+      ],
+      "@hyperframes/core/atomic-file": [
+        "./packages/hyperframes/packages/core/src/atomicFile.ts"
+      ],
+      "@hyperframes/core/audible-video": [
+        "./packages/hyperframes/packages/core/src/audibleVideo.ts"
+      ],
+      "@hyperframes/core/audio-automation": [
+        "./packages/hyperframes/packages/core/src/audioAutomation.ts"
+      ],
+      "@hyperframes/core/audio-fade": [
+        "./packages/hyperframes/packages/core/src/audioFade.ts"
+      ],
+      "@hyperframes/core/audio-fx": [
+        "./packages/hyperframes/packages/core/src/audioFx.ts"
+      ],
+      "@hyperframes/core/audio-fx-runtime": [
+        "./packages/hyperframes/packages/core/src/generated/audio-fx-runtime-inline.ts"
+      ],
+      "@hyperframes/core/audio-fx-tail": [
+        "./packages/hyperframes/packages/core/src/audio/audioFxTail.ts"
+      ],
+      "@hyperframes/core/audio-gain": [
+        "./packages/hyperframes/packages/core/src/audioGain.ts"
+      ],
+      "@hyperframes/core/audio-groups": [
+        "./packages/hyperframes/packages/core/src/audioGroups.ts"
+      ],
+      "@hyperframes/core/beats": [
+        "./packages/hyperframes/packages/core/src/beats/index.ts"
+      ],
+      "@hyperframes/core/canary": [
+        "./packages/hyperframes/packages/core/src/canary.ts"
+      ],
+      "@hyperframes/core/canary-registry": [
+        "./packages/hyperframes/packages/core/src/canaryRegistry.ts"
+      ],
+      "@hyperframes/core/clip-facts": [
+        "./packages/hyperframes/packages/core/src/clipFacts.ts"
+      ],
+      "@hyperframes/core/color-grading": [
+        "./packages/hyperframes/packages/core/src/colorGrading.ts"
+      ],
+      "@hyperframes/core/compiler": [
+        "./packages/hyperframes/packages/core/src/compiler/index.ts"
+      ],
+      "@hyperframes/core/compiler/html-document": [
+        "./packages/hyperframes/packages/core/src/compiler/htmlDocument.ts"
+      ],
+      "@hyperframes/core/composition-contract": [
+        "./packages/hyperframes/packages/core/src/compositionContract.ts"
+      ],
+      "@hyperframes/core/figma": [
+        "./packages/hyperframes/packages/core/src/figma/index.ts"
+      ],
+      "@hyperframes/core/fonts/embed": [
+        "./packages/hyperframes/packages/core/src/fonts/deterministicFonts.ts"
+      ],
+      "@hyperframes/core/fonts/embedded-data": [
+        "./packages/hyperframes/packages/core/src/fonts/fontData.generated.ts"
+      ],
+      "@hyperframes/core/fonts/system-locator": [
+        "./packages/hyperframes/packages/core/src/fonts/systemFontLocator.ts"
+      ],
+      "@hyperframes/core/gsap-cdn": [
+        "./packages/hyperframes/packages/core/src/gsapCdn.ts"
+      ],
+      "@hyperframes/core/gsap-parser": [
+        "./packages/hyperframes/packages/core/src/parsers/gsapParserExports.ts"
+      ],
+      "@hyperframes/core/html-attr-safety": [
+        "./packages/hyperframes/packages/core/src/utils/htmlAttrSafety.ts"
+      ],
+      "@hyperframes/core/media-grade-analyzer": [
+        "./packages/hyperframes/packages/core/src/mediaGradeAnalyzer.ts"
+      ],
+      "@hyperframes/core/media-link": [
+        "./packages/hyperframes/packages/core/src/mediaLink.ts"
+      ],
+      "@hyperframes/core/media-timing": [
+        "./packages/hyperframes/packages/core/src/mediaTiming.ts"
+      ],
+      "@hyperframes/core/media-volume-envelope": [
+        "./packages/hyperframes/packages/core/src/runtime/mediaVolumeEnvelope.ts"
+      ],
+      "@hyperframes/core/rich-text-sanitize": [
+        "./packages/hyperframes/packages/core/src/utils/richTextSanitize.ts"
+      ],
+      "@hyperframes/core/runtime/position-edits-render": [
+        "./packages/hyperframes/packages/core/src/generated/position-edits-render-inline.ts"
+      ],
+      "@hyperframes/core/safe-path": [
+        "./packages/hyperframes/packages/core/src/safePath.ts"
+      ],
+      "@hyperframes/core/schemas/registry-item.json": [
+        "./packages/hyperframes/packages/core/schemas/registry-item.json"
+      ],
+      "@hyperframes/core/schemas/registry.json": [
+        "./packages/hyperframes/packages/core/schemas/registry.json"
+      ],
+      "@hyperframes/core/slideshow": [
+        "./packages/hyperframes/packages/core/src/slideshow/index.ts"
+      ],
+      "@hyperframes/core/speed-ramp": [
+        "./packages/hyperframes/packages/core/src/speedRamp.ts"
+      ],
+      "@hyperframes/core/studio-api": [
+        "./packages/hyperframes/packages/core/src/studio-api/index.ts"
+      ],
+      "@hyperframes/core/studio-preview-mark": [
+        "./packages/hyperframes/packages/core/src/studioPreviewMark.ts"
+      ],
+      "@hyperframes/core/telemetry-redaction": [
+        "./packages/hyperframes/packages/core/src/telemetryRedaction.ts"
+      ],
+      "@hyperframes/core/timeline-asset-id": [
+        "./packages/hyperframes/packages/core/src/timelineAssetId.ts"
+      ],
+      "@hyperframes/core/variables": [
+        "./packages/hyperframes/packages/core/src/variables.ts"
+      ],
+      "@hyperframes/engine": [
+        "./packages/hyperframes/packages/engine/src/index.ts"
+      ],
+      "@hyperframes/engine/chrome-host-ceiling": [
+        "./packages/hyperframes/packages/engine/src/services/chromeHostCeiling.ts"
+      ],
+      "@hyperframes/engine/system-memory": [
+        "./packages/hyperframes/packages/engine/src/services/systemMemory.ts"
+      ],
+      "@hyperframes/gcp-cloud-run/sdk": [
+        "./packages/hyperframes/packages/gcp-cloud-run/src/sdk/index.ts"
+      ],
+      "@hyperframes/gcp-cloud-run/terraform": [
+        "./packages/hyperframes/packages/gcp-cloud-run/src/terraform.ts"
+      ],
+      "@hyperframes/lint": [
+        "./packages/hyperframes/packages/lint/src/index.ts"
+      ],
+      "@hyperframes/parsers": [
+        "./packages/hyperframes/packages/parsers/src/index.ts"
+      ],
+      "@hyperframes/parsers/asset-paths": [
+        "./packages/hyperframes/packages/parsers/src/assets.ts"
+      ],
+      "@hyperframes/parsers/asset-resolution": [
+        "./packages/hyperframes/packages/parsers/src/assetResolution.ts"
+      ],
+      "@hyperframes/parsers/color-grading-contract": [
+        "./packages/hyperframes/packages/parsers/src/colorGradingContract.ts"
+      ],
+      "@hyperframes/parsers/composition": [
+        "./packages/hyperframes/packages/parsers/src/composition.ts"
+      ],
+      "@hyperframes/parsers/composition-contract": [
+        "./packages/hyperframes/packages/parsers/src/compositionContract.ts"
+      ],
+      "@hyperframes/parsers/composition-duration": [
+        "./packages/hyperframes/packages/parsers/src/compositionDuration.ts"
+      ],
+      "@hyperframes/parsers/ff-binaries": [
+        "./packages/hyperframes/packages/parsers/src/ffBinaries.ts"
+      ],
+      "@hyperframes/parsers/gsap-constants": [
+        "./packages/hyperframes/packages/parsers/src/gsapConstants.ts"
+      ],
+      "@hyperframes/parsers/gsap-parser": [
+        "./packages/hyperframes/packages/parsers/src/gsapParserExports.ts"
+      ],
+      "@hyperframes/parsers/gsap-parser-acorn": [
+        "./packages/hyperframes/packages/parsers/src/gsapParserAcorn.ts"
+      ],
+      "@hyperframes/parsers/gsap-parser-recast": [
+        "./packages/hyperframes/packages/parsers/src/gsapParser.ts"
+      ],
+      "@hyperframes/parsers/gsap-writer-acorn": [
+        "./packages/hyperframes/packages/parsers/src/gsapWriterAcorn.ts"
+      ],
+      "@hyperframes/parsers/hf-ids": [
+        "./packages/hyperframes/packages/parsers/src/hfIds.ts"
+      ],
+      "@hyperframes/parsers/html-attribute-spans": [
+        "./packages/hyperframes/packages/parsers/src/htmlAttributeSpans.ts"
+      ],
+      "@hyperframes/parsers/media-duration": [
+        "./packages/hyperframes/packages/parsers/src/mediaDuration.ts"
+      ],
+      "@hyperframes/parsers/slideshow": [
+        "./packages/hyperframes/packages/parsers/src/slideshow/index.ts"
+      ],
+      "@hyperframes/parsers/sub-composition-validity": [
+        "./packages/hyperframes/packages/parsers/src/subCompositionValidity.ts"
+      ],
+      "@hyperframes/parsers/top-level-elements": [
+        "./packages/hyperframes/packages/parsers/src/topLevelElements.ts"
+      ],
+      "@hyperframes/producer": [
+        "./packages/hyperframes/packages/producer/src/index.ts"
+      ],
+      "@hyperframes/producer/distributed": [
+        "./packages/hyperframes/packages/producer/src/distributed.ts"
+      ],
+      "@hyperframes/studio-server": [
+        "./packages/hyperframes/packages/studio-server/src/index.ts"
+      ],
+      "@hyperframes/studio-server/history": [
+        "./packages/hyperframes/packages/studio-server/src/history/index.ts"
+      ],
+      "@hyperframes/studio-server/loudness": [
+        "./packages/hyperframes/packages/studio-server/src/helpers/loudness.ts"
+      ],
+      "@hyperframes/studio-server/manual-edits-render-script": [
+        "./packages/hyperframes/packages/studio-server/src/helpers/manualEditsRenderScript.ts"
+      ],
+      "@hyperframes/studio-server/media-codec-map": [
+        "./packages/hyperframes/packages/studio-server/src/helpers/mediaCodecMap.ts"
+      ],
+      "@hyperframes/studio-server/media-proxy-preview": [
+        "./packages/hyperframes/packages/studio-server/src/helpers/mediaProxyPreview.ts"
+      ],
+      "@hyperframes/studio-server/proxy-transcoder": [
+        "./packages/hyperframes/packages/studio-server/src/helpers/proxyTranscoder.ts"
+      ],
+      "@hyperframes/studio-server/screenshot-clip": [
+        "./packages/hyperframes/packages/studio-server/src/helpers/screenshotClip.ts"
+      ],
+      "@hyperframes/studio-server/source-mutation": [
+        "./packages/hyperframes/packages/studio-server/src/helpers/sourceMutation.ts"
+      ],
+      "@remotion/bundler": [
+        "./packages/remotion/packages/bundler/src/index.ts"
+      ],
+      "@remotion/codemods": [
+        "./packages/remotion/packages/codemods/src/index.ts"
+      ],
+      "@remotion/compositor-darwin-arm64": [
+        "./packages/remotion/packages/compositor-darwin-arm64/index.js"
+      ],
+      "@remotion/compositor-darwin-x64": [
+        "./packages/remotion/packages/compositor-darwin-x64/index.js"
+      ],
+      "@remotion/compositor-linux-arm64-gnu": [
+        "./packages/remotion/packages/compositor-linux-arm64-gnu/index.js"
+      ],
+      "@remotion/compositor-linux-arm64-musl": [
+        "./packages/remotion/packages/compositor-linux-arm64-musl/index.js"
+      ],
+      "@remotion/compositor-linux-x64-gnu": [
+        "./packages/remotion/packages/compositor-linux-x64-gnu/index.js"
+      ],
+      "@remotion/compositor-linux-x64-musl": [
+        "./packages/remotion/packages/compositor-linux-x64-musl/index.js"
+      ],
+      "@remotion/compositor-win32-x64-msvc": [
+        "./packages/remotion/packages/compositor-win32-x64-msvc/index.js"
+      ],
+      "@remotion/licensing": [
+        "./packages/remotion/packages/licensing/src/index.ts"
+      ],
+      "@remotion/renderer": [
+        "./packages/remotion/packages/renderer/src/index.ts"
+      ],
+      "@remotion/renderer/client": [
+        "./packages/remotion/packages/renderer/src/client.ts"
+      ],
+      "@remotion/renderer/pure": [
+        "./packages/remotion/packages/renderer/src/pure.ts"
+      ],
+      "@remotion/streaming": [
+        "./packages/remotion/packages/streaming/src/index.ts"
+      ],
+      "@remotion/studio-protocol": [
+        "./packages/remotion/packages/studio-protocol/src/index.ts"
+      ],
+      "@remotion/studio-server": [
+        "./packages/remotion/packages/studio-server/src/index.ts"
+      ],
+      "@remotion/studio-shared": [
+        "./packages/remotion/packages/studio-shared/src/index.ts"
+      ],
+      "@remotion/studio-shared/keyframe-easing-presets": [
+        "./packages/remotion/packages/studio-shared/src/keyframe-easing-presets.ts"
+      ],
+      "@remotion/studio-shared/keyframe-interpolation-function": [
+        "./packages/remotion/packages/studio-shared/src/keyframe-interpolation-function.ts"
+      ],
+      "@remotion/studio-shared/parse-spring-easing-config": [
+        "./packages/remotion/packages/studio-shared/src/parse-spring-easing-config.ts"
+      ],
+      "@remotion/studio-shared/studio-entry-points": [
+        "./packages/remotion/packages/studio-shared/src/studio-entry-points.ts"
+      ],
+      "@remotion/studio-shared/studio-html": [
+        "./packages/remotion/packages/studio-shared/src/studio-html.ts"
+      ],
+      "mediabunny": [
+        "./packages/mediabunny/src/index.ts"
+      ],
+      "remotion": [
+        "./packages/remotion/packages/core/src/index.ts"
+      ],
+      "remotion/no-react": [
+        "./packages/remotion/packages/core/src/no-react.ts"
+      ],
+      "remotion/version": [
+        "./packages/remotion/packages/core/src/version.ts"
+      ],
+      "@aphrody/bun-cloudflare/api": [
+        "../bun-cloudflare/src/api.ts"
+      ],
+      "bun": [
+        "../../packages/bun-types/index.d.ts"
+      ],
+      "bun:*": [
+        "../../packages/bun-types/*.d.ts"
+      ],
+      "@aphrody/bun-video": [
+        "./src/index.ts"
+      ],
+      "@aphrody/bun-video/mcp": [
+        "./src/mcp.ts"
+      ],
+      "@aphrody/bun-video/capabilities": [
+        "./src/capabilities.ts"
+      ],
+      "@aphrody/bun-video/hls": [
+        "./src/hls.ts"
+      ],
+      "@aphrody/bun-video/playback": [
+        "./src/playback.ts"
+      ],
+      "@aphrody/bun-video/dash": [
+        "./src/dash.ts"
+      ],
+      "@aphrody/bun-video/mpd": [
+        "./src/dash.ts"
+      ],
+      "@aphrody/bun-video/har": [
+        "./src/har.ts"
+      ],
+      "@aphrody/bun-video/bitmovin": [
+        "./src/bitmovin.ts"
+      ],
+      "@aphrody/bun-video/crunchyroll": [
+        "./src/crunchyroll.ts"
+      ],
+      "@aphrody/bun-video/crunchyroll/api": [
+        "./src/crunchyroll-api.ts"
+      ],
+      "@aphrody/bun-video/crunchyroll/cli": [
+        "./src/crunchyroll-cli.ts"
+      ],
+      "@aphrody/bun-video/crunchyroll/watchlist": [
+        "./src/crunchyroll-watchlist.ts"
+      ],
+      "@aphrody/bun-video/oauth": [
+        "./src/oauth.ts"
+      ],
+      "@aphrody/bun-video/secrets": [
+        "./src/secrets.ts"
+      ],
+      "@aphrody/bun-video/webgpu": [
+        "./src/webgpu.ts"
+      ],
+      "@aphrody/bun-video/mediabunny": [
+        "./packages/mediabunny/src/index.ts"
+      ],
+      "@aphrody/bun-video/ytdlp": [
+        "./src/ytdlp.ts"
+      ],
+      "@aphrody/bun-video/pipeline": [
+        "./src/pipeline.ts"
+      ],
+      "@aphrody/bun-video/image": [
+        "./src/image.ts"
+      ],
+      "@aphrody/bun-video/frame-theme": [
+        "./src/frame-theme.ts"
+      ],
+      "@aphrody/bun-video/frame-analysis": [
+        "./src/frame-analysis.ts"
+      ],
+      "@aphrody/bun-video/episode-assets": [
+        "./src/episode-assets.ts"
+      ],
+      "@aphrody/bun-video/episode-unpack": [
+        "./src/episode-unpack.ts"
+      ],
+      "@aphrody/bun-video/episode-dataset": [
+        "./src/episode-dataset.ts"
+      ],
+      "@aphrody/bun-video/pixel-svg": [
+        "./src/pixel-svg.ts"
+      ],
+      "@aphrody/bun-video/shenron-episode": [
+        "./src/shenron-episode.ts"
+      ],
+      "@aphrody/bun-video/formats": [
+        "./src/formats.ts"
+      ],
+      "@aphrody/bun-video/source": [
+        "./src/source.ts"
+      ],
+      "@aphrody/bun-video/cache": [
+        "./src/cache.ts"
+      ],
+      "@aphrody/bun-video/archive": [
+        "./src/archive.ts"
+      ],
+      "@aphrody/bun-video/studio": [
+        "./src/studio.tsx"
+      ],
+      "@aphrody/bun-video/studio-remotion": [
+        "./src/studio-remotion.tsx"
+      ],
+      "@aphrody/bun-video/engine": [
+        "./src/index.ts"
+      ],
+      "@aphrody/bun-video/encode": [
+        "./src/encode.ts"
+      ],
+      "@aphrody/bun-video/computer": [
+        "./src/computer.ts"
+      ],
+      "@aphrody/bun-video/ffmpeg": [
+        "./src/ffmpeg.ts"
+      ],
+      "@aphrody/bun-video/mpv": [
+        "./src/mpv.ts"
+      ],
+      "@aphrody/bun-video/remotion": [
+        "./packages/remotion/packages/core/src/index.ts"
+      ],
+      "@aphrody/bun-video/remotion/renderer": [
+        "./packages/remotion/packages/renderer/src/index.ts"
+      ],
+      "@aphrody/bun-video/hyperframes": [
+        "./packages/hyperframes/packages/core/src/index.ts"
+      ],
+      "@aphrody/bun-video/hyperframes/engine": [
+        "./packages/hyperframes/packages/engine/src/index.ts"
+      ],
+      "@aphrody/bun-video/workflow": [
+        "./src/video-workflow.ts"
+      ],
+      "@aphrody/bun-video/workers": [
+        "./src/video-workers.ts"
+      ],
+      "@aphrody/bun-video/catalog": [
+        "./src/video-catalog.ts"
+      ],
+      "@aphrody/bun-video/api": [
+        "./src/video-api.ts"
+      ],
+      "@aphrody/bun-video/pixel-verify": [
+        "./src/pixel-verify.ts"
+      ],
+      "@aphrody/bun-video/video-capture": [
+        "./src/video-capture.ts"
+      ],
+      "@aphrody/bun-video/archive-capture": [
+        "./src/archive-capture.ts"
+      ],
+      "@aphrody/bun-video/video-dataset": [
+        "./src/video-dataset.ts"
+      ],
+      "@aphrody/bun-video/video-cookies": [
+        "./src/video-cookies.ts"
+      ],
+      "@aphrody/bun-video/data-site": [
+        "./src/video-data-site.ts"
+      ],
+      "@aphrody/bun-video/publish": [
+        "./src/video-publish.ts"
+      ],
+      "react": [
+        "./packages/remotion/node_modules/.bun/@types+react@19.2.7/node_modules/@types/react/index.d.ts"
+      ],
+      "react/*": [
+        "./packages/remotion/node_modules/.bun/@types+react@19.2.7/node_modules/@types/react/*.d.ts"
+      ],
+      "react-dom": [
+        "./packages/remotion/node_modules/.bun/@types+react-dom@19.2.3+b3aeb48c1f537661/node_modules/@types/react-dom/index.d.ts"
+      ],
+      "react-dom/*": [
+        "./packages/remotion/node_modules/.bun/@types+react-dom@19.2.3+b3aeb48c1f537661/node_modules/@types/react-dom/*.d.ts"
+      ]
+    },
+    "typeRoots": [
+      "../../packages/bun-types/node_modules/@types"
+    ]
+  }
+}

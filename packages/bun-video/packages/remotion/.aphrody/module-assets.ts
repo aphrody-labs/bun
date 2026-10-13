@@ -9,6 +9,7 @@ import {
 import { dirname, join, resolve } from "node:path";
 import type { BunPlugin } from "bun";
 import { transformSync as esbuildTransformSync } from "./build-deps/node_modules/esbuild/lib/main.js";
+import { planRemotionLibraryAssets } from "./module-assets-scope";
 
 const root = resolve(import.meta.dir, "..");
 
@@ -94,13 +95,28 @@ export function rewriteIsolatedTypeExports(text: string, sourceFile: string): st
 }
 
 /** Materialize real module files because the native Rspack resolver cannot read Bun's virtual filesystem. */
-export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
+export async function remotionModuleAssetsPlugin(options?: {
+  libraryPackages: readonly string[];
+}): Promise<BunPlugin> {
+  const scope = options
+    ? await planRemotionLibraryAssets(root, options.libraryPackages)
+    : undefined;
   const stage = resolve(root, "../../../tmp/bun-video-build/remotion-module-assets");
   mkdirSync(join(stage, "node_modules"), { recursive: true });
   const files: { source: string; destination: string }[] = [];
+  const owned = new Set<string>();
+  const record = (path: string) => {
+    if (scope) owned.add(path);
+  };
   function addTree(source: string, destination: string, transpile = false) {
     for (const entry of readdirSync(source, { withFileTypes: true })) {
       if (entry.isSymbolicLink() || entry.name === "node_modules" || entry.name === ".git")
+        continue;
+      if (
+        scope &&
+        (/^(test|tests|__tests__|visual-test|fixtures|testdata)$/.test(entry.name) ||
+          /\.d\.ts$|\.map$|\.(?:test|spec)\.[^.]+$/.test(entry.name))
+      )
         continue;
       if (transpile && /^(test|tests|__tests__|visual-test|fixtures)$/.test(entry.name)) continue;
       const from = join(source, entry.name),
@@ -141,11 +157,15 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
             ),
           );
         } else copyFileSync(from, output);
+        record(output);
       }
     }
   }
   const registry = join(root, ".aphrody/build-deps/node_modules");
-  addTree(registry, join(stage, "node_modules"));
+  if (scope) {
+    for (const owner of scope.owners.filter((owner) => !owner.workspace))
+      addTree(owner.directory, join(stage, owner.destination));
+  } else addTree(registry, join(stage, "node_modules"));
   const manifests = new Map<string, string>();
   for (const entry of readdirSync(join(root, "packages"), {
     withFileTypes: true,
@@ -156,6 +176,8 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
     if (!existsSync(manifestPath) || !existsSync(join(source, "src"))) continue;
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     if (!manifest.name) continue;
+    if (scope && !scope.owners.some((owner) => owner.workspace && owner.name === manifest.name))
+      continue;
     const destination = join(stage, "node_modules", manifest.name);
     mkdirSync(destination, { recursive: true });
     addTree(join(source, "src"), join(destination, "src"), true);
@@ -183,8 +205,10 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
       const esm = join(destination, manifest.name === "remotion" ? "esm" : "src/esm");
       addTree(join(source, "src"), esm, true);
       for (const name of readdirSync(esm)) {
-        if (name.endsWith(".js"))
+        if (name.endsWith(".js") && (!scope || owned.has(join(esm, name)))) {
           copyFileSync(join(esm, name), join(esm, name.replace(/\.js$/, ".mjs")));
+          record(join(esm, name.replace(/\.js$/, ".mjs")));
+        }
       }
     }
     const rewrite = (value: unknown): unknown => {
@@ -203,14 +227,18 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
     manifest.exports = rewrite(manifest.exports);
     manifest.type = "module";
     writeFileSync(join(destination, "package.json"), JSON.stringify(manifest));
+    record(join(destination, "package.json"));
     for (const name of readdirSync(source)) {
       const from = join(source, name);
       if (/\.(?:js|mjs|cjs|json|css|ico)$/.test(name) && name !== "package.json") {
         copyFileSync(from, join(destination, name));
+        record(join(destination, name));
       }
     }
-    if (existsSync(join(root, "LICENSE.md")))
+    if (existsSync(join(root, "LICENSE.md"))) {
       copyFileSync(join(root, "LICENSE.md"), join(destination, "LICENSE.md"));
+      record(join(destination, "LICENSE.md"));
+    }
     manifests.set(manifest.name, destination);
   }
   function inventory(directory: string) {
@@ -224,7 +252,39 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
         });
     }
   }
-  inventory(stage);
+  if (scope) {
+    let bytes = 0;
+    for (const path of [...owned].sort()) {
+      bytes += Bun.file(path).size;
+      if (files.length >= 12000 || bytes > 160 * 1024 * 1024)
+        throw new Error("Materialized scoped assets exceed their payload bound");
+      files.push({ source: path, destination: path.slice(stage.length + 1).replaceAll("\\", "/") });
+    }
+    writeFileSync(
+      join(stage, "library-module-assets-receipt.json"),
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          platform: process.platform,
+          arch: process.arch,
+          packages: scope.owners.map((owner) => ({
+            name: owner.name,
+            version: owner.manifest.version,
+            destination: owner.destination,
+          })),
+          skipped: scope.skipped,
+          files: files.map((file) => ({
+            name: file.destination,
+            bytes: Bun.file(file.source).size,
+            sha256: new Bun.CryptoHasher("sha256").update(readFileSync(file.source)).digest("hex"),
+          })),
+          bytes,
+        },
+        null,
+        2,
+      ),
+    );
+  } else inventory(stage);
   const imports = files
     .map(
       (file, index) =>

@@ -7,6 +7,12 @@ const transpilers = {
 };
 let checked = 0;
 let failed = 0;
+const trace = Bun.argv.includes("--trace");
+const started = performance.now();
+let readMs = 0;
+let transformMs = 0;
+if (trace)
+  console.error(JSON.stringify({ event: "engine-start", runtime: Bun.revision, executable: process.execPath }));
 for await (const entry of new Bun.Glob("packages/{remotion,hyperframes}/packages/*/src/**/*.{ts,tsx}").scan({
   cwd: root,
   onlyFiles: true,
@@ -14,7 +20,12 @@ for await (const entry of new Bun.Glob("packages/{remotion,hyperframes}/packages
   if (entry.endsWith(".d.ts")) continue;
   checked++;
   try {
-    transpilers[entry.endsWith(".tsx") ? "tsx" : "ts"].transformSync(await Bun.file(resolve(root, entry)).text());
+    const reading = performance.now();
+    const source = await Bun.file(resolve(root, entry)).text();
+    const transforming = performance.now();
+    readMs += transforming - reading;
+    transpilers[entry.endsWith(".tsx") ? "tsx" : "ts"].transformSync(source);
+    transformMs += performance.now() - transforming;
   } catch (error) {
     failed++;
     const issues = error instanceof AggregateError ? error.errors : [error];
@@ -29,6 +40,31 @@ for await (const entry of new Bun.Glob("packages/{remotion,hyperframes}/packages
       );
     }
   }
+  if (trace && checked % 1024 === 0)
+    console.error(
+      JSON.stringify({
+        event: "engine-progress",
+        checked,
+        failed,
+        elapsedMs: Math.round(performance.now() - started),
+        readMs: Math.round(readMs),
+        transformMs: Math.round(transformMs),
+        rssBytes: process.memoryUsage.rss(),
+        lastFile: entry,
+      }),
+    );
 }
-console.log(JSON.stringify({ checked, failed }));
+console.log(
+  JSON.stringify({
+    checked,
+    failed,
+    ...(trace
+      ? {
+          elapsedMs: Math.round(performance.now() - started),
+          readMs: Math.round(readMs),
+          transformMs: Math.round(transformMs),
+        }
+      : {}),
+  }),
+);
 if (failed) process.exitCode = 1;

@@ -1,0 +1,34 @@
+import { expect, test } from "bun:test";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { formatSourcePaths } from "../scripts/check-format";
+
+test("native format inputs retain JS and nested TSX without selecting unsupported HTML or vendor", async () => {
+  const root = await mkdtemp(join(tmpdir(), "bun-video-format-"));
+  await mkdir(join(root, "labs", "nested"), { recursive: true });
+  await mkdir(join(root, "src"));
+  await mkdir(join(root, "packages", "vendor"), { recursive: true });
+  await writeFile(join(root, "labs", "nested", "view.tsx"), "export const View=()=> <p>Video</p>;\n");
+  await writeFile(join(root, "src", "runtime.js"), "export const enabled=true;\n");
+  await writeFile(join(root, "labs", "page.html"), "<p>Capture</p>\n");
+  await writeFile(join(root, "packages", "vendor", "engine.ts"), "export const engine=1;\n");
+  const paths = await formatSourcePaths(root);
+  expect(paths.map(path => path.replaceAll("\\", "/"))).toEqual(["labs/nested/view.tsx", "src/runtime.js"]);
+  const child = Bun.spawn([process.execPath, "fmt", "--check", ...paths], {
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+    timeout: 10_000,
+  });
+  const [output, errors, code] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+  expect(output).toContain("view.tsx");
+  expect(output).toContain("runtime.js");
+  expect(output).toContain("formatting differs");
+  expect(errors).toBe("");
+  expect(code).toBe(1);
+});

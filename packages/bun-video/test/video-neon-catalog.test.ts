@@ -3,7 +3,7 @@ import { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createNeonClient } from "../../bun-plugin-neon/src";
+import { createNeonClient } from "@aphrody/bun-plugin-neon";
 import { registerObservedCrunchyrollWatchlist } from "../src/crunchyroll-watchlist";
 import { VideoCatalog } from "../src/video-catalog";
 import { importCapturedVideoNetwork } from "../src/video-capture";

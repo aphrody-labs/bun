@@ -7,7 +7,7 @@ import { VideoWorkerPool, type VideoWorkerPoolOptions } from "./video-workers";
 import type { VideoRenderTask } from "./video-worker-task";
 import type { VideoPipelineOptions } from "./pipeline";
 import type { ArchiveCaptureOptions } from "./archive-capture";
-import type { VideoDatasetQuery, exportVideoDataset } from "./video-dataset";
+import type { VideoDatasetQuery } from "./video-dataset";
 import type { VideoDataSiteOptions } from "./video-data-site";
 
 /** Canonical application workflow; libraries keep their native implementation owners. */
@@ -118,7 +118,7 @@ export class UnifiedVideoPipeline {
       ? queryVideoDataset(this.catalog, request)
       : queryVideoDataset(this.catalog, request);
   }
-  async exportDataset(options: Parameters<typeof exportVideoDataset>[1]) {
+  async exportDataset(options: Parameters<typeof import("./video-dataset").exportVideoDataset>[1]) {
     const { exportVideoDataset } = await import("./video-dataset");
     return exportVideoDataset(this.catalog, options);
   }

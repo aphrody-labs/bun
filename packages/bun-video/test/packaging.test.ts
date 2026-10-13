@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { resolve, relative, isAbsolute, dirname } from "node:path";
+import { libraryPlan } from "../scripts/library-plan";
+import { publicPackageFile } from "../scripts/package-file-policy";
 
 const root = resolve(import.meta.dir, "..");
 const manifest = await Bun.file(resolve(root, "package.json")).json();
+const plan = libraryPlan(manifest);
 
-describe("standalone source package", () => {
+describe("canonical sources and published library plan", () => {
   test("every relative source import remains inside the packaged directory", async () => {
     const typescript = new Bun.Transpiler({ loader: "ts" });
     const tsx = new Bun.Transpiler({ loader: "tsx" });
@@ -24,85 +27,59 @@ describe("standalone source package", () => {
     expect(await Bun.file(resolve(root, "src/parallel-capture.ts")).text()).toContain('"./frame-worker.ts"');
   });
 
-  test("manifest exports and CLI entry points exist in explicit public directories", async () => {
+  test("published exports and CLI entries bind existing source owners to confined dist paths", async () => {
     expect(manifest.private).not.toBe(true);
-    const sdk = await Bun.file(resolve(root, "../bun-runtime-sdk/package.json")).json();
+    const sdk = await Bun.file(Bun.resolveSync("@aphrody/bun-runtime-sdk/package.json", root)).json();
+    expect(sdk.name).toBe("@aphrody/bun-runtime-sdk");
     expect(manifest.dependencies["@aphrody/bun-runtime-sdk"]).toBe(sdk.version);
     expect(
       Object.values(manifest.dependencies).every(value => typeof value === "string" && !value.startsWith("file:")),
     ).toBe(true);
     expect(manifest.publishConfig).toEqual({ access: "public", tag: "next" });
-    for (const entry of [...Object.values(manifest.exports), ...Object.values(manifest.bin)] as string[]) {
+    expect(manifest.exports).toEqual(plan.exports);
+    expect(manifest.bin).toEqual(plan.bins);
+    for (const entry of [...Object.values(plan.sourceExports), ...Object.values(plan.sourceBins)]) {
       expect(/^(\.\/(src|labs|umbrella-src|packages)\/)/.test(entry)).toBe(true);
       expect(await Bun.file(resolve(root, entry)).exists()).toBe(true);
     }
-    for (const entry of Object.values(manifest.bin) as string[]) {
+    for (const entry of Object.values(plan.sourceBins)) {
       expect((await Bun.file(resolve(root, entry)).text()).startsWith("#!/usr/bin/env bun")).toBe(true);
     }
-    expect(manifest.files.filter((entry: string) => !entry.startsWith("!"))).toEqual([
-      "src",
-      "umbrella-src",
-      "packages/remotion/.aphrody",
-      "packages/remotion/LICENSE.md",
-      "packages/remotion/package.json",
-      "packages/remotion/packages/*/src",
-      "packages/remotion/packages/*/package.json",
-      "packages/hyperframes/aphrody",
-      "packages/hyperframes/LICENSE*",
-      "packages/hyperframes/package.json",
-      "packages/hyperframes/packages/*/src",
-      "packages/hyperframes/packages/*/package.json",
-      "native",
-      "infra",
-      "plugin",
-      "scripts",
-      "docs",
-      "labs",
-      "assets",
-      "packages/mediabunny/src",
-      "packages/mediabunny/LICENSE*",
-      "packages/mediabunny/package.json",
-      "packages/yt-dlp/yt_dlp",
-      "packages/yt-dlp/LICENSE*",
-      "packages/yt-dlp/README.md",
-      "packages/yt-dlp/pyproject.toml",
-      "packages/yt-dlp/public.key",
-      "README.md",
-      "LICENSE",
-      "THIRD_PARTY_NOTICES.md",
-    ]);
-    const exclusions = manifest.files.filter((entry: string) => entry.startsWith("!"));
-    expect(exclusions).toContain("!**/.env*");
-    expect(exclusions).toContain("!**/cookies/**");
-    expect(exclusions).toContain("!packages/yt-dlp/test/testdata/certificate/**");
+    expect(manifest.files.length).toBeGreaterThan(1000);
+    expect(manifest.files.every((entry: string) => !/[*!?]/.test(entry) && publicPackageFile(entry))).toBe(true);
+    expect(manifest.files).toContain("dist");
+    expect(manifest.files).toContain("tsconfig.json");
+    expect(manifest.files).toContain("packages/mediabunny/shared/mp3-misc.ts");
+    expect(manifest.files).toContain("packages/remotion/packages/bundler/favicon.ico");
+    for (const source of plan.entries) expect(manifest.files).toContain(source.slice(2));
   });
 
   test("direct engine exports resolve to the absorbed source", async () => {
-    expect(manifest.exports["./remotion"]).toBe("./packages/remotion/packages/core/src/index.ts");
-    expect(manifest.exports["./hyperframes"]).toBe("./packages/hyperframes/packages/core/src/index.ts");
-    for (const entry of [manifest.exports["./remotion"], manifest.exports["./hyperframes"]]) {
+    expect(plan.sourceExports["./remotion"]).toBe("./packages/remotion/packages/core/src/index.ts");
+    expect(plan.sourceExports["./hyperframes"]).toBe("./packages/hyperframes/packages/core/src/index.ts");
+    for (const entry of [plan.sourceExports["./remotion"], plan.sourceExports["./hyperframes"]]) {
       expect(await Bun.file(resolve(root, entry)).exists()).toBe(true);
     }
     expect(manifest.dependencies.remotion).toBeUndefined();
     expect(manifest.dependencies["@hyperframes/core"]).toBeUndefined();
   });
 
-  test("public aliases resolve to their canonical implementation", async () => {
-    const main = await import("@aphrody/bun-video");
-    const engine = await import("@aphrody/bun-video/engine");
-    const encode = await import("@aphrody/bun-video/encode");
-    const computer = await import("@aphrody/bun-video/computer");
+  test("source owners retain canonical implementation references before library generation", async () => {
+    const main = await import("../src/index");
+    const encode = await import("../src/encode");
+    const computer = await import("../src/computer");
     const hyperframes = await import("../packages/hyperframes/packages/engine/src/services/nativeWebViewCapture");
-    expect(engine).toBe(main);
+    expect(plan.sourceExports["./engine"]).toBe(plan.sourceExports["."]);
     expect(encode.encodeVideo).toBe(main.encodeVideo);
     expect(computer.runBrowserTask).toBe(main.runBrowserTask);
     expect(hyperframes.captureNativeWebViewFrames).toBe(main.captureNativeWebViewFrames);
   });
 
   test("the engine CLI retains its commands after entrypoint consolidation", async () => {
-    const child = Bun.spawn([process.execPath, resolve(root, manifest.bin["bun-video-engine"]), "--help"], {
+    const child = Bun.spawn([process.execPath, resolve(root, plan.sourceBins["bun-video-engine"]!), "--help"], {
       stdout: "pipe",
       stderr: "pipe",
+      timeout: 15_000,
     });
     const [output, errors, exitCode] = await Promise.all([
       new Response(child.stdout).text(),
@@ -117,15 +94,25 @@ describe("standalone source package", () => {
   });
 
   test("absorbed Remotion core loads as Bun source without generated dist files", async () => {
-    const core = await import(resolve(root, manifest.exports["./remotion"]));
+    const core = await import(resolve(root, plan.sourceExports["./remotion"]!));
     expect(typeof core.Composition).toBe("function");
     expect(typeof core.interpolate).toBe("function");
     expect(core.interpolate(5, [0, 10], [0, 100])).toBe(50);
     expect(typeof core.AbsoluteFill).toBe("object");
   });
 
+  test("the package renderer and Remotion share one React dispatcher", async () => {
+    const React = await import("react");
+    const dom = await import("react-dom/server");
+    const core = await import(resolve(root, plan.sourceExports["./remotion"]!));
+    const html = dom.renderToStaticMarkup(React.createElement(core.AbsoluteFill, null, "source-render-fixture"));
+    expect(html).toContain("source-render-fixture");
+    expect(html).toContain("position:absolute");
+    expect(React.version).toBe(manifest.dependencies.react);
+  });
+
   test("absorbed HyperFrames core loads as Bun source", async () => {
-    const core = await import(resolve(root, manifest.exports["./hyperframes"]));
+    const core = await import(resolve(root, plan.sourceExports["./hyperframes"]!));
     expect(typeof core.generateBaseHtml).toBe("function");
     expect(typeof core.parseSlideshowManifest).toBe("function");
   });

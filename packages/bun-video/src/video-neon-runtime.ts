@@ -1,5 +1,5 @@
 import { dirname, isAbsolute, join } from "node:path";
-import { createNeonClient } from "../../bun-plugin-neon/src";
+import { createNeonClient } from "@aphrody/bun-plugin-neon";
 import { VideoCatalog, defaultVideoCatalogPath } from "./video-catalog";
 import { NeonVideoCatalog } from "./video-neon-catalog";
 
