@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // Stages target/runtime into the verified artifact layout the Python ctypes binding loads:
 // target/artifact/<triple>/current/{library, yolo_runtime.h, manifest.json}.
-// Usage: bun scripts/stage.ts  (after `cargo build --profile runtime -p yolo-runtime`)
+// Usage: bun scripts/stage.ts [explicit-built-library] (after building the runtime profile)
 import { $ } from "bun";
 import { copyFileSync, mkdirSync, realpathSync, rmSync } from "node:fs";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { Runtime, standaloneLibraryFile, type BuildInfo } from "../src/index.ts";
 
 const root = resolve(import.meta.dir, "..");
-const library = join(
+const defaultLibrary = join(
   root,
   "target/runtime",
   process.platform === "win32"
@@ -17,6 +17,7 @@ const library = join(
       ? "libyolo_runtime.dylib"
       : "libyolo_runtime.so",
 );
+const library = process.argv[2] ? resolve(process.argv[2]) : defaultLibrary;
 const header = join(root, "include/yolo_runtime.h");
 const canonicalHeader = join(root, "include/buv_runtime.h");
 if (!(await Bun.file(library).exists())) {

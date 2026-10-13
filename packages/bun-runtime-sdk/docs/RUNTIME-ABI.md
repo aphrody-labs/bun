@@ -25,6 +25,8 @@ command. Staging selects `target/runtime` and writes
 `target/artifact/<target>/current` with the library, headers and manifest.
 The manifest records target, ABI, source revision, profile and checksums.
 The compiled library's build info identifies the selected native revision.
+An explicit compiled library path may be passed to the staging command when
+Cargo uses the shared cache instead of the package's default target directory.
 
 ## Core capabilities
 
