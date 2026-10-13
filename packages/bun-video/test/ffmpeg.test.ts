@@ -1,8 +1,44 @@
 import { describe, expect, test } from "bun:test";
 import { ptr } from "bun:ffi";
 import { FFmpeg, ffmpegABI, ffmpegLibraryPath } from "../src/ffmpeg";
-import { openVideoPipeline } from "../src/pipeline";
 import { materializeVideoSource, resolveVideoSource } from "../src/source";
+import { mediaSDKLibraryDirectory, mediaSDKPlan, mediaSDKPrefix, validateSDKAsset } from "../src/sdk";
+import { dirname, join } from "node:path";
+
+describe("media SDK identities", () => {
+  test("installed SDK paths share Bun's home and preserve explicit library directories", () => {
+    const target = `${process.platform === "win32" ? "windows" : process.platform}-${process.arch}`;
+    if (!["windows-x64", "linux-x64"].includes(target)) {
+      expect(() => mediaSDKPrefix("ffmpeg")).toThrow("Unsupported media SDK target");
+      expect(mediaSDKLibraryDirectory("ffmpeg", dirname(process.execPath))).toBe(dirname(process.execPath));
+      return;
+    }
+    expect(mediaSDKPrefix("ffmpeg")).toBe(join(dirname(process.execPath), "lib/media", "ffmpeg", target));
+    expect(mediaSDKPrefix("mpv")).toBe(join(dirname(process.execPath), "lib/media", "mpv", target));
+    expect(mediaSDKLibraryDirectory("ffmpeg", dirname(process.execPath))).toBe(dirname(process.execPath));
+    expect(() => mediaSDKLibraryDirectory("ffmpeg", "relative")).toThrow("must be absolute");
+  });
+  test("FFmpeg SDKs have immutable asset digests and complete shared builds", () => {
+    for (const target of ["windows-x64", "linux-x64"] as const) {
+      const plan = mediaSDKPlan("ffmpeg", target);
+      expect(plan.sourceRevision).toBe("7e93014c5bbb61e7c22afebb478bf92f7a08d59a");
+      expect(plan.assets).toHaveLength(0);
+      expect(plan.upstreamAssets).toHaveLength(1);
+      expect(() => validateSDKAsset(plan.upstreamAssets![0])).not.toThrow();
+      expect(plan.upstreamAssets![0].url).toContain("lgpl-shared-9.0");
+      plan.upstreamAssets!.length = 0;
+      expect(mediaSDKPlan("ffmpeg", target).upstreamAssets).toHaveLength(1);
+    }
+  });
+  test("unqualified Linux mpv SDK stays explicitly unavailable", () => {
+    expect(mediaSDKPlan("mpv", "linux-x64").assets).toHaveLength(0);
+  });
+  test("SDK sources reject credentials, mutable digests and oversized assets", () => {
+    const asset = mediaSDKPlan("ffmpeg", "windows-x64").upstreamAssets![0];
+    for (const patch of [{ url: "https://user:secret@example.test/a.zip" }, { sha256: "latest" }, { bytes: 536870913 }, { format: "exe" }])
+      expect(() => validateSDKAsset({ ...asset, ...patch })).toThrow();
+  });
+});
 
 test("source normalization preserves paths and byte view boundaries", () => {
   expect(resolveVideoSource("clips/example.mp4")).toEqual({ kind: "file", path: "clips/example.mp4" });
@@ -77,6 +113,7 @@ describe.skipIf(!process.env.BUN_VIDEO_MEDIA_DIR)("native FFmpeg ownership", () 
       new Blob([bytes]),
       new Response(bytes),
     ]) {
+      const { openVideoPipeline } = await import("../src/pipeline");
       using pipeline = await openVideoPipeline({
         source,
         mediaDirectory: process.env.BUN_VIDEO_MEDIA_DIR,

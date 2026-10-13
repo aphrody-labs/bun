@@ -6,6 +6,7 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
     "paths": {
       "bun": ["../../packages/bun-types/index.d.ts"],
       "bun:*": ["../../packages/bun-types/*.d.ts"]

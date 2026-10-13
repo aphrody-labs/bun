@@ -1,12 +1,16 @@
 import { mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { runMediaSDKCommand } from "../../packages/bun-video/src/sdk";
+import { runMediaSDKFactory, verifyMediaSource } from "./media-sdk-factory";
 
 const root = resolve(import.meta.dir, "../..");
-const source = join(root, "vendor/ffmpeg");
+if (await runMediaSDKFactory("ffmpeg")) process.exit(0);
+if (await runMediaSDKCommand("ffmpeg", root)) process.exit(0);
+const source = resolve(Bun.env.BUN_FFMPEG_SOURCE ?? join(root, "build/media-sources/ffmpeg"));
 const output = join(root, "build/ffmpeg");
 const prefix = resolve(Bun.env.BUN_MEDIA_PREFIX ?? join(root, "build/media"));
 const action = process.argv[2] ?? "plan";
-const bash = Bun.env.BUN_MEDIA_BASH ?? (process.platform === "win32" ? "C:/Program Files/Git/bin/bash.exe" : "bash");
+const bash = Bun.env.BUN_MEDIA_BASH ?? Bun.which("bash") ?? "bash";
 const make = Bun.env.BUN_MEDIA_MAKE ?? Bun.which("make") ?? "make";
 const configure = [
   bash,
@@ -20,6 +24,7 @@ const configure = [
 if (action === "plan") {
   console.log(JSON.stringify({ source, output, prefix, configure, make }, null, 2));
 } else if (action === "configure" || action === "build") {
+  await verifyMediaSource("ffmpeg", source);
   await mkdir(output, { recursive: true });
   const commands =
     action === "configure"

@@ -1,6 +1,7 @@
 import { CString, dlopen, ptr, type FFIFunction, type Pointer } from "bun:ffi";
-import { dirname, isAbsolute, join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { MAX_MEMORY_SOURCE_BYTES } from "./source";
+import { mediaSDKLibraryDirectory } from "./sdk";
 
 const functionABI = <
   const A extends NonNullable<FFIFunction["args"]>,
@@ -172,7 +173,7 @@ export const ffmpegMajors = {
   avdevice: 63,
 } as const;
 
-export function ffmpegLibraryPath(component: FFmpegComponent, directory = dirname(process.execPath)): string {
+export function ffmpegLibraryPath(component: FFmpegComponent, directory = mediaSDKLibraryDirectory("ffmpeg")): string {
   if (!isAbsolute(directory)) throw new TypeError("FFmpeg library directory must be absolute");
   const major = ffmpegMajors[component];
   const name =
@@ -204,6 +205,7 @@ export class FFmpeg {
   }
 
   static open(directory?: string): FFmpeg {
+    const selectedDirectory = mediaSDKLibraryDirectory("ffmpeg", directory);
     const libraries: Partial<FFmpegLibraries> = {};
     const owned: Array<{ close(): void }> = [];
     try {
@@ -216,14 +218,14 @@ export class FFmpeg {
         "avfilter",
         "avdevice",
       ] as const) {
-        const library = openFFmpegComponent(component, directory);
+        const library = openFFmpegComponent(component, selectedDirectory);
         owned.push(library);
         const version = (library.symbols as Record<string, (...args: never[]) => unknown>)[`${component}_version`]();
         if (typeof version !== "number" || version >>> 16 !== ffmpegMajors[component])
           throw new Error(`FFmpeg ${component} ABI mismatch: expected major ${ffmpegMajors[component]}`);
         Object.assign(libraries, { [component]: library });
       }
-      return new FFmpeg(libraries as FFmpegLibraries, directory ?? dirname(process.execPath));
+      return new FFmpeg(libraries as FFmpegLibraries, selectedDirectory);
     } catch (error) {
       for (const library of owned.reverse()) library.close();
       throw error;
