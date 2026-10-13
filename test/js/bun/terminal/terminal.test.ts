@@ -1973,4 +1973,19 @@ describe("bun:rio", () => {
       expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }),
     );
   });
+
+  test("omits wide-character wrap placeholders from text and cell widths", () => {
+    const terminal = new RioTerminal({ cols: 3, rows: 2, scrollback: 2 });
+    terminal.write("ab中");
+
+    expect(terminal.text()).toBe("ab\n中");
+    expect(terminal.cellText(2, 0)).toBe("");
+    expect(terminal.cellText(1, 1)).toBe("");
+    const cells = terminal.cells();
+    expect([cells[8], cells[11] >>> 24, cells[16], cells[19] >>> 24]).toEqual([32, 0, 32, 0]);
+
+    terminal.write("\r\nX");
+    expect(terminal.text({ scrollback: true })).toBe("ab\n中\nX");
+    expect(terminal.text()).toBe("中\nX");
+  });
 });

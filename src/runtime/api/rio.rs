@@ -266,8 +266,8 @@ impl RioTerminal {
                     .unwrap_or(0);
                 let width = match square.wide() {
                     Wide::Wide => 2u32,
-                    Wide::Spacer => 0,
-                    Wide::Narrow | Wide::LeadingSpacer => 1,
+                    Wide::Spacer | Wide::LeadingSpacer => 0,
+                    Wide::Narrow => 1,
                 };
                 let style = terminal.grid.style_of(square);
                 let flags = u32::from(style.flags.bits())
@@ -337,7 +337,10 @@ impl RioTerminal {
             Line(row as i32 - terminal.display_offset() as i32),
             Column(col as usize),
         );
-        let text: String = if matches!(terminal.grid[pos].wide(), Wide::Spacer) {
+        let text: String = if matches!(
+            terminal.grid[pos].wide(),
+            Wide::Spacer | Wide::LeadingSpacer
+        ) {
             String::new()
         } else {
             terminal
@@ -439,8 +442,11 @@ fn terminal_line(terminal: &Crosswords<ReplyListener>, line: i32) -> String {
     (0..terminal.columns())
         .filter_map(|column| {
             let pos = Pos::new(Line(line), Column(column));
-            (!matches!(terminal.grid[pos].wide(), Wide::Spacer))
-                .then_some(terminal.grid.cell_text(pos))
+            (!matches!(
+                terminal.grid[pos].wide(),
+                Wide::Spacer | Wide::LeadingSpacer
+            ))
+            .then_some(terminal.grid.cell_text(pos))
         })
         .flatten()
         .filter(|character| *character != '\0')

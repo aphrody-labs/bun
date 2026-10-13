@@ -44,8 +44,9 @@ to terminal query sequences. The `cols`, `rows`, `cursor`, `title`, and
 
 `RioTerminal.cellText(col, row)` returns the full grapheme at a visible cell's
 zero-based column and row. It preserves combining marks, variation selectors,
-and joined emoji sequences; a wide-character spacer cell returns an empty
-string. Both coordinates must be integers within the current visible screen.
+and joined emoji sequences; a wide-character spacer cell, including the filler
+at the end of a line before a wrapped wide character, returns an empty string.
+Both coordinates must be integers within the current visible screen.
 In contrast, `cells()` stores only the grapheme's first code point in its first
 word; the spacer cell uses code point 32 and display width 0.
 
