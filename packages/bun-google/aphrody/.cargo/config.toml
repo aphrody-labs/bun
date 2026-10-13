@@ -6,7 +6,6 @@
 
 [patch."https://github.com/aphrody-labs/aphrody"]
 aphrody-config = { path = "../../../../aphrody/crates/ai/config" }
-aphrody-m3-tokens = { path = "../../../../aphrody/crates/ui/m3-tokens" }
 aphrody-mcp-client = { path = "../../../../aphrody/crates/ai/mcp-client" }
 aphrody-model-client = { path = "../../../../aphrody/crates/ai/model-client" }
 aphrody-patch = { path = "../../../../aphrody/crates/ai/patch" }

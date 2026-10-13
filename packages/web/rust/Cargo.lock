@@ -289,7 +289,7 @@ dependencies = [
 [[package]]
 name = "aphrody-m3-tokens"
 version = "1.4.4"
-source = "git+https://github.com/aphrody-labs/aphrody?rev=4b83ea7f6c2727d67c30d4942501e5b831e559dd#4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+source = "git+https://github.com/aphrody-labs/material?rev=229a767493818a5dd9f92451b4a99699894a1865#229a767493818a5dd9f92451b4a99699894a1865"
 dependencies = [
  "base64 0.23.1",
 ]

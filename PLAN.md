@@ -1,5 +1,16 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## Material source ownership — 2026-10-13
+
+`packages/web/rust/crates/site` consumes `aphrody-m3-tokens` from the Material
+workspace at revision `229a767493818a5dd9f92451b4a99699894a1865`. Its nested
+`Cargo.lock` resolves exactly one token package at that revision. The Bun
+Google workspace no longer patches this package to `aphrody/crates/ui`.
+`cargo metadata --locked` confirms the resolved site edge. No build or tests
+were run; the site uses the Material owner’s `sheets` module. Migrating the
+remaining Aphrody consumers and removing their transferred duplicate sources
+remain open.
+
 ## Rio stability and upstream source coverage — 2026-10-13
 
 GitHub `raphamorim/rio/main` matches pin `59203ccd5fa1e6b760a738c1ad653bb29f2f3465`:

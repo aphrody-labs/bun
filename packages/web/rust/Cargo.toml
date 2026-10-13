@@ -50,8 +50,8 @@ features = []
 [workspace.dependencies.aphrody-m3-tokens]
 version = "1.4.4"
 features = []
-git = "https://github.com/aphrody-labs/aphrody"
-rev = "4b83ea7f6c2727d67c30d4942501e5b831e559dd"
+git = "https://github.com/aphrody-labs/material"
+rev = "229a767493818a5dd9f92451b4a99699894a1865"
 
 [workspace.dependencies.aphrody-patch]
 version = "1.4.4"
