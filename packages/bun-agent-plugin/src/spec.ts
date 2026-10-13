@@ -26,7 +26,7 @@ export const PREFER: { instead: string; bash: string; use: string[] }[] = [
 ];
 
 /** Where repository skills come from, first match of a name wins. Each is `<dir>/<name>/SKILL.md`. */
-export const SKILL_ROOTS = [".claude/skills", "skills", ".agents/skills"];
+export const SKILL_ROOTS = ["packages/bun-agent-plugin/skills", ".claude/skills", "skills", ".agents/skills"];
 /** Slash commands become skills too (`<name>.md` with a `description` front matter). */
 export const COMMAND_ROOTS = [".claude/commands"];
 

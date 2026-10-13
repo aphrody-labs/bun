@@ -21,6 +21,7 @@
     "bin",
     "src",
     "memory",
+    "skills",
     "README.md"
   ],
   "engines": {

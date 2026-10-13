@@ -126,7 +126,7 @@ describe("generate", () => {
         args: ["mcp"],
       });
       const hooks = json(`${t}/hooks/hooks.json`).hooks;
-      expect(Object.keys(hooks).sort()).toEqual(["PostToolUse", "PreToolUse", "SessionStart"]);
+      expect(Object.keys(hooks).sort()).toEqual(["PostToolUse", "PreToolUse", "SessionStart", "UserPromptSubmit"]);
       expect(hooks.PreToolUse[0].matcher).toBe(t === "claude" ? "Bash|Grep|Glob" : "Bash");
     }
     expect(json("agy/mcp_config.json").mcpServers.bun).toEqual({ command: "bun", args: ["mcp"] });
@@ -151,6 +151,7 @@ describe("generate", () => {
         "bun-crates",
         "bun-docs",
         "bun-runtime",
+        "bun-rust-first",
         "bun-tests",
         "verify",
       ]),

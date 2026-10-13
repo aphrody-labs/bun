@@ -108,7 +108,7 @@ function packageFiles(): Files {
   const out: Files = new Map();
   for (const rel of ["package.json", "README.md"])
     if (existsSync(join(pkg, rel))) out.set(rel, readFileSync(join(pkg, rel), "utf8"));
-  for (const dir of ["bin", "src"]) for (const [rel, v] of readTree(join(pkg, dir))) out.set(`${dir}/${rel}`, v);
+  for (const dir of ["bin", "src", "skills"]) for (const [rel, v] of readTree(join(pkg, dir))) out.set(`${dir}/${rel}`, v);
   return out;
 }
 
