@@ -1,4 +1,13 @@
-export function resolveNeonConnection(value: string | URL | undefined): {
+export type NeonDestination = {
+  expectedHostname?: string;
+  expectedDatabase?: string;
+  requireDirect?: boolean;
+};
+
+export function resolveNeonConnection(
+  value: string | URL | undefined,
+  destination: NeonDestination = {},
+): {
   url: URL;
   pooled: boolean;
 } {
@@ -23,6 +32,17 @@ export function resolveNeonConnection(value: string | URL | undefined): {
     throw new TypeError("Neon connections must require TLS; sslmode must be require, verify-ca, or verify-full");
   }
 
+  const pooled = url.hostname.includes("-pooler.");
+  if (destination.expectedHostname && url.hostname !== destination.expectedHostname.toLowerCase()) {
+    throw new TypeError("Neon connection hostname does not match the expected destination");
+  }
+  if (destination.expectedDatabase && decodeURIComponent(url.pathname.slice(1)) !== destination.expectedDatabase) {
+    throw new TypeError("Neon connection database does not match the expected destination");
+  }
+  if (destination.requireDirect && pooled) {
+    throw new TypeError("This operation requires a direct Neon endpoint");
+  }
+
   url.searchParams.set("sslmode", "verify-full");
-  return { url, pooled: url.hostname.includes("-pooler.") };
+  return { url, pooled };
 }

@@ -21,6 +21,28 @@ test("Neon connections require an explicit PostgreSQL URL and verified TLS", asy
     expect(direct.pooled).toBe(false);
     const pooler = resolveNeonConnection("postgres://user:secret@ep.test-pooler.neon.tech/app");
     expect(pooler.pooled).toBe(true);
+    expect(() =>
+      resolveNeonConnection("postgres://user:secret@ep.site.neon.tech/app", {
+        expectedHostname: "ep.other.neon.tech",
+      }),
+    ).toThrow("hostname does not match");
+    expect(() =>
+      resolveNeonConnection("postgres://user:secret@ep.site.neon.tech/app", {
+        expectedDatabase: "another_app",
+      }),
+    ).toThrow("database does not match");
+    expect(() =>
+      resolveNeonConnection("postgres://user:secret@ep.site-pooler.neon.tech/app", {
+        requireDirect: true,
+      }),
+    ).toThrow("direct Neon endpoint");
+    expect(
+      resolveNeonConnection("postgres://user:secret@ep.site.neon.tech/app", {
+        expectedHostname: "EP.SITE.NEON.TECH",
+        expectedDatabase: "app",
+        requireDirect: true,
+      }).pooled,
+    ).toBe(false);
     let error: unknown;
     try {
       resolveNeonConnection("invalid-secret-value");

@@ -13,6 +13,9 @@ Set `NEON_DATABASE_URL` from the Neon Connect panel, or pass the connection
 string directly. The helper requires PostgreSQL over TLS with hostname and
 certificate verification. It defaults to one pooled connection and disabled
 prepared statements, which also works with Neon pooler endpoints.
+For deployments with multiple Neon projects, set `expectedHostname` and
+`expectedDatabase` to fail closed if a secret points at another product. Set
+`requireDirect` for migrations and other session-dependent operations.
 
 In Inagle, pass only its provider-specific configuration and fail closed when
 it is missing; do not fall back to RG's Supabase connection:
@@ -29,7 +32,10 @@ const sql = createNeonClient({ connectionString });
 ```ts
 import { createNeonClient } from "@aphrody/bun-plugin-neon";
 
-const sql = createNeonClient();
+const sql = createNeonClient({
+  expectedHostname: "ep-my-app.neon.tech",
+  expectedDatabase: "my_app",
+});
 
 try {
   const rows = await sql`SELECT now() AS current_time`;
@@ -53,7 +59,7 @@ PostgreSQL advisory lock, and a ledger table. Files must be named
 ```ts
 import { applyMigrations, createNeonClient } from "@aphrody/bun-plugin-neon";
 
-const sql = createNeonClient();
+const sql = createNeonClient({ requireDirect: true });
 try {
   const report = await applyMigrations(sql, { directory: "./db/migrations" });
   console.log(`Applied ${report.applied.length} migrations`);
