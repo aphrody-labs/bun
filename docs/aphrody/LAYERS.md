@@ -11,7 +11,7 @@ Toute la couche bas niveau appartient au fork Bun (aphrody-labs/bun) :
 - crates Rust système ;
 - interop .NET, C et C++.
 
-Aphrody (C:\aphrody) consomme Bun. Il ne garde que le produit : API, IA, cloud, apps, MCP.
+Aphrody (`$APHRODY_ROOT`) consumes Bun. It retains the product layer: APIs, AI, cloud, apps and MCP.
 
 winclean reste dans aphrody, uniquement comme outil produit. Il couvre le computer use Windows, le nettoyage et l'optimisation, et il consomme `bun:windows`. Il ne possède aucun binding Win32 qui lui soit propre.
 
@@ -19,12 +19,12 @@ Cette logique vaut pour tout : à chaque fois qu'une capacité système existe �
 
 ## Remplacements visés sur Windows 11
 
-| Windows | Remplaçant | Propriétaire |
-|---|---|---|
-| explorer.exe (shell, barre des tâches, menu Démarrer, explorateur de fichiers) | COSMIC porté en Win32 (panel en appbar, launcher, cosmic-files, bg, workspaces) + WebOS M3 ; enregistrable comme shell Winlogon | CW, OS |
-| cmd.exe, pwsh | bunsh (Bun Shell complet POSIX + builtins uutils) + shell aphrody, terminal cosmic-term/ConPTY, profil Windows Terminal | MS (langage et builtins), G1 (pty et terminal) |
-| WinUI 3 / XAML | M3 (Material 3) : composants m3 rendus par Bun.WebView (couche webview unique) ou libcosmic thémé M3 | UI, WV, OS |
-| .NET hors Bun | .NET 10 hébergé dans Bun (node-api-dotnet), `dotnet` piloté par Bun | W |
+| Windows                                                                        | Remplaçant                                                                                                                      | Propriétaire                                   |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| explorer.exe (shell, barre des tâches, menu Démarrer, explorateur de fichiers) | COSMIC porté en Win32 (panel en appbar, launcher, cosmic-files, bg, workspaces) + WebOS M3 ; enregistrable comme shell Winlogon | CW, OS                                         |
+| cmd.exe, pwsh                                                                  | bunsh (Bun Shell complet POSIX + builtins uutils) + shell aphrody, terminal cosmic-term/ConPTY, profil Windows Terminal         | MS (langage et builtins), G1 (pty et terminal) |
+| WinUI 3 / XAML                                                                 | M3 (Material 3) : composants m3 rendus par Bun.WebView (couche webview unique) ou libcosmic thémé M3                            | UI, WV, OS                                     |
+| .NET hors Bun                                                                  | .NET 10 hébergé dans Bun (node-api-dotnet), `dotnet` piloté par Bun                                                             | W                                              |
 
 ## Couverture native de kernel32 et de System32
 
