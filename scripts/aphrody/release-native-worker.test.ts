@@ -4,6 +4,8 @@ import { tempDir } from "../../test/harness";
 import { nativeCapacity, nativeOwnerPrerequisites, nativeWorkerInput, nativeLinuxCPUs } from "./release-native-worker";
 import { nativeFullReleasePlan } from "./release-matrix";
 import { qualifyNativeWinget } from "./release-native-install";
+import { nativeNginxRecipe } from "./release-native-nginx";
+import { mediaSDKPlan } from "../../packages/bun-video/src/sdk";
 
 test("native capacity rejects small hosted machines instead of qualifying from their labels", () => {
   const GiB = 1024 ** 3;
@@ -35,11 +37,16 @@ test("native worker rejects moving refs, foreign targets and products inside the
     expect(() => nativeWorkerInput(bad, sourceRoot)).toThrow();
 });
 
-test("current complete SDK absence remains a concrete failure for every native producer", () => {
+test("unpublished media SDKs use pinned source recipes while unrelated native owner gaps remain", () => {
   for (const allocation of nativeFullReleasePlan("a".repeat(40)).targets) {
     const missing = nativeOwnerPrerequisites(allocation.target);
-    expect(missing.some(cause => cause.includes("pinned ffmpeg SDK assets absent"))).toBe(true);
-    expect(missing.some(cause => cause.includes("pinned mpv SDK assets absent"))).toBe(true);
+    if (allocation.target === "linux-x64") expect(nativeNginxRecipe(allocation.target)).toContain("gnu-x64.sh");
+    else {
+      expect(() => nativeNginxRecipe(allocation.target)).toThrow("recipe absent");
+      expect(missing.some(cause => cause.includes("NGINX engine/module recipe absent"))).toBe(true);
+    }
+    expect(missing.some(cause => cause.includes("SDK recipe or archive absent"))).toBe(false);
+    expect(missing.some(cause => cause.includes("Mach-O"))).toBe(false);
     if (allocation.target !== "windows-x64") expect(missing.some(cause => cause.includes("Sharp/Remotion"))).toBe(true);
     if (allocation.target.endsWith("-musl")) {
       expect(allocation.nativeABIContainer).toBe("alpine:3.24");
@@ -47,6 +54,15 @@ test("current complete SDK absence remains a concrete failure for every native p
       expect(allocation.bootstrap.url).toContain("-musl.zip");
     }
   }
+});
+
+test("a missing source recipe cannot be substituted by an unqualified target label", () => {
+  const plans = (["ffmpeg", "mpv"] as const).map(component => mediaSDKPlan(component, "linux-x64"));
+  delete plans[0]!.buildRecipe;
+  plans[1]!.sourceRevision = "main";
+  const missing = nativeOwnerPrerequisites("linux-x64", plans);
+  expect(missing.some(cause => cause.includes("pinned ffmpeg SDK recipe or archive absent"))).toBe(true);
+  expect(missing.some(cause => cause.includes("pinned mpv SDK recipe or archive absent"))).toBe(true);
 });
 
 test("Winget fixture cannot modify the local workstation through the native CI helper", async () => {

@@ -1,28 +1,28 @@
-import { chmod, mkdir, realpath, statfs } from "node:fs/promises";
+import { chmod, mkdir, statfs } from "node:fs/promises";
 import { freemem } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pins, locations } from "../build/ci-images/spec";
 import {
   downloadMediaSDK,
-  extractMediaSDKArchive,
   hashSDKFile,
   mediaSDKPlan,
-  verifyMediaSDKLayout,
   type MediaSDKDescriptor,
   type MediaSDKTarget,
 } from "../../packages/bun-video/src/sdk";
 import { mediaSDKHostTarget } from "../../packages/bun-video/src/sdk-platform";
-import {
-  assertPublicMediaPath,
-  assertMediaRuntimeIdentity,
-  mediaReleaseTarget,
-  packageMediaRelease,
-} from "./media-release";
+import { assertMediaRuntimeIdentity, mediaReleaseTarget, packageMediaRelease } from "./media-release";
 import { nativeFullReleasePlan, runtimeFlavorArgs } from "./release-matrix";
-import { qualifyLinuxMediaSDK } from "./media-sdk-factory";
+import { qualifyMediaSDKClosure } from "./media-sdk-factory";
+import {
+  prepareNativeMedia,
+  qualifyNativeMediaAVIO,
+  readNativeMediaInputs,
+  type NativeMediaInputs,
+} from "./media-sdk-producer";
 import { qualifyNativeInstall, qualifyNativeWinget } from "./release-native-install";
 import type { NativePlatformQualification } from "./release-aggregation";
-import { binaryImports, isMediaSystemDLL } from "./media-stage";
+import { nativeNginxRecipe, readNginxReleaseArtifact, type NginxReleaseManifest } from "./release-native-nginx";
+import { qualifyMediaELFs } from "./media-sdk-abi";
 
 type WorkerInput = { target: string; source: string; version: string; output: string; root: string };
 const root = resolve(import.meta.dir, "../..");
@@ -90,16 +90,24 @@ export function nativeOwnerPrerequisites(target: string, plans?: MediaSDKDescrip
     plans ??
     (["ffmpeg", "mpv"] as const).map(component => mediaSDKPlan(component, selected.sdkTarget as MediaSDKTarget));
   const missing: string[] = [];
+  try {
+    nativeNginxRecipe(target);
+  } catch (error) {
+    missing.push((error as Error).message);
+  }
   for (const [index, plan] of descriptors.entries())
-    if (!plan.assets.length)
+    if (
+      !plan.assets.length &&
+      (plan.buildRecipe?.owner !== "scripts/aphrody/media-sdk-build.ts" ||
+        plan.buildRecipe.sourcePins !== "scripts/aphrody/media-sdk-sources.json" ||
+        !/^[a-f0-9]{40}$/.test(plan.sourceRevision ?? ""))
+    )
       missing.push(
-        `scripts/aphrody/media-sdk-factory.ts: complete pinned ${index === 0 ? "ffmpeg" : "mpv"} SDK assets absent for ${selected.sdkTarget}`,
+        `scripts/aphrody/media-sdk-factory.ts: pinned ${index === 0 ? "ffmpeg" : "mpv"} SDK recipe or archive absent for ${selected.sdkTarget}`,
       );
   // The existing native asset plugins deliberately reject these platforms.
   if (target !== "windows-x64")
     missing.push("packages/bun-video native Sharp/Remotion library owner currently qualifies Windows x64 only");
-  if (selected.os === "darwin")
-    missing.push("Native Mach-O closure qualification for the media and runtime SDK owners is not implemented");
   return missing;
 }
 
@@ -220,48 +228,32 @@ async function preflight(input: WorkerInput) {
 
 async function sdkPrefix(input: WorkerInput, diagnostics: string) {
   const target = mediaReleaseTarget(input.target);
-  const prefix = join(input.output, "media-prefix");
-  await mkdir(prefix, { recursive: false });
-  const members = new Map<string, string>();
-  for (const component of ["ffmpeg", "mpv"] as const) {
-    const descriptor = mediaSDKPlan(component, target.sdkTarget as MediaSDKTarget);
-    const archives = await downloadMediaSDK(
-      component,
-      target.sdkTarget as MediaSDKTarget,
-      join(input.output, "downloads"),
+  const sdkTarget = target.sdkTarget as MediaSDKTarget;
+  let inputs: NativeMediaInputs;
+  if (process.env.BUN_MEDIA_SDK_INPUTS) {
+    inputs = await readNativeMediaInputs(
+      process.env.BUN_MEDIA_SDK_INPUTS,
+      process.env.BUN_MEDIA_SDK_INPUTS_SHA256 ?? "",
+      sdkTarget,
     );
-    if (archives.length !== 1) throw new Error(`Native factory needs one complete normalized ${component} SDK asset`);
-    const directory = join(input.output, `sdk-${component}`);
-    await extractMediaSDKArchive(archives[0]!, directory);
-    const receipt = await Bun.file(join(directory, "bun-sdk-receipt.json")).json();
-    if (
-      receipt.schema !== 1 ||
-      receipt.component !== component ||
-      receipt.target !== target.sdkTarget ||
-      receipt.sourceRevision !== descriptor.sourceRevision ||
-      !receipt.files
-    )
-      throw new Error(`Normalized ${component} SDK source receipt differs`);
-    await verifyMediaSDKLayout(component, target.sdkTarget as MediaSDKTarget, directory);
-    for (const [name, expected] of Object.entries(receipt.files)) {
-      assertPublicMediaPath(name);
-      const path = await realpath(join(directory, name));
-      const within = relative(await realpath(directory), path);
-      if (within.startsWith("..") || isAbsolute(within) || (await hashSDKFile(path)) !== expected)
-        throw new Error(`Pinned ${component} SDK member differs: ${name}`);
-      const key = name.toLowerCase();
-      const prior = members.get(key);
-      if (prior && prior !== expected) throw new Error(`Native SDK owners collide: ${name}`);
-      if (!prior) {
-        const destination = join(prefix, name);
-        await mkdir(dirname(destination), { recursive: true });
-        await Bun.write(destination, Bun.file(path));
-        if (target.os !== "windows") await chmod(destination, name.startsWith("bin/") ? 0o755 : 0o644);
-        members.set(key, String(expected));
-      }
+  } else {
+    inputs = { schema: 1, target: sdkTarget, components: {} as NativeMediaInputs["components"] };
+    for (const component of ["ffmpeg", "mpv"] as const) {
+      const descriptor = mediaSDKPlan(component, sdkTarget);
+      if (descriptor.assets.length !== 1)
+        throw new Error(
+          `Explicit ${component} SDK source/prefix/archive input required via BUN_MEDIA_SDK_INPUTS + BUN_MEDIA_SDK_INPUTS_SHA256; source recipes need no prior publication`,
+        );
+      const archives = await downloadMediaSDK(component, sdkTarget, join(input.output, "downloads"));
+      const asset = descriptor.assets[0]!;
+      inputs.components[component] = { kind: "archive", path: archives[0]!, sha256: asset.sha256, bytes: asset.bytes };
     }
-    await Bun.write(join(diagnostics, `${component}-sdk.json`), JSON.stringify(receipt, null, 2) + "\n");
   }
+  return prepareNativeMedia(inputs, input.root, input.output, diagnostics);
+}
+
+async function requireAVIO(prefix: string, input: WorkerInput) {
+  const target = mediaReleaseTarget(input.target);
   const sidecars =
     target.os === "windows"
       ? ["bin/bun-video-native.exe", "bin/bun_video_native.dll"]
@@ -272,7 +264,6 @@ async function sdkPrefix(input: WorkerInput, diagnostics: string) {
   for (const path of sidecars)
     if (!(await Bun.file(join(prefix, path)).exists()))
       throw new Error(`Native AVIO sidecar owner absent from pinned complete SDK: ${path}`);
-  return prefix;
 }
 
 async function produce(input: WorkerInput) {
@@ -315,6 +306,9 @@ async function produce(input: WorkerInput) {
   const rust = (await run("rust-pin", ["rustup", "show", "active-toolchain"])).stdout;
   if (!rust.startsWith(pins.rust.channel)) throw new Error("Rust toolchain differs from committed pin");
   const prefix = await sdkPrefix(input, diagnostics);
+  await requireAVIO(prefix, input);
+  if (!(await Bun.file(join(diagnostics, "avio-qualification.json")).exists()))
+    await qualifyNativeMediaAVIO(target.sdkTarget as MediaSDKTarget, input.root, prefix, diagnostics);
   process.env.BUN_MEDIA_PREFIX = prefix;
   await run("curl-source", [process.execPath, "--no-env-file", "scripts/aphrody/curl-source.ts"], 300_000);
   const sysroot =
@@ -408,18 +402,13 @@ async function produce(input: WorkerInput) {
   const sdkLibraries = Object.keys(sdkArtifactManifest.files).filter(name => /\.(?:dll|so|dylib)$/.test(name));
   if (sdkLibraries.length !== 1) throw new Error("Runtime SDK artifact must own exactly one native module");
   const sdkLibrary = join(runtimeSDKArtifact, sdkLibraries[0]!);
-  let sdkClosure: unknown;
-  if (target.os === "linux") {
-    const directory = join(input.output, "runtime-sdk-closure");
-    await mkdir(join(directory, "lib"), { recursive: true });
-    await Bun.write(join(directory, "lib", sdkLibraries[0]!), Bun.file(sdkLibrary));
-    sdkClosure = await qualifyLinuxMediaSDK(target.sdkTarget as MediaSDKTarget, directory);
-  } else if (target.os === "windows") {
-    const imports = await binaryImports(sdkLibrary, target.sdkTarget as MediaSDKTarget);
-    if (imports.some(name => !isMediaSystemDLL(name)))
-      throw new Error("Runtime SDK imports an unbundled native dependency");
-    sdkClosure = { target: target.sdkTarget, imports, sha256: await hashSDKFile(sdkLibrary) };
-  } else throw new Error("Native Mach-O runtime SDK closure owner is missing");
+  const sdkClosureDirectory = join(input.output, "runtime-sdk-closure");
+  await mkdir(join(sdkClosureDirectory, target.os === "windows" ? "bin" : "lib"), { recursive: true });
+  await Bun.write(
+    join(sdkClosureDirectory, target.os === "windows" ? "bin" : "lib", sdkLibraries[0]!),
+    Bun.file(sdkLibrary),
+  );
+  const sdkClosure = await qualifyMediaSDKClosure(target.sdkTarget as MediaSDKTarget, sdkClosureDirectory);
   const gates: NativePlatformQualification["gates"] = [];
   const products = join(input.output, "products");
   await mkdir(products, { recursive: false });
@@ -438,6 +427,124 @@ async function produce(input: WorkerInput) {
     gates.push({ id, passed: true, log, sha256: await hashSDKFile(join(products, log)) });
     return id === "native-update" ? result.stdout + result.stderr : result.stdout;
   };
+  const nginxRecipe = nativeNginxRecipe(input.target);
+  await run("nginx-source", [runtime, "--no-env-file", "packages/bun-nginx/scripts/prepare-sources.ts"], 300_000);
+  if (sysroot !== "/opt/linux-sysroot-glibc" || dirname(toolchain.cc) !== "/usr/lib/llvm-23/bin")
+    throw new Error(
+      "packages/bun-nginx/scripts/portable-sdk.ts requires its proven focal sysroot and LLVM owner paths",
+    );
+  const nginxZlib = process.env.BUN_NGINX_ZLIB_PREFIX ?? prefix;
+  for (const name of ["lib/libz.a", "include/zlib.h", "include/zconf.h", "share/licenses/zlib-ng/LICENSE.md"])
+    if (!(await Bun.file(join(nginxZlib, name)).exists()))
+      throw new Error(`Canonical NGINX zlib SDK prerequisite absent: ${name}; supply the qualified SDK owner prefix`);
+  const nginxOwner = join(input.root, "build/native-ci-nginx", input.target);
+  await command(["bash", join(input.root, nginxRecipe)], input.root, join(diagnostics, "nginx-build.log"), {
+    timeout: 3_600_000,
+    env: {
+      GIT_SHA: input.source,
+      BUN_NGINX_OUTPUT: nginxOwner,
+      BUN_NGINX_RUNTIME: runtime,
+      BUN_NGINX_SYSROOT: sysroot,
+      BUN_NGINX_LLVM_BIN: dirname(toolchain.cc),
+      BUN_NGINX_ZLIB_PREFIX: nginxZlib,
+      BUN_NGINX_HEAVY_LOCK: process.env.BUN_NGINX_HEAVY_LOCK ?? join(input.root, "build/locks/heavy.lock"),
+      BUN_NGINX_CPUS: nativeLinuxCPUs(await Bun.file("/proc/self/status").text()),
+    },
+  });
+  const nginxExecutable = join(nginxOwner, "objects/nginx");
+  const nginxModuleReceipt = join(nginxOwner, "module-qualification.json");
+  await gate("native-nginx-controller", [runtime, "--no-env-file", "test", "./test/js/bun/nginx/test.ts"], {
+    env: { BUN_NGINX_TEST_BINARY: nginxExecutable },
+  });
+  await gate("native-nginx-module", [
+    runtime,
+    "--no-env-file",
+    "packages/bun-nginx/scripts/qualify-module.ts",
+    join(nginxOwner, "build-receipt.json"),
+    nginxModuleReceipt,
+    join(nginxOwner, "objects/ngx_bun_runtime/ngx-release/libngx_http_bun_module.so"),
+  ]);
+  const elf = async (argument: string) =>
+    (await run(`nginx-elf-${argument.slice(2)}`, ["llvm-readelf", argument, nginxExecutable])).stdout;
+  const nginxClosure = qualifyMediaELFs("linux-x64", [
+    {
+      file: "bin/nginx",
+      sha256: await hashSDKFile(nginxExecutable),
+      header: await elf("--file-header"),
+      dynamic: await elf("--dynamic-table"),
+      versions: await elf("--version-info"),
+      programHeaders: await elf("--program-headers"),
+    },
+  ]);
+  await gate("native-nginx-closure", [
+    runtime,
+    "--no-env-file",
+    "-e",
+    "console.log(JSON.stringify(JSON.parse(process.argv[1])))",
+    JSON.stringify(nginxClosure),
+  ]);
+  const nginxArtifact = join(input.output, "nginx-sdk");
+  await mkdir(nginxArtifact, { recursive: false });
+  const nginxFiles: NginxReleaseManifest["files"] = {};
+  const nginxAdd = async (name: string, path: string) => {
+    const destination = join(nginxArtifact, name);
+    await mkdir(dirname(destination), { recursive: true });
+    await Bun.write(destination, Bun.file(path));
+    nginxFiles[name] = { bytes: Bun.file(destination).size, sha256: await hashSDKFile(destination) };
+  };
+  await nginxAdd("bin/nginx", nginxExecutable);
+  await chmod(join(nginxArtifact, "bin/nginx"), 0o755);
+  await nginxAdd("receipts/build-receipt.json", join(nginxOwner, "build-receipt.json"));
+  await nginxAdd("receipts/module-qualification.json", nginxModuleReceipt);
+  const closurePath = join(nginxOwner, "closure.json");
+  await Bun.write(closurePath, JSON.stringify(nginxClosure, null, 2) + "\n");
+  await nginxAdd("receipts/closure.json", closurePath);
+  const sourcePins = await Bun.file(join(input.root, "packages/bun-nginx/native/sources.json")).json();
+  for (const [component, pin] of Object.entries(sourcePins) as [
+    string,
+    { path?: string; revision?: string; licensePath?: string },
+  ][]) {
+    if (!pin.path || !pin.revision || !pin.licensePath) continue;
+    await nginxAdd(`share/licenses/${component}/LICENSE`, join(input.root, pin.licensePath));
+    const archive = join(nginxArtifact, `sources/${component}.tar`);
+    await mkdir(dirname(archive), { recursive: true });
+    await run(`nginx-source-${component}`, [
+      "git",
+      "-C",
+      join(input.root, pin.path),
+      "archive",
+      "--format=tar",
+      `--output=${archive}`,
+      pin.revision,
+    ]);
+    nginxFiles[`sources/${component}.tar`] = { bytes: Bun.file(archive).size, sha256: await hashSDKFile(archive) };
+  }
+  for (const [name, path] of [
+    ["boringssl/LICENSE", join(nginxOwner, "dependencies/prefix/share/licenses/boringssl/LICENSE")],
+    ["pcre2/copyright", join(nginxOwner, "dependencies/prefix/usr/share/doc/libpcre2-dev/copyright")],
+    ["zlib-ng/LICENSE.md", join(nginxZlib, "share/licenses/zlib-ng/LICENSE.md")],
+    ["gcc-runtime/copyright", join(sysroot!, "usr/share/doc/gcc-13-base/copyright")],
+    ["libcrypt/copyright", join(sysroot!, "usr/share/doc/libcrypt1/copyright")],
+  ] as const)
+    await nginxAdd(`share/licenses/${name}`, path);
+  const nginxManifest: NginxReleaseManifest = {
+    schema: 1,
+    kind: "bun-nginx-native-sdk",
+    source: input.source,
+    sourceDirty: false,
+    target: input.target,
+    platform: process.platform,
+    arch: process.arch,
+    executable: "bin/nginx",
+    files: nginxFiles,
+  };
+  await Bun.write(join(nginxArtifact, "nginx-sdk.json"), JSON.stringify(nginxManifest, null, 2) + "\n");
+  await readNginxReleaseArtifact(nginxArtifact, {
+    source: input.source,
+    target: input.target,
+    platform: process.platform,
+    arch: process.arch,
+  });
   await gate("runtime-regressions", [
     runtime,
     "--no-env-file",
@@ -473,10 +580,7 @@ async function produce(input: WorkerInput) {
     "-t",
     "native (Curl|Crawl)",
   ]);
-  const closure =
-    target.os === "linux"
-      ? await qualifyLinuxMediaSDK(target.sdkTarget as MediaSDKTarget, prefix)
-      : await verifyMediaSDKLayout("ffmpeg", target.sdkTarget as MediaSDKTarget, prefix);
+  const closure = await qualifyMediaSDKClosure(target.sdkTarget as MediaSDKTarget, prefix);
   await Bun.write(join(diagnostics, "media-closure.json"), JSON.stringify(closure, null, 2) + "\n");
   await gate(
     "native-runtime-sdk",
@@ -521,6 +625,7 @@ async function produce(input: WorkerInput) {
     executable,
     mediaPrefix: prefix,
     runtimeSDKArtifact,
+    nginxArtifact,
     output: join(input.output, "assembled"),
     sdkArchives: [
       {
@@ -627,10 +732,30 @@ if (import.meta.main) {
   const input = nativeWorkerInput(args);
   try {
     if (action === "preflight") await preflight(input);
-    else if (action === "produce") await produce(input);
+    else if (action === "prepare-media") {
+      const diagnostics = join(input.output, "diagnostics");
+      await mkdir(diagnostics, { recursive: true });
+      await sourceIdentity(input, diagnostics);
+      const prefix = await sdkPrefix(input, diagnostics);
+      await Bun.write(
+        join(diagnostics, "media-preparation.json"),
+        JSON.stringify(
+          {
+            schema: 1,
+            source: input.source,
+            target: input.target,
+            prefix,
+            nativeReleaseQualified: false,
+            archivePublished: false,
+          },
+          null,
+          2,
+        ) + "\n",
+      );
+    } else if (action === "produce") await produce(input);
     else
       throw new Error(
-        "Usage: release-native-worker.ts preflight|produce <target> <source-SHA> <version> <absolute-output>",
+        "Usage: release-native-worker.ts preflight|prepare-media|produce <target> <source-SHA> <version> <absolute-output>",
       );
   } catch (error) {
     const diagnostics = join(input.output, "diagnostics");
