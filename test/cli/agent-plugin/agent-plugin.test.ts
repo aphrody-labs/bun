@@ -441,7 +441,7 @@ describe("bun agent-plugin", () => {
       });
       expect(install.stderr).toBe("");
       const report = JSON.parse(install.stdout);
-      expect(report.targets).toEqual(["claude", "codex", "agy"]);
+      expect(report.targets).toEqual(["claude", "codex", "agy", "gemini"]);
 
       const merged = JSON.parse(readFileSync(join(h, ".claude/settings.json"), "utf8"));
       expect(merged.enabledPlugins).toEqual({ "aphrody@aphrody": true, "bun@aphrody-bun": true });
@@ -461,6 +461,7 @@ describe("bun agent-plugin", () => {
       expect(resolve(JSON.parse(plugin["agy/mcp_config.json"]).mcpServers.bun.command)).toBe(resolve(bunExe()));
       expect(resolve(JSON.parse(plugin["install.json"]).executable)).toBe(resolve(bunExe()));
       expect(existsSync(join(h, ".gemini/config/plugins/bun/hooks.json"))).toBe(true);
+      expect(existsSync(join(h, ".gemini/extensions/bun/gemini-extension.json"))).toBe(true);
 
       const again = await run([bunExe(), "agent-plugin", "install", "--update", "--home", h, "--json"], { cwd: h });
       expect(JSON.parse(again.stdout).skipped).toBe("up to date");
@@ -473,6 +474,7 @@ describe("bun agent-plugin", () => {
       expect(readFileSync(join(h, ".codex/config.toml"), "utf8")).toBe(config);
       expect(existsSync(join(h, ".codex/AGENTS.md")) ? readFileSync(join(h, ".codex/AGENTS.md"), "utf8") : "").toBe("");
       expect(existsSync(join(h, ".gemini/config/plugins/bun"))).toBe(false);
+      expect(existsSync(join(h, ".gemini/extensions/bun"))).toBe(false);
       expect(existsSync(join(h, ".bun/agent-plugin"))).toBe(false);
       expect([install.exitCode, again.exitCode, uninstall.exitCode]).toEqual([0, 0, 0]);
     },
