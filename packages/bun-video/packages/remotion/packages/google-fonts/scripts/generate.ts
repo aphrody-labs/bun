@@ -158,7 +158,7 @@ export const loadVariableFont = <T extends keyof VariableVariants>(
 const date = Date.now();
 
 // Prepare css cache dir
-if (!await Bun.file(CSS_CACHE_DIR).exists()) {
+if (!(await Bun.file(CSS_CACHE_DIR).exists())) {
 	await fs.promises.mkdir(CSS_CACHE_DIR, {recursive: true});
 }
 

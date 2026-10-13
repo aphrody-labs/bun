@@ -1,5 +1,6 @@
 import { CString, FFIType, dlopen, ptr, toArrayBuffer, type FFIFunction, type Pointer } from "bun:ffi";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
+import { mediaSDKLibraryDirectory } from "./sdk";
 
 const functionABI = <
   const A extends NonNullable<FFIFunction["args"]>,
@@ -78,7 +79,7 @@ export interface MpvEvent {
   readonly replyUserdata: bigint;
 }
 
-export function mpvLibraryPath(directory = dirname(process.execPath)): string {
+export function mpvLibraryPath(directory = mediaSDKLibraryDirectory("mpv")): string {
   return join(
     directory,
     process.platform === "win32" ? "mpv-2.dll" : process.platform === "darwin" ? "libmpv.2.dylib" : "libmpv.so.2",
@@ -172,7 +173,7 @@ export class MpvClient {
   getProperty(name: string): string | null {
     this.#assertOpen();
     const value = this.#library.symbols.mpv_get_property_string(this.#handle, ptr(cstring(name)));
-    if (value === null || value === 0 || value === 0n) return null;
+    if (!value) return null;
     const pointer = Number(value) as Pointer;
     try {
       return new CString(pointer).toString();

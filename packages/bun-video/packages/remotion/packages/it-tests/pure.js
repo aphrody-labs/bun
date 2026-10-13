@@ -1,5 +1,6 @@
 var __commonJS = (cb, mod) => () => (
-	mod || cb((mod = {exports: {}}).exports, mod), mod.exports
+	mod || cb((mod = {exports: {}}).exports, mod),
+	mod.exports
 );
 
 // ../renderer/dist/codec.js

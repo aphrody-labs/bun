@@ -2,7 +2,13 @@
 // one with `bun pm pack`, so the Dockerfiles can install the local build of
 // the renderer (with our --enable-blink-features=CanvasDrawElement change)
 // instead of pulling the published version from npm.
-import {readFileSync, readdirSync, rmSync, mkdirSync, writeFileSync} from 'node:fs';
+import {
+	readFileSync,
+	readdirSync,
+	rmSync,
+	mkdirSync,
+	writeFileSync,
+} from 'node:fs';
 import {join, resolve} from 'node:path';
 import {$} from 'bun';
 
@@ -21,7 +27,10 @@ const readPkg = (dir: string): Pkg | null => {
 			...json.optionalDependencies,
 		};
 		const wsDeps = Object.entries(deps)
-			.filter(([, v]) => typeof v === 'string' && (v as string).startsWith('workspace:'))
+			.filter(
+				([, v]) =>
+					typeof v === 'string' && (v as string).startsWith('workspace:'),
+			)
 			.map(([k]) => k);
 		return {name: json.name, dir, deps: wsDeps};
 	} catch {

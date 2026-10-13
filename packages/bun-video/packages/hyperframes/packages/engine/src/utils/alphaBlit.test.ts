@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "bun:test";
 import { deflateSync } from "node:zlib";
 import {
   decodePng,
+  encodePng,
   decodePngToRgb48le,
   blitRgba8OverRgb48le,
   blitRgb48leRegion,
@@ -51,6 +52,30 @@ function makeChunk(type: string, data: Buffer): Buffer {
 
 const PNG_SIG = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
+it("encodes valid PNG chunk lengths, checksums and zeroed IHDR methods", () => {
+  const pixels = new Uint8Array([255, 0, 128, 255, 1, 2, 3, 64]);
+  const png = encodePng(2, 1, pixels);
+  expect(Buffer.isBuffer(png)).toBe(true);
+  expect(png.subarray(0, 8).equals(PNG_SIG)).toBe(true);
+  const chunks: string[] = [];
+  for (let offset = 8; offset < png.length;) {
+    const length = png.readUInt32BE(offset);
+    const type = png.toString("ascii", offset + 4, offset + 8);
+    chunks.push(type);
+    expect(png.readUInt32BE(offset + 8 + length)).toBe(
+      crc32(png.subarray(offset + 4, offset + 8 + length)),
+    );
+    if (type === "IHDR") {
+      expect(png.readUInt32BE(offset + 8)).toBe(2);
+      expect(png.readUInt32BE(offset + 12)).toBe(1);
+      expect([...png.subarray(offset + 16, offset + 21)]).toEqual([8, 6, 0, 0, 0]);
+    }
+    offset += 12 + length;
+  }
+  expect(chunks).toEqual(["IHDR", "IDAT", "IEND"]);
+  expect(decodePng(png).data).toEqual(pixels);
+});
+
 /**
  * Build a minimal RGBA PNG for testing.
  * pixels: flat RGBA array (row-major, 8-bit per channel)
@@ -82,7 +107,7 @@ function makePng(width: number, height: number, pixels: number[]): Buffer {
     PNG_SIG,
     makeChunk("IHDR", ihdr),
     makeChunk("IDAT", idatData),
-    makeChunk("IEND", new Uint8Array(0)),
+    makeChunk("IEND", Buffer.alloc(0)),
   ]);
 }
 
@@ -250,7 +275,7 @@ function makePngWithFilter(filterType: 0 | 1 | 2 | 3 | 4): {
       PNG_SIG,
       makeChunk("IHDR", ihdr),
       makeChunk("IDAT", idat),
-      makeChunk("IEND", new Uint8Array(0)),
+      makeChunk("IEND", Buffer.alloc(0)),
     ]),
     expectedPixels,
   };
@@ -306,7 +331,7 @@ describe("decodePng filter coverage", () => {
       ihdrChunk,
       makeChunk("IDAT", Buffer.from(part1)),
       makeChunk("IDAT", Buffer.from(part2)),
-      makeChunk("IEND", new Uint8Array(0)),
+      makeChunk("IEND", Buffer.alloc(0)),
     ]);
 
     const { data } = decodePng(multiIdatPng);
@@ -329,7 +354,7 @@ describe("decodePng filter coverage", () => {
       PNG_SIG,
       makeChunk("IHDR", ihdr),
       makeChunk("IDAT", idat),
-      makeChunk("IEND", new Uint8Array(0)),
+      makeChunk("IEND", Buffer.alloc(0)),
     ]);
     expect(() => decodePng(png)).toThrow("interlace");
   });
@@ -339,7 +364,7 @@ describe("decodePng filter coverage", () => {
     const png = Buffer.concat([
       PNG_SIG,
       makeChunk("IDAT", idat),
-      makeChunk("IEND", new Uint8Array(0)),
+      makeChunk("IEND", Buffer.alloc(0)),
     ]);
     expect(() => decodePng(png)).toThrow("IHDR");
   });
@@ -389,7 +414,7 @@ function makePng16(width: number, height: number, pixels: number[]): Buffer {
     PNG_SIG,
     makeChunk("IHDR", ihdr),
     makeChunk("IDAT", idat),
-    makeChunk("IEND", new Uint8Array(0)),
+    makeChunk("IEND", Buffer.alloc(0)),
   ]);
 }
 
@@ -749,7 +774,7 @@ describe("blitRgba8OverRgb48le: sRGB → BT.2020 reference values", () => {
 
 describe("blitRgb48leRegion", () => {
   it("copies a region at position (0,0) — full overlap", () => {
-    const canvas = new Uint8Array(4 * 4 * 6); // 4x4 black
+    const canvas = Buffer.alloc(4 * 4 * 6); // 4x4 black
     const source = makeHdrFrame(2, 2, 10000, 20000, 30000);
     blitRgb48leRegion(canvas, source, 0, 0, 2, 2, 4, 4);
     expect(canvas.readUInt16LE(0)).toBe(10000);
@@ -759,7 +784,7 @@ describe("blitRgb48leRegion", () => {
   });
 
   it("copies a region at offset position", () => {
-    const canvas = new Uint8Array(4 * 4 * 6);
+    const canvas = Buffer.alloc(4 * 4 * 6);
     const source = makeHdrFrame(2, 2, 50000, 40000, 30000);
     blitRgb48leRegion(canvas, source, 1, 1, 2, 2, 4, 4);
     expect(canvas.readUInt16LE(0)).toBe(0);
@@ -768,7 +793,7 @@ describe("blitRgb48leRegion", () => {
   });
 
   it("clips when region extends beyond canvas edge", () => {
-    const canvas = new Uint8Array(4 * 4 * 6);
+    const canvas = Buffer.alloc(4 * 4 * 6);
     const source = makeHdrFrame(3, 3, 10000, 20000, 30000);
     blitRgb48leRegion(canvas, source, 2, 2, 3, 3, 4, 4);
     const off = (2 * 4 + 2) * 6;
@@ -779,7 +804,7 @@ describe("blitRgb48leRegion", () => {
   });
 
   it("applies opacity when provided", () => {
-    const canvas = new Uint8Array(1 * 1 * 6);
+    const canvas = Buffer.alloc(1 * 1 * 6);
     const source = makeHdrFrame(1, 1, 40000, 40000, 40000);
     blitRgb48leRegion(canvas, source, 0, 0, 1, 1, 1, 1, 0.5);
     expect(canvas.readUInt16LE(0)).toBe(20000);
@@ -805,7 +830,7 @@ describe("blitRgb48leRegion", () => {
   });
 
   it("no-op for zero-size region", () => {
-    const canvas = new Uint8Array(4 * 4 * 6);
+    const canvas = Buffer.alloc(4 * 4 * 6);
     const source = makeHdrFrame(2, 2, 10000, 20000, 30000);
     blitRgb48leRegion(canvas, source, 0, 0, 0, 0, 4, 4);
     expect(canvas.readUInt16LE(0)).toBe(0);
@@ -947,8 +972,8 @@ describe("parseTransformMatrix", () => {
 
 describe("blitRgb48leAffine", () => {
   it("identity matrix produces same result as blitRgb48leRegion", () => {
-    const canvas1 = new Uint8Array(4 * 4 * 6);
-    const canvas2 = new Uint8Array(4 * 4 * 6);
+    const canvas1 = Buffer.alloc(4 * 4 * 6);
+    const canvas2 = Buffer.alloc(4 * 4 * 6);
     const source = makeHdrFrame(2, 2, 10000, 20000, 30000);
     const identity = [1, 0, 0, 1, 0, 0];
 
@@ -959,7 +984,7 @@ describe("blitRgb48leAffine", () => {
   });
 
   it("translation moves pixels", () => {
-    const canvas = new Uint8Array(4 * 4 * 6);
+    const canvas = Buffer.alloc(4 * 4 * 6);
     const source = makeHdrFrame(1, 1, 50000, 40000, 30000);
     const translate = [1, 0, 0, 1, 2, 1];
     blitRgb48leAffine(canvas, source, translate, 1, 1, 4, 4);
@@ -970,7 +995,7 @@ describe("blitRgb48leAffine", () => {
   });
 
   it("scale down by 0.5 shrinks the output", () => {
-    const canvas = new Uint8Array(4 * 4 * 6);
+    const canvas = Buffer.alloc(4 * 4 * 6);
     const source = makeHdrFrame(4, 4, 40000, 30000, 20000);
     const scale = [0.5, 0, 0, 0.5, 0, 0];
     blitRgb48leAffine(canvas, source, scale, 4, 4, 4, 4);
@@ -981,7 +1006,7 @@ describe("blitRgb48leAffine", () => {
   });
 
   it("scale up by 2 enlarges the output", () => {
-    const canvas = new Uint8Array(4 * 4 * 6);
+    const canvas = Buffer.alloc(4 * 4 * 6);
     const source = makeHdrFrame(2, 2, 40000, 30000, 20000);
     const scale = [2, 0, 0, 2, 0, 0];
     blitRgb48leAffine(canvas, source, scale, 2, 2, 4, 4);
@@ -1001,7 +1026,7 @@ describe("blitRgb48leAffine", () => {
   });
 
   it("out-of-bounds source coordinates are clipped", () => {
-    const canvas = new Uint8Array(2 * 2 * 6);
+    const canvas = Buffer.alloc(2 * 2 * 6);
     const source = makeHdrFrame(1, 1, 50000, 40000, 30000);
     const translate = [1, 0, 0, 1, 10, 10];
     blitRgb48leAffine(canvas, source, translate, 1, 1, 2, 2);
@@ -1128,7 +1153,7 @@ describe("roundedRectAlpha", () => {
 describe("blitRgb48leRegion with borderRadius", () => {
   it("clips corner pixels when borderRadius is set", () => {
     // 10x10 source placed at origin on a 10x10 canvas, radius 5
-    const canvas = new Uint8Array(10 * 10 * 6);
+    const canvas = Buffer.alloc(10 * 10 * 6);
     const source = makeHdrFrame(10, 10, 40000, 30000, 20000);
     const br: [number, number, number, number] = [5, 5, 5, 5];
     blitRgb48leRegion(canvas, source, 0, 0, 10, 10, 10, 10, undefined, br);
@@ -1142,8 +1167,8 @@ describe("blitRgb48leRegion with borderRadius", () => {
   });
 
   it("no effect when borderRadius is all zeros", () => {
-    const canvas1 = new Uint8Array(4 * 4 * 6);
-    const canvas2 = new Uint8Array(4 * 4 * 6);
+    const canvas1 = Buffer.alloc(4 * 4 * 6);
+    const canvas2 = Buffer.alloc(4 * 4 * 6);
     const source = makeHdrFrame(4, 4, 40000, 30000, 20000);
 
     blitRgb48leRegion(canvas1, source, 0, 0, 4, 4, 4, 4);
@@ -1174,7 +1199,7 @@ describe("blitRgb48leRegion with borderRadius", () => {
 
 describe("blitRgb48leAffine with borderRadius", () => {
   it("clips corner pixels with identity transform", () => {
-    const canvas = new Uint8Array(10 * 10 * 6);
+    const canvas = Buffer.alloc(10 * 10 * 6);
     const source = makeHdrFrame(10, 10, 40000, 30000, 20000);
     const identity = [1, 0, 0, 1, 0, 0];
     const br: [number, number, number, number] = [5, 5, 5, 5];
@@ -1191,7 +1216,7 @@ describe("blitRgb48leAffine with borderRadius", () => {
 
   it("mask follows transform (scaled output has rounded corners)", () => {
     // 4x4 source scaled up 2× on an 8×8 canvas, radius 2 in source space
-    const canvas = new Uint8Array(8 * 8 * 6);
+    const canvas = Buffer.alloc(8 * 8 * 6);
     const source = makeHdrFrame(4, 4, 50000, 40000, 30000);
     const scale2x = [2, 0, 0, 2, 0, 0];
     const br: [number, number, number, number] = [2, 2, 2, 2];
@@ -1207,8 +1232,8 @@ describe("blitRgb48leAffine with borderRadius", () => {
   });
 
   it("no effect when borderRadius is undefined", () => {
-    const canvas1 = new Uint8Array(4 * 4 * 6);
-    const canvas2 = new Uint8Array(4 * 4 * 6);
+    const canvas1 = Buffer.alloc(4 * 4 * 6);
+    const canvas2 = Buffer.alloc(4 * 4 * 6);
     const source = makeHdrFrame(4, 4, 40000, 30000, 20000);
     const identity = [1, 0, 0, 1, 0, 0];
 

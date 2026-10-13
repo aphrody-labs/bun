@@ -202,9 +202,12 @@ export const init = async () => {
 	});
 	if (pkgManager === 'pnpm') {
 		const workspaceFile = path.join(projectRoot, 'pnpm-workspace.yaml');
-		if (!await Bun.file(workspaceFile).exists()) {
+		if (!(await Bun.file(workspaceFile).exists())) {
 			// pnpm 10 reads ignoredBuiltDependencies; pnpm 11 reads allowBuilds.
-			await Bun.write(workspaceFile, 'ignoredBuiltDependencies:\n  - esbuild\nallowBuilds:\n  esbuild: false\n',);
+			await Bun.write(
+				workspaceFile,
+				'ignoredBuiltDependencies:\n  - esbuild\nallowBuilds:\n  esbuild: false\n',
+			);
 		}
 	}
 

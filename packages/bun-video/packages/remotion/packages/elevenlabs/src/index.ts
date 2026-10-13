@@ -1,12 +1,12 @@
 export {detectElevenLabsTranscriptFormat} from './detect-elevenlabs-transcript-format';
 
 export {
-	ElevenLabsTranscriptToCaptionsInput,
-	ElevenLabsTranscriptToCaptionsOutput,
+	type ElevenLabsTranscriptToCaptionsInput,
+	type ElevenLabsTranscriptToCaptionsOutput,
 	elevenLabsTranscriptToCaptions,
 } from './elevenlabs-transcript-to-captions';
 
-export {
+export type {
 	ElevenLabsTranscript,
 	ElevenLabsTranscriptWord,
 } from './elevenlabs-transcript';

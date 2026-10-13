@@ -80,7 +80,7 @@ export const validateBundleDir = (bundleDir: unknown): string => {
 		);
 	}
 
-	const indexHtml = fs.readFileSync(indexHtmlPath, "utf8");
+	const indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
 	const publicPath = getPublicPath(indexHtml);
 	if (publicPath !== './') {
 		throw new Error(

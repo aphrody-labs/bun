@@ -1,5 +1,5 @@
-import fs from 'node:fs';
 import assert from 'node:assert';
+import fs from 'node:fs';
 import {expect, test} from '@playwright/test';
 import {
 	getAllSchemaKeys,

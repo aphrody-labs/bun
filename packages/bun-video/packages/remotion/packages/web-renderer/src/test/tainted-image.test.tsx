@@ -1,5 +1,5 @@
-import {AbsoluteFill, Img} from 'remotion';
 import {expect, test} from 'bun:test';
+import {AbsoluteFill, Img} from 'remotion';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 

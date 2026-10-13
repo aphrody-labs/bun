@@ -1,5 +1,5 @@
-import {ALL_FORMATS, Input, UrlSource} from 'mediabunny';
 import {expect, test} from 'bun:test';
+import {ALL_FORMATS, Input, UrlSource} from 'mediabunny';
 import {makeNonceManager} from '../nonce-manager';
 import {
 	isSequentialMediaTimeAdvance,

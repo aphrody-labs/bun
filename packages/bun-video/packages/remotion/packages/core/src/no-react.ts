@@ -2,6 +2,7 @@ import {
 	evaluateSourceNumericValue,
 	evaluateSourcePropStatuses,
 } from './evaluate-source-expressions.js';
+import type {} from './index.js';
 import {DEFAULT_SEQUENCE_ACTIVITY_LIMIT} from './sequence-activity-defaults.js';
 export type {
 	ArtifactAsset,

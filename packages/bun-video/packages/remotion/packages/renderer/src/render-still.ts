@@ -1,4 +1,4 @@
-import fs, {statSync} from 'node:fs';
+import {statSync} from 'node:fs';
 import path from 'node:path';
 import {LicensingInternals} from '@remotion/licensing';
 import type {_InternalTypes} from 'remotion';

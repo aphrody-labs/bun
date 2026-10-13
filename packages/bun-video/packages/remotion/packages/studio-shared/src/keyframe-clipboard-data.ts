@@ -33,7 +33,9 @@ type KeyframeClipboardFieldTypeSupport =
 	typeof KEYFRAME_CLIPBOARD_FIELD_TYPE_SUPPORT;
 
 export type KeyframeClipboardFieldType = {
-	[FieldType in keyof KeyframeClipboardFieldTypeSupport]: KeyframeClipboardFieldTypeSupport[FieldType] extends true
+	[
+		FieldType in keyof KeyframeClipboardFieldTypeSupport
+	]: KeyframeClipboardFieldTypeSupport[FieldType] extends true
 		? FieldType
 		: never;
 }[keyof KeyframeClipboardFieldTypeSupport];

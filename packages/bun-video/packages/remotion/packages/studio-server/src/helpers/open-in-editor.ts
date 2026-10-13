@@ -454,7 +454,7 @@ export async function launchEditor(
 	},
 	projectFolder: string | null = null,
 ): Promise<boolean> {
-	if (!await Bun.file(fileName).exists()) {
+	if (!(await Bun.file(fileName).exists())) {
 		return false;
 	}
 
@@ -566,7 +566,7 @@ export async function launchEditor(
 		const applicationPath = editor.process.match(
 			/^(.*?\.app)\/Contents\//,
 		)?.[1];
-		if (applicationPath && await Bun.file(applicationPath).exists()) {
+		if (applicationPath && (await Bun.file(applicationPath).exists())) {
 			// Match the CLI's native macOS launch without starting its Node.js wrapper.
 			// -n lets Electron receive the arguments and forward them to a running instance.
 			const opened = await new Promise<boolean>((resolve) => {

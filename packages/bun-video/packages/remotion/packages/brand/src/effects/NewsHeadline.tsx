@@ -1,3 +1,5 @@
+import {linearProgressiveBlur} from '@remotion/effects/linear-progressive-blur';
+import {noise} from '@remotion/effects/noise';
 import {vignette} from '@remotion/effects/vignette';
 import {
 	HtmlInCanvas,
@@ -8,8 +10,6 @@ import {
 	useCurrentFrame,
 	Easing,
 } from 'remotion';
-import {linearProgressiveBlur} from '@remotion/effects/linear-progressive-blur';
-import {noise} from '@remotion/effects/noise';
 
 export const NewsHeadline = () => {
 	const frame = useCurrentFrame();

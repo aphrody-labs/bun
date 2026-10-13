@@ -1,9 +1,9 @@
-import { Caption } from "@remotion/captions";
+import {Caption} from '@remotion/captions';
 
 export type CaptionPage = {
-  captions: Caption[];
+	captions: Caption[];
 };
 
 export type LayoutedCaptions = {
-  segments: CaptionPage[];
+	segments: CaptionPage[];
 };

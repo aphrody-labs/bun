@@ -12,6 +12,58 @@ import { transformSync as esbuildTransformSync } from "./build-deps/node_modules
 
 const root = resolve(import.meta.dir, "..");
 
+/** Isolated transpilation cannot infer a type-only re-export from another file. */
+export function rewriteIsolatedTypeExports(text: string, sourceFile: string): string {
+  return text.replace(
+    /export\s*\{([^}]+)\}\s*from\s*(['"])(\.[^'"]+)\2/g,
+    (statement, names: string, quote: string, specifier: string) => {
+      const stem = resolve(dirname(sourceFile), specifier.replace(/\.(?:js|mjs|cjs)$/, ""));
+      const target = [
+        stem + ".ts",
+        stem + ".tsx",
+        stem + ".mts",
+        stem + ".cts",
+        stem + "/index.ts",
+        stem + "/index.tsx",
+        stem + "/index.mts",
+        stem + "/index.cts",
+      ].find(existsSync);
+      if (!target) return statement;
+      const declaredTypes = new Set(
+        [
+          ...readFileSync(target, "utf8").matchAll(
+            /export\s+(?:declare\s+)?(?:type|interface)\s+(\w+)/g,
+          ),
+        ].map((match) => match[1]),
+      );
+      const targetText = readFileSync(target, "utf8");
+      for (const match of targetText.matchAll(/export\s+type\s*\{([^}]+)\}/g)) {
+        for (const name of match[1]!.split(",")) {
+          const exported = name.trim().split(/\s+as\s+/).pop();
+          if (exported) declaredTypes.add(exported);
+        }
+      }
+      for (const match of targetText.matchAll(/export\s*\{([^}]+)\}/g)) {
+        for (const name of match[1]!.split(",")) {
+          if (!name.trim().startsWith("type ")) continue;
+          const exported = name.trim().replace(/^type\s+/, "").split(/\s+as\s+/).pop();
+          if (exported) declaredTypes.add(exported);
+        }
+      }
+      const exports = names
+        .split(",")
+        .map((name: string) => {
+          const clean = name.trim();
+          if (!clean || clean.startsWith("type ")) return name;
+          const original = clean.split(/\s+as\s+/)[0]!;
+          return declaredTypes.has(original) ? name.replace(original, "type " + original) : name;
+        })
+        .join(",");
+      return `export {${exports}} from ${quote}${specifier}${quote}`;
+    },
+  );
+}
+
 /** Materialize real module files because the native Rspack resolver cannot read Bun's virtual filesystem. */
 export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
   const stage = resolve(root, "../../../tmp/bun-video-build/remotion-module-assets");
@@ -35,7 +87,7 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
             : entry.name.endsWith(".jsx")
               ? "jsx"
               : "ts";
-          const sourceText = readFileSync(from, "utf8");
+          const sourceText = rewriteIsolatedTypeExports(readFileSync(from, "utf8"), from);
           let transformed = new Bun.Transpiler({
             loader,
             target: "browser",
@@ -101,6 +153,12 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
         ),
       );
     }
+    if (manifest.name === "@remotion/timeline-utils") {
+      const workerFactory = join(destination, "src/audio-waveform/make-audio-waveform-worker.js");
+      writeFileSync(workerFactory, readFileSync(workerFactory, "utf8").replaceAll(
+        "./audio-waveform-worker.mjs", "../audio-waveform-worker.js",
+      ));
+    }
     if (["remotion", "@remotion/studio", "@remotion/timeline-utils"].includes(manifest.name)) {
       const esm = join(destination, manifest.name === "remotion" ? "esm" : "src/esm");
       addTree(join(source, "src"), esm, true);
@@ -111,7 +169,9 @@ export async function remotionModuleAssetsPlugin(): Promise<BunPlugin> {
     }
     const rewrite = (value: unknown): unknown => {
       if (typeof value === "string")
-        return value.replace(/^(\.\/)?dist\/(?:cjs\/|esm\/)?/, "./src/").replace(/\.mjs$/, ".js");
+        return value
+          .replace(/^(\.\/)?dist\/(?:cjs\/|esm\/)?/, "./src/")
+          .replace(/\.(?:mjs|tsx?|jsx)$/, ".js");
       if (Array.isArray(value)) return value.map(rewrite);
       if (value && typeof value === "object")
         return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, rewrite(item)]));

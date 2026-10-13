@@ -54,7 +54,7 @@ export const lzw = (
 	var pi;
 	var bi;
 	datum = bits = first = top = pi = bi = 0;
-	for (i = 0; i < npix; ) {
+	for (i = 0; i < npix;) {
 		if (top === 0) {
 			if (bits < code_size) {
 				// get the next byte

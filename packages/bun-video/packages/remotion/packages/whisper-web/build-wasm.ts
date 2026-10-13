@@ -45,7 +45,9 @@ const lines = file.split('\n').map((line) => {
 	return line;
 });
 
-await Bun.write(cmakeListsFile, [
+await Bun.write(
+	cmakeListsFile,
+	[
 		...lines,
 		// Generate a .d.ts file
 		`set(CMAKE_CXX_FLAGS "$\{CMAKE_CXX_FLAGS\} -lembind --emit-tsd $\{CMAKE_CURRENT_BINARY_DIR\}/interface.d.ts")`,

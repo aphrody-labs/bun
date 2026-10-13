@@ -1,7 +1,7 @@
+import {expect, test} from 'bun:test';
 import {Audio, Video} from '@remotion/media';
 import {ALL_FORMATS, BlobSource, Input, type InputAudioTrack} from 'mediabunny';
 import {staticFile} from 'remotion';
-import {expect, test} from 'bun:test';
 import {renderMediaOnWeb} from '../render-media-on-web';
 import '../symbol-dispose';
 

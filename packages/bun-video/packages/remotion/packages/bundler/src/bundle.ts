@@ -368,7 +368,7 @@ export const internalBundle = async (
 	}
 
 	const bundleOutput = path.join(outDir, NoReactInternals.bundleName);
-	if (!await Bun.file(bundleOutput).exists()) {
+	if (!(await Bun.file(bundleOutput).exists())) {
 		throw new Error(
 			`The bundler completed without emitting ${NoReactInternals.bundleName}.`,
 		);

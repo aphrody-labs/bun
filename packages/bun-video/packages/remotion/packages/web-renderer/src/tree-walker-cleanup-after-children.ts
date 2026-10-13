@@ -9,7 +9,7 @@ export const createTreeWalkerCleanupAfterChildren = (
 	const cleanupAfterChildren: CleanupAfterChildrenFn[] = [];
 
 	const checkCleanUpAtBeginningOfIteration = () => {
-		for (let i = 0; i < cleanupAfterChildren.length; ) {
+		for (let i = 0; i < cleanupAfterChildren.length;) {
 			const cleanup = cleanupAfterChildren[i];
 			if (
 				!(

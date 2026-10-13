@@ -1,5 +1,5 @@
-import {useCurrentFrame} from 'remotion';
 import {expect, test} from 'bun:test';
+import {useCurrentFrame} from 'remotion';
 import {renderMediaOnWeb} from '../render-media-on-web';
 import '../symbol-dispose';
 

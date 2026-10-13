@@ -1,5 +1,5 @@
-import {Artifact, useCurrentFrame} from 'remotion';
 import {expect, test} from 'bun:test';
+import {Artifact, useCurrentFrame} from 'remotion';
 import type {EmittedArtifact} from '../artifact';
 import {renderMediaOnWeb} from '../render-media-on-web';
 import {renderStillOnWeb} from '../render-still-on-web';

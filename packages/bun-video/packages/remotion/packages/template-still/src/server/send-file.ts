@@ -1,19 +1,19 @@
-import { Response } from "express";
-import { Readable } from "node:stream";
+import {Readable} from 'node:stream';
+import {Response} from 'express';
 
 export const sendFile = async (
-  res: Response,
-  data: Readable,
+	res: Response,
+	data: Readable,
 ): Promise<void> => {
-  return new Promise<void>((resolve, reject) => {
-    data
-      .pipe(res)
-      .on("close", () => {
-        res.end();
-        resolve();
-      })
-      .on("error", (err) => {
-        reject(err);
-      });
-  });
+	return new Promise<void>((resolve, reject) => {
+		data
+			.pipe(res)
+			.on('close', () => {
+				res.end();
+				resolve();
+			})
+			.on('error', (err) => {
+				reject(err);
+			});
+	});
 };

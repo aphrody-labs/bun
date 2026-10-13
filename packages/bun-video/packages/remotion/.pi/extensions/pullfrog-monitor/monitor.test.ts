@@ -1,5 +1,5 @@
-import type {ExtensionAPI} from '@earendil-works/pi-coding-agent';
 import {expect, test} from 'bun:test';
+import type {ExtensionAPI} from '@earendil-works/pi-coding-agent';
 import {fetchMonitorStatus} from './index';
 
 const result = (stdout: string, code = 0) => ({

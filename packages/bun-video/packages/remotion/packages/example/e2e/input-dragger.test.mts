@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import {expect, test} from '@playwright/test';
 import {EXPANDED_SIDEBAR_STATE, rootFile, STUDIO_URL} from './constants.mts';
@@ -81,7 +82,7 @@ test.describe('Input dragger', () => {
 		await page.mouse.up();
 
 		await expect
-			.poll(() => await Bun.file(rootFile).text())
+			.poll(() => __bunSyncFs.readFileSync(rootFile, 'utf8'))
 			.toBe(
 				originalSource.replace(
 					/(id="AnimatedBarChart"[\s\S]*?)width=\{1280\}/,

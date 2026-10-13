@@ -156,7 +156,7 @@ export const writeBits = (bytes: Uint8Array, start: number, end: number, value: 
 export const toUint8Array = (source: AllowSharedBufferSource): Uint8Array => {
 	if (source instanceof Uint8Array) {
 		return source;
-	} else if (source instanceof ArrayBuffer) {
+	} else if (!ArrayBuffer.isView(source)) {
 		return new Uint8Array(source);
 	} else {
 		return new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
@@ -166,7 +166,7 @@ export const toUint8Array = (source: AllowSharedBufferSource): Uint8Array => {
 export const toDataView = (source: AllowSharedBufferSource) => {
 	if (source instanceof DataView) {
 		return source;
-	} else if (source instanceof ArrayBuffer) {
+	} else if (!ArrayBuffer.isView(source)) {
 		return new DataView(source);
 	} else {
 		return new DataView(source.buffer, source.byteOffset, source.byteLength);
@@ -462,6 +462,9 @@ export const mapAsyncGenerator = <T, U>(
 		},
 		[Symbol.asyncIterator]() {
 			return this;
+		},
+		async [Symbol.asyncDispose]() {
+			await this.return();
 		},
 	};
 };

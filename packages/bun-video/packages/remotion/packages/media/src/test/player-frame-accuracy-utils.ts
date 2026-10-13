@@ -1,6 +1,6 @@
+import {expect, onTestFinished} from 'bun:test';
 import type {PlayerRef} from '@remotion/player';
 import type React from 'react';
-import {expect, onTestFinished} from 'bun:test';
 import {page} from 'vitest/browser';
 
 const previewWidth = 360;

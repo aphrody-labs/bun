@@ -534,21 +534,19 @@ export const CompositionMetadata: React.FC<{
 			},
 		],
 	);
-	const frameRatePresetValues = frameRatePresets.map(
-		(fps): ComboboxValue => ({
-			type: 'item',
-			id: String(fps),
-			label: `${fps} fps`,
-			value: fps,
-			onClick: () => {
-				saveMetadata({fps});
-			},
-			keyHint: null,
-			leftItem: null,
-			subMenu: null,
-			quickSwitcherLabel: null,
-		}),
-	);
+	const frameRatePresetValues = frameRatePresets.map((fps): ComboboxValue => ({
+		type: 'item',
+		id: String(fps),
+		label: `${fps} fps`,
+		value: fps,
+		onClick: () => {
+			saveMetadata({fps});
+		},
+		keyHint: null,
+		leftItem: null,
+		subMenu: null,
+		quickSwitcherLabel: null,
+	}));
 
 	return (
 		<div style={compositionMetadataContainer}>

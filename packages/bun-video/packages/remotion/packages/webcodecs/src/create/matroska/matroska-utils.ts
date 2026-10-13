@@ -352,9 +352,9 @@ export const makeMatroskaBytes = (
 export type PossibleEbmlOrUint8Array =
 	| Prettify<
 			{
-				[key in keyof typeof MediaParserInternals.ebmlMap]: EbmlParsedOrUint8Array<
-					(typeof MediaParserInternals.ebmlMap)[key]
-				>;
+				[
+					key in keyof typeof MediaParserInternals.ebmlMap
+				]: EbmlParsedOrUint8Array<(typeof MediaParserInternals.ebmlMap)[key]>;
 			}[keyof typeof MediaParserInternals.ebmlMap]
 	  >
 	| BytesAndOffset;

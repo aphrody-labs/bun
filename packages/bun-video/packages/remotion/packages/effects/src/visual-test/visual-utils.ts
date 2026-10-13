@@ -1,9 +1,9 @@
+import {expect, onTestFinished} from 'bun:test';
 import {
 	Internals,
 	type EffectDefinitionAndStack,
 	type EffectDescriptor,
 } from 'remotion';
-import {expect, onTestFinished} from 'bun:test';
 import {page} from 'vitest/browser';
 
 export const testImage = async ({

@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {expandElementSourceReferences} from './plugins/element-source-utils.js';
@@ -23,10 +24,12 @@ const writeRawMarkdown = ({
 	}
 
 	const raw = expandRawMarkdownComponents({
-		raw: await Bun.file(sourcePath).text(),
+		raw: __bunSyncFs.readFileSync(sourcePath, 'utf8'),
 		sourcePath,
 	});
-	await Bun.write(destPath, expandElementSourceReferences({
+	__bunSyncFs.writeFileSync(
+		destPath,
+		expandElementSourceReferences({
 			raw,
 			sourceFilePath: sourcePath,
 		}),
@@ -55,7 +58,7 @@ function copyRawDocs() {
 		// Remove 'docs/' prefix from relativePath since we're already in docs/
 		const relativePathWithoutDocs = article.relativePath.replace(/^docs\//, '');
 		const sourcePath = path.join(DOCS_DIR, relativePathWithoutDocs);
-		if (!await Bun.file(sourcePath).exists()) {
+		if (!__bunSyncFs.existsSync(sourcePath)) {
 			console.warn(`⚠️  Source file not found: ${sourcePath}`);
 			continue;
 		}
@@ -134,7 +137,7 @@ function copyRawElements() {
 	let copiedCount = 0;
 
 	for (const sourcePath of findElementMdxFiles(ELEMENTS_DIR)) {
-		const contents = await Bun.file(sourcePath).text();
+		const contents = __bunSyncFs.readFileSync(sourcePath, 'utf8');
 		if (hasNoAiFrontmatter(contents)) {
 			continue;
 		}
@@ -162,7 +165,7 @@ function copyRawElements() {
 
 function copyRawContent() {
 	// Clean output directory
-	if (await Bun.file(RAW_DIR).exists()) {
+	if (__bunSyncFs.existsSync(RAW_DIR)) {
 		fs.rmSync(RAW_DIR, {recursive: true});
 	}
 

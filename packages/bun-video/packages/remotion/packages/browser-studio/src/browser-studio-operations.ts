@@ -848,8 +848,10 @@ export const createBrowserStudioOperations = ({
 		mutation: AppliedEffectKeyframeMutation;
 		project: VirtualProject;
 	}) => {
-		const effects = Array.from({length: mutation.effectIndex + 1}, (_, index) =>
-			index === mutation.effectIndex ? getAllSchemaKeys(mutation.schema) : [],
+		const effects = Array.from(
+			{length: mutation.effectIndex + 1},
+			(_, index) =>
+				index === mutation.effectIndex ? getAllSchemaKeys(mutation.schema) : [],
 		);
 		const status = getNodeProps({
 			project,

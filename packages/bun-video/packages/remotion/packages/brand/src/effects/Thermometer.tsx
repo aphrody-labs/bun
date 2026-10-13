@@ -1,3 +1,6 @@
+import {chromaticAberration} from '@remotion/effects/chromatic-aberration';
+import {noise} from '@remotion/effects/noise';
+import {shine} from '@remotion/effects/shine';
 import {wave} from '@remotion/effects/wave';
 import {waves} from '@remotion/effects/waves';
 import {loadFont} from '@remotion/fonts';
@@ -11,10 +14,6 @@ import {
 	staticFile,
 	useCurrentFrame,
 } from 'remotion';
-
-import {chromaticAberration} from '@remotion/effects/chromatic-aberration';
-import {noise} from '@remotion/effects/noise';
-import {shine} from '@remotion/effects/shine';
 
 const fontFamily = 'GTPlanar';
 

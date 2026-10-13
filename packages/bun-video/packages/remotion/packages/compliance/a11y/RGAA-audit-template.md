@@ -18,32 +18,32 @@
 
 The audit covered {{N}} pages, representative of all content types and functionality on the site.
 
-| #   | Page name       | URL                    |
-| --- | --------------- | ---------------------- |
-| 1   | {{Page name}}   | {{https://...}}        |
-| 2   | {{Page name}}   | {{https://...}}        |
-| 3   | {{Page name}}   | {{https://...}}        |
+| #   | Page name     | URL             |
+| --- | ------------- | --------------- |
+| 1   | {{Page name}} | {{https://...}} |
+| 2   | {{Page name}} | {{https://...}} |
+| 3   | {{Page name}} | {{https://...}} |
 
 ---
 
 ## Compliance Summary
 
-| #   | Theme                       | C     | NC    | NA    | Rate    |
-| --- | --------------------------- | ----- | ----- | ----- | ------- |
-| 1   | Images                      |       |       |       |         |
-| 2   | Frames                      |       |       |       |         |
-| 3   | Colors                      |       |       |       |         |
-| 4   | Multimedia                  |       |       |       |         |
-| 5   | Tables                      |       |       |       |         |
-| 6   | Links                       |       |       |       |         |
-| 7   | Scripts                     |       |       |       |         |
-| 8   | Mandatory Elements          |       |       |       |         |
-| 9   | Information Structure       |       |       |       |         |
-| 10  | Presentation of Information |       |       |       |         |
-| 11  | Forms                       |       |       |       |         |
-| 12  | Navigation                  |       |       |       |         |
-| 13  | Content Access              |       |       |       |         |
-|     | **TOTAL**                   | **0** | **0** | **0** | **0%**  |
+| #   | Theme                       | C     | NC    | NA    | Rate   |
+| --- | --------------------------- | ----- | ----- | ----- | ------ |
+| 1   | Images                      |       |       |       |        |
+| 2   | Frames                      |       |       |       |        |
+| 3   | Colors                      |       |       |       |        |
+| 4   | Multimedia                  |       |       |       |        |
+| 5   | Tables                      |       |       |       |        |
+| 6   | Links                       |       |       |       |        |
+| 7   | Scripts                     |       |       |       |        |
+| 8   | Mandatory Elements          |       |       |       |        |
+| 9   | Information Structure       |       |       |       |        |
+| 10  | Presentation of Information |       |       |       |        |
+| 11  | Forms                       |       |       |       |        |
+| 12  | Navigation                  |       |       |       |        |
+| 13  | Content Access              |       |       |       |        |
+|     | **TOTAL**                   | **0** | **0** | **0** | **0%** |
 
 Legend: **C** = Conformant, **NC** = Non-Conformant, **NA** = Not Applicable.
 
@@ -236,7 +236,7 @@ Legend: **C** = Conformant, **NC** = Non-Conformant, **NA** = Not Applicable.
 | #     | Criterion                                                                     | Status | Observations / Evidence |
 | ----- | ----------------------------------------------------------------------------- | ------ | ----------------------- |
 | 12.1  | Is a skiplink present on each page?                                           |        |                         |
-| 12.2  | Is there more than one way to find a page within the site?                   |        |                         |
+| 12.2  | Is there more than one way to find a page within the site?                    |        |                         |
 | 12.3  | Is the navigation consistent across pages?                                    |        |                         |
 | 12.4  | Is active page indicated?                                                     |        |                         |
 | 12.5  | Are multiple navigation sets identifiable?                                    |        |                         |
@@ -299,18 +299,18 @@ _Reference: https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/_
 
 When auditing a video/audio player component (Themes 4, 7, 12), check against the de-facto standard shortcut set used by YouTube, Vimeo, Able Player, Video.js, OzPlayer, and native `<video controls>`:
 
-| Key                   | Action                                          |
-| --------------------- | ----------------------------------------------- |
-| `Space` / `K`         | Play-pause                                      |
-| `←` / `→`             | Seek −5 s / +5 s                                |
-| `Shift+←` / `Shift+→` | Fine seek (±1 s or per frame)                   |
-| `PageUp` / `PageDown` | Seek ±10 s                                      |
-| `Home` / `End`        | Jump to start / end                             |
-| `↑` / `↓`             | Volume ±5 %                                     |
-| `M`                   | Mute toggle                                     |
-| `F`                   | Fullscreen toggle                               |
-| `C`                   | Captions toggle                                 |
-| `<` / `>`             | Playback rate down / up                         |
+| Key                   | Action                        |
+| --------------------- | ----------------------------- |
+| `Space` / `K`         | Play-pause                    |
+| `←` / `→`             | Seek −5 s / +5 s              |
+| `Shift+←` / `Shift+→` | Fine seek (±1 s or per frame) |
+| `PageUp` / `PageDown` | Seek ±10 s                    |
+| `Home` / `End`        | Jump to start / end           |
+| `↑` / `↓`             | Volume ±5 %                   |
+| `M`                   | Mute toggle                   |
+| `F`                   | Fullscreen toggle             |
+| `C`                   | Captions toggle               |
+| `<` / `>`             | Playback rate down / up       |
 
 Slider requirements for seek and volume controls: `role="slider"` with `aria-valuemin`, `aria-valuemax`, `aria-valuenow`, and `aria-valuetext` (for human-readable time / percentage). Arrow keys on a focused slider natively adjust `aria-valuenow` by 1. Container should be focusable (`tabindex="0"`) and announce its purpose via `aria-label`.
 

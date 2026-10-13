@@ -1,4 +1,4 @@
-import { RemotionExample } from "./index";
+import {RemotionExample} from './index';
 
 export const histogramCode = `import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring } from "remotion";
 import { Rect } from "@remotion/shapes";
@@ -93,11 +93,11 @@ export const MyAnimation = () => {
 };`;
 
 export const histogramExample: RemotionExample = {
-  id: "histogram",
-  name: "Histogram",
-  description: "Animated bar chart using @remotion/shapes",
-  category: "Charts",
-  durationInFrames: 120,
-  fps: 30,
-  code: histogramCode,
+	id: 'histogram',
+	name: 'Histogram',
+	description: 'Animated bar chart using @remotion/shapes',
+	category: 'Charts',
+	durationInFrames: 120,
+	fps: 30,
+	code: histogramCode,
 };

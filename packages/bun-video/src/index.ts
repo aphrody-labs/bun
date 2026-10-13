@@ -1,4 +1,42 @@
 export { interpolate, Easing, generateSpringEaseData, SPRING_PRESETS } from "./render-runtime";
+export { createUnifiedVideoPipeline, UnifiedVideoPipeline } from "./video-workflow";
+export { VideoCatalog, defaultVideoCatalogPath } from "./video-catalog";
+export { VideoWorkerPool, runVideoTaskProcess } from "./video-workers";
+export { validateVideoTask, videoTaskFrameRate, executeVideoTask } from "./video-worker-task";
+export type { VideoRenderTask, VideoRenderResult } from "./video-worker-task";
+export type { VideoWorkerPoolOptions, VideoWorkerEvent, VideoTaskRunner } from "./video-workers";
+export { describeVideoAPIs, inspectVideoAPI, loadVideoAPI, VIDEO_APIS } from "./video-api";
+export { compareRGBAFrames, verifyPixelFrames } from "./pixel-verify";
+export { importCapturedVideoNetwork } from "./video-capture";
+export { captureArchiveHTTP, archiveCDXURL } from "./archive-capture";
+export {
+  parseVideoCookies,
+  loadVideoCookies,
+  selectVideoCookies,
+  videoCookieHeader,
+  describeVideoCookies,
+  probeCrunchyrollCookies,
+} from "./video-cookies";
+export { VideoCookieVault, defaultVideoCookieVaultPath, migrateVideoCookies } from "./video-cookies";
+export type { BrowserVideoCookie, CookieSecretStore } from "./video-cookies";
+export { createVideoDataSite } from "./video-data-site";
+export { exportPublicVideoCatalog, publishBunVideoExports, validateVideoPublicationTarget } from "./video-publish";
+export type { VideoPublication, VideoPublicationAsset } from "./video-publish";
+export type { VideoDataSiteOptions } from "./video-data-site";
+export type { ArchiveCaptureOptions, ArchiveCaptureSummary } from "./archive-capture";
+export {
+  queryVideoDataset,
+  exportVideoDataset,
+  redactVideoDatasetText,
+  createVideoDatasetCache,
+} from "./video-dataset";
+export type {
+  VideoDatasetQuery,
+  VideoDatasetQueryResult,
+  VideoDatasetExportResult,
+  CuratedVideoDocument,
+  VideoDatasetTable,
+} from "./video-dataset";
 export { captureNativeRemotionFrame } from "./remotion-frame";
 export type { NativeFrameOptions } from "./remotion-frame";
 export { captureNativeWebViewFrames } from "./hyperframes-native";

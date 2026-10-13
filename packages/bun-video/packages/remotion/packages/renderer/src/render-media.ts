@@ -1050,13 +1050,13 @@ const internalRenderMediaRaw = async ({
 				await remotionSharedMemory?.dispose();
 				if (
 					preEncodedFileLocation !== null &&
-					await Bun.file(preEncodedFileLocation).exists()
+					(await Bun.file(preEncodedFileLocation).exists())
 				) {
 					deleteDirectory(path.dirname(preEncodedFileLocation));
 				}
 
 				// Clean temporary image frames when rendering ends or fails
-				if (workingDir && await Bun.file(workingDir).exists()) {
+				if (workingDir && (await Bun.file(workingDir).exists())) {
 					deleteDirectory(workingDir);
 				}
 

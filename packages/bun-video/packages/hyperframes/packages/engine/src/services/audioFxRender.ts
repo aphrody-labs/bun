@@ -138,7 +138,7 @@ export function writeWav(
   const n = samples.length;
   const bytesPerSample = float ? 4 : 2;
   const bytes = n * bytesPerSample;
-  const buf = new Uint8Array(44 + bytes);
+  const buf = Buffer.alloc(44 + bytes);
   buf.write("RIFF", 0, "ascii");
   buf.writeUInt32LE(36 + bytes, 4);
   buf.write("WAVE", 8, "ascii");

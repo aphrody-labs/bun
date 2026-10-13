@@ -129,7 +129,10 @@ const reproWriter = (name: string): ReproWriter => {
 			reproFolder,
 			'resolved-props.json',
 		);
-		fs.writeFileSync(serializedResolvedProps, serializedResolvedPropsWithCustomSchema,);
+		fs.writeFileSync(
+			serializedResolvedProps,
+			serializedResolvedPropsWithCustomSchema,
+		);
 
 		writeLine('info', [`Args: ${JSON.stringify(process.argv)}`]);
 		writeLine('info', [`Node/Bun version: ${process.version}`]);

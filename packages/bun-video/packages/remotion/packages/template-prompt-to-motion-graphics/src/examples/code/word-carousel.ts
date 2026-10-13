@@ -1,4 +1,4 @@
-import { RemotionExample } from "./index";
+import {RemotionExample} from './index';
 
 export const wordCarouselCode = `import { useCurrentFrame, AbsoluteFill, interpolate } from "remotion";
 
@@ -120,11 +120,11 @@ export const MyAnimation = () => {
 };`;
 
 export const wordCarouselExample: RemotionExample = {
-  id: "word-carousel",
-  name: "Word Carousel",
-  description: "Rotating words with crossfade and blur transitions",
-  category: "Text",
-  durationInFrames: 200,
-  fps: 30,
-  code: wordCarouselCode,
+	id: 'word-carousel',
+	name: 'Word Carousel',
+	description: 'Rotating words with crossfade and blur transitions',
+	category: 'Text',
+	durationInFrames: 200,
+	fps: 30,
+	code: wordCarouselCode,
 };

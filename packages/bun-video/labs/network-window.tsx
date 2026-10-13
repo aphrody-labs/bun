@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { connect, findExecutable, type ChromiumConnection } from "bun:chromium";
-import { Job } from "bun:windows";
+import { connect, type ChromiumConnection } from "bun:chromium";
+import { detectActiveChromeProfile, planChromeSiteApp, type ActiveChromeProfile } from "./crunchyroll-app";
 import { mkdir } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 
 type RecordJSON = Record<string, any>;
 export interface CookieExport {
@@ -76,7 +76,7 @@ function Panel() {
           <pre id="detail" />
         </details>
         <details>
-          <summary>Cookies JSON de la session isolée</summary>
+          <summary>Cookies JSON du site dans le profil actif</summary>
           <pre id="cookies" />
         </details>
       </div>
@@ -131,42 +131,6 @@ export function mediaCandidate(request: CapturedRequest) {
     /(?:mpegurl|dash\+xml|video\/|audio\/)/i.test(request.response?.mimeType ?? "") ||
     /\.(?:m3u8|mpd|m4s|ts|mp4|webm|aac)(?:[?#]|$)/i.test(request.request.url)
   );
-}
-
-async function waitEndpoint(child: Bun.Subprocess<"ignore", "ignore", "pipe">) {
-  return await new Promise<string>((accept, reject) => {
-    let ended = false;
-    const finish = (error?: Error, endpoint?: string) => {
-      if (ended) return;
-      ended = true;
-      clearTimeout(timer);
-      if (error) reject(error);
-      else accept(endpoint!);
-    };
-    const timer = setTimeout(() => finish(new Error("Chrome CDP endpoint timed out")), 20000);
-    void child.exited.then(() => finish(new Error("Chrome exited before CDP connection")));
-    const drain = async () => {
-      const reader = child.stderr.getReader();
-      const decoder = new TextDecoder();
-      let tail = "";
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          tail += decoder.decode(value, { stream: true });
-          const match = /DevTools listening on (wss?:\/\/[^\s]+)[\r\n]/.exec(tail);
-          if (match) finish(undefined, match[1]);
-          tail = tail.slice(-16384);
-        }
-        finish(new Error("Chrome exited before CDP endpoint"));
-      } catch (error) {
-        finish(error as Error);
-      } finally {
-        reader.releaseLock();
-      }
-    };
-    void drain();
-  });
 }
 
 class Inspector {
@@ -377,7 +341,15 @@ class Inspector {
   async writeExport() {
     await Promise.allSettled(this.bodies);
     await this.sink.flush();
-    const cookies = await this.cdp.send<CookieExport>("Storage.getCookies");
+    const { result: location } = await this.cdp.send<RecordJSON>(
+      "Runtime.evaluate",
+      { expression: "location.href", returnByValue: true },
+      this.mainSession,
+    );
+    const urls = [
+      ...new Set([location.value, ...[...this.requests.values()].map(request => request.request.url)]),
+    ].filter(url => typeof url === "string" && /^https?:/.test(url));
+    const cookies = await this.cdp.send<CookieExport>("Network.getCookies", { urls }, this.mainSession);
     await Bun.write(join(this.directory, "cookies.json"), JSON.stringify(cookies, null, 2));
     const { result } = await this.cdp.send<RecordJSON>(
       "Runtime.evaluate",
@@ -421,93 +393,191 @@ class Inspector {
   }
 }
 
-async function main() {
-  const args = Bun.argv.slice(2);
+async function existingChromeProfile(): Promise<ActiveChromeProfile> {
+  try {
+    return await detectActiveChromeProfile();
+  } catch (activeError) {
+    const child = Bun.spawn(
+      [
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "@(Get-CimInstance Win32_Process -Filter \"name='chrome.exe'\" | Where-Object { $_.CommandLine -and $_.CommandLine -notmatch '--type=' }).Count",
+      ],
+      { stdout: "pipe", stderr: "ignore" },
+    );
+    const timer = setTimeout(() => child.kill(), 10000);
+    let count: string;
+    let code: number;
+    try {
+      [count, code] = await Promise.all([child.stdout.text(), child.exited]);
+    } finally {
+      clearTimeout(timer);
+    }
+    if (code !== 0 || count.trim() !== "0") throw activeError;
+    if (!Bun.env.LOCALAPPDATA) throw new Error("Répertoire des profils Chrome existants indisponible.");
+    const userDataDir = join(Bun.env.LOCALAPPDATA, "Google", "Chrome", "User Data");
+    if (!(await Bun.file(join(userDataDir, "Local State")).exists()))
+      throw new Error("Aucun profil Chrome original existant.");
+    const state = await Bun.file(join(userDataDir, "Local State")).json();
+    const profileDirectory = state?.profile?.last_used;
+    if (typeof profileDirectory !== "string" || !state?.profile?.info_cache?.[profileDirectory])
+      throw new Error("Dernier profil Chrome existant non identifié.");
+    if (!(await Bun.file(join(userDataDir, profileDirectory, "Preferences")).exists()))
+      throw new Error("Le profil Chrome original indiqué n'existe pas.");
+    const executableCandidates = [Bun.env.PROGRAMFILES, Bun.env["PROGRAMFILES(X86)"], Bun.env.LOCALAPPDATA]
+      .filter((root): root is string => !!root)
+      .map(root => join(root, "Google", "Chrome", "Application", "chrome.exe"));
+    for (const executable of executableCandidates)
+      if (await Bun.file(executable).exists()) return { pid: 0, executable, userDataDir, profileDirectory };
+    throw new Error("Exécutable Google Chrome propriétaire introuvable.");
+  }
+}
+
+async function activeEndpoint(profile: ActiveChromeProfile, explicit?: string): Promise<string> {
+  if (!profile.pid)
+    throw new Error(
+      "CDP absent : Chrome était fermé ; fenêtre réelle du profil original ouverte, inspection/export indisponibles.",
+    );
+  let endpoint = explicit;
+  if (!endpoint) {
+    const activePort = Bun.file(join(profile.userDataDir, "DevToolsActivePort"));
+    if (!(await activePort.exists()))
+      throw new Error("CDP absent du profil Chrome actif ; fenêtre réelle ouverte, inspection/export indisponibles.");
+    const [port, browserPath] = (await activePort.text()).trim().split(/\r?\n/);
+    if (!/^\d+$/.test(port ?? "") || !browserPath?.startsWith("/devtools/browser/"))
+      throw new Error("DevToolsActivePort invalide ; aucune configuration Chrome modifiée.");
+    endpoint = `ws://127.0.0.1:${port}${browserPath}`;
+  }
+  const parsed = new URL(endpoint);
+  if (
+    !["http:", "ws:"].includes(parsed.protocol) ||
+    !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname) ||
+    parsed.username ||
+    parsed.password ||
+    !parsed.port
+  )
+    throw new Error("Endpoint CDP local explicite requis.");
+  const owner = Bun.spawn(
+    [
+      "powershell.exe",
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "$listeners=@(Get-NetTCPConnection -State Listen -LocalPort ([int]$env:BUN_INSPECT_PORT) -ErrorAction SilentlyContinue); if ($listeners | Where-Object { $_.OwningProcess -eq ([int]$env:BUN_INSPECT_PID) }) { 'OWNED' } else { exit 1 }",
+    ],
+    {
+      stdout: "pipe",
+      stderr: "ignore",
+      env: { ...process.env, BUN_INSPECT_PORT: parsed.port, BUN_INSPECT_PID: String(profile.pid) },
+    },
+  );
+  const timeout = setTimeout(() => owner.kill(), 10000);
+  try {
+    const [proof, code] = await Promise.all([owner.stdout.text(), owner.exited]);
+    if (code !== 0 || proof.trim() !== "OWNED")
+      throw new Error("Endpoint CDP non attribuable au processus Chrome du profil actif.");
+  } finally {
+    clearTimeout(timeout);
+  }
+  const response = await fetch(`http://${parsed.host}/json/version`, { signal: AbortSignal.timeout(5000) });
+  if (!response.ok) throw new Error("Endpoint CDP du profil actif inaccessible.");
+  const version = (await response.json()) as { webSocketDebuggerUrl?: string };
+  if (!version.webSocketDebuggerUrl) throw new Error("Endpoint CDP navigateur absent.");
+  return version.webSocketDebuggerUrl;
+}
+
+export async function runNetworkWindow(url: string, options: { check?: boolean; endpoint?: string } = {}) {
+  return networkWindowMain([
+    url,
+    ...(options.check ? ["--check"] : []),
+    ...(options.endpoint ? ["--endpoint", options.endpoint] : []),
+  ]);
+}
+
+export async function networkWindowMain(args = Bun.argv.slice(2)) {
   if (args.includes("--help")) {
     console.log(
-      "network-window.exe [URL] [--browser chemin.exe]\nExports privés : ~/.aphrody/cookies/network-window/<session>\nSélection CDP, cookies JSON, réseau JSON brut, corps JS/CSS/HTML et MHTML.",
+      "network-window.exe [URL] [--check] [--endpoint URL-CDP-local]\nProfil Chrome original actif ou dernier utilisé ; URL par défaut https://www.crunchyroll.com/. Aucun profil copié ni redémarrage Chrome.",
     );
     return;
   }
   if (process.platform !== "win32") throw new Error("Cette application nécessite Windows natif.");
-  const home = Bun.env.APHRODY_HOME ?? join(Bun.env.USERPROFILE!, ".aphrody");
-  const directory = join(
-    home,
-    "cookies",
-    "network-window",
-    `${new Date().toISOString().replaceAll(/[:.]/g, "-")}-${crypto.randomUUID()}`,
+  const endpointIndex = args.indexOf("--endpoint");
+  if (endpointIndex >= 0 && !args[endpointIndex + 1]) throw new Error("--endpoint nécessite une URL locale.");
+  for (const arg of args)
+    if (arg.startsWith("--") && !["--check", "--endpoint"].includes(arg)) throw new Error(`Option inconnue : ${arg}`);
+  const url = validURL(
+    args.find((arg, index) => !arg.startsWith("--") && !(endpointIndex >= 0 && index === endpointIndex + 1)) ??
+      "https://www.crunchyroll.com/",
   );
-  await new Promise<void>((ok, fail) =>
-    mkdir(join(directory, "resources"), { recursive: true }, e => (e ? fail(e) : ok())),
-  );
-  const profile = join(directory, "profile");
-  await new Promise<void>((ok, fail) => mkdir(profile, { recursive: true }, e => (e ? fail(e) : ok())));
-  const browserIndex = args.indexOf("--browser");
-  const candidates = [
-    join(Bun.env.PROGRAMFILES ?? "C:/Program Files", "Google/Chrome/Application/chrome.exe"),
-    join(Bun.env["PROGRAMFILES(X86)"] ?? "C:/Program Files (x86)", "Microsoft/Edge/Application/msedge.exe"),
-  ];
-  let executable = browserIndex >= 0 ? resolve(args[browserIndex + 1]!) : null;
-  for (const candidate of candidates) if (!executable && (await Bun.file(candidate).exists())) executable = candidate;
-  executable ??= findExecutable();
-  if (!executable) throw new Error("Chrome/Edge introuvable ; utiliser --browser chemin.exe.");
-  let url = validURL(
-    args.find((arg, index) => !arg.startsWith("--") && !(browserIndex >= 0 && index === browserIndex + 1)) ??
-      "https://example.com",
-  );
-  const selfTest = args.includes("--self-test");
-  const fixture = selfTest
-    ? Bun.serve({
-        hostname: "127.0.0.1",
-        port: 0,
-        fetch(request) {
-          const path = new URL(request.url).pathname;
-          if (path === "/site.js")
-            return new Response("fetch('/stream.m3u8')", { headers: { "content-type": "application/javascript" } });
-          if (path === "/site.css")
-            return new Response("body{background:#eceff4}", { headers: { "content-type": "text/css" } });
-          if (path === "/stream.m3u8")
-            return new Response("#EXTM3U\n#EXT-X-ENDLIST\n", {
-              headers: { "content-type": "application/vnd.apple.mpegurl" },
-            });
-          return new Response(
-            '<!doctype html><title>Bun Inspector fixture</title><link rel="stylesheet" href="/site.css"><video id="player" controls></video><script src="/site.js"></script>',
-            { headers: { "content-type": "text/html", "set-cookie": "fixture=pass; Path=/; HttpOnly; SameSite=Lax" } },
-          );
-        },
-      })
-    : undefined;
-  if (fixture) url = fixture.url.href;
-  using job = new Job({ killOnClose: true });
-  const child = Bun.spawn(
-    [
-      executable,
-      `--user-data-dir=${profile}`,
-      "--remote-debugging-port=0",
-      "--remote-debugging-address=127.0.0.1",
-      "--no-first-run",
-      "--no-default-browser-check",
-      "--app=about:blank",
-    ],
-    { stdin: "ignore", stdout: "ignore", stderr: "pipe" },
-  );
-  job.assign(child);
+  const profile = await existingChromeProfile();
   let cdp: ChromiumConnection | undefined;
   let inspector: Inspector | undefined;
+  let target: RecordJSON | undefined;
+  let opened = false;
+  const open = async () => {
+    const command = planChromeSiteApp(profile).command.map(argument =>
+      argument.startsWith("--app=") ? `--app=${url}` : argument,
+    );
+    const child = Bun.spawn(command, { detached: true, stdin: "ignore", stdout: "ignore", stderr: "ignore" });
+    child.unref();
+    opened = true;
+  };
   try {
-    const endpoint = await waitEndpoint(child);
-    cdp = await connect(endpoint);
+    let endpoint: string;
+    try {
+      endpoint = await activeEndpoint(profile, endpointIndex >= 0 ? args[endpointIndex + 1] : undefined);
+    } catch (error) {
+      await open();
+      throw error;
+    }
+    cdp = await connect(endpoint, { timeout: 15000 });
+    const { targetInfos: before } = await cdp.send<{ targetInfos: RecordJSON[] }>("Target.getTargets");
+    const prior = new Set(before.map(info => info.targetId));
+    const created = Promise.withResolvers<RecordJSON>();
+    const cancelCreated = cdp.on("Target.targetCreated", params => {
+      const info = params.targetInfo as RecordJSON;
+      if (info.type === "page" && !prior.has(info.targetId) && info.url === url) created.resolve(info);
+    });
+    await cdp.send("Target.setDiscoverTargets", { discover: true });
+    await open();
+    const { targetInfos: after } = await cdp.send<{ targetInfos: RecordJSON[] }>("Target.getTargets");
+    target = after.find(info => info.type === "page" && !prior.has(info.targetId) && info.url === url);
+    let targetTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      target ??= await Promise.race([
+        created.promise,
+        new Promise<never>((_, reject) => {
+          targetTimer = setTimeout(
+            () => reject(new Error("Nouvelle fenêtre du site non identifiée ; aucun onglet existant attaché.")),
+            15000,
+          );
+        }),
+      ]);
+    } finally {
+      clearTimeout(targetTimer);
+      cancelCreated();
+    }
+    const home = Bun.env.APHRODY_HOME ?? join(Bun.env.USERPROFILE!, ".aphrody");
+    const directory = join(
+      home,
+      "cookies",
+      "network-window",
+      `${new Date().toISOString().replaceAll(/[:.]/g, "-")}-${crypto.randomUUID()}`,
+    );
+    await new Promise<void>((ok, fail) =>
+      mkdir(join(directory, "resources"), { recursive: true }, error => (error ? fail(error) : ok())),
+    );
     inspector = new Inspector(cdp, directory);
-    const { targetInfos } = await cdp.send<{ targetInfos: RecordJSON[] }>("Target.getTargets");
-    const target = targetInfos.find(t => t.type === "page");
-    if (!target) throw new Error("Fenêtre Chrome absente.");
     const { sessionId } = await cdp.send<{ sessionId: string }>("Target.attachToTarget", {
       targetId: target.targetId,
       flatten: true,
     });
-    inspector.mainSession = sessionId;
-    inspector.mainTarget = target.targetId;
     const app = inspector;
+    app.mainSession = sessionId;
+    app.mainTarget = target.targetId;
     cdp.on("Runtime.executionContextCreated", (p, s) => {
       const context = p.context as RecordJSON;
       if (context.name === "bun-inspector" && s) app.contexts.set(s, context.id);
@@ -519,10 +589,10 @@ async function main() {
       if (s === app.mainSession && p.executionContextId === app.contexts.get(s)) app.run(app.action(String(p.payload)));
     });
     cdp.on("Overlay.inspectNodeRequested", (p, s) => {
-      if (s) app.run(app.select(s, Number(p.backendNodeId)));
+      if (s && app.targets.has(s)) app.run(app.select(s, Number(p.backendNodeId)));
     });
-    cdp.on("Target.attachedToTarget", p => {
-      app.run(app.session(String(p.sessionId), p.targetInfo as RecordJSON));
+    cdp.on("Target.attachedToTarget", (p, parent) => {
+      if (parent && app.targets.has(parent)) app.run(app.session(String(p.sessionId), p.targetInfo as RecordJSON));
     });
     cdp.on("Target.detachedFromTarget", p => {
       app.targets.delete(String(p.sessionId));
@@ -536,83 +606,51 @@ async function main() {
     const protocolResponse = await fetch(protocolURL, { signal: AbortSignal.timeout(10000) });
     if (!protocolResponse.ok) throw new Error("Chrome n'a pas fourni son schéma CDP.");
     const protocol = (await protocolResponse.json()) as { domains: { domain: string; events?: { name: string }[] }[] };
-    const events = protocol.domains.find(d => d.domain === "Network")?.events;
+    const events = protocol.domains.find(domain => domain.domain === "Network")?.events;
     if (!events) throw new Error("Schéma Network absent.");
     for (const event of events)
       cdp.on(`Network.${event.name}`, (p, s) => {
-        if (s) app.event(`Network.${event.name}`, p, s);
+        if (s && app.targets.has(s)) app.event(`Network.${event.name}`, p, s);
       });
-    await cdp.send("Target.setDiscoverTargets", { discover: true });
     await app.session(sessionId, target);
-    const loaded = Promise.withResolvers<void>();
-    const cancelLoad = cdp.on("Page.loadEventFired", (_p, s) => {
-      if (s === sessionId) loaded.resolve();
-    });
-    await cdp.send("Page.navigate", { url }, sessionId);
-    console.log(`Fenêtre ouverte. Exports privés : ${directory}`);
-    if (selfTest) {
-      let loadTimer: ReturnType<typeof setTimeout> | undefined;
-      try {
-        await Promise.race([
-          loaded.promise,
-          new Promise<never>((_, reject) => {
-            loadTimer = setTimeout(() => reject(new Error("Fixture load timed out")), 15000);
-          }),
-        ]);
-      } finally {
-        clearTimeout(loadTimer);
-        cancelLoad();
-      }
+    const { frameTree } = await cdp.send<RecordJSON>("Page.getFrameTree", {}, sessionId);
+    const { executionContextId } = await cdp.send<RecordJSON>(
+      "Page.createIsolatedWorld",
+      { frameId: frameTree.frame.id, worldName: "bun-inspector" },
+      sessionId,
+    );
+    app.contexts.set(sessionId, executionContextId);
+    await cdp.send("Runtime.evaluate", { contextId: executionContextId, expression: panelScript }, sessionId);
+    console.log(`Fenêtre Chrome du profil actif ouverte. Exports privés : ${directory}`);
+    if (args.includes("--check")) {
       const { root } = await cdp.send<RecordJSON>("DOM.getDocument", {}, sessionId);
-      const { nodeId } = await cdp.send<RecordJSON>(
-        "DOM.querySelector",
-        { nodeId: root.nodeId, selector: "#player" },
-        sessionId,
-      );
-      const { node } = await cdp.send<RecordJSON>("DOM.describeNode", { nodeId }, sessionId);
-      await app.select(sessionId, node.backendNodeId);
-      await cdp.send(
+      await app.select(sessionId, root.backendNodeId);
+      await app.export();
+      const { result } = await cdp.send<RecordJSON>(
         "Runtime.evaluate",
-        { expression: `fetch('/stream.m3u8').then(r=>r.text())`, awaitPromise: true },
+        {
+          expression:
+            "({url:location.href,title:document.title,readyState:document.readyState,videos:document.querySelectorAll('video').length})",
+          returnByValue: true,
+        },
         sessionId,
       );
-      const cookies = await app.export();
-      if (!cookies.cookies.some((c: RecordJSON) => c.name === "fixture" && c.httpOnly))
-        throw new Error("HttpOnly cookie capture failed");
-      const requests = [...app.requests.values()];
-      if (!requests.some(r => r.request.url.endsWith("/stream.m3u8") && mediaCandidate(r) && r.bodyFile))
-        throw new Error("Manifest response capture failed");
-      if (!requests.some(r => r.bodyFile?.endsWith(".js")) || !requests.some(r => r.bodyFile?.endsWith(".css")))
-        throw new Error("JS/CSS capture failed");
-      const network = await Bun.file(join(directory, "network.json")).json();
-      if (!network.events.length || !app.selectedFrame) throw new Error("Network/DOM selection capture failed");
-      const contextId = app.contexts.get(sessionId);
-      const { result: panel } = await cdp.send<RecordJSON>(
-        "Runtime.evaluate",
-        { contextId, expression: "typeof bunInspectorUpdate", returnByValue: true },
-        sessionId,
-      );
-      if (panel.value !== "function" || app.errors.length) throw new Error("Inspector panel initialization failed");
-      await cdp.send(
-        "Overlay.setInspectMode",
-        { mode: "searchForNode", highlightConfig: { showInfo: true } },
-        sessionId,
-      );
-      await cdp.send("Overlay.setInspectMode", { mode: "none", highlightConfig: {} }, sessionId);
-      const { data } = await cdp.send<{ data: string }>("Page.captureScreenshot", { format: "png" }, sessionId);
-      await Bun.write(join(directory, "preview.png"), Buffer.from(data, "base64"));
       console.log(
         JSON.stringify({
-          selfTest: "PASS",
-          requests: requests.length,
-          events: network.events.length,
+          check: "real-site-inspected",
+          site: result.value,
+          requests: app.requests.size,
           output: directory,
+          playbackQualified: false,
         }),
       );
     } else {
-      cancelLoad();
-      await Promise.race([app.stop.promise, child.exited]);
+      await app.stop.promise;
+      await cdp.send("Target.closeTarget", { targetId: app.mainTarget }).catch(() => {});
     }
+  } catch (error) {
+    if (!opened) await open();
+    throw error;
   } finally {
     if (inspector) {
       await Promise.allSettled(inspector.bodies);
@@ -620,10 +658,7 @@ async function main() {
       await inspector.sink.end();
     }
     cdp?.close();
-    job.terminate();
-    await child.exited;
-    fixture?.stop(true);
   }
 }
 
-if (import.meta.main) await main();
+if (import.meta.main) await networkWindowMain();

@@ -7,16 +7,30 @@ export const remotionRoot = resolve(import.meta.dir, "..");
 
 /** Resolve public workspace export entrypoints to the vendored source, including subpaths. */
 export async function remotionSourcePlugin(): Promise<BunPlugin> {
-  const upstream = await Bun.file(join(remotionRoot, "UPSTREAM.json")).json();
+  const renderer = await Bun.file(join(remotionRoot, "packages/renderer/package.json")).json();
   const compositorName =
     process.platform === "win32" && process.arch === "x64"
       ? "@remotion/compositor-win32-x64-msvc"
       : null;
-  const compositorRoot =
-    process.env.BUN_VIDEO_COMPOSITOR_DIR ??
-    (compositorName
-      ? resolve(remotionRoot, upstream.baseline, "packages/compositor-win32-x64-msvc")
-      : null);
+  let compositorRoot = process.env.BUN_VIDEO_COMPOSITOR_DIR ?? null;
+  if (compositorName && !compositorRoot) {
+    try {
+      compositorRoot = resolve(
+        Bun.resolveSync(`${compositorName}/package.json`, join(import.meta.dir, "build-deps")),
+        "..",
+      );
+    } catch {
+      throw new Error(
+        `Install optional ${compositorName}@${renderer.version} in .aphrody/build-deps or set BUN_VIDEO_COMPOSITOR_DIR`,
+      );
+    }
+  }
+  if (compositorName && compositorRoot) {
+    compositorRoot = resolve(compositorRoot);
+    const manifest = await Bun.file(join(compositorRoot, "package.json")).json();
+    if (manifest.name !== compositorName || manifest.version !== renderer.version)
+      throw new Error(`Compositor assets must match ${compositorName}@${renderer.version}`);
+  }
   const workspaces = new Map<string, { root: string; manifest: Record<string, any> }>();
   for (const item of readdirSync(join(remotionRoot, "packages"), { withFileTypes: true })) {
     if (!item.isDirectory()) continue;
@@ -63,7 +77,7 @@ export async function remotionSourcePlugin(): Promise<BunPlugin> {
       build.onLoad({ filter: /.*/, namespace: "remotion-native-compositor" }, () => {
         if (!compositorRoot || !existsSync(compositorRoot)) {
           throw new Error(
-            "Restore the pinned compositor assets or set BUN_VIDEO_COMPOSITOR_DIR before compilation",
+            "Install the pinned optional compositor package or set BUN_VIDEO_COMPOSITOR_DIR before compilation",
           );
         }
         const files = readdirSync(compositorRoot).filter((name) => /\.(exe|dll)$/.test(name));

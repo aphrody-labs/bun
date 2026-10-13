@@ -1,3 +1,4 @@
+const __bunSyncFs = require('node:fs');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -6,9 +7,9 @@ const paths = [path.join(__dirname, 'dist', 'init.js')];
 const prefix = '#! /usr/bin/env node\n';
 
 paths.forEach((p) => {
-	const contents = await Bun.file(p).text();
+	const contents = __bunSyncFs.readFileSync(p, 'utf8');
 
 	if (!contents.startsWith(prefix)) {
-		await Bun.write(p, prefix + contents);
+		__bunSyncFs.writeFileSync(p, prefix + contents);
 	}
 });

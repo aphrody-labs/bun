@@ -52,7 +52,7 @@ const waitForEvent = async ({
 	event: string;
 }): Promise<void> => {
 	for (let attempts = 0; attempts < 500; attempts++) {
-		const events = await Bun.file(eventsPath).exists()
+		const events = (await Bun.file(eventsPath).exists())
 			? await Bun.file(eventsPath).text()
 			: '';
 		if (events.includes(event)) {

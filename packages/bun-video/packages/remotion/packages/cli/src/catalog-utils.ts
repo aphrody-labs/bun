@@ -34,7 +34,7 @@ export const findWorkspaceRoot = (startDir: string): string | null => {
 		if (fs.existsSync(packageJsonPath)) {
 			try {
 				const packageJson = JSON.parse(
-					fs.readFileSync(packageJsonPath, "utf8"),
+					fs.readFileSync(packageJsonPath, 'utf8'),
 				);
 				if (packageJson.workspaces) {
 					return currentDir;
@@ -69,7 +69,7 @@ export const findCatalogSource = (
 
 	if (fs.existsSync(packageJsonPath)) {
 		try {
-			const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+			const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
 			if (
 				packageJson.workspaces &&
@@ -96,7 +96,7 @@ export const findCatalogSource = (
 
 	const pnpmWorkspacePath = path.join(workspaceRoot, 'pnpm-workspace.yaml');
 	if (fs.existsSync(pnpmWorkspacePath)) {
-		const content = fs.readFileSync(pnpmWorkspacePath, "utf8");
+		const content = fs.readFileSync(pnpmWorkspacePath, 'utf8');
 		if (/^catalog:/m.test(content)) {
 			return {type: 'pnpm-workspace', filePath: pnpmWorkspacePath};
 		}
@@ -114,7 +114,7 @@ export const getCatalogEntries = (
 	}
 
 	if (source.type === 'package-json') {
-		const packageJson = JSON.parse(fs.readFileSync(source.filePath, "utf8"));
+		const packageJson = JSON.parse(fs.readFileSync(source.filePath, 'utf8'));
 
 		if (source.catalogKey === 'workspaces') {
 			return (packageJson.workspaces.catalog ?? {}) as Record<string, string>;
@@ -123,7 +123,7 @@ export const getCatalogEntries = (
 		return (packageJson.catalog ?? {}) as Record<string, string>;
 	}
 
-	return parsePnpmWorkspaceCatalog(fs.readFileSync(source.filePath, "utf8"));
+	return parsePnpmWorkspaceCatalog(fs.readFileSync(source.filePath, 'utf8'));
 };
 
 export const parsePnpmWorkspaceCatalog = (
@@ -168,7 +168,7 @@ export const updateCatalogEntryInPackageJson = ({
 	pkg: string;
 	newVersion: string;
 }): boolean => {
-	const content = fs.readFileSync(filePath, "utf8");
+	const content = fs.readFileSync(filePath, 'utf8');
 	const packageJson = JSON.parse(content);
 
 	const catalog =
@@ -199,7 +199,7 @@ export const updateCatalogEntryInPnpmWorkspace = ({
 	pkg: string;
 	newVersion: string;
 }): boolean => {
-	const content = fs.readFileSync(filePath, "utf8");
+	const content = fs.readFileSync(filePath, 'utf8');
 	const lines = content.split('\n');
 	let inCatalogSection = false;
 	let updated = false;

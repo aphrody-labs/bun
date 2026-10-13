@@ -1,6 +1,7 @@
-import {expect, test} from '@playwright/test';
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
+import {expect, test} from '@playwright/test';
 import {apiCall} from './api-call.mts';
 import {STUDIO_URL, exampleDir} from './constants.mts';
 import {startStudio, stopStudio} from './studio-server.mts';
@@ -178,7 +179,7 @@ test.describe('render output dragging', () => {
 			});
 			await expect
 				.poll(() => {
-					if (!await Bun.file(copiedAsset).exists()) {
+					if (!__bunSyncFs.existsSync(copiedAsset)) {
 						return false;
 					}
 

@@ -1,12 +1,12 @@
 import {internalRegisterUsageEvent} from './register-usage-event';
 
 export {
-	UsageEventClassification as Classification,
+	type UsageEventClassification as Classification,
 	registerUsageEvent,
-	RegisterUsageEventResponse,
+	type RegisterUsageEventResponse,
 } from './register-usage-event';
 
-export {EventCount, getUsage, GetUsageResponse} from './get-usage';
+export {type EventCount, getUsage, type GetUsageResponse} from './get-usage';
 
 export const LicensingInternals = {
 	internalRegisterUsageEvent,

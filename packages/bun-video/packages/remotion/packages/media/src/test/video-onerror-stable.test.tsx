@@ -1,7 +1,7 @@
+import {expect, test, vi} from 'bun:test';
 import {Player} from '@remotion/player';
 import React, {useEffect, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {expect, test, vi} from 'bun:test';
 import {Audio} from '../audio/audio';
 import {MediaPlayer} from '../media-player';
 import {Video} from '../video/video';

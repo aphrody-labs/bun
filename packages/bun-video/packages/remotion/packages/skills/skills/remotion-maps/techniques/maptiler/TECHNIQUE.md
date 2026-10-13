@@ -22,7 +22,7 @@ Env `REMOTION_MAPTILER_KEY` (unrestricted). Init the map once (ref guard); updat
 When constructing MapLibre/MapTiler layer objects, omit optional properties that are absent.  
 In particular, use `...(layer.filter ? {filter: layer.filter} : {})`; do not pass `filter: undefined`. An undefined filter can suppress the layer while separately created halo or border layers continue rendering, producing missing country fills and dark marker halos with no coloured cores.
 
-Drive animation from `useCurrentFrame()` rather than CSS transitions or browser timers.  
+Drive animation from `useCurrentFrame()` rather than CSS transitions or browser timers.
 
 ## Choose the source for each map element
 

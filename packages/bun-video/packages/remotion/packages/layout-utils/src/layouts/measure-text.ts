@@ -4,13 +4,15 @@ export type Dimensions = {
 };
 
 export type ModifyableCSSProperties<T = Partial<CSSStyleDeclaration>> = {
-	[P in keyof T as P extends 'length'
-		? never
-		: P extends keyof CSSPropertiesOnWord
+	[
+		P in keyof T as P extends 'length'
 			? never
-			: T[P] extends string | number
-				? P
-				: never]: T[P];
+			: P extends keyof CSSPropertiesOnWord
+				? never
+				: T[P] extends string | number
+					? P
+					: never
+	]: T[P];
 };
 
 export type TextTransform =

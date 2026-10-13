@@ -444,16 +444,14 @@ export const TimelineVirtualizationProvider: React.FC<{
 								verticalRenderWindow.top
 						);
 					})
-					.map(
-						(index): VirtualItem => ({
-							index,
-							key: timeline[index].track.sequence.id,
-							start: layout.offsets[index],
-							end: layout.offsets[index] + layout.rowHeights[index],
-							size: layout.rowHeights[index],
-							lane: 0,
-						}),
-					),
+					.map((index): VirtualItem => ({
+						index,
+						key: timeline[index].track.sequence.id,
+						start: layout.offsets[index],
+						end: layout.offsets[index] + layout.rowHeights[index],
+						size: layout.rowHeights[index],
+						lane: 0,
+					})),
 			),
 		[
 			layout.groups,

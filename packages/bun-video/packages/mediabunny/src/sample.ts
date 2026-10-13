@@ -1030,7 +1030,8 @@ export class AudioSample {
 				numberOfFrames: this.numberOfFrames,
 				numberOfChannels: this.numberOfChannels,
 				timestamp: this.microsecondTimestamp,
-				data: this._data,
+				// AudioData requires an owned ArrayBuffer rather than shared storage.
+				data: this._data.slice(),
 			});
 		}
 	}

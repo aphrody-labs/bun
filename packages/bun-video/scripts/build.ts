@@ -8,6 +8,8 @@ import { remotionSourcePlugin } from "../packages/remotion/.aphrody/standalone-b
 import { sharpNativePlugin } from "../packages/hyperframes/aphrody/sharp-native-plugin";
 import { remotionModuleAssetsPlugin } from "../packages/remotion/.aphrody/module-assets";
 import { mediaPlugin } from "./media-plugin";
+import { videoCatalogPlugin } from "./catalog-plugin";
+import { ytDlpAssetsPlugin } from "./ytdlp-assets-plugin";
 import { hyperframesRuntimeAssetsPlugin } from "../packages/hyperframes/aphrody/runtime-assets-plugin";
 
 const root = resolve(import.meta.dir, "..");
@@ -19,12 +21,18 @@ const outfile = resolve(
 await prepareHyperframesStandalone();
 const hyperframes = await hyperframesStandaloneConfig({
   outfile,
-  entrypoint: join(root, "src/cli.ts"),
+  entrypoint: join(root, "umbrella-src/cli.ts"),
 });
 const result = await Bun.build({
   ...hyperframes,
-  entrypoints: [join(root, library ? "src/index.ts" : "src/cli.ts"), join(root, "src/frame-worker.ts")],
+  entrypoints: [
+    join(root, library ? "umbrella-src/index.ts" : "umbrella-src/cli.ts"),
+    join(root, "src/frame-worker.ts"),
+    join(root, "src/video-worker-entry.ts"),
+  ],
   plugins: [
+    videoCatalogPlugin(),
+    ytDlpAssetsPlugin(),
     await remotionSourcePlugin(),
     await sharpNativePlugin(),
     hyperframesRuntimeAssetsPlugin(),
@@ -32,7 +40,13 @@ const result = await Bun.build({
     ...(library ? [] : [mediaPlugin()]),
   ],
   ...(library
-    ? { compile: undefined, outdir: outfile, naming: "[name].ts", format: "esm" as const }
+    ? {
+        compile: undefined,
+        outdir: outfile,
+        naming: "[name].ts",
+        format: "esm" as const,
+        external: ["bun-video:media-runtime"],
+      }
     : { compile: { outfile, executablePath: process.execPath } }),
 });
 if (!result.success) throw new AggregateError(result.logs, "Unified bun-video compilation failed");

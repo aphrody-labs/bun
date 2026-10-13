@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {expect, test} from '@playwright/test';
@@ -47,7 +48,7 @@ test.describe('suppress webpack rebuild', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(rootFile).text();
+					const content = __bunSyncFs.readFileSync(rootFile, 'utf8');
 					return content.includes(`delay: ${newDelay}`);
 				},
 				{

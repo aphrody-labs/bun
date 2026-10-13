@@ -1,8 +1,8 @@
+import {expect, test, vi} from 'bun:test';
 import {Player, type PlayerRef} from '@remotion/player';
 import React, {useContext} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Internals, useBufferState} from 'remotion';
-import {expect, test, vi} from 'bun:test';
 import {Video} from '../video/video';
 import {findLargestCanvas, waitFor} from './player-frame-accuracy-utils';
 

@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import {expect, test} from '@playwright/test';
 import {EXPANDED_SIDEBAR_STATE, rootFile} from './constants.mts';
@@ -42,7 +43,7 @@ test.describe('visual mode', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(rootFile).text();
+					const content = __bunSyncFs.readFileSync(rootFile, 'utf8');
 					return content.includes(newTitle);
 				},
 				{
@@ -61,7 +62,8 @@ test.describe('visual mode', () => {
 
 		await expect
 			.poll(
-				() => await Bun.file(rootFile).text() === contentAfterValidEdit,
+				() =>
+					__bunSyncFs.readFileSync(rootFile, 'utf8') === contentAfterValidEdit,
 				{
 					timeout: 2_000,
 				},
@@ -95,7 +97,8 @@ test.describe('visual mode', () => {
 
 		await expect
 			.poll(
-				() => await Bun.file(rootFile).text() === contentAfterValidEdit,
+				() =>
+					__bunSyncFs.readFileSync(rootFile, 'utf8') === contentAfterValidEdit,
 				{
 					timeout: 2_000,
 				},

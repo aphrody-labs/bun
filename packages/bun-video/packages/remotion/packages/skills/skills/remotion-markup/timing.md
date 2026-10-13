@@ -1,4 +1,4 @@
-Drive motion with `interpolate()` over an explicit frame range. 
+Drive motion with `interpolate()` over an explicit frame range.
 To customize timing, use **`Easing.bezier`** or `Easing.spring`.
 
 A simple linear interpolation is done using the `interpolate` function.

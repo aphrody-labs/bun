@@ -31,6 +31,11 @@ export const transformersImportMetaWarning = {
 
 export const getResolveConfig = () => ({
 	extensions: ['.ts', '.tsx', '.web.js', '.js', '.jsx', '.mjs', '.cjs'],
+	extensionAlias: {
+		'.js': ['.js', '.ts', '.tsx'],
+		'.mjs': ['.mjs', '.mts'],
+		'.cjs': ['.cjs', '.cts'],
+	},
 	alias: {
 		// Only one version of react
 		'react/jsx-runtime': require.resolve('react/jsx-runtime'),

@@ -1,5 +1,5 @@
-import crypto from "node:crypto";
+import crypto from 'node:crypto';
 
 export const getImageHash = (obj: unknown): string => {
-  return crypto.createHash("md5").update(JSON.stringify(obj)).digest("hex");
+	return crypto.createHash('md5').update(JSON.stringify(obj)).digest('hex');
 };

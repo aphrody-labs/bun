@@ -1,35 +1,35 @@
 export const examplePrompts = [
-  {
-    id: "text-typewriter",
-    headline: "Typewriter text",
-    icon: "Type",
-    prompt: `Generate the text "Hello world" with world in yellow highlighting. Black text, white background. That words should be shown next to each other in the center of the screen.
+	{
+		id: 'text-typewriter',
+		headline: 'Typewriter text',
+		icon: 'Type',
+		prompt: `Generate the text "Hello world" with world in yellow highlighting. Black text, white background. That words should be shown next to each other in the center of the screen.
 
 Animation: Let the words fade in from left to right and then highlight "world" yellow. Mimic a typewriter effect for the text appearance with a blinking cursor at the end of the text.`,
-    color: "#fdba74",
-  },
-  {
-    id: "chat-bubbles",
-    headline: "Chat messages",
-    icon: "MessageCircle",
-    prompt: `WhatsApp-style chat bubbles that appear one by one with a bouncy spring animation, alternating between sent and received messages.
+		color: '#fdba74',
+	},
+	{
+		id: 'chat-bubbles',
+		headline: 'Chat messages',
+		icon: 'MessageCircle',
+		prompt: `WhatsApp-style chat bubbles that appear one by one with a bouncy spring animation, alternating between sent and received messages.
 Use green for sent messages and gray for received messages. Position them on left and right sides respectively.`,
-    color: "#86efac",
-  },
-  {
-    id: "counter",
-    headline: "Metric counters",
-    icon: "Hash",
-    prompt: `Three animated number counters showing Users (10,000), Revenue ($50,000), and Growth (127%) that count up from zero with staggered timing.
+		color: '#86efac',
+	},
+	{
+		id: 'counter',
+		headline: 'Metric counters',
+		icon: 'Hash',
+		prompt: `Three animated number counters showing Users (10,000), Revenue ($50,000), and Growth (127%) that count up from zero with staggered timing.
 
 Show all metrics at the same time, use this color #fde047. Focus on no overlaps and no flickering. Show the metrics in the center.`,
-    color: "#fde047",
-  },
-  {
-    id: "bar-chart",
-    headline: "Bar chart",
-    icon: "BarChart3",
-    prompt: `An animated histogram with the gold price for the following data:
+		color: '#fde047',
+	},
+	{
+		id: 'bar-chart',
+		headline: 'Bar chart',
+		icon: 'BarChart3',
+		prompt: `An animated histogram with the gold price for the following data:
 {
   "title": "Gold Price 2024",
   "unit": "USD per troy ounce",
@@ -48,18 +48,18 @@ Show all metrics at the same time, use this color #fde047. Focus on no overlaps 
     { "month": "Dec", "price": 2650 }
   ]
 }`,
-    color: "#a5b4fc",
-  },
-  {
-    id: "doge-dvd",
-    headline: "Doge screensaver",
-    icon: "Disc",
-    prompt: `Create a DVD-Rom Style animation of this image https://i.pinimg.com/600x/ac/82/57/ac8257e1cfc4e63f5c63f3d4869eb7c4.jpg
+		color: '#a5b4fc',
+	},
+	{
+		id: 'doge-dvd',
+		headline: 'Doge screensaver',
+		icon: 'Disc',
+		prompt: `Create a DVD-Rom Style animation of this image https://i.pinimg.com/600x/ac/82/57/ac8257e1cfc4e63f5c63f3d4869eb7c4.jpg
 The graphic moves smoothly across the screen in a straight line, bouncing off the edges of the screen whenever it hits a border. Each time it hits a corner or side, it changes direction, creating a continuous floating, ricocheting motion. The speed is steady, the movement is linear, and the object keeps rotating around the screen endlessly, just like the classic DVD logo screensaver.
 
 Change the color on every bounce, no rotation, Make the animation speed fast.`,
-    color: "#f9a8d4",
-  },
+		color: '#f9a8d4',
+	},
 ] as const;
 
 export type ExamplePrompt = (typeof examplePrompts)[number];

@@ -1,4 +1,4 @@
-import { RemotionExample } from "./index";
+import {RemotionExample} from './index';
 
 export const animatedShapesCode = `import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 import { Circle, Triangle, Rect, Star } from "@remotion/shapes";
@@ -83,11 +83,11 @@ export const MyAnimation = () => {
 };`;
 
 export const animatedShapesExample: RemotionExample = {
-  id: "animated-shapes",
-  name: "Animated Shapes",
-  description: "Bouncing and rotating SVG shapes with spring animations",
-  category: "Other",
-  durationInFrames: 180,
-  fps: 30,
-  code: animatedShapesCode,
+	id: 'animated-shapes',
+	name: 'Animated Shapes',
+	description: 'Bouncing and rotating SVG shapes with spring animations',
+	category: 'Other',
+	durationInFrames: 180,
+	fps: 30,
+	code: animatedShapesCode,
 };

@@ -1,6 +1,6 @@
+import {createRequire} from 'node:module';
 import {bundle} from '@remotion/bundler';
 import {renderMedia, selectComposition} from '@remotion/renderer';
-import {createRequire} from 'node:module';
 
 const require = createRequire(import.meta.url);
 

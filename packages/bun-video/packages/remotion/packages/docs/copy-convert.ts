@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs, {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {$} from 'bun';
@@ -11,7 +12,7 @@ const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
 const lowMemoryBuild =
 	isVercel || process.env.REMOTION_DOCS_LOW_MEMORY_BUILD === '1';
 const prebuiltAssetsExist = [dir, brandDir, testbedDir].every((assetDir) =>
-	await Bun.file(assetDir).exists(),
+	__bunSyncFs.existsSync(assetDir),
 );
 
 if (isVercel && prebuiltAssetsExist) {

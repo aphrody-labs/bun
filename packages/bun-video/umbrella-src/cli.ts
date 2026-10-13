@@ -1,6 +1,26 @@
 #!/usr/bin/env bun
 const [command, ...args] = Bun.argv.slice(2);
 switch (command) {
+  case "site":
+    await import("../labs/video-data-site").then(module => module.videoDataSiteMain(args));
+    break;
+  case "workers":
+    await import("../labs/video-workers").then(module => module.videoWorkersMain(args));
+    break;
+  case "--video-worker": {
+    const { runVideoWorkerEntry } = await import("../src/video-worker-entry");
+    if (args.length !== 2) throw new Error("Worker requires private request and result paths");
+    process.exitCode = await runVideoWorkerEntry(args[0]!, args[1]!);
+    break;
+  }
+  case "ytdlp": {
+    const { runYtDlpCli } = await import("../src/ytdlp");
+    const result = await runYtDlpCli(args);
+    process.stdout.write(result.stdout);
+    process.stderr.write(result.stderr);
+    process.exitCode = result.exitCode;
+    break;
+  }
   case "remotion": {
     process.argv = [process.argv[0]!, process.argv[1]!, ...args];
     const { default: dotenv } =
@@ -48,7 +68,7 @@ switch (command) {
   case "--help":
   case "-h":
     console.log(
-      "bun-video remotion <command> [args]\nbun-video hyperframes <command> [args]\nbun-video capabilities\nbun-video media-probe\nbun-video encode <frame-plan.json> <absolute-output.mkv>\nbun-video mcp\n\nBoth upstream CLIs share one compiled Bun executable. Native capture requires a qualified browser provider; capabilities reports provider availability.",
+      "bun-video site [--port N]\nbun-video workers <command> [args]\nbun-video ytdlp [args]\nbun-video remotion <command> [args]\nbun-video hyperframes <command> [args]\nbun-video capabilities\nbun-video media-probe\nbun-video encode <frame-plan.json> <absolute-output.mkv>\nbun-video mcp\n\nBoth upstream CLIs share one compiled Bun executable. Native capture requires a qualified browser provider; capabilities reports provider availability.",
     );
     break;
   default:

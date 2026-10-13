@@ -77,29 +77,28 @@ export const saveMultipleEffectProps = ({
 	}
 
 	return saveMultipleEffectPropsApi({
-		edits: changes.map(
-			(change): SaveMultipleEffectPropsEdit =>
-				change.type === 'effect-param'
-					? {
-							type: 'effect-param',
-							fileName: change.fileName,
-							sequenceNodePath: change.nodePath,
-							effectIndex: change.effectIndex,
-							key: change.fieldKey,
-							effectParam: change.effectParam,
-							defaultValue: change.defaultValue,
-							schema: change.schema,
-						}
-					: {
-							type: 'value',
-							fileName: change.fileName,
-							sequenceNodePath: change.nodePath,
-							effectIndex: change.effectIndex,
-							key: change.fieldKey,
-							value: JSON.stringify(change.value),
-							defaultValue: change.defaultValue,
-							schema: change.schema,
-						},
+		edits: changes.map((change): SaveMultipleEffectPropsEdit =>
+			change.type === 'effect-param'
+				? {
+						type: 'effect-param',
+						fileName: change.fileName,
+						sequenceNodePath: change.nodePath,
+						effectIndex: change.effectIndex,
+						key: change.fieldKey,
+						effectParam: change.effectParam,
+						defaultValue: change.defaultValue,
+						schema: change.schema,
+					}
+				: {
+						type: 'value',
+						fileName: change.fileName,
+						sequenceNodePath: change.nodePath,
+						effectIndex: change.effectIndex,
+						key: change.fieldKey,
+						value: JSON.stringify(change.value),
+						defaultValue: change.defaultValue,
+						schema: change.schema,
+					},
 		),
 		clientId,
 		undoLabel,

@@ -37,5 +37,8 @@
     "prompts": "2.4.2",
     "@huggingface/transformers": "4.2.0",
     "onnxruntime-node": "1.24.3"
+  },
+  "optionalDependencies": {
+    "@remotion/compositor-win32-x64-msvc": "4.0.534"
   }
 }

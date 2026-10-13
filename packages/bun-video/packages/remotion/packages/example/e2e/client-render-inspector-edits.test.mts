@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {expect, test} from '@playwright/test';
@@ -24,7 +25,9 @@ test('client export includes inspector edits without reloading Studio', async ({
 	);
 	try {
 		fs.rmSync(output, {force: true});
-		await Bun.write(rootFile, `
+		await Bun.write(
+			rootFile,
+			`
 import React from 'react';
 import {Composition, Solid} from 'remotion';
 const EditableSolid = () => <Solid name="Editable color" color="#ff0000" width={32} height={32} />;
@@ -64,7 +67,7 @@ export const E2eTestRoot = () => <Composition id="client-render-inspector" compo
 			.getByRole('textbox', {name: 'Output name', exact: true})
 			.fill('out/client-render-inspector-edits.png');
 		await page.getByRole('button', {name: /Render still/}).click();
-		await expect.poll(() => await Bun.file(output).exists()).toBe(true);
+		await expect.poll(() => __bunSyncFs.existsSync(output)).toBe(true);
 		const {data, info} = await sharp(output)
 			.ensureAlpha()
 			.raw()

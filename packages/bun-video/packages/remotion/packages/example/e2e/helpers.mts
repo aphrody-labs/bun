@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import {expect} from '@playwright/test';
 import type {Page} from '@playwright/test';
@@ -41,7 +42,7 @@ export const stripAnsi = (s: string) =>
 	s.replace(/\x1b\[[0-9;]*m/g, '').replace(/\]8;;[^\x1b]*\x1b\\/g, '');
 
 export const readStudioLogs = (): string[] => {
-	if (!await Bun.file(LOGS_FILE).exists()) {
+	if (!__bunSyncFs.existsSync(LOGS_FILE)) {
 		return [];
 	}
 

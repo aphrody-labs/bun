@@ -29,7 +29,7 @@ export const patchReadmeMd = (
 		return;
 	}
 
-	const contents = fs.readFileSync(fileName, "utf8");
+	const contents = fs.readFileSync(fileName, 'utf8');
 	const newContents = contents
 		.split('\n')
 		.map((c) => {

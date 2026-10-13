@@ -1,8 +1,8 @@
+import {test} from 'bun:test';
 import {Player} from '@remotion/player';
 import {flushSync} from 'react-dom';
 import {createRoot} from 'react-dom/client';
 import {useRemotionEnvironment} from 'remotion';
-import {test} from 'bun:test';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 

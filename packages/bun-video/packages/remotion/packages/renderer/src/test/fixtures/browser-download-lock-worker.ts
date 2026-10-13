@@ -23,7 +23,7 @@ const main = async () => {
 	appendEvent('acquired');
 
 	if (releaseSignal) {
-		while (!await Bun.file(releaseSignal).exists()) {
+		while (!(await Bun.file(releaseSignal).exists())) {
 			await wait(10);
 		}
 	}

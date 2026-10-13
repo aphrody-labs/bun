@@ -1,5 +1,5 @@
-import type {Socket} from 'node:net';
 import http from 'node:http';
+import type {Socket} from 'node:net';
 import type {DownloadMap} from './assets/download-map';
 import type {Compositor} from './compositor/compositor';
 import {getDesiredPort} from './get-port';

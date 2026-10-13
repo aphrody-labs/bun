@@ -52,10 +52,7 @@ const Scene: React.FC<CodingPromptProps> = ({promptLine1, promptLine2}) => {
 	return (
 		<>
 			<MapLayer />
-			<CodingPromptLayer
-				promptLine1={promptLine1}
-				promptLine2={promptLine2}
-			/>
+			<CodingPromptLayer promptLine1={promptLine1} promptLine2={promptLine2} />
 		</>
 	);
 };
@@ -65,7 +62,12 @@ export const HomepageAssetMaster: React.FC<CodingPromptProps> = ({
 	promptLine2,
 }) => {
 	const frame = useCurrentFrame();
-	const resetProgress = Easing.bezier(0.645, 0.045, 0.355, 1)(
+	const resetProgress = Easing.bezier(
+		0.645,
+		0.045,
+		0.355,
+		1,
+	)(
 		interpolate(
 			frame,
 			[resetStartFrame, resetStartFrame + resetDurationInFrames],

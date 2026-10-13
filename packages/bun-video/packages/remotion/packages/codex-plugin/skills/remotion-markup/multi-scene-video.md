@@ -12,7 +12,7 @@ export const SceneA: React.FC = () => {
 // SceneB.tsx
 export const SceneB: React.FC = () => {
   return // ...
-} 
+}
 ```
 
 Install `@remotion/transitions` if not yet available:
@@ -22,6 +22,7 @@ npx remotion add @remotion/transitions
 ```
 
 // MyVideo.tsx
+
 ```tsx
 import {TransitionSeries} from '@remotion/transitions';
 
@@ -62,7 +63,7 @@ export const Root: React.FC = () => {
           fps={30}
           width={1920}
           height={1080}
-        /> 
+        />
       </Folder>
       <Composition
         id="MyVideo"
@@ -71,7 +72,7 @@ export const Root: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
-      /> 
+      />
     </>
   )
 }

@@ -1,3 +1,4 @@
+import {expect, test} from 'bun:test';
 import {Player, type PlayerRef} from '@remotion/player';
 import React from 'react';
 import {createRoot} from 'react-dom/client';
@@ -8,7 +9,6 @@ import {
 	Sequence,
 	type TSequence,
 } from 'remotion';
-import {expect, test} from 'bun:test';
 
 test('preserves the Player media playback rate across source changes and reloads', async () => {
 	const container = document.createElement('div');

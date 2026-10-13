@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {expect, test} from '@playwright/test';
@@ -63,7 +64,9 @@ test('trimming a parent then its expression child saves with the latest instance
 	try {
 		// The example is also editable in the main Studio. Give this test a known
 		// starting point and restore any manual edits afterwards.
-		await Bun.write(fixture, original.replace(
+		await Bun.write(
+			fixture,
+			original.replace(
 				/(<Sequence name="Trim this parent" durationInFrames=\{)\d+(\})/,
 				(_, prefix: string, suffix: string) => `${prefix}300${suffix}`,
 			),
@@ -79,7 +82,7 @@ test('trimming a parent then its expression child saves with the latest instance
 
 		await trimRightEdge('Trim this parent', 300, 60);
 		await expect
-			.poll(() => await Bun.file(fixture).text())
+			.poll(() => __bunSyncFs.readFileSync(fixture, 'utf8'))
 			.toMatch(/name="Trim this parent"\s+durationInFrames=\{360\}/);
 		await expect(
 			page.getByText('Expression A: 180 frames', {exact: true}),
@@ -90,7 +93,7 @@ test('trimming a parent then its expression child saves with the latest instance
 
 		await trimRightEdge('Expression A', 180, 36);
 		await expect
-			.poll(() => await Bun.file(fixture).text())
+			.poll(() => __bunSyncFs.readFileSync(fixture, 'utf8'))
 			.toMatch(/durationInFrames=\{duration \* 0\.6\}/);
 		await expect(
 			page.getByText('Expression A: 216 frames', {exact: true}),
@@ -113,7 +116,9 @@ test('trimming a parent then its expression child saves with the latest instance
 
 		// Keep one real file-watcher update; expression combinations and
 		// subscription counts are covered by the React integration test.
-		await Bun.write(fixture, fs
+		await Bun.write(
+			fixture,
+			fs
 				.readFileSync(fixture, 'utf8')
 				.replace('duration * 0.6', 'duration * 0.75'),
 		);

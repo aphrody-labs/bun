@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {parse} from '@babel/parser';
@@ -93,7 +94,7 @@ export const getRemotionElementSource = ({file, sourceFilePath}) => {
 	const absoluteSourcePath = path.resolve(path.dirname(sourceFilePath), file);
 
 	try {
-		return await Bun.file(absoluteSourcePath).text().trimEnd();
+		return __bunSyncFs.readFileSync(absoluteSourcePath, 'utf8').trimEnd();
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
 
@@ -142,7 +143,7 @@ export const getRemotionElementSourceMap = ({elementsRoot}) => {
 	const sourceCodeBySlug = {};
 
 	for (const sourceFilePath of indexFiles.sort()) {
-		const raw = await Bun.file(sourceFilePath).text();
+		const raw = __bunSyncFs.readFileSync(sourceFilePath, 'utf8');
 		const elementPages = Array.from(
 			raw.matchAll(/<ElementPage\b([\s\S]*?)\/>/g),
 		);

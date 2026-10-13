@@ -64,7 +64,7 @@ export const allowESLintShareableConfig = () => {
 	let eslintFolder: string | undefined;
 
 	// Probe for the ESLint >=8.0.0 layout:
-	for (let currentModule = module; ; ) {
+	for (let currentModule = module; ;) {
 		if (!eslintrcBundlePath) {
 			if (currentModule.filename.endsWith('eslintrc.cjs')) {
 				// For ESLint >=8.0.0, all @eslint/eslintrc code is bundled at this path:
@@ -143,7 +143,7 @@ export const allowESLintShareableConfig = () => {
 
 	if (!eslintFolder) {
 		// Probe for the ESLint >=7.12.0 layout:
-		for (let currentModule = module; ; ) {
+		for (let currentModule = module; ;) {
 			if (!configArrayFactoryPath) {
 				// For ESLint >=7.12.0, config-array-factory.js is at this path:
 				//   .../@eslint/eslintrc/lib/config-array-factory.js
@@ -212,7 +212,7 @@ export const allowESLintShareableConfig = () => {
 
 	if (!eslintFolder) {
 		// Probe for the <7.12.0 layout:
-		for (let currentModule = module; ; ) {
+		for (let currentModule = module; ;) {
 			// For ESLint <7.12.0, config-array-factory.js was at this path:
 			//   .../eslint/lib/cli-engine/config-array-factory.js
 			if (

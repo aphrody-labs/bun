@@ -1,5 +1,5 @@
-import {ALL_FORMATS, Input, UrlSource} from 'mediabunny';
 import {assert, expect, test} from 'bun:test';
+import {ALL_FORMATS, Input, UrlSource} from 'mediabunny';
 import {audioIteratorManager} from '../audio-iterator-manager';
 import {
 	getMaxVideoCacheSize,

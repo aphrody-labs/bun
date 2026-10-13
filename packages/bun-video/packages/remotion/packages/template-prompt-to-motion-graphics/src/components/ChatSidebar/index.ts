@@ -1,1 +1,1 @@
-export { ChatSidebar, type ChatSidebarRef } from "./ChatSidebar";
+export {ChatSidebar, type ChatSidebarRef} from './ChatSidebar';

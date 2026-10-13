@@ -60,7 +60,6 @@ To find and read current Remotion documentation, load [Remotion Docs](./remotion
 
 To upgrade Remotion, related packages, compatible Mediabunny packages, and installed Remotion Agent Skills, load [Remotion Upgrade](./remotion-upgrade/REFERENCE.md).
 
-
 ## Codex troubleshooting
 
 When running inside Codex, first try starting the Remotion Studio without opening the system browser:

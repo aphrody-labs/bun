@@ -8,9 +8,15 @@ test('allows valid site names', () => {
 });
 
 test('rejects invalid characters', () => {
-	expect(() => validateSiteName('my site')).toThrow(/Check for invalid characters/);
-	expect(() => validateSiteName('my@site')).toThrow(/Check for invalid characters/);
-	expect(() => validateSiteName('my#site')).toThrow(/Check for invalid characters/);
+	expect(() => validateSiteName('my site')).toThrow(
+		/Check for invalid characters/,
+	);
+	expect(() => validateSiteName('my@site')).toThrow(
+		/Check for invalid characters/,
+	);
+	expect(() => validateSiteName('my#site')).toThrow(
+		/Check for invalid characters/,
+	);
 });
 
 test('rejects dot segments and empty strings', () => {
@@ -24,8 +30,12 @@ test('rejects dot segments and empty strings', () => {
 });
 
 test('rejects substrings and suffixes that contain invalid characters', () => {
-	expect(() => validateSiteName('valid/name')).toThrow(/Check for invalid characters/);
-	expect(() => validateSiteName('valid name')).toThrow(/Check for invalid characters/);
+	expect(() => validateSiteName('valid/name')).toThrow(
+		/Check for invalid characters/,
+	);
+	expect(() => validateSiteName('valid name')).toThrow(
+		/Check for invalid characters/,
+	);
 });
 
 test('allows undefined', () => {

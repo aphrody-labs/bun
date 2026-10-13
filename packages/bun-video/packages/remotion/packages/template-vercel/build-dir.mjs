@@ -1,1 +1,1 @@
-export const BUILD_DIR = ".remotion";
+export const BUILD_DIR = '.remotion';

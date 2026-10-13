@@ -1,5 +1,5 @@
-import {build} from 'bun';
 import path from 'node:path';
+import {build} from 'bun';
 import {Exports, validateExports} from './validate-exports';
 
 if (process.env.NODE_ENV !== 'production') {

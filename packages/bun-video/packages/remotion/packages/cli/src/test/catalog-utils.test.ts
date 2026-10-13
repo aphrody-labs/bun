@@ -92,7 +92,8 @@ test('parsePnpmWorkspaceCatalog handles basic, quoted, scoped entries and stops 
 });
 
 test('bun-style monorepo: finds workspace root, catalog source, and reads entries', () => {
-	fs.writeFileSync(path.join(tmpDir, 'package.json'),
+	fs.writeFileSync(
+		path.join(tmpDir, 'package.json'),
 		JSON.stringify({
 			name: 'my-monorepo',
 			workspaces: {
@@ -107,7 +108,8 @@ test('bun-style monorepo: finds workspace root, catalog source, and reads entrie
 
 	const subPkgDir = path.join(tmpDir, 'packages', 'my-app');
 	fs.mkdirSync(subPkgDir, {recursive: true});
-	fs.writeFileSync(path.join(subPkgDir, 'package.json'),
+	fs.writeFileSync(
+		path.join(subPkgDir, 'package.json'),
 		JSON.stringify({name: 'my-app'}),
 	);
 
@@ -127,7 +129,8 @@ test('bun-style monorepo: finds workspace root, catalog source, and reads entrie
 });
 
 test('top-level catalog in package.json: finds catalog source and reads entries', () => {
-	fs.writeFileSync(path.join(tmpDir, 'package.json'),
+	fs.writeFileSync(
+		path.join(tmpDir, 'package.json'),
 		JSON.stringify({
 			name: 'my-monorepo',
 			catalog: {zod: '4.5.4'},
@@ -145,7 +148,8 @@ test('top-level catalog in package.json: finds catalog source and reads entries'
 });
 
 test('pnpm monorepo: finds workspace root, catalog source, and reads entries', () => {
-	fs.writeFileSync(path.join(tmpDir, 'pnpm-workspace.yaml'),
+	fs.writeFileSync(
+		path.join(tmpDir, 'pnpm-workspace.yaml'),
 		'packages:\n  - packages/*\ncatalog:\n  zod: 4.5.4\n  react: ^19.0.0\n',
 	);
 
@@ -165,7 +169,8 @@ test('pnpm monorepo: finds workspace root, catalog source, and reads entries', (
 });
 
 test('standalone project: returns null/empty for workspace root, catalog source, and entries', () => {
-	fs.writeFileSync(path.join(tmpDir, 'package.json'),
+	fs.writeFileSync(
+		path.join(tmpDir, 'package.json'),
 		JSON.stringify({name: 'standalone-project'}),
 	);
 
@@ -179,7 +184,9 @@ test('standalone project: returns null/empty for workspace root, catalog source,
 
 test('updating catalog entries in bun-style package.json', () => {
 	const filePath = path.join(tmpDir, 'package.json');
-	fs.writeFileSync(filePath, JSON.stringify(
+	fs.writeFileSync(
+		filePath,
+		JSON.stringify(
 			{
 				name: 'my-monorepo',
 				workspaces: {
@@ -192,7 +199,8 @@ test('updating catalog entries in bun-style package.json', () => {
 				},
 			},
 			null,
-			'\t',) + '\n',
+			'\t',
+		) + '\n',
 	);
 
 	expect(
@@ -204,7 +212,7 @@ test('updating catalog entries in bun-style package.json', () => {
 		}),
 	).toBe(true);
 
-	const afterZodUpdate = JSON.parse(fs.readFileSync(filePath, "utf8"));
+	const afterZodUpdate = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 	expect(afterZodUpdate.workspaces.catalog.zod).toBe('4.4.0');
 	expect(afterZodUpdate.workspaces.catalog.react).toBe('^18.0.0');
 
@@ -216,7 +224,7 @@ test('updating catalog entries in bun-style package.json', () => {
 		}),
 	).toBe(true);
 
-	const afterBothUpdates = JSON.parse(fs.readFileSync(filePath, "utf8"));
+	const afterBothUpdates = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 	expect(afterBothUpdates.workspaces.catalog.mediabunny).toBe('1.35.0');
 	expect(afterBothUpdates.workspaces.catalog.react).toBe('^18.0.0');
 
@@ -232,13 +240,16 @@ test('updating catalog entries in bun-style package.json', () => {
 
 test('updating catalog entries in top-level package.json catalog', () => {
 	const filePath = path.join(tmpDir, 'package.json');
-	fs.writeFileSync(filePath, JSON.stringify(
+	fs.writeFileSync(
+		filePath,
+		JSON.stringify(
 			{
 				name: 'my-monorepo',
 				catalog: {zod: '4.5.4', mediabunny: '1.34.4'},
 			},
 			null,
-			'\t',) + '\n',
+			'\t',
+		) + '\n',
 	);
 
 	expect(
@@ -250,14 +261,16 @@ test('updating catalog entries in top-level package.json catalog', () => {
 		}),
 	).toBe(true);
 
-	const updated = JSON.parse(fs.readFileSync(filePath, "utf8"));
+	const updated = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 	expect(updated.catalog.mediabunny).toBe('1.35.0');
 	expect(updated.catalog.zod).toBe('4.5.4');
 });
 
 test('updating catalog entries in pnpm-workspace.yaml', () => {
 	const filePath = path.join(tmpDir, 'pnpm-workspace.yaml');
-	fs.writeFileSync(filePath, [
+	fs.writeFileSync(
+		filePath,
+		[
 			'packages:',
 			'  - packages/*',
 			'catalog:',
@@ -280,7 +293,7 @@ test('updating catalog entries in pnpm-workspace.yaml', () => {
 		}),
 	).toBe(true);
 
-	let content = fs.readFileSync(filePath, "utf8");
+	let content = fs.readFileSync(filePath, 'utf8');
 	expect(content).toContain('zod: 4.4.0');
 	expect(content).toContain('react: ^18.3.1');
 
@@ -292,7 +305,7 @@ test('updating catalog entries in pnpm-workspace.yaml', () => {
 		}),
 	).toBe(true);
 
-	content = fs.readFileSync(filePath, "utf8");
+	content = fs.readFileSync(filePath, 'utf8');
 	expect(content).toContain('"react-dom": "^19.0.0"');
 
 	expect(
@@ -303,7 +316,7 @@ test('updating catalog entries in pnpm-workspace.yaml', () => {
 		}),
 	).toBe(true);
 
-	content = fs.readFileSync(filePath, "utf8");
+	content = fs.readFileSync(filePath, 'utf8');
 	expect(content).toContain('"@aws-sdk/client-s3": 3.987.0');
 	expect(content).toContain('jest: 30.0.0');
 
@@ -323,12 +336,13 @@ test('updating catalog entries in pnpm-workspace.yaml', () => {
 		}),
 	).toBe(true);
 
-	content = fs.readFileSync(filePath, "utf8");
+	content = fs.readFileSync(filePath, 'utf8');
 	expect(content).toContain('react: ^19.0.0');
 });
 
 test('updateCatalogEntry returns false when no catalog source exists', () => {
-	fs.writeFileSync(path.join(tmpDir, 'package.json'),
+	fs.writeFileSync(
+		path.join(tmpDir, 'package.json'),
 		JSON.stringify({name: 'standalone'}),
 	);
 

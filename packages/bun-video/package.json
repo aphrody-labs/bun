@@ -12,7 +12,9 @@
     "bun-video-keychain": "./labs/hls-keychain.ts",
     "bun-video-shortcuts": "./labs/crunchyroll-shortcuts.ts",
     "bun-video-webgpu": "./labs/webgpu.ts",
-    "bun-video-engine": "./umbrella-src/cli.ts"
+    "bun-video-engine": "./umbrella-src/cli.ts",
+    "bun-video-workers": "./labs/video-workers.ts",
+    "bun-video-network": "./labs/network-window.tsx"
   },
   "scripts": {
     "check:types": "bunx tsgo --project tsconfig.json --noEmit",
@@ -84,7 +86,18 @@
     "./remotion": "./packages/remotion/packages/core/src/index.ts",
     "./remotion/renderer": "./packages/remotion/packages/renderer/src/index.ts",
     "./hyperframes": "./packages/hyperframes/packages/core/src/index.ts",
-    "./hyperframes/engine": "./packages/hyperframes/packages/engine/src/index.ts"
+    "./hyperframes/engine": "./packages/hyperframes/packages/engine/src/index.ts",
+    "./workflow": "./src/video-workflow.ts",
+    "./workers": "./src/video-workers.ts",
+    "./catalog": "./src/video-catalog.ts",
+    "./api": "./src/video-api.ts",
+    "./pixel-verify": "./src/pixel-verify.ts",
+    "./video-capture": "./src/video-capture.ts",
+    "./archive-capture": "./src/archive-capture.ts",
+    "./video-dataset": "./src/video-dataset.ts",
+    "./video-cookies": "./src/video-cookies.ts",
+    "./data-site": "./src/video-data-site.ts",
+    "./publish": "./src/video-publish.ts"
   },
   "publishConfig": {
     "access": "public",

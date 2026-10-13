@@ -1,3 +1,4 @@
+import path from 'node:path';
 import {bundle} from '@remotion/bundler';
 import {
 	RenderInternals,
@@ -5,7 +6,6 @@ import {
 	selectComposition,
 } from '@remotion/renderer';
 import {$} from 'bun';
-import path from 'node:path';
 import {webpackOverride} from './src/webpack-override.mjs';
 const bundled = await bundle({
 	entryPoint: './src/index.ts',

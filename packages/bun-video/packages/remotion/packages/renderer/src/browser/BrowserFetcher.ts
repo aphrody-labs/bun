@@ -116,7 +116,7 @@ export const getExpectedVersion = ({
 export const readVersionFile = (chromeMode: ChromeMode): string | null => {
 	const versionFilePath = getVersionFilePath(chromeMode);
 	try {
-		return fs.readFileSync(versionFilePath, "utf8").trim();
+		return fs.readFileSync(versionFilePath, 'utf8').trim();
 	} catch {
 		return null;
 	}
@@ -227,7 +227,10 @@ export const downloadBrowser = async ({
 				const chromeLinuxFolder = path.join(outputPath, subdir);
 				const chromePath = path.join(chromeLinuxFolder, 'chrome');
 
-				if (chromeMode === 'headless-shell' && await Bun.file(chromePath).exists()) {
+				if (
+					chromeMode === 'headless-shell' &&
+					(await Bun.file(chromePath).exists())
+				) {
 					const chromeHeadlessShellPath = path.join(
 						chromeLinuxFolder,
 						'chrome-headless-shell',

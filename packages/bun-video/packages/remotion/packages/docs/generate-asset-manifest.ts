@@ -8,7 +8,7 @@ import path from 'node:path';
 const buildDir = path.join(__dirname, 'build');
 const assetsDir = path.join(buildDir, 'assets');
 
-if (!await Bun.file(assetsDir).exists()) {
+if (!(await Bun.file(assetsDir).exists())) {
 	throw new Error(
 		`Expected ${assetsDir} to exist - run the Docusaurus build first`,
 	);
@@ -40,7 +40,8 @@ if (files.length < 100) {
 	);
 }
 
-await Bun.write(path.join(buildDir, 'asset-manifest.json'),
+await Bun.write(
+	path.join(buildDir, 'asset-manifest.json'),
 	JSON.stringify(files),
 );
 

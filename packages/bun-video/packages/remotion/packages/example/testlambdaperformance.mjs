@@ -1,9 +1,9 @@
+import assert from 'node:assert';
 import {
 	getFunctions,
 	getRenderProgress,
 	renderMediaOnLambda,
 } from '@remotion/lambda/client';
-import assert from 'node:assert';
 import {config} from 'dotenv';
 
 config({quiet: true});

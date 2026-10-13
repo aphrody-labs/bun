@@ -1,6 +1,6 @@
+import {expect, test} from 'bun:test';
 import {ALL_FORMATS, Input, UrlSource} from 'mediabunny';
 import type {ScheduleAudioNodeResult} from 'remotion';
-import {expect, test} from 'bun:test';
 import {
 	anchorToContinuousTime,
 	audioIteratorManager,

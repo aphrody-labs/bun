@@ -19,7 +19,7 @@ export const getWebhookCustomData = (
 	const jsonFile = path.resolve(process.cwd(), webhookFlag);
 	try {
 		if (fs.existsSync(jsonFile)) {
-			const rawJsonData = fs.readFileSync(jsonFile, "utf8");
+			const rawJsonData = fs.readFileSync(jsonFile, 'utf8');
 
 			return JSON.parse(rawJsonData);
 		}

@@ -19,20 +19,20 @@
 
 #### Public Pages
 
-| Page          | URL       | Title       |
-| ------------- | --------- | ----------- |
+| Page          | URL        | Title       |
+| ------------- | ---------- | ----------- |
 | {{Page name}} | `{{/...}}` | {{<title>}} |
 
 #### Authenticated Pages
 
-| Page          | URL       | Title       |
-| ------------- | --------- | ----------- |
+| Page          | URL        | Title       |
+| ------------- | ---------- | ----------- |
 | {{Page name}} | `{{/...}}` | {{<title>}} |
 
 #### Admin Pages
 
-| Page          | URL       | Title       |
-| ------------- | --------- | ----------- |
+| Page          | URL        | Title       |
+| ------------- | ---------- | ----------- |
 | {{Page name}} | `{{/...}}` | {{<title>}} |
 
 ### Conformance Level Key
@@ -502,18 +502,18 @@ A public [Accessibility Statement]({{/accessibility}}) is available on the {{Pro
 
 When a product includes a video or audio player, check against the de-facto standard shortcut set used by YouTube, Vimeo, Able Player, Video.js, OzPlayer, and native `<video controls>`:
 
-| Key                   | Action                                          |
-| --------------------- | ----------------------------------------------- |
-| `Space` / `K`         | Play-pause                                      |
-| `←` / `→`             | Seek −5 s / +5 s                                |
-| `Shift+←` / `Shift+→` | Fine seek (±1 s or per frame)                   |
-| `PageUp` / `PageDown` | Seek ±10 s                                      |
-| `Home` / `End`        | Jump to start / end                             |
-| `↑` / `↓`             | Volume ±5 %                                     |
-| `M`                   | Mute toggle                                     |
-| `F`                   | Fullscreen toggle                               |
-| `C`                   | Captions toggle                                 |
-| `<` / `>`             | Playback rate down / up                         |
+| Key                   | Action                        |
+| --------------------- | ----------------------------- |
+| `Space` / `K`         | Play-pause                    |
+| `←` / `→`             | Seek −5 s / +5 s              |
+| `Shift+←` / `Shift+→` | Fine seek (±1 s or per frame) |
+| `PageUp` / `PageDown` | Seek ±10 s                    |
+| `Home` / `End`        | Jump to start / end           |
+| `↑` / `↓`             | Volume ±5 %                   |
+| `M`                   | Mute toggle                   |
+| `F`                   | Fullscreen toggle             |
+| `C`                   | Captions toggle               |
+| `<` / `>`             | Playback rate down / up       |
 
 Related WCAG criteria: **2.1.1 Keyboard**, **2.1.4 Character Key Shortcuts** (provide a mechanism to turn off or remap), **4.1.2 Name, Role, Value** (sliders), **4.1.3 Status Messages** (announce seek / volume / mute changes).
 

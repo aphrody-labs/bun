@@ -207,8 +207,8 @@ const generateOptionDocs = async () => {
 		}
 
 		if (
-			await Bun.file(filePath).exists() &&
-			await Bun.file(filePath).text() === formatted.code
+			(await Bun.file(filePath).exists()) &&
+			(await Bun.file(filePath).text()) === formatted.code
 		) {
 			continue;
 		}

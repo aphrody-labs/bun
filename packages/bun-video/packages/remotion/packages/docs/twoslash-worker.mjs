@@ -1,4 +1,10 @@
-import {existsSync, mkdirSync, renameSync, unlinkSync, writeFileSync} from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	renameSync,
+	unlinkSync,
+	writeFileSync,
+} from 'node:fs';
 import {dirname} from 'node:path';
 import {createInterface} from 'node:readline';
 import {rendererClassic, transformerTwoslash} from '@shikijs/twoslash';

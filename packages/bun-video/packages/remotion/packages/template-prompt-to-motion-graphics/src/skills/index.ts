@@ -1,38 +1,37 @@
-import { examples } from "@/examples/code";
-
+import {examples} from '@/examples/code';
 // Import markdown files at build time
-import threeDSkill from "./3d.md";
-import chartsSkill from "./charts.md";
-import messagingSkill from "./messaging.md";
-import sequencingSkill from "./sequencing.md";
-import socialMediaSkill from "./social-media.md";
-import springPhysicsSkill from "./spring-physics.md";
-import transitionsSkill from "./transitions.md";
-import typographySkill from "./typography.md";
+import threeDSkill from './3d.md';
+import chartsSkill from './charts.md';
+import messagingSkill from './messaging.md';
+import sequencingSkill from './sequencing.md';
+import socialMediaSkill from './social-media.md';
+import springPhysicsSkill from './spring-physics.md';
+import transitionsSkill from './transitions.md';
+import typographySkill from './typography.md';
 
 // Guidance skills (markdown files with patterns/rules)
 const GUIDANCE_SKILLS = [
-  "charts",
-  "typography",
-  "social-media",
-  "messaging",
-  "3d",
-  "transitions",
-  "sequencing",
-  "spring-physics",
+	'charts',
+	'typography',
+	'social-media',
+	'messaging',
+	'3d',
+	'transitions',
+	'sequencing',
+	'spring-physics',
 ] as const;
 
 // Example skills (complete working code references)
 const EXAMPLE_SKILLS = [
-  "example-histogram",
-  "example-progress-bar",
-  "example-text-rotation",
-  "example-falling-spheres",
-  "example-animated-shapes",
-  "example-lottie",
-  "example-gold-price-chart",
-  "example-typewriter-highlight",
-  "example-word-carousel",
+	'example-histogram',
+	'example-progress-bar',
+	'example-text-rotation',
+	'example-falling-spheres',
+	'example-animated-shapes',
+	'example-lottie',
+	'example-gold-price-chart',
+	'example-typewriter-highlight',
+	'example-word-carousel',
 ] as const;
 
 export const SKILL_NAMES = [...GUIDANCE_SKILLS, ...EXAMPLE_SKILLS] as const;
@@ -41,57 +40,57 @@ export type SkillName = (typeof SKILL_NAMES)[number];
 
 // Map guidance skill names to imported content
 const guidanceSkillContent: Record<(typeof GUIDANCE_SKILLS)[number], string> = {
-  charts: chartsSkill,
-  typography: typographySkill,
-  "social-media": socialMediaSkill,
-  messaging: messagingSkill,
-  "3d": threeDSkill,
-  transitions: transitionsSkill,
-  sequencing: sequencingSkill,
-  "spring-physics": springPhysicsSkill,
+	charts: chartsSkill,
+	typography: typographySkill,
+	'social-media': socialMediaSkill,
+	messaging: messagingSkill,
+	'3d': threeDSkill,
+	transitions: transitionsSkill,
+	sequencing: sequencingSkill,
+	'spring-physics': springPhysicsSkill,
 };
 
 // Map example skill names to example IDs
 const exampleIdMap: Record<(typeof EXAMPLE_SKILLS)[number], string> = {
-  "example-histogram": "histogram",
-  "example-progress-bar": "progress-bar",
-  "example-text-rotation": "text-rotation",
-  "example-falling-spheres": "falling-spheres",
-  "example-animated-shapes": "animated-shapes",
-  "example-lottie": "lottie-animation",
-  "example-gold-price-chart": "gold-price-chart",
-  "example-typewriter-highlight": "typewriter-highlight",
-  "example-word-carousel": "word-carousel",
+	'example-histogram': 'histogram',
+	'example-progress-bar': 'progress-bar',
+	'example-text-rotation': 'text-rotation',
+	'example-falling-spheres': 'falling-spheres',
+	'example-animated-shapes': 'animated-shapes',
+	'example-lottie': 'lottie-animation',
+	'example-gold-price-chart': 'gold-price-chart',
+	'example-typewriter-highlight': 'typewriter-highlight',
+	'example-word-carousel': 'word-carousel',
 };
 
 export function getSkillContent(skillName: SkillName): string {
-  // Handle example skills - return the code directly
-  if (skillName.startsWith("example-")) {
-    const exampleId =
-      exampleIdMap[skillName as (typeof EXAMPLE_SKILLS)[number]];
-    const example = examples.find((e) => e.id === exampleId);
-    if (example) {
-      return `## Example: ${example.name}\n${example.description}\n\n\`\`\`tsx\n${example.code}\n\`\`\``;
-    }
-    return "";
-  }
+	// Handle example skills - return the code directly
+	if (skillName.startsWith('example-')) {
+		const exampleId =
+			exampleIdMap[skillName as (typeof EXAMPLE_SKILLS)[number]];
+		const example = examples.find((e) => e.id === exampleId);
+		if (example) {
+			return `## Example: ${example.name}\n${example.description}\n\n\`\`\`tsx\n${example.code}\n\`\`\``;
+		}
+		return '';
+	}
 
-  // Handle guidance skills - return imported markdown content
-  return (
-    guidanceSkillContent[skillName as (typeof GUIDANCE_SKILLS)[number]] || ""
-  );
+	// Handle guidance skills - return imported markdown content
+	return (
+		guidanceSkillContent[skillName as (typeof GUIDANCE_SKILLS)[number]] || ''
+	);
 }
 
 export function getCombinedSkillContent(skills: SkillName[]): string {
-  if (skills.length === 0) {
-    return "";
-  }
+	if (skills.length === 0) {
+		return '';
+	}
 
-  const contents = skills
-    .map((skill) => getSkillContent(skill))
-    .filter((content) => content.length > 0);
+	const contents = skills
+		.map((skill) => getSkillContent(skill))
+		.filter((content) => content.length > 0);
 
-  return contents.join("\n\n---\n\n");
+	return contents.join('\n\n---\n\n');
 }
 
 export const SKILL_DETECTION_PROMPT = `Classify this motion graphics prompt into ALL applicable categories.

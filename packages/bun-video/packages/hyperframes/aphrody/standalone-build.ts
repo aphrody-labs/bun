@@ -6,6 +6,7 @@ import { remotionSourcePlugin } from "../../remotion/.aphrody/standalone-build";
 
 export const hyperframesRoot = resolve(import.meta.dir, "..");
 export const hyperframesCliEntry = join(hyperframesRoot, "packages/cli/src/cli.ts");
+type StandaloneTarget = NonNullable<import("bun").CompileBuildOptions["target"]>;
 
 export async function prepareHyperframesStandalone(): Promise<void> {
   for (const script of ["build:svg-selector-aliases", "build:hyperframes-runtime", "build:position-edits-render", "build:audio-fx-runtime"]) {
@@ -19,7 +20,7 @@ export async function prepareHyperframesStandalone(): Promise<void> {
 
 export async function hyperframesStandaloneConfig(options: {
   outfile: string;
-  target?: Bun.Build.CompileTarget;
+  target?: StandaloneTarget;
   entrypoint?: string;
 }): Promise<Bun.BuildConfig> {
   const manifest = await Bun.file(join(hyperframesRoot, "packages/cli/package.json")).json();
@@ -43,7 +44,7 @@ export async function hyperframesStandaloneConfig(options: {
 
 export async function buildHyperframesStandalone(options: {
   outfile: string;
-  target?: Bun.Build.CompileTarget;
+  target?: StandaloneTarget;
   entrypoint?: string;
 }): Promise<void> {
   if (options.target && !options.target.startsWith("bun-windows-x64")) {

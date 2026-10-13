@@ -1,4 +1,10 @@
-import {existsSync, readdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {
+	existsSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import {BundlerInternals} from '@remotion/bundler';
 import type {LogLevel} from '@remotion/renderer';

@@ -203,7 +203,7 @@ const AudioForRenderingRefForwardingFunction: React.ForwardRefRenderFunction<
 		return null;
 	}
 
-	return <audio ref={audioRef} {...nativeProps} onError={onNativeError} />;
+	return <audio {...nativeProps} ref={audioRef} onError={onNativeError} />;
 };
 
 export const AudioForRendering = forwardRef(

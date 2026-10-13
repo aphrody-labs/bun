@@ -13,7 +13,7 @@ const createContent = (filename: string): CreateContent => {
 
 		await remove();
 
-		if (!await Bun.file(filename).exists()) {
+		if (!(await Bun.file(filename).exists())) {
 			Log.verbose(logLevel, 'Creating file', filename);
 			await Bun.write(filename, '');
 		}

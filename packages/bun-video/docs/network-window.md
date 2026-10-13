@@ -1,59 +1,49 @@
 # Fenêtre réseau Windows
 
-Source autonome React/TSX : `labs/network-window.tsx`. Le panneau React est rendu
-dans un Shadow DOM, dans un monde CDP isolé du JavaScript du site. Le site reste
-une vraie page Chrome interactive, sans proxy, iframe de substitution ni capture
-vidéo simulée. Chrome/Edge installé reste nécessaire ; seul l'outil Bun est
-embarqué dans le PE Windows x64.
+`labs/network-window.tsx` ouvre le vrai site dans une fenêtre Chrome Windows,
+avec le profil Chrome actif, ou le dernier profil original si Chrome est fermé, et ses données existantes. URL par défaut :
+`https://www.crunchyroll.com/`. Aucun profil invité, copie de profil, serveur
+de démonstration ou redémarrage Chrome n'est utilisé.
 
 ```sh
-bun labs/network-window.tsx https://example.com
-bun build --compile --target=bun-windows-x64 --windows-hide-console labs/network-window.tsx --outfile network-window.exe
-network-window.exe https://example.com
-network-window.exe --self-test
+bun labs/network-window.tsx https://www.crunchyroll.com/
+network-window.exe --check
+network-window.exe https://www.crunchyroll.com/ --endpoint http://127.0.0.1:9222
 ```
 
-Utiliser le fork Aphrody 1.4.4 disposant de `bun:chromium.connect`,
-`findExecutable` et `bun:windows.Job`. `--browser chemin.exe` sélectionne un
-moteur précis. La session possède son propre profil ; se connecter au site
-dans cette fenêtre si nécessaire.
+L'ouverture utilise le plan propriétaire Chrome et `Bun.spawn` natif. L'inspection requiert
+un endpoint CDP déjà vivant dans le profil actif : `DevToolsActivePort` ou
+`--endpoint`. Le port doit appartenir au processus Chrome actif identifié.
+Sans CDP, la vraie fenêtre s'ouvre puis l'outil signale précisément que
+l'inspection et les exports sont indisponibles. Il ne change aucun flag,
+paramètre de débogage ou politique du navigateur.
 
-« Sélectionner un élément » active le sélecteur natif Chrome DevTools.
-Le panneau affiche le cadre, HTML de l'élément, URL `currentSrc`, ainsi que les
-requêtes candidates HLS/DASH, vidéo/audio et segments. Cliquer une requête
-montre URL, méthode, en-têtes, initiateur, réponse, cadre et fichier de corps.
-La correspondance par cadre est un indice ; plusieurs lecteurs dans un même
-cadre nécessitent de comparer leurs URL et initiateurs. « Tous les cadres »
-retire ce filtre. « Réduire » libère la surface du site.
+Depuis Chrome 136, les commutateurs de débogage distant ne fonctionnent plus
+sur le répertoire de données par défaut ; voir la
+[documentation officielle Chrome](https://developer.chrome.com/blog/remote-debugging-port).
+La disponibilité CDP du profil courant reste une qualification distincte.
 
-« Exporter » écrit sous `$APHRODY_HOME/cookies/network-window/<session>`
+Le panneau React est rendu dans un Shadow DOM et un monde CDP isolé. L'outil
+attache uniquement la nouvelle fenêtre du site et ses sous-cibles. Aucun
+onglet déjà ouvert n'est choisi comme cible de secours. Le sélecteur DevTools
+affiche l'élément, son cadre, son HTML et son `currentSrc`. Les flux candidats
+HLS/DASH, vidéo/audio et segments se filtrent par URL et cadre ; cette
+correspondance reste un indice, pas une preuve de causalité.
+
+« Exporter » écrit dans `$APHRODY_HOME/cookies/network-window/<session>`
 (défaut `~/.aphrody/cookies/network-window/<session>`) :
 
-- `cookies.json` : cookies CDP structurés, y compris HttpOnly et partitionnement.
-- `network.json` : tous les événements du domaine Network exposés par le schéma
-  du moteur, plus requêtes, redirections, initiateurs, corps et erreurs.
-- `network.ndjson` : journal incrémental, conservé aussi à la fermeture.
-- `site.html` : DOM courant ; `site.mhtml` : archive du site et ressources.
-- `resources/*.html`, `*.js`, `*.css`, `*.body` : corps des réponses récupérables.
+- `cookies.json` : cookies applicables au site et aux URLs observées, avec
+  HttpOnly et partitionnement ; aucun transfert entre profils.
+- `network.json` et `network.ndjson` : événements et requêtes observés après
+  l'attachement, redirections, initiateurs, réponses, corps et erreurs.
+- `site.html`, `site.mhtml`, `resources/*` : DOM, archive et corps récupérables.
 
-Les sous-cibles iframe/worker sont attachées récursivement avant leur reprise.
-L'export concerne le trafic observé dans cette session, pas celui d'autres
-profils ou du système. Les corps évincés, réponses en cours, flux infinis,
-trafic interne inaccessible au CDP et contenu DRM ne deviennent pas des corps
-complets : les erreurs de récupération sont conservées. Tampons CDP : 128 Mio
-au total, 32 Mio par ressource. Les ressources ne sont pas réécrites pour
-reproduire un site dynamique hors ligne.
+Les corps évincés, réponses en cours, flux infinis et contenus DRM ne sont pas
+garantis récupérables. Les tampons CDP limitent chaque ressource à 32 Mio et
+le total à 128 Mio. Ces fichiers privés restent hors Git.
 
-« Fermer » exporte avant de fermer. La croix Windows conserve le journal réseau
-et les corps déjà capturés ; exporter avant cette fermeture pour enregistrer
-le DOM et les cookies. Le Job Windows termine les processus du moteur possédés
-par l'application. Aucun export ni profil ne doit entrer dans Git.
-
-Qualification locale : `--self-test` lance une vraie fenêtre sur une fixture
-HTTP locale et vérifie cookie HttpOnly, manifeste HLS, fichiers JS/CSS,
-événements Network, sélection DOM, initialisation du panneau et sélecteur
-Overlay. `preview.png` est sauvegardé dans la session privée du test.
-
-Références : [Network CDP](https://chromedevtools.github.io/devtools-protocol/tot/Network/),
-[Overlay CDP](https://chromedevtools.github.io/devtools-protocol/tot/Overlay/),
-[Page CDP](https://chromedevtools.github.io/devtools-protocol/tot/Page/).
+`--check` inspecte et exporte la vraie page ouverte, avec un délai CDP borné.
+Il ne simule ni lecteur ni cookies et ne prouve pas la lecture vidéo. La
+fenêtre réelle reste ouverte après la vérification. « Fermer » ferme seulement
+la cible créée par l'outil ; aucun Job Windows ne possède le Chrome utilisateur.

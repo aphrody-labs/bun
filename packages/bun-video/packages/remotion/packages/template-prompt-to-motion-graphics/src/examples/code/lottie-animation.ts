@@ -1,4 +1,4 @@
-import { RemotionExample } from "./index";
+import {RemotionExample} from './index';
 
 export const lottieAnimationCode = `import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 import { Lottie } from "@remotion/lottie";
@@ -79,11 +79,11 @@ export const MyAnimation = () => {
 };`;
 
 export const lottieAnimationExample: RemotionExample = {
-  id: "lottie-animation",
-  name: "Lottie Fish Loader",
-  description: "Glowing fish loader animation from LottieFiles",
-  category: "Animation",
-  durationInFrames: 180,
-  fps: 60,
-  code: lottieAnimationCode,
+	id: 'lottie-animation',
+	name: 'Lottie Fish Loader',
+	description: 'Glowing fish loader animation from LottieFiles',
+	category: 'Animation',
+	durationInFrames: 180,
+	fps: 60,
+	code: lottieAnimationCode,
 };

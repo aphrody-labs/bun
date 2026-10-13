@@ -755,15 +755,13 @@ const getSelectableTimelineItemsForTrack = ({
 				nodePath: nodePathInfo.sequenceSubscriptionKey,
 				propStatuses,
 			})
-				? getKeyframeSegments(keyframes).map(
-						(segment): TimelineSelection => ({
-							type: 'easing',
-							nodePathInfo: node.nodePathInfo,
-							fromFrame: segment.fromFrame,
-							toFrame: segment.toFrame,
-							segmentIndex: segment.segmentIndex,
-						}),
-					)
+				? getKeyframeSegments(keyframes).map((segment): TimelineSelection => ({
+						type: 'easing',
+						nodePathInfo: node.nodePathInfo,
+						fromFrame: segment.fromFrame,
+						toFrame: segment.toFrame,
+						segmentIndex: segment.segmentIndex,
+					}))
 				: [];
 
 			return [rowSelection, ...easingSelections, ...keyframeSelections];

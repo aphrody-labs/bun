@@ -1,5 +1,5 @@
-import {existsSync, mkdirSync, rmSync} from 'node:fs';
 import {type EventEmitter} from 'node:events';
+import {existsSync, mkdirSync, rmSync} from 'node:fs';
 import {join} from 'node:path';
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import type {LogOptions} from '@remotion/renderer';
@@ -909,7 +909,8 @@ const innerLaunchHandler = async <Provider extends CloudProvider>({
 			overallProgress: progress,
 			timeToFinish: Date.now() - startTime,
 			outputSize:
-				progress.uploadedSizeInBytes + new TextEncoder().encode(manifestBody).length,
+				progress.uploadedSizeInBytes +
+				new TextEncoder().encode(manifestBody).length,
 			providerSpecifics,
 		});
 		await overallProgress.setPostRenderData(postRenderData);

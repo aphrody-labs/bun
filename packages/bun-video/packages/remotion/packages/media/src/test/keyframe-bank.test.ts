@@ -1,5 +1,5 @@
-import {VideoSample, type VideoSampleSink} from 'mediabunny';
 import {expect, test} from 'bun:test';
+import {VideoSample, type VideoSampleSink} from 'mediabunny';
 import {makeKeyframeBank} from '../video-extraction/keyframe-bank';
 
 const makeSample = ({

@@ -1,12 +1,12 @@
-import { z } from "zod";
-export const COMP_NAME = "MyComp";
+import {z} from 'zod';
+export const COMP_NAME = 'MyComp';
 
 export const CompositionProps = z.object({
-  title: z.string(),
+	title: z.string(),
 });
 
 export const defaultMyCompProps: z.infer<typeof CompositionProps> = {
-  title: "Vercel and Remotion",
+	title: 'Vercel and Remotion',
 };
 
 export const DURATION_IN_FRAMES = 200;

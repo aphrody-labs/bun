@@ -48,9 +48,10 @@ declare global {
 
 const restorePersistedClientRenders = (): RestoredClientRenderJob[] => {
 	const persisted = window.remotion_initialClientRenders ?? [];
-	return persisted.map(
-		(r): RestoredClientRenderJob => ({...r, status: 'done'}),
-	);
+	return persisted.map((r): RestoredClientRenderJob => ({
+		...r,
+		status: 'done',
+	}));
 };
 
 export type AnyRenderJob = RenderJob | ClientRenderJob;

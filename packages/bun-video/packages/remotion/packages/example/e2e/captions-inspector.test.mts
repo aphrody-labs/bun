@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {expect, test} from '@playwright/test';
@@ -51,7 +52,10 @@ test.describe('captions inspector', () => {
 		await Bun.write(inlineCaptionsFile, inlineSourceBefore);
 		await Bun.write(elementCaptionsFile, elementSourceBefore);
 		await Bun.write(elementCallSiteFile, elementCallSiteSourceBefore);
-		await Bun.write(missingCaptionsCallSiteFile, missingCaptionsCallSiteSourceBefore,);
+		await Bun.write(
+			missingCaptionsCallSiteFile,
+			missingCaptionsCallSiteSourceBefore,
+		);
 	});
 
 	test('persists caption edits at their inline definitions', async ({page}) => {
@@ -170,7 +174,7 @@ test.describe('captions inspector', () => {
 		});
 		await expect(defaultCaption).toHaveValue('Imported');
 		await expect
-			.poll(() => await Bun.file(elementCallSiteFile).text())
+			.poll(() => __bunSyncFs.readFileSync(elementCallSiteFile, 'utf8'))
 			.toMatch(/text:\s*['"]Imported['"][\s\S]*startMs:\s*100/);
 		expect(await Bun.file(elementCaptionsFile).text()).toBe(
 			elementSourceBefore,
@@ -184,7 +188,7 @@ test.describe('captions inspector', () => {
 		await expect
 			.poll(() => {
 				return /text:\s*['"]Edited imported caption['"]/.test(
-					await Bun.file(elementCallSiteFile).text(),
+					__bunSyncFs.readFileSync(elementCallSiteFile, 'utf8'),
 				);
 			})
 			.toBe(true);
@@ -237,7 +241,7 @@ test.describe('captions inspector', () => {
 			'Materialized',
 		);
 		await expect
-			.poll(() => await Bun.file(missingCaptionsCallSiteFile).text())
+			.poll(() => __bunSyncFs.readFileSync(missingCaptionsCallSiteFile, 'utf8'))
 			.toMatch(/<MissingCaptions[\s\S]*captions=\{\[[\s\S]*Materialized/);
 	});
 });

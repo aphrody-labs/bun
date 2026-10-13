@@ -1,4 +1,5 @@
 import {spawn} from 'node:child_process';
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {expect, test} from '@playwright/test';
@@ -17,12 +18,14 @@ test('SDK Canvas and vibe-code evaluate and save source expressions per instance
 		'src/remotion/SourceSubscriptionChurn.tsx',
 	);
 	const originalRoot = await Bun.file(rootFile).text();
-	const originalFixture = await Bun.file(fixture).exists()
+	const originalFixture = (await Bun.file(fixture).exists())
 		? await Bun.file(fixture).text()
 		: null;
 	const errors: string[] = [];
 	page.on('pageerror', (error) => errors.push(error.message));
-	await Bun.write(fixture, fs
+	await Bun.write(
+		fixture,
+		fs
 			.readFileSync(
 				path.join(exampleDir, 'src/SourceSubscriptionChurn.tsx'),
 				'utf8',
@@ -32,7 +35,9 @@ test('SDK Canvas and vibe-code evaluate and save source expressions per instance
 				(_, prefix: string, suffix: string) => `${prefix}300${suffix}`,
 			),
 	);
-	await Bun.write(rootFile, `import {Composition} from 'remotion';
+	await Bun.write(
+		rootFile,
+		`import {Composition} from 'remotion';
 import {SourceSubscriptionChurn} from './SourceSubscriptionChurn';
 export const RemotionRoot = () => <Composition id="SourceSubscriptionChurn" component={SourceSubscriptionChurn} durationInFrames={600} fps={30} width={1280} height={720} />;`,
 	);
@@ -146,7 +151,7 @@ export const RemotionRoot = () => <Composition id="SourceSubscriptionChurn" comp
 			.getByRole('button', {name: 'Save to src/remotion', exact: true})
 			.click();
 		await expect
-			.poll(() => await Bun.file(fixture).text())
+			.poll(() => __bunSyncFs.readFileSync(fixture, 'utf8'))
 			.toMatch(/durationInFrames=\{duration \* 0\.6\}/);
 		expect(
 			errors.filter((error) => /maximum update depth/i.test(error)),

@@ -1,5 +1,5 @@
-import {Config} from '@remotion/cli/config';
 import {createRequire} from 'node:module';
+import {Config} from '@remotion/cli/config';
 
 const projectRequire = createRequire(process.cwd() + '/package.json');
 

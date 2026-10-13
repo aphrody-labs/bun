@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -27,7 +28,8 @@ const fetchAllPromptSubmissions = async () => {
 };
 
 fetchAllPromptSubmissions().then((promptSubmissions) => {
-	await Bun.write(path.join(process.cwd(), 'static', '_raw', 'prompt-submissions.json'),
+	__bunSyncFs.writeFileSync(
+		path.join(process.cwd(), 'static', '_raw', 'prompt-submissions.json'),
 		JSON.stringify(promptSubmissions, null, '\t'),
 	);
 

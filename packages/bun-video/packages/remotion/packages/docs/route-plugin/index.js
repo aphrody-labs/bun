@@ -1,3 +1,4 @@
+const __bunSyncFs = require('node:fs');
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -34,8 +35,8 @@ module.exports = function () {
 				__dirname,
 				'../static/_raw/prompt-submissions.json',
 			);
-			const promptSubmissions = await Bun.file(promptSubmissionsPath).exists()
-				? await Bun.file(promptSubmissionsPath).json()
+			const promptSubmissions = __bunSyncFs.existsSync(promptSubmissionsPath)
+				? JSON.parse(__bunSyncFs.readFileSync(promptSubmissionsPath, 'utf8'))
 				: [];
 			const promptSlugs = promptSubmissions.map((p) => p.slug);
 			const promptPageCount = Math.ceil(promptSubmissions.length / 12);

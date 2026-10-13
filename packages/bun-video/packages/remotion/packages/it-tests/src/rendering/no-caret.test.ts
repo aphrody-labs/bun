@@ -15,7 +15,7 @@ test('Should not have carets in Remotion versions', async () => {
 		}
 
 		const packageJsonPath = path.join(packagesDir, pkg, 'package.json');
-		if (!await Bun.file(packageJsonPath).exists()) {
+		if (!(await Bun.file(packageJsonPath).exists())) {
 			continue;
 		}
 

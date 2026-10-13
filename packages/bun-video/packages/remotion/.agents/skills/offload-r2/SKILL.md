@@ -7,7 +7,6 @@ description: Upload Remotion repository media assets to the Cloudflare R2 bucket
 
 Host media on `https://remotion.media/`, update every in-scope source reference to the public object, and remove the repository-local copy after verification.
 
-
 ## Workflow
 
 1. Find the main worktree with `git worktree list --porcelain`. Prefer the worktree on `refs/heads/main`, normally `/Users/jonathanburger/remotion`.

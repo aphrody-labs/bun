@@ -86,9 +86,9 @@ export async function detectActiveChromeProfile(): Promise<ActiveChromeProfile> 
   if (process.platform !== "win32") throw new Error("This Chrome site-app launcher requires Windows.");
   const processes = (await powershellJson(`
 $chromeRoots = @(Get-CimInstance Win32_Process -Filter "name='chrome.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine -notmatch '--type=' } | ForEach-Object {
-  $dirMatch = [regex]::Match($_.CommandLine, '--user-data-dir=(?:"([^"]+)"|([^\\s]+))')
-  $profileMatch = [regex]::Match($_.CommandLine, '--profile-directory=(?:"([^"]+)"|([^\\s]+))')
-  [pscustomobject]@{ pid=$_.ProcessId; executable=$_.ExecutablePath; userDataDir=($dirMatch.Groups[1].Value + $dirMatch.Groups[2].Value); profileDirectory=($profileMatch.Groups[1].Value + $profileMatch.Groups[2].Value) }
+  $dirMatch = [regex]::Match($_.CommandLine, '(?:"--user-data-dir=([^"]+)"|--user-data-dir="([^"]+)"|--user-data-dir=([^\\s]+))')
+  $profileMatch = [regex]::Match($_.CommandLine, '(?:"--profile-directory=([^"]+)"|--profile-directory="([^"]+)"|--profile-directory=([^\\s]+))')
+  [pscustomobject]@{ pid=$_.ProcessId; executable=$_.ExecutablePath; userDataDir=($dirMatch.Groups[1].Value + $dirMatch.Groups[2].Value + $dirMatch.Groups[3].Value); profileDirectory=($profileMatch.Groups[1].Value + $profileMatch.Groups[2].Value + $profileMatch.Groups[3].Value) }
 })
 ConvertTo-Json -InputObject $chromeRoots -Compress
 `)) as Array<Partial<ActiveChromeProfile>>;

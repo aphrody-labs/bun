@@ -1,7 +1,7 @@
+import {test} from 'bun:test';
 import {useEffect, useState} from 'react';
 import {flushSync} from 'react-dom';
 import {useDelayRender} from 'remotion';
-import {test} from 'bun:test';
 import {renderStillOnWeb} from '../render-still-on-web';
 import '../symbol-dispose';
 import {testImage} from './utils';

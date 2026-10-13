@@ -2,21 +2,21 @@ on:
   workflow_dispatch:
     inputs:
       repoOrg:
-        description: "Repo Org"
+        description: 'Repo Org'
         required: true
-        default: "pomber"
+        default: 'pomber'
       repoName:
-        description: "Repo Name"
+        description: 'Repo Name'
         required: true
-        default: "didact"
+        default: 'didact'
       starCount:
-        description: "Star Count"
+        description: 'Star Count'
         required: true
-        default: "100"
+        default: '100'
       duration:
-        description: "Duration (seconds)"
+        description: 'Duration (seconds)'
         required: false
-        default: "15"
+        default: '15'
 name: Render video
 jobs:
   render:

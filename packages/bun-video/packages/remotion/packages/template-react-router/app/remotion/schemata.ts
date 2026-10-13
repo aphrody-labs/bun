@@ -1,33 +1,33 @@
-import { z } from "zod";
+import {z} from 'zod';
 
 export const CompositionProps = z.object({
-  title: z.string(),
+	title: z.string(),
 });
 
 export const defaultMyCompProps: z.infer<typeof CompositionProps> = {
-  title: "React Router and Remotion",
+	title: 'React Router and Remotion',
 };
 
 export const RenderRequest = z.object({
-  inputProps: CompositionProps,
+	inputProps: CompositionProps,
 });
 
 export const ProgressRequest = z.object({
-  bucketName: z.string(),
-  id: z.string(),
+	bucketName: z.string(),
+	id: z.string(),
 });
 
 export type ProgressResponse =
-  | {
-      type: "error";
-      message: string;
-    }
-  | {
-      type: "progress";
-      progress: number;
-    }
-  | {
-      type: "done";
-      url: string;
-      size: number;
-    };
+	| {
+			type: 'error';
+			message: string;
+	  }
+	| {
+			type: 'progress';
+			progress: number;
+	  }
+	| {
+			type: 'done';
+			url: string;
+			size: number;
+	  };

@@ -1,8 +1,8 @@
+import {expect, test, vi} from 'bun:test';
 import {Player} from '@remotion/player';
 import React from 'react';
 import {flushSync} from 'react-dom';
 import {createRoot} from 'react-dom/client';
-import {expect, test, vi} from 'bun:test';
 import {Audio} from '../audio/audio';
 import {Video} from '../video/video';
 

@@ -1,5 +1,6 @@
 import type {ChildProcess} from 'node:child_process';
 import {spawn} from 'node:child_process';
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import {createServer} from 'node:http';
 import os from 'node:os';
@@ -62,7 +63,8 @@ test('installs an Element from a website into a clean Studio project', async ({
 	fs.cpSync(path.join(packagesDirectory, 'template-blank'), temporaryProject, {
 		recursive: true,
 	});
-	await Bun.write(path.join(temporaryProject, 'src', 'Composition.tsx'),
+	await Bun.write(
+		path.join(temporaryProject, 'src', 'Composition.tsx'),
 		`import {AbsoluteFill, Composition} from 'remotion';
 import {CloseupFolder} from './closeups/Closeup';
 
@@ -101,7 +103,8 @@ export const DirectCanvas = () => {
 	);
 	const closeupDirectory = path.join(temporaryProject, 'src', 'closeups');
 	fs.mkdirSync(closeupDirectory);
-	await Bun.write(path.join(closeupDirectory, 'Closeup.tsx'),
+	await Bun.write(
+		path.join(closeupDirectory, 'Closeup.tsx'),
 		`import {AbsoluteFill, Composition, Folder} from 'remotion';
 
 export const CloseupFolder = () => {
@@ -779,7 +782,7 @@ const CloseupPlaceholder = () => {
 		await waitForFile(newCompositionFile);
 		await waitForFile(newCompositionElementFile);
 		await expect
-			.poll(() => await Bun.file(newCompositionFile).text())
+			.poll(() => __bunSyncFs.readFileSync(newCompositionFile, 'utf8'))
 			.toContain('ProtocolElement');
 		const installedComposition = await Bun.file(newCompositionFile).text();
 		expect(await Bun.file(newCompositionElementFile).text()).toContain(
@@ -825,7 +828,9 @@ const CloseupPlaceholder = () => {
 			timeout: 30_000,
 		});
 		await expect(studioPage).toHaveTitle(/MyComp/);
-		await expect.poll(() => await Bun.file(newCompositionFile).exists()).toBe(false);
+		await expect
+			.poll(() => __bunSyncFs.existsSync(newCompositionFile))
+			.toBe(false);
 		expect(await Bun.file(newCompositionElementFile).exists()).toBe(false);
 		expect(
 			fs.readFileSync(path.join(closeupDirectory, 'Closeup.tsx'), 'utf8'),
@@ -837,7 +842,9 @@ const CloseupPlaceholder = () => {
 			timeout: 30_000,
 		});
 		await expect(studioPage).toHaveTitle(/ProtocolElementScene/);
-		await expect.poll(() => await Bun.file(newCompositionFile).exists()).toBe(true);
+		await expect
+			.poll(() => __bunSyncFs.existsSync(newCompositionFile))
+			.toBe(true);
 		expect(await Bun.file(newCompositionElementFile).exists()).toBe(true);
 		expect(
 			fs.readFileSync(path.join(closeupDirectory, 'Closeup.tsx'), 'utf8'),
@@ -907,7 +914,9 @@ const CloseupPlaceholder = () => {
 			.getByRole('button', {name: /^Add Element Library/})
 			.click();
 		await expect
-			.poll(() => await Bun.file(configFile).text(), {timeout: 30_000})
+			.poll(() => __bunSyncFs.readFileSync(configFile, 'utf8'), {
+				timeout: 30_000,
+			})
 			.toContain(protocolLibraryUrl);
 		await expect(studioPage.getByLabel('Protocol Library library')).toBeVisible(
 			{timeout: 30_000},
@@ -940,8 +949,8 @@ const CloseupPlaceholder = () => {
 		await expect
 			.poll(
 				() =>
-					await Bun.file(configFile).text().split(protocolLibraryUrl).length -
-					1,
+					__bunSyncFs.readFileSync(configFile, 'utf8').split(protocolLibraryUrl)
+						.length - 1,
 				{timeout: 30_000},
 			)
 			.toBe(1);

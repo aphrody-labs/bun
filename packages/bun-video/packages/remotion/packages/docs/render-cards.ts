@@ -166,7 +166,8 @@ data.push(
 	},
 );
 
-await Bun.write(path.join(process.cwd(), 'src', 'data', 'articles.ts'),
+await Bun.write(
+	path.join(process.cwd(), 'src', 'data', 'articles.ts'),
 	`export const articles = ` + JSON.stringify(data, null, 2),
 );
 

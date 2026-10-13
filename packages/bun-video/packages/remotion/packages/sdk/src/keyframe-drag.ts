@@ -204,19 +204,17 @@ export const startCanvasKeyframeDrag = ({
 			}
 
 			onDragEnd({
-				changes: groups.map(
-					(group): CanvasKeyframeChange => ({
-						nodePathInfo: group.nodePathInfo,
-						key: group.key,
-						schema: group.schema,
-						operation: {
-							type: 'move',
-							moves: group.targets.map((target) =>
-								getCanvasKeyframeMove(target, lastDelta),
-							),
-						},
-					}),
-				),
+				changes: groups.map((group): CanvasKeyframeChange => ({
+					nodePathInfo: group.nodePathInfo,
+					key: group.key,
+					schema: group.schema,
+					operation: {
+						type: 'move',
+						moves: group.targets.map((target) =>
+							getCanvasKeyframeMove(target, lastDelta),
+						),
+					},
+				})),
 				delta: lastDelta,
 				dragged,
 				released,

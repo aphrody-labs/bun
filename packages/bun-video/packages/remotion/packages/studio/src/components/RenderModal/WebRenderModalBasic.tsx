@@ -147,19 +147,17 @@ export const WebRenderModalBasic: React.FC<WebRenderModalBasicProps> = ({
 		const containers =
 			renderMode === 'audio' ? audioContainers : videoContainers;
 
-		return containers.map(
-			(c): ComboboxValue => ({
-				label: containerLabels[c],
-				onClick: () => setContainerFormat(c),
-				leftItem: container === c ? <Checkmark /> : null,
-				id: c,
-				keyHint: null,
-				quickSwitcherLabel: null,
-				subMenu: null,
-				type: 'item',
-				value: c,
-			}),
-		);
+		return containers.map((c): ComboboxValue => ({
+			label: containerLabels[c],
+			onClick: () => setContainerFormat(c),
+			leftItem: container === c ? <Checkmark /> : null,
+			id: c,
+			keyHint: null,
+			quickSwitcherLabel: null,
+			subMenu: null,
+			type: 'item',
+			value: c,
+		}));
 	}, [container, setContainerFormat, renderMode]);
 
 	const codecOptions = useMemo((): ComboboxValue[] => {

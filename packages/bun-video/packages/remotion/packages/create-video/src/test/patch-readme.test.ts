@@ -16,7 +16,8 @@ test('Patches a template readme named readme.md', () => {
 	);
 
 	try {
-		fs.writeFileSync(path.join(projectRoot, 'readme.md'),
+		fs.writeFileSync(
+			path.join(projectRoot, 'readme.md'),
 			'# Stargazer\n\nnpm install\n\nnpx remotion render\n',
 		);
 

@@ -179,27 +179,20 @@ export const buildTimelineTree = ({
 						effectSchema: effect.schema,
 						documentationLink: effect.documentationLink ?? null,
 					},
-					children: effectFields.map(
-						(f): TimelineTreeNode => ({
-							kind: 'field',
-							nodePathInfo: {
-								sequenceSubscriptionKey,
-								auxiliaryKeys: [
-									...auxiliaryKeys,
-									'effects',
-									i.toString(),
-									f.key,
-								],
-								index,
-								numberOfSequencesWithThisNodePath: 0,
-								supportsEffects,
-							},
-							label: f.description ?? f.key,
-							field: f,
-							runtimeValue: null,
-							runtimeValueStore: sequence.effectRuntimeValues?.[i] ?? null,
-						}),
-					),
+					children: effectFields.map((f): TimelineTreeNode => ({
+						kind: 'field',
+						nodePathInfo: {
+							sequenceSubscriptionKey,
+							auxiliaryKeys: [...auxiliaryKeys, 'effects', i.toString(), f.key],
+							index,
+							numberOfSequencesWithThisNodePath: 0,
+							supportsEffects,
+						},
+						label: f.description ?? f.key,
+						field: f,
+						runtimeValue: null,
+						runtimeValueStore: sequence.effectRuntimeValues?.[i] ?? null,
+					})),
 				};
 			}),
 		});

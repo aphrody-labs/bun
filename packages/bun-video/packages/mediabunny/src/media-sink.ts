@@ -322,6 +322,9 @@ export class EncodedPacketSink {
 			[Symbol.asyncIterator]() {
 				return this;
 			},
+			async [Symbol.asyncDispose]() {
+				await this.return();
+			},
 		};
 	}
 }
@@ -526,6 +529,9 @@ export abstract class BaseMediaSampleSink<
 			},
 			[Symbol.asyncIterator]() {
 				return this;
+			},
+			async [Symbol.asyncDispose]() {
+				await this.return();
 			},
 		};
 	}
@@ -732,6 +738,9 @@ export abstract class BaseMediaSampleSink<
 			},
 			[Symbol.asyncIterator]() {
 				return this;
+			},
+			async [Symbol.asyncDispose]() {
+				await this.return();
 			},
 		};
 	}

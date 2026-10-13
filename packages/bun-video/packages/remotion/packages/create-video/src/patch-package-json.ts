@@ -18,7 +18,7 @@ export const patchPackageJson = (
 		addTailwind: boolean;
 	},
 	{
-		getPackageJson = (filename: string) => fs.readFileSync(filename, "utf8"),
+		getPackageJson = (filename: string) => fs.readFileSync(filename, 'utf8'),
 		setPackageJson = (filename: string, content: string) =>
 			fs.writeFileSync(filename, content),
 	} = {},

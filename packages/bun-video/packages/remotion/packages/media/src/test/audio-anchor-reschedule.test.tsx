@@ -1,8 +1,8 @@
+import {expect, test, vi} from 'bun:test';
 import {Player, type PlayerRef} from '@remotion/player';
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {Internals} from 'remotion';
-import {expect, test, vi} from 'bun:test';
 import {Audio} from '../audio/audio';
 
 test('replaces queued audio after a suspension re-anchors a stationary Player', async () => {

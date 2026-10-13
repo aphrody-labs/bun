@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {expect, test} from '@playwright/test';
@@ -14,7 +15,7 @@ const affineFrameClockFile = path.join(
 );
 
 const readRotationKeyframes = () => {
-	const source = await Bun.file(affineFrameClockFile).text();
+	const source = __bunSyncFs.readFileSync(affineFrameClockFile, 'utf8');
 	const match = /rotate:\s*interpolate\(\s*captureFrame,\s*\[([^\]]*)\]/.exec(
 		source,
 	);
@@ -29,7 +30,7 @@ const readRotationKeyframes = () => {
 };
 
 const readTranslateKeyframes = () => {
-	const source = await Bun.file(affineFrameClockFile).text();
+	const source = __bunSyncFs.readFileSync(affineFrameClockFile, 'utf8');
 	const match =
 		/translate:\s*interpolate\(\s*frame,\s*\[([^\]]*)\],\s*\[([^\]]*)\]/.exec(
 			source,

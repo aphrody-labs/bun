@@ -243,9 +243,9 @@ const TIMELINE_SCHEMA_FIELD_TYPE_SUPPORT = {
 type TimelineSchemaFieldTypeSupport = typeof TIMELINE_SCHEMA_FIELD_TYPE_SUPPORT;
 
 type SupportedSchemaType = {
-	[FieldType in keyof TimelineSchemaFieldTypeSupport]: TimelineSchemaFieldTypeSupport[FieldType] extends true
-		? FieldType
-		: never;
+	[
+		FieldType in keyof TimelineSchemaFieldTypeSupport
+	]: TimelineSchemaFieldTypeSupport[FieldType] extends true ? FieldType : never;
 }[keyof TimelineSchemaFieldTypeSupport];
 
 type SupportedSchemaField = Extract<

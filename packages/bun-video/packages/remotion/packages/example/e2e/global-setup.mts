@@ -16,14 +16,24 @@ import {
 
 export default async function globalSetup(): Promise<void> {
 	await Bun.write(ORIGINAL_CONTENT_FILE, fs.readFileSync(rootFile, 'utf-8'));
-	await Bun.write(ORIGINAL_VISUAL_CONTROLS_FILE, fs.readFileSync(visualControlsFile, 'utf-8'),
+	await Bun.write(
+		ORIGINAL_VISUAL_CONTROLS_FILE,
+		fs.readFileSync(visualControlsFile, 'utf-8'),
 	);
-	await Bun.write(ORIGINAL_EFFECT_KEYFRAME_E2E_FILE, fs.readFileSync(effectKeyframeE2eFile, 'utf-8'),
+	await Bun.write(
+		ORIGINAL_EFFECT_KEYFRAME_E2E_FILE,
+		fs.readFileSync(effectKeyframeE2eFile, 'utf-8'),
 	);
-	await Bun.write(ORIGINAL_LOST_NODE_PATH_E2E_FILE, fs.readFileSync(lostNodePathE2eFile, 'utf-8'),
+	await Bun.write(
+		ORIGINAL_LOST_NODE_PATH_E2E_FILE,
+		fs.readFileSync(lostNodePathE2eFile, 'utf-8'),
 	);
-	await Bun.write(ORIGINAL_ERROR_OVERLAY_E2E_FILE, fs.readFileSync(errorOverlayE2eFile, 'utf-8'),
+	await Bun.write(
+		ORIGINAL_ERROR_OVERLAY_E2E_FILE,
+		fs.readFileSync(errorOverlayE2eFile, 'utf-8'),
 	);
-	await Bun.write(ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE, fs.readFileSync(hookOrderChangeE2eFile, 'utf-8'),
+	await Bun.write(
+		ORIGINAL_HOOK_ORDER_CHANGE_E2E_FILE,
+		fs.readFileSync(hookOrderChangeE2eFile, 'utf-8'),
 	);
 }

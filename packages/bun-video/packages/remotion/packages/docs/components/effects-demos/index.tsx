@@ -1,6 +1,6 @@
 import {useColorMode} from '@docusaurus/theme-common';
-import {StudioProtocolInternals} from '@remotion/studio-protocol';
 import {Player} from '@remotion/player';
+import {StudioProtocolInternals} from '@remotion/studio-protocol';
 import React, {useCallback, useMemo, useState} from 'react';
 import {AbsoluteFill} from 'remotion';
 import {setEffectDragData, setEffectDragImage} from './effect-drag-data';

@@ -5,124 +5,124 @@
 // same-origin, the editor talks to the iframe by calling functions on the
 // object returned from `window.remotionVibeCodePreview`.
 
-import type { BrowserBundle } from "@remotion/browser-bundler";
-import type { BrowserComposition } from "@remotion/browser-bundler/runtime";
+import type {BrowserBundle} from '@remotion/browser-bundler';
+import type {BrowserComposition} from '@remotion/browser-bundler/runtime';
+import type {PlayerRef} from '@remotion/player';
 import type {
-  CanvasController,
-  CanvasSequencePropChange,
-  CanvasSequencePropStatusResolver,
-} from "@remotion/sdk";
-import type { PlayerRef } from "@remotion/player";
+	CanvasController,
+	CanvasSequencePropChange,
+	CanvasSequencePropStatusResolver,
+} from '@remotion/sdk';
 import type {
-  CanRenderMediaOnWebResult,
-  WebRendererContainer,
-  WebRendererQuality,
-  WebRendererVideoCodec,
-} from "@remotion/web-renderer";
+	CanRenderMediaOnWebResult,
+	WebRendererContainer,
+	WebRendererQuality,
+	WebRendererVideoCodec,
+} from '@remotion/web-renderer';
 
-export type PreviewZoom = "fit" | number;
+export type PreviewZoom = 'fit' | number;
 
 export type PreviewOptions = {
-  showOutlines: boolean;
-  checkerboard: boolean;
-  zoom: PreviewZoom;
-  loop: boolean;
-  playbackRate: number;
-  inFrame: number | null;
-  outFrame: number | null;
+	showOutlines: boolean;
+	checkerboard: boolean;
+	zoom: PreviewZoom;
+	loop: boolean;
+	playbackRate: number;
+	inFrame: number | null;
+	outFrame: number | null;
 };
 
 export type PreviewCompositionSelection = {
-  compositionId: string;
-  inputProps: Record<string, unknown>;
+	compositionId: string;
+	inputProps: Record<string, unknown>;
 };
 
 export type PreviewSnapshot = {
-  composition: BrowserComposition | null;
-  playerReady: boolean;
+	composition: BrowserComposition | null;
+	playerReady: boolean;
 };
 
 export type PreviewKeyEvent = {
-  key: string;
-  code: string;
-  shiftKey: boolean;
-  metaKey: boolean;
-  ctrlKey: boolean;
-  altKey: boolean;
-  repeat: boolean;
-  isEditable: boolean;
+	key: string;
+	code: string;
+	shiftKey: boolean;
+	metaKey: boolean;
+	ctrlKey: boolean;
+	altKey: boolean;
+	repeat: boolean;
+	isEditable: boolean;
 };
 
 export type PreviewMediaRenderRequest = {
-  kind: "media";
-  container: WebRendererContainer;
-  videoCodec: WebRendererVideoCodec | null;
-  videoBitrate: WebRendererQuality;
-  scale: number;
-  frameRange: [number, number] | null;
-  muted: boolean;
+	kind: 'media';
+	container: WebRendererContainer;
+	videoCodec: WebRendererVideoCodec | null;
+	videoBitrate: WebRendererQuality;
+	scale: number;
+	frameRange: [number, number] | null;
+	muted: boolean;
 };
 
 export type PreviewStillRenderRequest = {
-  kind: "still";
-  frame: number;
-  format: "png" | "jpeg";
-  scale: number;
+	kind: 'still';
+	frame: number;
+	format: 'png' | 'jpeg';
+	scale: number;
 };
 
 export type PreviewRenderRequest =
-  | PreviewMediaRenderRequest
-  | PreviewStillRenderRequest;
+	| PreviewMediaRenderRequest
+	| PreviewStillRenderRequest;
 
 export type PreviewRenderProgress = {
-  progress: number;
-  renderedFrames: number;
-  encodedFrames: number;
+	progress: number;
+	renderedFrames: number;
+	encodedFrames: number;
 };
 
 export type PreviewRenderResult = {
-  url: string;
-  sizeInBytes: number;
-  mimeType: string;
+	url: string;
+	sizeInBytes: number;
+	mimeType: string;
 };
 
 export type PreviewHost = {
-  readonly controller: CanvasController;
-  applyBundle: (bundle: BrowserBundle) => Promise<void>;
-  selectComposition: (
-    selection: PreviewCompositionSelection,
-  ) => Promise<BrowserComposition>;
-  setOptions: (options: Partial<PreviewOptions>) => void;
-  getPlayer: () => PlayerRef | null;
-  subscribe: (listener: () => void) => () => void;
-  getSnapshot: () => PreviewSnapshot;
-  canRenderMedia: (
-    request: PreviewMediaRenderRequest,
-  ) => Promise<CanRenderMediaOnWebResult>;
-  render: (
-    request: PreviewRenderRequest,
-    callbacks: {
-      onProgress: (progress: PreviewRenderProgress) => void;
-      signal: AbortSignal;
-    },
-  ) => Promise<PreviewRenderResult>;
-  dispose: () => void;
+	readonly controller: CanvasController;
+	applyBundle: (bundle: BrowserBundle) => Promise<void>;
+	selectComposition: (
+		selection: PreviewCompositionSelection,
+	) => Promise<BrowserComposition>;
+	setOptions: (options: Partial<PreviewOptions>) => void;
+	getPlayer: () => PlayerRef | null;
+	subscribe: (listener: () => void) => () => void;
+	getSnapshot: () => PreviewSnapshot;
+	canRenderMedia: (
+		request: PreviewMediaRenderRequest,
+	) => Promise<CanRenderMediaOnWebResult>;
+	render: (
+		request: PreviewRenderRequest,
+		callbacks: {
+			onProgress: (progress: PreviewRenderProgress) => void;
+			signal: AbortSignal;
+		},
+	) => Promise<PreviewRenderResult>;
+	dispose: () => void;
 };
 
 export type CreatePreviewHost = (callbacks: {
-  onError: (message: string) => void;
-  onKeyDown: (event: PreviewKeyEvent) => boolean;
-  /**
-   * The user moved outlines on the canvas. The values are previewed through
-   * `controller.overrides` until the editor clears them.
-   */
-  onSequencePropsChange: (changes: readonly CanvasSequencePropChange[]) => void;
-  /** How the props are written in the source; decides what can be moved. */
-  getSequencePropStatuses: CanvasSequencePropStatusResolver;
+	onError: (message: string) => void;
+	onKeyDown: (event: PreviewKeyEvent) => boolean;
+	/**
+	 * The user moved outlines on the canvas. The values are previewed through
+	 * `controller.overrides` until the editor clears them.
+	 */
+	onSequencePropsChange: (changes: readonly CanvasSequencePropChange[]) => void;
+	/** How the props are written in the source; decides what can be moved. */
+	getSequencePropStatuses: CanvasSequencePropStatusResolver;
 }) => PreviewHost;
 
 declare global {
-  interface Window {
-    remotionVibeCodePreview: Promise<CreatePreviewHost> | null;
-  }
+	interface Window {
+		remotionVibeCodePreview: Promise<CreatePreviewHost> | null;
+	}
 }

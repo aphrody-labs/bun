@@ -1,5 +1,5 @@
-import {ALL_FORMATS, CanvasSink, Input, UrlSource} from 'mediabunny';
 import {expect, test} from 'bun:test';
+import {ALL_FORMATS, CanvasSink, Input, UrlSource} from 'mediabunny';
 import {makePrewarmedVideoIteratorCache} from '../prewarm-iterator-for-looping';
 import {createVideoIterator} from '../video/video-preview-iterator';
 

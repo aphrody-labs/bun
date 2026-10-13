@@ -80,10 +80,11 @@ const getBodySourceRange = ({
 	const bodyStart = recastLocToOffset(input, body.loc.start);
 	let start = bodyStart;
 	let end = recastLocToOffset(input, body.loc.end);
-	const leadingCommentStarts = (body.leadingComments ?? []).flatMap((comment) =>
-		comment.loc && recastLocToOffset(input, comment.loc.end) <= bodyStart
-			? [recastLocToOffset(input, comment.loc.start)]
-			: [],
+	const leadingCommentStarts = (body.leadingComments ?? []).flatMap(
+		(comment) =>
+			comment.loc && recastLocToOffset(input, comment.loc.end) <= bodyStart
+				? [recastLocToOffset(input, comment.loc.start)]
+				: [],
 	);
 	if (leadingCommentStarts.length > 0) {
 		start = Math.min(...leadingCommentStarts);

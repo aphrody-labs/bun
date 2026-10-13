@@ -38,3 +38,39 @@ export function createClient(options: ClientOptions & { credentials?: Credential
 export async function verifyToken(client: Cloudflare = createClient()) {
   return client.user.tokens.verify();
 }
+
+/** Private owner configuration; callers must never log this result. Environment values override the file. */
+export async function loadCloudflareEnvironment(file?: string): Promise<Record<string, string | undefined>> {
+  const home = Bun.env.APHRODY_HOME ?? `${Bun.env.USERPROFILE ?? Bun.env.HOME}/.aphrody`;
+  const source = Bun.file(file ?? Bun.env.APHRODY_CLOUDFLARE_ENV ?? `${home}/config/cloudflare.env`);
+  const parsed: Record<string, string | undefined> = {};
+  if (await source.exists()) {
+    for (const line of (await source.text()).split(/\r?\n/)) {
+      const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+      if (match) parsed[match[1]!] = match[2]!.replace(/^(["'])(.*)\1$/, "$2");
+    }
+  }
+  return { ...parsed, ...Bun.env };
+}
+
+/** R2 object data plane uses Bun's native S3 implementation; REST SDK remains the control plane. */
+export function createR2Client(options: { bucket: string; env: Record<string, string | undefined> }): Bun.S3Client {
+  if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(options.bucket)) throw new TypeError("Invalid R2 bucket");
+  const { env } = options;
+  const endpoint = env.R2_ENDPOINT;
+  const accessKeyId = env.R2_ACCESS_KEY_ID ?? env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = env.R2_SECRET_ACCESS_KEY ?? env.AWS_SECRET_ACCESS_KEY;
+  if (!endpoint || !accessKeyId || !secretAccessKey) throw new Error("R2 object credentials are unavailable");
+  const url = new URL(endpoint);
+  if (url.protocol !== "https:" || !url.hostname.endsWith(".r2.cloudflarestorage.com") || url.username || url.password)
+    throw new TypeError("R2 endpoint must be the HTTPS Cloudflare object service");
+  return new Bun.S3Client({
+    endpoint,
+    accessKeyId,
+    secretAccessKey,
+    bucket: options.bucket,
+    region: "auto",
+    queueSize: 1,
+    retry: 0,
+  });
+}

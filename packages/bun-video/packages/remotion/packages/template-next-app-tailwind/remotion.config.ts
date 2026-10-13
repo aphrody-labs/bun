@@ -3,10 +3,10 @@
 
 // Note: When using the Node.JS APIs, the config file doesn't apply. Instead, pass options directly to the APIs
 
-import { Config } from "@remotion/cli/config";
-import { webpackOverride } from "./src/remotion/webpack-override.mjs";
+import {Config} from '@remotion/cli/config';
+import {webpackOverride} from './src/remotion/webpack-override.mjs';
 
 Config.setRspack(true);
-Config.setVideoImageFormat("jpeg");
+Config.setVideoImageFormat('jpeg');
 
 Config.overrideBundlerConfig(webpackOverride);

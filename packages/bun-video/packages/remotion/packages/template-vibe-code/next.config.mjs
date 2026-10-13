@@ -11,44 +11,44 @@
 // Serve the exported files with the COOP/COEP headers yourself.
 const staticExportBasePath = process.env.STATIC_EXPORT_BASE_PATH;
 const basePath =
-  staticExportBasePath === undefined
-    ? ""
-    : staticExportBasePath.replace(/\/+$/, "");
+	staticExportBasePath === undefined
+		? ''
+		: staticExportBasePath.replace(/\/+$/, '');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  agentRules: false,
-  basePath,
-  // Read by src/lib/base-path.ts to address public files and the API.
-  env: { NEXT_PUBLIC_BASE_PATH: basePath },
-  ...(staticExportBasePath === undefined
-    ? {
-        // The starter project in src/remotion is read from disk at request time.
-        outputFileTracingIncludes: {
-          "/": ["./src/remotion/**/*"],
-          "/api/project": ["./src/remotion/**/*"],
-        },
-        async headers() {
-          return [
-            "/",
-            "/preview.html",
-            "/preview.js",
-            "/compiler/:path*",
-            "/_next/:path*",
-          ].map((source) => ({
-            source,
-            headers: [
-              { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-              { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
-            ],
-          }));
-        },
-      }
-    : {
-        output: "export",
-        pageExtensions: ["static.tsx"],
-      }),
+	reactStrictMode: true,
+	agentRules: false,
+	basePath,
+	// Read by src/lib/base-path.ts to address public files and the API.
+	env: {NEXT_PUBLIC_BASE_PATH: basePath},
+	...(staticExportBasePath === undefined
+		? {
+				// The starter project in src/remotion is read from disk at request time.
+				outputFileTracingIncludes: {
+					'/': ['./src/remotion/**/*'],
+					'/api/project': ['./src/remotion/**/*'],
+				},
+				async headers() {
+					return [
+						'/',
+						'/preview.html',
+						'/preview.js',
+						'/compiler/:path*',
+						'/_next/:path*',
+					].map((source) => ({
+						source,
+						headers: [
+							{key: 'Cross-Origin-Opener-Policy', value: 'same-origin'},
+							{key: 'Cross-Origin-Embedder-Policy', value: 'require-corp'},
+						],
+					}));
+				},
+			}
+		: {
+				output: 'export',
+				pageExtensions: ['static.tsx'],
+			}),
 };
 
 export default nextConfig;

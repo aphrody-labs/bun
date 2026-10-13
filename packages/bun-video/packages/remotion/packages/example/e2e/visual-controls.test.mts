@@ -1,3 +1,4 @@
+import * as __bunSyncFs from 'node:fs';
 import fs from 'node:fs';
 import {expect, test} from '@playwright/test';
 import {EXPANDED_SIDEBAR_STATE, visualControlsFile} from './constants.mts';
@@ -42,7 +43,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(visualControlsFile).text();
+					const content = __bunSyncFs.readFileSync(visualControlsFile, 'utf8');
 					return content.includes(`'rotation', ${newRotation}`);
 				},
 				{
@@ -62,7 +63,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(visualControlsFile).text();
+					const content = __bunSyncFs.readFileSync(visualControlsFile, 'utf8');
 					return content.includes(newLabel);
 				},
 				{
@@ -84,7 +85,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(visualControlsFile).text();
+					const content = __bunSyncFs.readFileSync(visualControlsFile, 'utf8');
 					return content.includes(newSubtitle);
 				},
 				{
@@ -103,7 +104,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(visualControlsFile).text();
+					const content = __bunSyncFs.readFileSync(visualControlsFile, 'utf8');
 					return /'subtitle',\s*null/.test(content);
 				},
 				{
@@ -140,7 +141,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(visualControlsFile).text();
+					const content = __bunSyncFs.readFileSync(visualControlsFile, 'utf8');
 					const match = content.match(/'extra-rotation',\s*(\d+)/);
 					return match?.[1] === newValue;
 				},
@@ -157,7 +158,7 @@ test.describe('visual controls', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(visualControlsFile).text();
+					const content = __bunSyncFs.readFileSync(visualControlsFile, 'utf8');
 					return /'extra-rotation',\s*undefined/.test(content);
 				},
 				{

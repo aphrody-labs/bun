@@ -1,4 +1,4 @@
-import { Config } from "@remotion/cli/config";
+import {Config} from '@remotion/cli/config';
 
 /**
  * Note: When using the Node.JS APIs, the config file
@@ -6,5 +6,5 @@ import { Config } from "@remotion/cli/config";
  */
 
 Config.setRspack(true);
-Config.setVideoImageFormat("jpeg");
+Config.setVideoImageFormat('jpeg');
 Config.setDelayRenderTimeoutInMilliseconds(1200000);

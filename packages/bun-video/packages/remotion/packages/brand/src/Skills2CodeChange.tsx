@@ -344,9 +344,7 @@ const CodeChange: React.FC<{readonly codeChange: CodeChangeData}> = ({
 				const bounds = element.getBoundingClientRect();
 				positions[index] = {
 					x: (bounds.left - preBounds.left) / measurementScaleX,
-					y:
-						verticalOffset +
-						(bounds.top - preBounds.top) / measurementScaleY,
+					y: verticalOffset + (bounds.top - preBounds.top) / measurementScaleY,
 				};
 			});
 
@@ -501,10 +499,10 @@ const CodeChange: React.FC<{readonly codeChange: CodeChangeData}> = ({
 										token.color === afterToken.color
 											? token.color
 											: interpolateColors(
-												frame,
-												[90, 108],
-												[token.color, afterToken.color],
-											),
+													frame,
+													[90, 108],
+													[token.color, afterToken.color],
+												),
 									translate: `${interpolate(
 										posterizedFrame,
 										[90, 108],

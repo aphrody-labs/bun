@@ -428,7 +428,7 @@ async function probeBeginFrameSupport(
       throw new Error(
         `beginFrame screenshot returned ${bytes.length} bytes after ` +
           `${BEGINFRAME_SCREENSHOT_PROBE_ATTEMPTS} attempts with signature ` +
-          `${bytes.length >= 4 ? bytes.subarray(0, 4).toString("hex") : "<empty>"}`,
+          `${bytes.length >= 4 ? Buffer.from(bytes.subarray(0, 4)).toString("hex") : "<empty>"}`,
       );
     }
     await awaitBeforeDeadline(client.detach(), deadline, "CDP detach").catch(() => {});

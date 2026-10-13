@@ -28,8 +28,8 @@ export const TableOfContents: React.FC = () => {
 			<TOCItem link="/docs/whisper-webgpu/load-whisper-model">
 				<strong>loadWhisperModel()</strong>
 				<div>Initialize a downloaded model</div>
-      </TOCItem>
-      <TOCItem link="/docs/whisper-webgpu/dispose-whisper-model">
+			</TOCItem>
+			<TOCItem link="/docs/whisper-webgpu/dispose-whisper-model">
 				<strong>disposeWhisperModel()</strong>
 				<div>Release model memory</div>
 			</TOCItem>
@@ -43,7 +43,9 @@ export const TableOfContents: React.FC = () => {
 			</TOCItem>
 			<TOCItem link="/docs/whisper-webgpu/to-captions">
 				<strong>toCaptions()</strong>
-				<div>Convert a transcription to <code>@remotion/captions</code></div>
+				<div>
+					Convert a transcription to <code>@remotion/captions</code>
+				</div>
 			</TOCItem>
 			<TOCItem link="/docs/whisper-webgpu/resample-to-16khz">
 				<strong>resampleTo16Khz()</strong>

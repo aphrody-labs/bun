@@ -1,5 +1,5 @@
-import assert from 'node:assert';
 import {expect, test} from 'bun:test';
+import assert from 'node:assert';
 import {computeSequencePropsStatusFromContent} from '../preview-server/routes/can-update-sequence-props';
 import {lineColumnToNodePath} from './test-utils';
 

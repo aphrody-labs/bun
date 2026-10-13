@@ -1,5 +1,6 @@
-import fs from 'node:fs';
 import assert from 'node:assert';
+import * as __bunSyncFs from 'node:fs';
+import fs from 'node:fs';
 import {expect, test, type Locator, type Page} from '@playwright/test';
 import {wave} from '@remotion/effects/wave';
 import {getAllSchemaKeys} from '@remotion/studio-shared';
@@ -52,7 +53,9 @@ test.describe('effect keyframes', () => {
 	}) => {
 		test.setTimeout(120_000);
 		const originalContent = await Bun.file(effectKeyframeE2eFile).text();
-		await Bun.write(effectKeyframeE2eFile, originalContent.replace(
+		await Bun.write(
+			effectKeyframeE2eFile,
+			originalContent.replace(
 				'opacity: interpolate(frame, [0, 30], [0, 1])',
 				'opacity: interpolate(frame, [0, 10, 20, 30, 40, 60, 89], [0, 1, 0, 1, 0, 1, 0])',
 			),
@@ -153,7 +156,7 @@ test.describe('effect keyframes', () => {
 		}
 
 		await expect
-			.poll(() => await Bun.file(effectKeyframeE2eFile).text())
+			.poll(() => __bunSyncFs.readFileSync(effectKeyframeE2eFile, 'utf8'))
 			.toMatch(/interpolate\(\s*frame,\s*\[0,\s*30,\s*40,\s*60,\s*89\]/);
 
 		// Single-keyframe deletion also selects the property, even at the playhead.
@@ -163,7 +166,7 @@ test.describe('effect keyframes', () => {
 			.click();
 		await page.keyboard.press('Backspace');
 		await expect
-			.poll(() => await Bun.file(effectKeyframeE2eFile).text())
+			.poll(() => __bunSyncFs.readFileSync(effectKeyframeE2eFile, 'utf8'))
 			.toMatch(/interpolate\(\s*frame,\s*\[0,\s*40,\s*60,\s*89\]/);
 		await expect(
 			page.getByRole('button', {name: 'Back to property', exact: true}),
@@ -180,7 +183,7 @@ test.describe('effect keyframes', () => {
 			.first()
 			.click();
 		await expect
-			.poll(() => await Bun.file(effectKeyframeE2eFile).text())
+			.poll(() => __bunSyncFs.readFileSync(effectKeyframeE2eFile, 'utf8'))
 			.toMatch(/interpolate\(\s*frame,\s*\[0,\s*60,\s*89\]/);
 		await expect(
 			page.getByRole('button', {name: 'Back to property', exact: true}),
@@ -194,7 +197,7 @@ test.describe('effect keyframes', () => {
 			.last()
 			.click();
 		await expect
-			.poll(() => await Bun.file(effectKeyframeE2eFile).text())
+			.poll(() => __bunSyncFs.readFileSync(effectKeyframeE2eFile, 'utf8'))
 			.toMatch(/interpolate\(\s*frame,\s*\[0,\s*89\]/);
 		await expect(
 			page.getByRole('button', {name: 'Back to property', exact: true}),
@@ -204,7 +207,7 @@ test.describe('effect keyframes', () => {
 		// The property remains selected, so another Backspace resets its value.
 		await page.keyboard.press('Backspace');
 		await expect
-			.poll(() => await Bun.file(effectKeyframeE2eFile).text())
+			.poll(() => __bunSyncFs.readFileSync(effectKeyframeE2eFile, 'utf8'))
 			.not.toContain('opacity:');
 		await page.reload();
 		await expect(
@@ -244,9 +247,7 @@ test.describe('effect keyframes', () => {
 		await expect(factorInput).toHaveValue('0.75');
 		await factorInput.press('Enter');
 		await expect(factorDragger).toBeVisible();
-		expect(await Bun.file(effectKeyframeE2eFile).text()).toBe(
-			originalContent,
-		);
+		expect(await Bun.file(effectKeyframeE2eFile).text()).toBe(originalContent);
 
 		await factorDragger.click();
 		await factorInput.fill('0.625');
@@ -256,7 +257,7 @@ test.describe('effect keyframes', () => {
 		await expect(factorInput).toHaveValue('0.625');
 		await factorInput.press('Enter');
 		await expect
-			.poll(() => await Bun.file(effectKeyframeE2eFile).text())
+			.poll(() => __bunSyncFs.readFileSync(effectKeyframeE2eFile, 'utf8'))
 			.toContain('scale: 0.625');
 
 		const preciseFactorDragger = page.getByRole('button', {
@@ -278,7 +279,7 @@ test.describe('effect keyframes', () => {
 		await page.mouse.move(factorX + 5, factorY);
 		await page.mouse.up();
 		await expect
-			.poll(() => await Bun.file(effectKeyframeE2eFile).text())
+			.poll(() => __bunSyncFs.readFileSync(effectKeyframeE2eFile, 'utf8'))
 			.toContain('scale: 0.8');
 		await page.reload();
 		await expect(async () => {
@@ -353,7 +354,10 @@ test.describe('effect keyframes', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(effectKeyframeE2eFile).text();
+					const content = __bunSyncFs.readFileSync(
+						effectKeyframeE2eFile,
+						'utf8',
+					);
 					return content.includes('scale: 0.525');
 				},
 				{
@@ -385,7 +389,10 @@ test.describe('effect keyframes', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(effectKeyframeE2eFile).text();
+					const content = __bunSyncFs.readFileSync(
+						effectKeyframeE2eFile,
+						'utf8',
+					);
 					return content.includes("rotate: '0.525deg'");
 				},
 				{
@@ -421,7 +428,10 @@ test.describe('effect keyframes', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(effectKeyframeE2eFile).text();
+					const content = __bunSyncFs.readFileSync(
+						effectKeyframeE2eFile,
+						'utf8',
+					);
 					return content.includes('cropLeft={0.005}');
 				},
 				{
@@ -456,7 +466,10 @@ test.describe('effect keyframes', () => {
 		await expect
 			.poll(
 				() => {
-					const content = await Bun.file(effectKeyframeE2eFile).text();
+					const content = __bunSyncFs.readFileSync(
+						effectKeyframeE2eFile,
+						'utf8',
+					);
 					return content.includes('amplitude: 60.525');
 				},
 				{
@@ -542,7 +555,10 @@ test.describe('effect keyframes', () => {
 		await expect
 			.poll(
 				() => {
-					const output = await Bun.file(effectKeyframeE2eFile).text();
+					const output = __bunSyncFs.readFileSync(
+						effectKeyframeE2eFile,
+						'utf8',
+					);
 					return (
 						output.includes('const frame = useCurrentFrame();') &&
 						output.includes('phase: interpolate(frame, [30], [90], {')

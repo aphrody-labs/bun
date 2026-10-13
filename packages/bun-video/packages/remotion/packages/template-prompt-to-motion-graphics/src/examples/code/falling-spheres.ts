@@ -1,4 +1,4 @@
-import { RemotionExample } from "./index";
+import {RemotionExample} from './index';
 
 export const fallingSpheresCode = `import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { ThreeCanvas } from "@remotion/three";
@@ -106,11 +106,11 @@ export const MyAnimation = () => {
 };`;
 
 export const fallingSpheresExample: RemotionExample = {
-  id: "falling-spheres",
-  name: "Golden Bouncing Spheres",
-  description: "Glowing golden spheres with physics and orbiting camera",
-  category: "3D",
-  durationInFrames: 450,
-  fps: 60,
-  code: fallingSpheresCode,
+	id: 'falling-spheres',
+	name: 'Golden Bouncing Spheres',
+	description: 'Glowing golden spheres with physics and orbiting camera',
+	category: '3D',
+	durationInFrames: 450,
+	fps: 60,
+	code: fallingSpheresCode,
 };

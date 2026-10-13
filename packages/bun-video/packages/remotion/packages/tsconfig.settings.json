@@ -6,6 +6,7 @@
 		"declarationMap": false,
 		"sourceMap": false,
 		"lib": ["es2023", "dom"],
+		"types": ["bun"],
 		"jsx": "react-jsx",
 		"noEmit": false,
 		"skipLibCheck": true,

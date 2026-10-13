@@ -1,49 +1,49 @@
-import { execSync } from "node:child_process";
-import { statSync } from "node:fs";
-import os from "node:os";
+import {execSync} from 'node:child_process';
+import {statSync} from 'node:fs';
+import os from 'node:os';
 
 function darwin() {
-  return `${process.env.HOME}/Downloads`;
+	return `${process.env.HOME}/Downloads`;
 }
 
 function unix() {
-  let dir;
-  try {
-    dir = execSync("xdg-user-dir DOWNLOAD", { encoding: "utf8" }).trim();
-  } catch (_) {
-    /* empty */
-  }
+	let dir;
+	try {
+		dir = execSync('xdg-user-dir DOWNLOAD', {encoding: 'utf8'}).trim();
+	} catch (_) {
+		/* empty */
+	}
 
-  if (dir && dir !== process.env.HOME) return dir;
+	if (dir && dir !== process.env.HOME) return dir;
 
-  let stat;
-  const homeDownloads = `${process.env.HOME}/Downloads`;
-  try {
-    stat = statSync(homeDownloads);
-  } catch (_) {
-    /* empty */
-  }
+	let stat;
+	const homeDownloads = `${process.env.HOME}/Downloads`;
+	try {
+		stat = statSync(homeDownloads);
+	} catch (_) {
+		/* empty */
+	}
 
-  if (stat) return homeDownloads;
+	if (stat) return homeDownloads;
 
-  return "/tmp/";
+	return '/tmp/';
 }
 
 function windows() {
-  return process.env.USERPROFILE + "/Downloads";
+	return process.env.USERPROFILE + '/Downloads';
 }
 
 export const getDownloadsFolder = () => {
-  switch (os.platform()) {
-    case "darwin":
-      return darwin();
-    case "freebsd":
-    case "linux":
-    case "sunos":
-      return unix();
-    case "win32":
-      return windows();
-    default:
-      throw new Error("Unsupported platform");
-  }
+	switch (os.platform()) {
+		case 'darwin':
+			return darwin();
+		case 'freebsd':
+		case 'linux':
+		case 'sunos':
+			return unix();
+		case 'win32':
+			return windows();
+		default:
+			throw new Error('Unsupported platform');
+	}
 };

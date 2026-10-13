@@ -1,5 +1,5 @@
-import https from 'node:https';
 import fs from 'node:fs';
+import https from 'node:https';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import * as tar from 'tar';

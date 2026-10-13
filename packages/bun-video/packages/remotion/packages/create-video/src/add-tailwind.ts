@@ -12,7 +12,7 @@ export const addTailwindRootCss = (projectRoot: string) => {
 		throw new Error('No Root file found');
 	}
 
-	const root = fs.readFileSync(rootFile, "utf8");
+	const root = fs.readFileSync(rootFile, 'utf8');
 
 	const newFile = `import "./index.css";\n${root}`;
 	fs.writeFileSync(rootFile, newFile);
@@ -31,7 +31,7 @@ export const addTailwindToConfig = (projectRoot: string) => {
 		throw new Error('No remotion.config.ts file found');
 	}
 
-	const config = fs.readFileSync(configFile, "utf8");
+	const config = fs.readFileSync(configFile, 'utf8');
 	const lines = config.trim().split('\n');
 	let lineNo = 0;
 	let lastImportLine = 0;

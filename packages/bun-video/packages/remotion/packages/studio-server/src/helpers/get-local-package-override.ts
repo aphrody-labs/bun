@@ -16,7 +16,7 @@ export const getLocalPackageOverride = ({
 		return null;
 	}
 
-	const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+	const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 	const localPackageRoot = packageJson[localPackageRootKey];
 	if (typeof localPackageRoot !== 'string') {
 		return null;
@@ -38,7 +38,7 @@ export const getLocalPackageOverride = ({
 		}
 
 		const candidatePackageJson = JSON.parse(
-			fs.readFileSync(candidatePackageJsonPath, "utf8"),
+			fs.readFileSync(candidatePackageJsonPath, 'utf8'),
 		);
 		if (
 			candidatePackageJson.name === packageName &&

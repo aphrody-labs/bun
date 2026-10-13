@@ -1,0 +1,151 @@
+/** Lazy ownership registry. Loading a module never constitutes playback qualification. */
+const owners = {
+  api: () => import("./video-api"),
+  catalog: () => import("./video-catalog"),
+  workers: () => import("./video-workers"),
+  workflow: () => import("./video-workflow"),
+  "pixel-verify": () => import("./pixel-verify"),
+  "video-capture": () => import("./video-capture"),
+  "archive-capture": () => import("./archive-capture"),
+  "video-dataset": () => import("./video-dataset"),
+  "video-cookies": () => import("./video-cookies"),
+  "data-site": () => import("./video-data-site"),
+  publish: () => import("./video-publish"),
+  hls: () => import("./hls"),
+  dash: () => import("./dash"),
+  har: () => import("./har"),
+  bitmovin: () => import("./bitmovin"),
+  crunchyroll: () => import("./crunchyroll"),
+  "crunchyroll-api": () => import("./crunchyroll-api"),
+  "crunchyroll-cli": () => import("./crunchyroll-cli"),
+  oauth: () => import("./oauth"),
+  secrets: () => import("./secrets"),
+  webgpu: () => import("./webgpu"),
+  mediabunny: () => import("../packages/mediabunny/src/index"),
+  ytdlp: () => import("./ytdlp"),
+  pipeline: () => import("./pipeline"),
+  image: () => import("./image"),
+  formats: () => import("./formats"),
+  source: () => import("./source"),
+  cache: () => import("./cache"),
+  archive: () => import("./archive"),
+  studio: () => import("./studio"),
+  "studio-remotion": () => import("./studio-remotion"),
+  encode: () => import("./encode"),
+  computer: () => import("./computer"),
+  ffmpeg: () => import("./ffmpeg"),
+  mpv: () => import("./mpv"),
+  remotion: () => import("../packages/remotion/packages/core/src/index"),
+  "remotion-renderer": () => import("../packages/remotion/packages/renderer/src/index"),
+  hyperframes: () => import("../packages/hyperframes/packages/core/src/index"),
+  "hyperframes-engine": () => import("../packages/hyperframes/packages/engine/src/index"),
+  capabilities: () => import("./capabilities"),
+  mcp: () => import("./mcp"),
+  "render-runtime": () => import("./render-runtime"),
+  "render-frame": () => import("./render-frame"),
+  "parallel-capture": () => import("./parallel-capture"),
+  "frame-plan": () => import("./frame-plan"),
+  "remotion-frame": () => import("./remotion-frame"),
+  "hyperframes-native": () => import("./hyperframes-native"),
+} as const;
+
+export type VideoAPIFamily = keyof typeof owners;
+export interface VideoAPIDescriptor {
+  readonly id: VideoAPIFamily;
+  readonly module: string;
+  readonly description: string;
+  readonly scope: "protocol" | "acquisition" | "render" | "native" | "catalog" | "service";
+}
+
+const definitions: readonly [VideoAPIFamily, string, VideoAPIDescriptor["scope"]][] = [
+  ["api", "Bun Video API ownership registry", "catalog"],
+  ["catalog", "Private SQLite source, asset and qualification catalog", "catalog"],
+  ["workers", "Bounded native Bun process job pool", "render"],
+  ["workflow", "Unified capture, acquisition and rendering workflow", "render"],
+  ["pixel-verify", "Exact decoded RGBA reference frame comparison", "render"],
+  ["video-capture", "Complete private HAR resource and request indexing", "acquisition"],
+  ["archive-capture", "Bounded public Internet Archive HTTP HAR capture", "acquisition"],
+  ["video-dataset", "Curated SQLite queries and JSON, JSONL, SQL or wiki exports", "catalog"],
+  ["video-cookies", "Private authorized Crunchyroll cookie selection and HTTP inspection", "acquisition"],
+  ["data-site", "Native Bun full-stack curated source and dataset application", "service"],
+  ["publish", "Curated dataset and portable catalog publication through Bun Cloudflare R2", "service"],
+  ["hls", "HLS manifests, variants and browser playback", "protocol"],
+  ["dash", "DASH/MPD manifests and browser playback", "protocol"],
+  ["har", "Network archive stream discovery", "acquisition"],
+  ["bitmovin", "Licensed Bitmovin browser player integration", "protocol"],
+  ["crunchyroll", "Isolated Crunchyroll acquisition client", "acquisition"],
+  ["crunchyroll-api", "Crunchyroll HTTP API owner", "acquisition"],
+  ["crunchyroll-cli", "Crunchyroll CLI owner", "service"],
+  ["oauth", "OAuth PKCE session flows", "service"],
+  ["secrets", "Native protected secret storage", "native"],
+  ["webgpu", "Bounded GPU compute and browser probes", "native"],
+  ["mediabunny", "Media demuxing, muxing and WebCodecs", "protocol"],
+  ["ytdlp", "Vendored site extractors through Bun Python", "acquisition"],
+  ["pipeline", "Native video ingestion and media pipeline", "native"],
+  ["image", "Native frame image transforms", "native"],
+  ["formats", "Media format descriptions", "catalog"],
+  ["source", "Source normalization and bounded materialization", "acquisition"],
+  ["cache", "Crawler source cache", "catalog"],
+  ["archive", "Source archive owner", "catalog"],
+  ["studio", "React source player and asset library", "render"],
+  ["studio-remotion", "React Remotion video composition", "render"],
+  ["encode", "Ordered native frame encoding", "render"],
+  ["computer", "Browser automation tasks", "service"],
+  ["ffmpeg", "Native FFmpeg media owner", "native"],
+  ["mpv", "Native libmpv playback owner", "native"],
+  ["remotion", "Absorbed Remotion React core", "render"],
+  ["remotion-renderer", "Official Remotion renderer", "render"],
+  ["hyperframes", "Absorbed HyperFrames composition core", "render"],
+  ["hyperframes-engine", "Official HyperFrames rendering engine", "render"],
+  ["capabilities", "Explicit provider availability probes", "native"],
+  ["mcp", "Bun Video MCP service", "service"],
+  ["render-runtime", "Lazy upstream rendering library loaders", "render"],
+  ["render-frame", "Served composition frame capture", "render"],
+  ["parallel-capture", "Bounded ordered frame worker pool", "render"],
+  ["frame-plan", "Validated rational-FPS frame plans", "render"],
+  ["remotion-frame", "Native served Remotion frame capture", "render"],
+  ["hyperframes-native", "Native served HyperFrames frame capture", "render"],
+];
+
+export const VIDEO_APIS: readonly VideoAPIDescriptor[] = Object.freeze(
+  definitions.map(([id, description, scope]) =>
+    Object.freeze({
+      id,
+      module: [
+        "render-runtime",
+        "render-frame",
+        "parallel-capture",
+        "frame-plan",
+        "remotion-frame",
+        "hyperframes-native",
+      ].includes(id)
+        ? `./src/${id}.ts`
+        : `@aphrody/bun-video/${id.replace("remotion-renderer", "remotion/renderer").replace("hyperframes-engine", "hyperframes/engine").replace("crunchyroll-api", "crunchyroll/api").replace("crunchyroll-cli", "crunchyroll/cli")}`,
+      description,
+      scope,
+    }),
+  ),
+);
+
+/** Metadata only: no providers, secrets, Python host or rendering engines are loaded. */
+export function describeVideoAPIs(): readonly VideoAPIDescriptor[] {
+  return VIDEO_APIS;
+}
+
+export async function loadVideoAPI(family: VideoAPIFamily): Promise<Record<string, unknown>> {
+  if (!Object.hasOwn(owners, family)) throw new TypeError(`Unknown Bun Video API family: ${family}`);
+  return await owners[family]();
+}
+
+/** Export names and kinds only; no values, sessions or credentials are serialized. */
+export async function inspectVideoAPI(family: VideoAPIFamily) {
+  const module = await loadVideoAPI(family);
+  return {
+    family,
+    loaded: true,
+    qualification: "module-load-only" as const,
+    exports: Object.keys(module)
+      .sort()
+      .map(name => ({ name, kind: typeof module[name] })),
+  };
+}

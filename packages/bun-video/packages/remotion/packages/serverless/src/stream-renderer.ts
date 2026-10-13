@@ -1,6 +1,6 @@
 import {createWriteStream, writeFileSync} from 'node:fs';
-import {pipeline} from 'node:stream/promises';
 import {join} from 'node:path';
+import {pipeline} from 'node:stream/promises';
 import type {EmittedArtifact, LogLevel} from '@remotion/renderer';
 import {RenderInternals} from '@remotion/renderer';
 import type {

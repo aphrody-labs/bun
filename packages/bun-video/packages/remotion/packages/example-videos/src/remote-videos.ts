@@ -1,7 +1,7 @@
-/* eslint-disable no-console */
-import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
+/* eslint-disable no-console */
+import dotenv from 'dotenv';
 
 dotenv.config({
 	quiet: true,
@@ -42,7 +42,7 @@ export const getRemoteExampleVideo = async (
 	const name = new URL(url).pathname.split('/').pop() as string;
 	const location = path.join(cacheDir, name);
 
-	if (!await Bun.file(location).exists()) {
+	if (!(await Bun.file(location).exists())) {
 		if (!fs.existsSync(cacheDir)) {
 			fs.mkdirSync(cacheDir);
 		}

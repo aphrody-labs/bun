@@ -19,7 +19,7 @@ export const isAmazonLinux2023 = (): boolean => {
 	}
 
 	try {
-		const osRelease = fs.readFileSync('/etc/os-release', "utf8");
+		const osRelease = fs.readFileSync('/etc/os-release', 'utf8');
 		return (
 			osRelease.includes('Amazon Linux') && osRelease.includes('VERSION="2023"')
 		);

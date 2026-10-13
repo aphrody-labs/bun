@@ -1,5 +1,5 @@
-import {expect, test} from '@playwright/test';
 import fs from 'node:fs';
+import {expect, test} from '@playwright/test';
 import {hookOrderChangeE2eFile, STUDIO_URL} from './constants.mts';
 import {readStudioLogs, stripAnsi} from './helpers.mts';
 import {startStudio, stopStudio} from './studio-server.mts';

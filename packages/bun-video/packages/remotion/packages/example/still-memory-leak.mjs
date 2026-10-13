@@ -1,6 +1,6 @@
+import {createRequire} from 'node:module';
 import {bundle} from '@remotion/bundler';
 import {openBrowser, renderStill, selectComposition} from '@remotion/renderer';
-import {createRequire} from 'node:module';
 import {webpackOverride} from './src/webpack-override.mjs';
 
 process.title = 'debugleak';
