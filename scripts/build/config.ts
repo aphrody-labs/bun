@@ -250,6 +250,7 @@ export interface Config {
    */
   clangResourceDir: string | undefined;
   ar: string;
+  hostAr: string;
   /** llvm-ranlib. undefined on windows (llvm-lib indexes itself). */
   ranlib: string | undefined;
   /**
@@ -469,6 +470,7 @@ export interface Toolchain extends JsToolchain {
    */
   hostCc: string | undefined;
   hostCxx: string | undefined;
+  hostAr?: string;
   /**
    * Parsed clang --version (X.Y.Z). Captured during toolchain resolution
    * so downstream checks (workarounds.ts) don't re-spawn. undefined if
@@ -1445,6 +1447,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     cxx: toolchain.cxx,
     hostCc: toolchain.hostCc ?? toolchain.cc,
     hostCxx: toolchain.hostCxx ?? toolchain.cxx,
+    hostAr: toolchain.hostAr ?? toolchain.ar,
     clangVersion: toolchain.clangVersion,
     clangResourceDir: toolchain.clangResourceDir,
     ar: toolchain.ar,

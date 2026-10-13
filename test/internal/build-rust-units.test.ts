@@ -462,6 +462,9 @@ describe("buildRustGraph + unitManifest", () => {
       debug: false,
       buildDir: "/build",
       host: { os: "windows" },
+      hostCc: "clang-cl.exe",
+      hostCxx: "clang-cl.exe",
+      hostAr: "llvm-lib.exe",
       timeTrace,
     } as Config,
     graph,
@@ -529,6 +532,48 @@ describe("buildRustGraph + unitManifest", () => {
     }
     expect(scriptEnv("aws-lc-sys", "0.46.0").CFLAGS_x86_64_pc_windows_msvc).toBe("/MT");
     expect(scriptEnv("other-native-crate", "0.45.0").CFLAGS_x86_64_pc_windows_msvc).toBe("/MT");
+  });
+
+  test("Windows cross builds use native tools for host C dependencies", () => {
+    const host = "x86_64-unknown-linux-gnu";
+    const plan = planWith([]);
+    plan.host = { ...info(host), cfg: ["unix", 'target_os="linux"'] };
+    plan.rustc.host = host;
+    const compiled = unit(registry, "bin", []);
+    compiled.target.kind = ["custom-build"];
+    compiled.target.name = "build-script-build";
+    compiled.platform = null;
+    const script: UnitGraphUnit = {
+      ...compiled,
+      mode: "run-custom-build",
+      dependencies: [{ index: 0, extern_crate_name: "build_script_build", public: false, noprelude: false }],
+    };
+    const scriptEnv = (platform: string | null) => {
+      plan.unitGraph.units = [
+        compiled,
+        { ...script, platform },
+        unit(local, "lib", [
+          { index: 1, extern_crate_name: "build_script_build", public: false, noprelude: false },
+        ]),
+      ];
+      plan.unitGraph.roots = [2];
+      const graph = buildRustGraph(plan, "/build/rust-target");
+      const ctx = context(graph);
+      ctx.cfg.host = { ...ctx.cfg.host, os: "linux" };
+      ctx.cfg.hostCc = "/llvm/bin/clang";
+      ctx.cfg.hostCxx = "/llvm/bin/clang++";
+      ctx.cfg.hostAr = "/llvm/bin/llvm-ar";
+      ctx.baseEnv = { CC: "/llvm/bin/clang-cl", CXX: "/llvm/bin/clang-cl", AR: "/llvm/bin/llvm-lib" };
+      return unitManifest(ctx, graph.units.find(unit => unit.kind === "build-script-run")!).env;
+    };
+    const hostEnv = scriptEnv(null);
+    const targetEnv = scriptEnv(triple);
+    expect([hostEnv.TARGET, hostEnv.CC, hostEnv.CXX, hostEnv.AR]).toEqual([
+      host, "/llvm/bin/clang", "/llvm/bin/clang++", "/llvm/bin/llvm-ar",
+    ]);
+    expect([targetEnv.TARGET, targetEnv.CC, targetEnv.CXX, targetEnv.AR]).toEqual([
+      triple, "/llvm/bin/clang-cl", "/llvm/bin/clang-cl", "/llvm/bin/llvm-lib",
+    ]);
   });
 
   test("native library dependencies offering a cdylib compile only their rlib", () => {

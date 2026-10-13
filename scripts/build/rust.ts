@@ -44,6 +44,7 @@ import { emitRustPlan, emitRustUnits, registerRustUnitRules } from "./rust/emit.
 import { emitRustNativeLink } from "./rust/native-link.ts";
 import { type PlanInput, planEnv, planPath, readPlan } from "./rust/plan.ts";
 import { buildRustGraph, linkedRlibs } from "./rust/units.ts";
+import { quote } from "./shell.ts";
 
 // ───────────────────────────────────────────────────────────────────────────
 // Target / profile mapping
@@ -561,6 +562,10 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
     CXX: cfg.cxx,
     AR: cfg.ar,
   };
+  const nativeToolTriple = triple.replace(/-/g, "_");
+  unitEnv[`CC_${nativeToolTriple}`] = cfg.cc;
+  unitEnv[`CXX_${nativeToolTriple}`] = cfg.cxx;
+  unitEnv[`AR_${nativeToolTriple}`] = cfg.ar;
   if (cfg.cargoHome !== undefined) unitEnv.CARGO_HOME = cfg.cargoHome;
   if (cfg.rustupHome !== undefined) unitEnv.RUSTUP_HOME = cfg.rustupHome;
   // Pin the toolchain explicitly. `vendor/` is commonly a symlink shared across worktrees; rustup's directory walk
@@ -593,8 +598,10 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
   if (cfg.windows) {
     const crt = cfg.debug ? "/MTd" : "/MT";
     const tripleEnv = triple.replace(/-/g, "_");
-    unitEnv[`CFLAGS_${tripleEnv}`] = crt;
-    unitEnv[`CXXFLAGS_${tripleEnv}`] = crt;
+    const sysroot = cfg.winsysroot === undefined ? "" : ` /winsysroot ${quote(cfg.winsysroot, false)}`;
+    if (cfg.winsysroot !== undefined) unitEnv.CC_SHELL_ESCAPED_FLAGS = "1";
+    unitEnv[`CFLAGS_${tripleEnv}`] = crt + sysroot;
+    unitEnv[`CXXFLAGS_${tripleEnv}`] = crt + sysroot;
   }
 
   // The linker for target units (cargo: `CARGO_TARGET_<TRIPLE>_LINKER`). The `bun_runtime` artifact is a staticlib

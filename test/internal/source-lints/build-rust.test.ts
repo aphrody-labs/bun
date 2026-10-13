@@ -104,6 +104,18 @@ describe("native coreutils feature", () => {
   });
 });
 
+test.each(["x64", "aarch64"] as const)("Windows %s C build scripts use the configured SDK", arch => {
+  const cfg = resolve({ os: "windows", arch, winsysroot: "/fake Windows SDK" });
+  const { unitEnv } = cargoBuildInvocation(cfg);
+  const triple = rustTriple("windows", arch, undefined).replaceAll("-", "_");
+  expect(unitEnv[`CFLAGS_${triple}`]).toBe("/MT /winsysroot '/fake Windows SDK'");
+  expect(unitEnv[`CXXFLAGS_${triple}`]).toBe(unitEnv[`CFLAGS_${triple}`]);
+  expect(unitEnv.CC_SHELL_ESCAPED_FLAGS).toBe("1");
+  expect(unitEnv[`CC_${triple}`]).toBe(cfg.cc);
+  expect(unitEnv[`CXX_${triple}`]).toBe(cfg.cxx);
+  expect(unitEnv[`AR_${triple}`]).toBe(cfg.ar);
+});
+
 describe("allRustTargets", () => {
   test("is exactly the set of triples .buildkite/ci.ts builds", () => {
     const ciScript = readFileSync(join(repoRoot, ".buildkite", "ci.ts"), "utf8");
