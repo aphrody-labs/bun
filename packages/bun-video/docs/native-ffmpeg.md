@@ -35,6 +35,25 @@ Run the native FFI ownership and symbol-loading gate with
 `bun bd test packages/bun-video/test/ffmpeg.test.ts`.
 Without that explicit artifact directory the native test is skipped.
 
+## Media pipeline
+
+`openVideoPipeline` opens the normalized media source with the owned FFmpeg
+demuxer and exposes it as `pipeline.input`. Closing the pipeline stops its mpv
+client and releases the input before unloading FFmpeg. With `playback: true`,
+mpv receives the same selected media URL through `loadfile`.
+
+Direct file paths and native media URLs bypass yt-dlp. Set `ytDlp` options
+explicitly to extract a website into a playable URL. Arrays, Blob objects,
+Request objects and Response streams use the native custom AVIO adapter through
+`FFmpeg.openMemory`. The bridge owns a copy of the bytes, so JavaScript buffer
+detachment or collection cannot invalidate its callbacks. Inputs are bounded
+to 512 MiB, and response ingestion is also bounded by chunk count and cancellable.
+Memory-source playback through mpv still requires its pending custom-stream
+adapter and returns an unsupported error.
+
+Build the AVIO bridge with the native crate's `libav` feature. Its shared library
+(`bun_video_native.dll` on Windows) must accompany the seven FFmpeg libraries.
+
 ## libmpv above the FFmpeg foundation
 
 `mpvABI` exports the native client, asynchronous commands, property observation,

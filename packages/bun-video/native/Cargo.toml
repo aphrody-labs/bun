@@ -25,6 +25,7 @@ libc = "=0.2.186"
 
 [lib]
 path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
 
 [[bin]]
 name = "bun-video-native"

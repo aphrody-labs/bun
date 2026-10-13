@@ -127,8 +127,10 @@ pub fn encode_ffv1(
         for row in 0..height as usize {
             let destination = &mut frame.data_mut(0)[row * stride..row * stride + row_bytes];
             for (rgba, bgra) in bytes[row * row_bytes..(row + 1) * row_bytes]
-                .chunks_exact(4)
-                .zip(destination.chunks_exact_mut(4))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(destination.as_chunks_mut::<4>().0.iter_mut())
             {
                 bgra.copy_from_slice(&[rgba[2], rgba[1], rgba[0], rgba[3]]);
             }

@@ -3,6 +3,8 @@
 pub mod owned_process;
 #[cfg(feature = "libav")]
 pub mod libav;
+#[cfg(feature = "libav")]
+pub mod memory_io;
 use owned_process::{OwnedChild, spawn_owned};
 use std::ffi::{OsStr, OsString};
 use std::io;
@@ -171,7 +173,7 @@ mod tests {
         let mut rgba: Vec<u8> = (0u8..=255).cycle().take(64 * 64 * 4 * 2).collect();
         rgba[3] = 0;
         rgba[64 * 64 * 4 + 3] = 0;
-        let pngs: Vec<u8> = rgba.chunks_exact(64 * 64 * 4).flat_map(|frame| encode_rgba_png(64, 64, frame).unwrap()).collect();
+        let pngs: Vec<u8> = rgba.as_chunks::<{ 64 * 64 * 4 }>().0.iter().flat_map(|frame| encode_rgba_png(64, 64, frame).unwrap()).collect();
         libav::encode_ffv1(&mut std::io::Cursor::new(&pngs), &path, &opts).unwrap();
         let mut decoded = Vec::new();
         assert_eq!(libav::decode_rgba(&path, &mut decoded).unwrap(), 2);

@@ -1,5 +1,6 @@
 import { CString, dlopen, ptr, type FFIFunction, type Pointer } from "bun:ffi";
 import { dirname, isAbsolute, join } from "node:path";
+import { MAX_MEMORY_SOURCE_BYTES } from "./source";
 
 const functionABI = <
   const A extends NonNullable<FFIFunction["args"]>,
@@ -11,6 +12,13 @@ const functionABI = <
 const p = "ptr";
 const i = "i32";
 const v = "void";
+
+const memoryABI = {
+  bun_video_memory_api_version: functionABI([], "u32"),
+  bun_video_memory_open: functionABI([p, "u64", p], i),
+  bun_video_memory_format: functionABI([p], p),
+  bun_video_memory_close: functionABI([p], v),
+} as const;
 
 export const ffmpegABI = {
   avutil: {
@@ -169,11 +177,14 @@ type FFmpegLibraries = { [C in FFmpegComponent]: FFmpegLibrary<C> };
 
 export class FFmpeg {
   readonly #libraries: FFmpegLibraries;
+  readonly #directory: string;
+  #memoryIO?: ReturnType<typeof dlopen<typeof memoryABI>>;
   #closed = false;
   readonly #resources = new Set<() => void>();
 
-  private constructor(libraries: FFmpegLibraries) {
+  private constructor(libraries: FFmpegLibraries, directory: string) {
     this.#libraries = libraries;
+    this.#directory = directory;
   }
 
   static open(directory?: string): FFmpeg {
@@ -196,7 +207,7 @@ export class FFmpeg {
           throw new Error(`FFmpeg ${component} ABI mismatch: expected major ${ffmpegMajors[component]}`);
         Object.assign(libraries, { [component]: library });
       }
-      return new FFmpeg(libraries as FFmpegLibraries);
+      return new FFmpeg(libraries as FFmpegLibraries, directory ?? dirname(process.execPath));
     } catch (error) {
       for (const library of owned.reverse()) library.close();
       throw error;
@@ -241,6 +252,56 @@ export class FFmpeg {
       get pointer() {
         if (closed) throw new Error("FFmpeg input is closed");
         return context;
+      },
+      close,
+      [Symbol.dispose]: close,
+    };
+  }
+
+  openMemory(data: ArrayBuffer | ArrayBufferView): FFmpegInput {
+    if (this.#closed) throw new Error("FFmpeg is closed");
+    if (!(data instanceof ArrayBuffer) && !ArrayBuffer.isView(data))
+      throw new TypeError("FFmpeg memory input requires an ArrayBuffer or byte view");
+    let bytes = ArrayBuffer.isView(data)
+      ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+      : new Uint8Array(data);
+    if (!bytes.byteLength || bytes.byteLength > MAX_MEMORY_SOURCE_BYTES)
+      throw new RangeError("FFmpeg memory input must contain 1..536870912 bytes");
+    if (bytes.buffer instanceof SharedArrayBuffer) bytes = new Uint8Array(bytes);
+    if (!this.#memoryIO) {
+      const name =
+        process.platform === "win32"
+          ? "bun_video_native.dll"
+          : process.platform === "darwin"
+            ? "libbun_video_native.dylib"
+            : "libbun_video_native.so";
+      const library = dlopen(join(this.#directory, name), memoryABI);
+      if (library.symbols.bun_video_memory_api_version() !== 1) {
+        library.close();
+        throw new Error("Bun Video memory input ABI mismatch");
+      }
+      this.#memoryIO = library;
+    }
+    const api = this.#memoryIO.symbols;
+    const slot = new BigUint64Array(1);
+    this.check(api.bun_video_memory_open(ptr(bytes), BigInt(bytes.byteLength), ptr(slot)));
+    const context = api.bun_video_memory_format(Number(slot[0]) as Pointer);
+    if (!context) {
+      api.bun_video_memory_close(ptr(slot));
+      throw new Error("Bun Video memory input has no format context");
+    }
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      api.bun_video_memory_close(ptr(slot));
+      this.#resources.delete(close);
+    };
+    this.#resources.add(close);
+    return {
+      get pointer() {
+        if (closed) throw new Error("FFmpeg input is closed");
+        return Number(context) as Pointer;
       },
       close,
       [Symbol.dispose]: close,
@@ -300,6 +361,7 @@ export class FFmpeg {
     if (this.#closed) return;
     for (const close of [...this.#resources].reverse()) close();
     this.#closed = true;
+    this.#memoryIO?.close();
     for (const library of Object.values(this.#libraries).reverse()) library.close();
   }
 

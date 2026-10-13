@@ -41,7 +41,7 @@ function validate(request: YtDlpRequest): void {
 export async function runYtDlp(request: YtDlpRequest): Promise<YtDlpResult> {
   validate(request);
   request.signal?.throwIfAborted();
-  const root = resolve(request.vendorRoot ?? new URL("../packages/yt-dlp", import.meta.url).pathname);
+  const root = resolve(request.vendorRoot ?? Bun.fileURLToPath(new URL("../packages/yt-dlp", import.meta.url)));
   const options = { quiet: true, no_warnings: true, ...request.options };
   const code = [
     "import json, sys",
