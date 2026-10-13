@@ -8,6 +8,8 @@ function mockBrowser(handler: (message: any, socket: any) => void) {
     port: 0,
     hostname: "127.0.0.1",
     fetch(request, server) {
+      if (new URL(request.url).pathname === "/json/version")
+        return Response.json({ webSocketDebuggerUrl: `ws://127.0.0.1:${server.port}/devtools/browser/test` });
       if (server.upgrade(request)) return;
       return new Response("Expected WebSocket", { status: 400 });
     },
@@ -29,16 +31,45 @@ test("Chrome protocol accepts web URLs and rejects privileged schemes", () => {
   expect(protocol.validateURL("https://example.com/app")).toBe("https://example.com/app");
   expect(protocol.validateURL("http://localhost/app")).toBe("http://localhost/app");
   expect(protocol.validateURL("about:blank")).toBe("about:blank");
-  for (const url of [
-    "javascript:alert(1)",
-    "file:///secret",
-    "chrome://settings",
-    "data:text/html,test",
-    "relative",
-  ])
+  for (const url of ["javascript:alert(1)", "file:///secret", "chrome://settings", "data:text/html,test", "relative"])
     expect(() => protocol.validateURL(url)).toThrow();
   const executable = findExecutable();
   expect(executable === null || typeof executable === "string").toBe(true);
+});
+
+test.concurrent("CDP discovers the browser WebSocket from an HTTP endpoint", async () => {
+  using browser = mockBrowser((message, socket) =>
+    socket.send(JSON.stringify({ id: message.id, result: { ok: true } })),
+  );
+  const connection = await connect(browser.url.replace("ws:", "http:"));
+  try {
+    expect(await connection.send("Browser.getVersion")).toEqual({ ok: true });
+  } finally {
+    connection.close();
+  }
+  expect(connection.closed).toBe(true);
+});
+
+test.concurrent("CDP rejects failed discovery and nonlocal advertised endpoints", async () => {
+  for (const response of [
+    () => new Response("private diagnostic", { status: 503 }),
+    () => Response.json({}),
+    () => Response.json({ webSocketDebuggerUrl: "ws://example.com/devtools/browser/test" }),
+    () => Response.json({ webSocketDebuggerUrl: "http://127.0.0.1/devtools/browser/test" }),
+  ]) {
+    using server = Bun.serve({ port: 0, hostname: "127.0.0.1", fetch: response });
+    await expect(connect(server.url.href)).rejects.toThrow();
+  }
+  const controller = new AbortController();
+  using server = Bun.serve({
+    port: 0,
+    hostname: "127.0.0.1",
+    fetch() {
+      controller.abort(new Error("discovery cancelled"));
+      return Response.json({});
+    },
+  });
+  await expect(connect(server.url.href, { signal: controller.signal })).rejects.toThrow("discovery cancelled");
 });
 
 test("Chrome extension and theme manifests default to MV3", () => {
@@ -57,9 +88,7 @@ test("Chrome extension and theme manifests default to MV3", () => {
   });
   expect(theme.manifest_version).toBe(3);
   expect(theme.theme).toEqual({ colors: { frame: [10, 20, 30] } });
-  expect(() =>
-    manifests.validateTheme({ ...theme, theme: { colors: { frame: [256, 0, 0] } } }),
-  ).toThrow();
+  expect(() => manifests.validateTheme({ ...theme, theme: { colors: { frame: [256, 0, 0] } } })).toThrow();
   expect(() =>
     manifests.validateTheme({ ...theme, theme: { images: { theme_frame: "../../private.png" } } }),
   ).toThrow();
@@ -131,9 +160,7 @@ test.concurrent("CDP correlates replies received in reverse order and forwards s
 test.concurrent("CDP exposes browser errors and rejects pending commands on disconnect", async () => {
   using browser = mockBrowser((message, socket) => {
     if (message.method === "Missing.command")
-      socket.send(
-        JSON.stringify({ id: message.id, error: { code: -32601, message: "Unknown command" } }),
-      );
+      socket.send(JSON.stringify({ id: message.id, error: { code: -32601, message: "Unknown command" } }));
     else socket.close();
   });
   const connection = await connect(browser.url);
@@ -153,13 +180,13 @@ test.concurrent("CDP listeners unsubscribe without dropping subsequent replies",
   const connection = await connect(browser.url);
   const events: unknown[] = [];
   try {
-    const unsubscribe = connection.on("Page.loadEventFired", (event) => events.push(event));
+    const unsubscribe = connection.on("Page.loadEventFired", event => events.push(event));
     await connection.send("Page.enable");
     expect(events).toHaveLength(1);
     unsubscribe();
     await connection.send("Page.enable");
     expect(events).toHaveLength(1);
-    const unsubscribeNext = connection.on("Page.loadEventFired", (event) => events.push(event));
+    const unsubscribeNext = connection.on("Page.loadEventFired", event => events.push(event));
     unsubscribe();
     await connection.send("Page.enable");
     expect(events).toHaveLength(2);
@@ -181,9 +208,7 @@ test.concurrent("CDP listeners unsubscribe without dropping subsequent replies",
 test.concurrent("CDP connection and pending work respect cancellation", async () => {
   const alreadyAborted = new AbortController();
   alreadyAborted.abort();
-  await expect(
-    connect("ws://127.0.0.1:1/devtools/browser/test", { signal: alreadyAborted.signal }),
-  ).rejects.toThrow();
+  await expect(connect("ws://127.0.0.1:1/devtools/browser/test", { signal: alreadyAborted.signal })).rejects.toThrow();
   for (const url of [
     "ws://example.com/devtools/browser/test",
     "ws://127.0.0.1.example.com/devtools/browser/test",
@@ -219,19 +244,16 @@ test.skipIf(!findExecutable())(
     const profile = browser.userDataDir;
     try {
       expect(existsSync(profile)).toBe(true);
-      const version = await browser.connection.send<{ product: string; protocolVersion: string }>(
-        "Browser.getVersion",
-      );
+      const version = await browser.connection.send<{ product: string; protocolVersion: string }>("Browser.getVersion");
       expect(version.product).toMatch(/Chrome|Chromium/);
       expect(version.protocolVersion).toMatch(/^\d+\.\d+$/);
-      const { targetId } = await browser.connection.send<{ targetId: string }>(
-        "Target.createTarget",
-        { url: "about:blank" },
-      );
-      const { sessionId } = await browser.connection.send<{ sessionId: string }>(
-        "Target.attachToTarget",
-        { targetId, flatten: true },
-      );
+      const { targetId } = await browser.connection.send<{ targetId: string }>("Target.createTarget", {
+        url: "about:blank",
+      });
+      const { sessionId } = await browser.connection.send<{ sessionId: string }>("Target.attachToTarget", {
+        targetId,
+        flatten: true,
+      });
       const result = await browser.connection.send<{ result: { value: number } }>(
         "Runtime.evaluate",
         { expression: "6 * 7", returnByValue: true },
@@ -276,15 +298,15 @@ test.skipIf(process.platform !== "win32" || !findExecutable())(
         const { targetInfos } = await browser.connection.send<{
           targetInfos: { targetId: string; url: string }[];
         }>("Target.getTargets");
-        const target = targetInfos.find((target) => target.url === server.url.href);
+        const target = targetInfos.find(target => target.url === server.url.href);
         expect(target).toBeDefined();
-        const { sessionId } = await browser.connection.send<{ sessionId: string }>(
-          "Target.attachToTarget",
-          { targetId: target!.targetId, flatten: true },
-        );
+        const { sessionId } = await browser.connection.send<{ sessionId: string }>("Target.attachToTarget", {
+          targetId: target!.targetId,
+          flatten: true,
+        });
         await browser.connection.send("Page.enable", {}, sessionId);
         let unsubscribe = () => {};
-        const loaded = new Promise<void>((resolve) => {
+        const loaded = new Promise<void>(resolve => {
           unsubscribe = browser.connection.on("Page.loadEventFired", (_event, eventSession) => {
             if (eventSession === sessionId) resolve();
           });

@@ -29,6 +29,11 @@ try {
 }
 ```
 
+HTTP(S) connections discover the browser endpoint through `/json/version`.
+Discovery and the WebSocket handshake share one timeout budget and caller
+cancellation. Discovery redirects are rejected, and the advertised WebSocket
+must also use a loopback address without credentials or a fragment.
+
 Launch options: executable, userDataDir, headless, webgpu, url, extensions,
 timeout and signal. Result: connection, process, userDataDir and async close.
 The installed browser remains its engine owner. Do not implicitly reuse personal

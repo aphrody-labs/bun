@@ -18,16 +18,16 @@ function timeoutValue(value: number | undefined): number {
   return result;
 }
 
-function endpointURL(endpoint: string): string {
+function endpointURL(endpoint: string, discovery = false): string {
   const url = new URL(endpoint);
   if (
-    !["ws:", "wss:"].includes(url.protocol) ||
+    !(discovery ? ["ws:", "wss:", "http:", "https:"] : ["ws:", "wss:"]).includes(url.protocol) ||
     !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) ||
     url.username ||
     url.password ||
     url.hash
   )
-    throw new TypeError("CDP endpoint must be a loopback WebSocket URL without credentials or fragment");
+    throw new TypeError("CDP endpoint must be a loopback debugging URL without credentials or fragment");
   return url.href;
 }
 
@@ -184,12 +184,30 @@ class ChromiumConnection {
 
 async function connect(endpoint: string, options: Options = {}): Promise<ChromiumConnection> {
   const timeout = timeoutValue(options.timeout);
-  const url = endpointURL(endpoint);
+  let url = endpointURL(endpoint, true);
+  options.signal?.throwIfAborted();
+  const started = Date.now();
+  if (url.startsWith("http:") || url.startsWith("https:")) {
+    const deadline = AbortSignal.timeout(timeout);
+    const signal = options.signal ? AbortSignal.any([options.signal, deadline]) : deadline;
+    const response = await fetch(new URL("/json/version", url), { signal, redirect: "error", credentials: "omit" });
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error(`CDP discovery failed: HTTP ${response.status}`);
+    }
+    const version = await response.json();
+    if (!version || typeof version.webSocketDebuggerUrl !== "string")
+      throw new TypeError("CDP discovery returned no browser WebSocket endpoint");
+    url = endpointURL(version.webSocketDebuggerUrl);
+    signal.throwIfAborted();
+  }
+  const remaining = timeout - (Date.now() - started);
+  if (remaining <= 0) throw new Error("CDP connection timed out");
   options.signal?.throwIfAborted();
   return new Promise((resolve, reject) => {
     const socket = new WebSocket(url);
     const signal = options.signal;
-    const timer = setTimeout(() => fail(new Error("CDP connection timed out")), timeout);
+    const timer = setTimeout(() => fail(new Error("CDP connection timed out")), remaining);
     const cleanup = () => {
       clearTimeout(timer);
       signal?.removeEventListener("abort", abort);
