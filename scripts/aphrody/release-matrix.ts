@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { buildArgs, findTarget, releaseTargets, type ReleaseTarget } from "./build-host.ts";
 import { createMullvadBuildPlan } from "./mullvad-sidecar.ts";
 import bootstraps from "./release-bootstraps.json";
@@ -248,8 +250,23 @@ export function windowsRuntimeReleasePlan(revision: string, targets: string[] = 
   const selected = runtimeReleaseMatrix(targets);
   if (selected.some(target => target.os !== "windows"))
     throw new Error("The Omar PC factory accepts Windows targets only");
-  const source = "C:/bun";
-  const artifacts = "C:/bun/artifacts/runtime-release";
+  let source = process.env.APHRODY_BUN_CHECKOUT ? resolve(process.env.APHRODY_BUN_CHECKOUT) : undefined;
+  if (!source) {
+    let current = resolve(process.cwd());
+    while (true) {
+      const workspaceCheckout = join(current, "bun");
+      if (existsSync(join(current, "WORKSPACE.md")) && existsSync(join(workspaceCheckout, "scripts/build.ts"))) {
+        source = workspaceCheckout;
+        break;
+      }
+      const parent = dirname(current);
+      if (parent === current) break;
+      current = parent;
+    }
+  }
+  source ??= resolve(import.meta.dir, "../..");
+  source = source.replaceAll("\\", "/").replace(/\/$/, "");
+  const artifacts = `${source}/artifacts/runtime-release`;
   return {
     schema: 1,
     revision,
@@ -257,7 +274,7 @@ export function windowsRuntimeReleasePlan(revision: string, targets: string[] = 
     target: "windows-x64",
     source,
     executionOwner: "local Windows workstation",
-    lock: "C:/bun/artifacts/locks/heavy.lock",
+    lock: `${source}/artifacts/locks/heavy.lock`,
     maxJobs: 2,
     reserveDiskGiB: 20,
     reserveMemoryGiB: 6,
