@@ -3,7 +3,6 @@ name = "bun_browser"
 version = "1.4.4"
 edition = "2021"
 description = "Rust API for the BunBrowser headless browser"
-readme = "README.md"
 repository = "https://github.com/aphrody-labs/bun-os"
 license = "Apache-2.0"
 [features]

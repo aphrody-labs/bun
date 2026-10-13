@@ -32,6 +32,45 @@ fn prefixes() -> Vec<String> {
 }
 
 #[test]
+fn memory_cgroup_mounts_and_namespaces() {
+    let mounts = "25 20 0:24 / /sys/fs/cgroup rw - cgroup2 cgroup rw\n26 20 0:25 /tenant /sys/fs/memory\\040group rw - cgroup cgroup rw,memory\n";
+    let hierarchies = parse::memory_cgroups("0::/user.slice/worker\n3:cpu,memory:/tenant/child\n", mounts);
+    assert_eq!(hierarchies.len(), 2);
+    assert_eq!(hierarchies[0].mount, "/sys/fs/cgroup");
+    assert_eq!(hierarchies[0].path, "/sys/fs/cgroup/user.slice/worker");
+    assert!(hierarchies[0].unified);
+    assert_eq!(hierarchies[1].path, "/sys/fs/memory group/child");
+    assert!(!hierarchies[1].unified);
+    assert!(parse::memory_cgroups("0::/../../outside\n3:memory:/tenant-other/child", mounts).is_empty());
+    let namespace = parse::memory_cgroups("0::/", "25 20 0:24 /tenant /sys/fs/cgroup rw - cgroup2 cgroup rw");
+    assert_eq!(namespace[0].path, "/sys/fs/cgroup");
+}
+
+#[test]
+fn memory_cgroup_limits_account_for_ancestor_usage() {
+    assert_eq!(parse::memory_budget("0", Some("0")), Some((0, 0)));
+    assert_eq!(parse::memory_budget("0", Some("4096")), Some((0, 0)));
+    assert_eq!(parse::memory_budget("max", Some("0")), None);
+    assert_eq!(parse::memory_budget("1048583", Some("5")), Some((1048583, 1048578)));
+    assert_eq!(parse::memory_budget("9223372036854771712", Some("5")), None);
+    assert_eq!(parse::memory_budget("9223372036854710272", Some("5")), None);
+    let mut memory = Memory { total_mib: 32768, available_mib: 20000, ..Memory::default() };
+    parse::constrain_memory(&mut memory, "8589934592", Some("1073741824"));
+    assert_eq!((memory.total_mib, memory.available_mib), (8192, 7168));
+    // A wider parent ceiling can still have less headroom due to siblings.
+    parse::constrain_memory(&mut memory, "17179869184", Some("16106127360"));
+    assert_eq!((memory.total_mib, memory.available_mib), (8192, 1024));
+    parse::constrain_memory(&mut memory, "max", None);
+    parse::constrain_memory(&mut memory, "invalid", Some("0"));
+    assert_eq!((memory.total_mib, memory.available_mib), (8192, 1024));
+    parse::constrain_memory(&mut memory, "1048576", Some("2097152"));
+    assert_eq!((memory.total_mib, memory.available_mib), (1, 0));
+    let mut unknown_usage = Memory { total_mib: 8192, available_mib: 4096, ..Memory::default() };
+    parse::constrain_memory(&mut unknown_usage, "1073741824", None);
+    assert_eq!((unknown_usage.total_mib, unknown_usage.available_mib), (1024, 0));
+}
+
+#[test]
 fn meminfo_and_psi() {
     let m = parse::meminfo(MEMINFO);
     assert_eq!((m.total_mib, m.available_mib, m.swap_total_mib, m.swap_free_mib), (47035, 40220, 2047, 2047));

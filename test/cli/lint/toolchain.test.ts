@@ -474,6 +474,23 @@ describe("bun create aphrody/<template>", () => {
 });
 
 describe("bun:wasm", () => {
+  test.concurrent("invalid wasm options are rejected before starting external tools", async () => {
+    const { stdout, exitCode } = await run([
+      "-e",
+      `const wasm = require("bun:wasm");
+const errors = [];
+for (const run of [() => wasm.build(null), () => wasm.optimize("missing.wasm", { level: "invalid" })]) {
+  try { await run(); } catch (error) { errors.push(error.message); }
+}
+console.log(JSON.stringify(errors));`,
+    ]);
+    const errors = JSON.parse(stdout);
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toContain("options");
+    expect(errors[1]).toBe("Unknown wasm-opt level -invalid");
+    expect(exitCode).toBe(0);
+  });
+
   test.concurrent("exports build, optimize and plugin", async () => {
     const { stdout, exitCode } = await run([
       "-e",
@@ -507,7 +524,8 @@ if (args[0] === "metadata") {
 } else process.exit(2);
 `;
 
-  test.concurrent("bun wasm build --cargo and the cargo option replace cargo", async () => {
+  // CLI and API each start Cargo shims as debug/ASAN subprocesses (measured 5.8s on the VPS).
+  test("bun wasm build --cargo and the cargo option replace cargo", async () => {
     using dir = tempDir("toolchain-wasm-cargo", {
       "add/Cargo.toml": `[package]\nname = "add"\nversion = "0.1.0"\n`,
       "fake-cargo.js": fakeCargo,
@@ -536,7 +554,7 @@ console.log(bytes);
       Uint8Array.of(0, 0x61, 0x73, 0x6d, 1, 0, 0, 0),
     );
     expect(await Bun.file(join(String(dir), "add", "pkg", "add.js")).exists()).toBe(true);
-  });
+  }, 20_000);
 
   // Compiles a crate: needs cargo with the wasm32-unknown-unknown target.
   test.skipIf(!Bun.which("cargo"))(

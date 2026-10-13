@@ -4,6 +4,8 @@
 // src/runtime/windows/ (Win32 code in sys/, host functions in host.rs); this file
 // validates arguments, parses registry paths and turns the JSON results of the
 // native side into objects. Nothing here runs until the module is imported.
+import type { Authenticode } from "../internal/authenticode";
+
 const {
   validateInteger,
   validateString,
@@ -815,7 +817,7 @@ class NtfsVolume {
   }
 
   /** Creates the USN journal (default 32 MiB, 4 MiB delta); a no-op if one already exists. */
-  createJournal(options) {
+  createJournal(options?) {
     let maximumSize = 32n * 1024n * 1024n;
     let allocationDelta = 4n * 1024n * 1024n;
     if (options !== undefined) {
@@ -835,7 +837,11 @@ class NtfsVolume {
       return this.queryJournal();
     } catch (e) {
       // ERROR_JOURNAL_NOT_ACTIVE (1179) or ERROR_JOURNAL_DELETE_IN_PROGRESS (1178).
-      if (e?.winError !== 1179 && e?.winError !== 1178) throw e;
+      const winError =
+        e !== null && (typeof e === "object" || typeof e === "function")
+          ? Reflect.get(e, "winError")
+          : undefined;
+      if (winError !== 1179 && winError !== 1178) throw e;
       this.createJournal();
       return this.queryJournal();
     }
@@ -969,7 +975,7 @@ const catalogSigners = new Map();
 function catalogSigner(file) {
   let signer = catalogSigners.get(file);
   if (signer === undefined) {
-    let parsed = null;
+    let parsed: Authenticode | null = null;
     try {
       const fs = require("node:fs");
       parsed = require("internal/authenticode").parseSignedData(

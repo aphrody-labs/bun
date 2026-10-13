@@ -8,10 +8,18 @@
 //! Ranges: `*`, `latest`, `""`, an exact version, comparators (`>=1.2 <2`),
 //! `^1.2`, `~1.2`, `1.2.x`, alternatives joined with `||`.
 
+use bun_core::strings;
 use core::cmp::Ordering;
 
+// ASCII delimiters cannot cut through a UTF-8 code point in a valid &str.
+fn utf8_part(part: &[u8]) -> &str {
+    core::str::from_utf8(part).expect("splitting valid UTF-8 on ASCII preserves UTF-8")
+}
+
 fn parts(v: &str) -> impl Iterator<Item = &str> {
-    v.trim().trim_start_matches(['v', 'V']).split(['.', '-', '+', '_']).filter(|p| !p.is_empty())
+    strings::split_any(v.trim().trim_start_matches(['v', 'V']).as_bytes(), b".-+_")
+        .map(utf8_part)
+        .filter(|p| !p.is_empty())
 }
 
 fn cmp_part(a: Option<&str>, b: Option<&str>) -> Ordering {
@@ -45,11 +53,14 @@ fn numeric_prefix(v: &str) -> Vec<u64> {
 
 /// `1.2.x` / `1.2.*` / `1.2` as a prefix match on the given parts.
 fn prefix_matches(pattern: &str, version: &str) -> bool {
-    let pat: Vec<&str> = parts(pattern).take_while(|p| !matches!(*p, "x" | "X" | "*")).collect();
+    let pat: Vec<&str> = parts(pattern)
+        .take_while(|p| !matches!(*p, "x" | "X" | "*"))
+        .collect();
     let ver: Vec<&str> = parts(version).collect();
-    pat.iter()
-        .enumerate()
-        .all(|(i, p)| ver.get(i).is_some_and(|v| cmp_part(Some(p), Some(v)) == Ordering::Equal))
+    pat.iter().enumerate().all(|(i, p)| {
+        ver.get(i)
+            .is_some_and(|v| cmp_part(Some(p), Some(v)) == Ordering::Equal)
+    })
 }
 
 fn bump_at(base: &[u64], idx: usize) -> String {
@@ -86,8 +97,10 @@ fn comparator_matches(c: &str, version: &str) -> bool {
         if compare(version, rest) == Ordering::Less {
             return false;
         }
-        let first_nonzero =
-            base.iter().position(|&n| n != 0).unwrap_or_else(|| base.len().saturating_sub(1));
+        let first_nonzero = base
+            .iter()
+            .position(|&n| n != 0)
+            .unwrap_or_else(|| base.len().saturating_sub(1));
         return compare(version, &bump_at(&base, first_nonzero)) == Ordering::Less;
     }
     if let Some(rest) = c.strip_prefix('~') {
@@ -98,7 +111,7 @@ fn comparator_matches(c: &str, version: &str) -> bool {
         let idx = if base.len() >= 2 { 1 } else { 0 };
         return compare(version, &bump_at(&base, idx)) == Ordering::Less;
     }
-    if c.split('.').any(|p| matches!(p, "x" | "X" | "*")) {
+    if strings::split(c.as_bytes(), b".").any(|p| matches!(p, b"x" | b"X" | b"*")) {
         return prefix_matches(c, version);
     }
     compare(version, c) == Ordering::Equal
@@ -106,8 +119,10 @@ fn comparator_matches(c: &str, version: &str) -> bool {
 
 /// Whether `version` satisfies `range`.
 pub fn satisfies(range: &str, version: &str) -> bool {
-    range.split("||").any(|alt| {
-        let mut tokens = alt.split([' ', '\t']).filter(|t| !t.is_empty());
+    strings::split(range.as_bytes(), b"||").any(|alt| {
+        let mut tokens = strings::split_any(alt, b" \t")
+            .map(utf8_part)
+            .filter(|t| !t.is_empty());
         let mut all = true;
         let mut any = false;
         while let Some(tok) = tokens.next() {
@@ -118,7 +133,7 @@ pub fn satisfies(range: &str, version: &str) -> bool {
                     Some(next) => {
                         joined = format!("{tok}{next}");
                         joined.as_str()
-                    },
+                    }
                     None => tok,
                 }
             } else {
@@ -136,7 +151,7 @@ pub fn is_exact(range: &str) -> bool {
     let r = range.trim();
     !r.is_empty()
         && !r.eq_ignore_ascii_case("latest")
-        && !r.contains(['*', 'x', 'X', '^', '~', '<', '>', '=', '|', ' '])
+        && !strings::contains_any(r.as_bytes(), b"*xX^~<>=| ")
 }
 
 /// Highest version in `versions` satisfying `range`, by `cmp`.
@@ -185,7 +200,24 @@ mod tests {
         assert!(satisfies("1.0 || 2.0", "2.0"));
         assert!(is_exact("1.2.3"));
         assert!(!is_exact("^1.2"));
-        assert_eq!(best_match(["1.0.0", "1.2.0", "2.0.0"], "<2", compare), Some("1.2.0"));
+        assert_eq!(
+            best_match(["1.0.0", "1.2.0", "2.0.0"], "<2", compare),
+            Some("1.2.0")
+        );
         assert_eq!(best_match(["1.0.0"], "3", compare), None);
+    }
+
+    #[test]
+    fn ascii_delimiters_preserve_unicode_and_empty_alternatives() {
+        assert_eq!(
+            parts(" V1..2-β+é_3 ").collect::<Vec<_>>(),
+            ["1", "2", "β", "é", "3"]
+        );
+        assert_eq!(compare("1.é", "1.β"), Ordering::Less);
+        assert!(satisfies("\t>=\t1.2\t<2\t", "1.9"));
+        assert!(satisfies("9 ||", "1"));
+        assert!(!satisfies("1|2", "2"));
+        assert!(is_exact("1.é"));
+        assert!(!is_exact("1.X"));
     }
 }

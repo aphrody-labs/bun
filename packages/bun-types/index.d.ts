@@ -12,6 +12,7 @@
 /// <reference path="./devserver.d.ts" />
 /// <reference path="./cosmic.d.ts" />
 /// <reference path="./ffi.d.ts" />
+/// <reference path="./thirdparty.d.ts" />
 /// <reference path="./dotnet.d.ts" />
 /// <reference path="./graph.d.ts" />
 /// <reference path="./graph-native.d.ts" />

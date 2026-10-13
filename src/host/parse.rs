@@ -6,6 +6,67 @@ use crate::schema::{Address, Disk, Gpu, Memory};
 
 pub const MIB: u64 = 1024 * 1024;
 
+/// The memory hierarchy visible to this process, resolved through mountinfo.
+pub struct MemoryCgroup {
+    pub mount: String,
+    pub path: String,
+    pub unified: bool,
+}
+
+/// Resolve cgroup v1 memory and v2 memberships, including namespace/bind roots.
+pub fn memory_cgroups(membership: &str, mountinfo: &str) -> Vec<MemoryCgroup> {
+    let decode = |text: &str| text.replace("\\040", " ").replace("\\011", "\t")
+        .replace("\\012", "\n").replace("\\134", "\\");
+    let mut result = Vec::new();
+    for line in membership.lines() {
+        let mut fields = line.splitn(3, ':');
+        let (Some(id), Some(controllers), Some(member)) = (fields.next(), fields.next(), fields.next()) else { continue };
+        let unified = id == "0" && controllers.is_empty();
+        if !unified && !controllers.split(',').any(|controller| controller == "memory") { continue; }
+        if !member.starts_with('/') || member.split('/').any(|part| part == ".." || part == ".") { continue; }
+        for mount in mountinfo.lines() {
+            let Some((before, after)) = mount.split_once(" - ") else { continue };
+            let mut tail = after.split_whitespace();
+            let (Some(kind), Some(_source), Some(options)) = (tail.next(), tail.next(), tail.next()) else { continue };
+            if (unified && kind != "cgroup2") || (!unified && (kind != "cgroup" || !options.split(',').any(|option| option == "memory"))) { continue; }
+            let mut head = before.split_whitespace().skip(3);
+            let (Some(root), Some(mount)) = (head.next(), head.next()) else { continue };
+            let root = decode(root);
+            let mount = decode(mount);
+            let relative = if root == "/" {
+                member.trim_start_matches('/')
+            } else if member == root || member == "/" {
+                ""
+            } else if let Some(relative) = member.strip_prefix(&format!("{root}/")) {
+                relative
+            } else { continue };
+            let path = if relative.is_empty() { mount.clone() } else { format!("{}/{relative}", mount.trim_end_matches('/')) };
+            result.push(MemoryCgroup { mount, path, unified });
+        }
+    }
+    result
+}
+
+/// Apply a finite kernel ceiling and its current usage without inventing free RAM.
+pub fn constrain_memory(memory: &mut Memory, ceiling: &str, usage: Option<&str>) {
+    let Some((ceiling, available)) = memory_budget(ceiling, usage) else { return };
+    memory.total_mib = memory.total_mib.min(ceiling / MIB);
+    memory.available_mib = memory.available_mib.min(available / MIB).min(memory.total_mib);
+}
+
+/// Bytes retained without MiB rounding for process.availableMemory().
+pub fn memory_budget(ceiling: &str, usage: Option<&str>) -> Option<(u64, u64)> {
+    let ceiling = ceiling.trim().parse::<u64>().ok()?;
+    // cgroup v1 represents unlimited as PAGE_COUNTER_MAX (LONG_MAX rounded
+    // down to a page), unlike v2's literal "max". Do not expose it as a limit.
+    if ceiling >= (i64::MAX as u64 & !65535) {
+        return None;
+    }
+    let available = usage.and_then(|text| text.trim().parse::<u64>().ok())
+        .map(|used| ceiling.saturating_sub(used)).unwrap_or(0);
+    Some((ceiling, available))
+}
+
 /// CPU flags worth routing on.
 pub const WANTED_FLAGS: &[&str] = &[
     "avx",

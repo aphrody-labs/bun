@@ -32,6 +32,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { generate } from "../../packages/bun-agent-plugin/src/generate.ts";
+import { isAphrodyBun } from "../../packages/bun-agent-plugin/src/hooks/common.ts";
 import { SCOPE } from "./scope.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
@@ -514,13 +515,20 @@ async function tarballFiles(bytes: Uint8Array): Promise<Map<string, Uint8Array>>
   return out;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 async function packument(registry: string, name: string): Promise<Record<string, any> | undefined> {
   const res = await fetch(`${registry}/${name.replace("/", "%2f")}`, {
     headers: { accept: "application/vnd.npm.install-v1+json" },
   });
   if (res.status === 404) return undefined;
   if (!res.ok) throw new Error(`GET ${name}: ${res.status} ${await res.text()}`);
-  return res.json();
+  const record = await res.json();
+  if (!isRecord(record))
+    throw new Error(`GET ${name}: registry returned an invalid package document`);
+  return record;
 }
 
 function pack(staging: string, dest: string, noBuild = false): string {
@@ -660,12 +668,17 @@ export async function publicationStatus(
       `${expected.name}@${expected.version}: public verification HTTP ${response.status}`,
     );
   const record = await response.json();
-  if (record.name !== expected.name || record.version !== expected.version) {
+  if (!isRecord(record) || record.name !== expected.name || record.version !== expected.version) {
     throw new Error(
       `${expected.name}@${expected.version}: registry returned a different package or version`,
     );
   }
-  if (!record.dist?.integrity?.split(/\s+/).includes(expected.integrity)) {
+  const dist = record.dist;
+  if (
+    !isRecord(dist) ||
+    typeof dist.integrity !== "string" ||
+    !dist.integrity.split(/\s+/).includes(expected.integrity)
+  ) {
     throw new Error(
       `${expected.name}@${expected.version}: registry integrity differs from the uploaded tarball`,
     );
@@ -702,8 +715,7 @@ export async function publishAll(opts: {
   const bunVersion: string = (await Bun.file(join(ROOT, "package.json")).json()).version;
   const sourceRevision = run(["git", "rev-parse", "HEAD"], ROOT).trim();
   if (!opts.dryRun) {
-    const revision = run([process.execPath, "--revision"], ROOT).trim();
-    if (!revision.includes("aphrody") || Bun.version.split("-")[0] !== bunVersion)
+    if (!isAphrodyBun() || Bun.version.split("-")[0] !== bunVersion)
       throw new Error(`Publication requires the qualified Aphrody runtime ${bunVersion}`);
     if (run(["git", "status", "--porcelain"], ROOT).trim())
       throw new Error("Publication requires a clean source-pinned checkout");

@@ -76,7 +76,11 @@ impl<'a> Database<'a> {
             return Err(corrupt("bad page size"));
         }
         let reserved = usize::from(data[20]);
-        Ok(Database { data, page_size, usable: page_size - reserved })
+        Ok(Database {
+            data,
+            page_size,
+            usable: page_size - reserved,
+        })
     }
 
     fn page(&self, no: u32) -> Result<&'a [u8]> {
@@ -85,7 +89,9 @@ impl<'a> Database<'a> {
             return Err(corrupt("page 0"));
         }
         let start = (no - 1) * self.page_size;
-        self.data.get(start..start + self.page_size).ok_or_else(|| corrupt("page out of range"))
+        self.data
+            .get(start..start + self.page_size)
+            .ok_or_else(|| corrupt("page out of range"))
     }
 
     /// Root page and column names of a rowid table, from `sqlite_schema`.
@@ -104,7 +110,7 @@ impl<'a> Database<'a> {
                     _ => 0,
                 };
                 let sql = row.get(4).and_then(Cell::text).unwrap_or(b"");
-                found = Some((root, column_names(sql)));
+                found = Some((root, column_names(sql)?));
             }
             Ok(())
         })?;
@@ -137,7 +143,7 @@ impl<'a> Database<'a> {
                     self.walk(be32(page, cell)?, depth + 1, f)?;
                 }
                 self.walk(be32(page, hdr + 8)?, depth + 1, f)
-            },
+            }
             0x0d => {
                 let ptrs = hdr + 8;
                 for i in 0..count {
@@ -148,7 +154,7 @@ impl<'a> Database<'a> {
                     f(rowid as i64, decode_record(&payload, rowid as i64)?)?;
                 }
                 Ok(())
-            },
+            }
             _ => Err(corrupt("not a table b-tree page")),
         }
     }
@@ -165,7 +171,10 @@ impl<'a> Database<'a> {
             if k <= x { k } else { m }
         };
         let mut out = Vec::with_capacity(len);
-        out.extend_from_slice(page.get(at..at + local).ok_or_else(|| corrupt("cell payload"))?);
+        out.extend_from_slice(
+            page.get(at..at + local)
+                .ok_or_else(|| corrupt("cell payload"))?,
+        );
         if local < len {
             let mut next = be32(page, at + local)?;
             let mut guard = 0usize;
@@ -193,7 +202,9 @@ fn decode_record(p: &[u8], rowid: i64) -> Result<Vec<Cell>> {
         let (st, n) = varint(p, h)?;
         h += n;
         let int = |size: usize, body: usize| -> Result<i64> {
-            let s = p.get(body..body + size).ok_or_else(|| corrupt("record int"))?;
+            let s = p
+                .get(body..body + size)
+                .ok_or_else(|| corrupt("record int"))?;
             let mut v: i64 = if s[0] & 0x80 != 0 { -1 } else { 0 };
             for &b in s {
                 v = (v << 8) | i64::from(b);
@@ -214,10 +225,19 @@ fn decode_record(p: &[u8], rowid: i64) -> Result<Vec<Cell>> {
             10 | 11 => return Err(corrupt("reserved serial type")),
             n => {
                 let size = ((n - 12) / 2) as usize;
-                let bytes =
-                    p.get(body..body + size).ok_or_else(|| corrupt("record blob"))?.to_vec();
-                (if n % 2 == 0 { Cell::Blob(bytes) } else { Cell::Text(bytes) }, size)
-            },
+                let bytes = p
+                    .get(body..body + size)
+                    .ok_or_else(|| corrupt("record blob"))?
+                    .to_vec();
+                (
+                    if n % 2 == 0 {
+                        Cell::Blob(bytes)
+                    } else {
+                        Cell::Text(bytes)
+                    },
+                    size,
+                )
+            }
         };
         body += size;
         cells.push(cell);
@@ -232,9 +252,9 @@ fn decode_record(p: &[u8], rowid: i64) -> Result<Vec<Cell>> {
 }
 
 /// Column names from `CREATE TABLE x(a TEXT, [b] INT, PRIMARY KEY(a))`.
-fn column_names(sql: &[u8]) -> Vec<String> {
+fn column_names(sql: &[u8]) -> Result<Vec<String>> {
     let Some(open) = sql.iter().position(|&c| c == b'(') else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
     let body = &sql[open + 1..];
     let mut cols = Vec::new();
@@ -244,27 +264,33 @@ fn column_names(sql: &[u8]) -> Vec<String> {
         match c {
             b'(' => depth += 1,
             b')' if depth == 0 => {
-                push_column(&body[start..i], &mut cols);
+                push_column(&body[start..i], &mut cols)?;
                 break;
-            },
+            }
             b')' => depth -= 1,
             b',' if depth == 0 => {
-                push_column(&body[start..i], &mut cols);
+                push_column(&body[start..i], &mut cols)?;
                 start = i + 1;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
-    cols
+    Ok(cols)
 }
 
-fn push_column(def: &[u8], cols: &mut Vec<String>) {
+fn push_column(def: &[u8], cols: &mut Vec<String>) -> Result<()> {
     let def = def.trim_ascii();
-    let end = def.iter().position(u8::is_ascii_whitespace).unwrap_or(def.len());
+    let end = def
+        .iter()
+        .position(u8::is_ascii_whitespace)
+        .unwrap_or(def.len());
     let name = &def[..end];
     let upper = name.to_ascii_uppercase();
-    if matches!(&upper[..], b"PRIMARY" | b"UNIQUE" | b"CHECK" | b"FOREIGN" | b"CONSTRAINT") {
-        return;
+    if matches!(
+        &upper[..],
+        b"PRIMARY" | b"UNIQUE" | b"CHECK" | b"FOREIGN" | b"CONSTRAINT"
+    ) {
+        return Ok(());
     }
     let name = name
         .strip_prefix(b"[")
@@ -272,7 +298,10 @@ fn push_column(def: &[u8], cols: &mut Vec<String>) {
         .or_else(|| name.strip_prefix(b"\"").and_then(|n| n.strip_suffix(b"\"")))
         .or_else(|| name.strip_prefix(b"`").and_then(|n| n.strip_suffix(b"`")))
         .unwrap_or(name);
-    cols.push(String::from_utf8_lossy(name).into_owned());
+    let name = core::str::from_utf8(name)
+        .map_err(|error| Error::Parse(format!("SQLite column name is not UTF-8: {error}")))?;
+    cols.push(name.to_owned());
+    Ok(())
 }
 
 #[cfg(test)]
@@ -282,7 +311,12 @@ mod tests {
     #[test]
     fn columns() {
         let sql = b"CREATE TABLE [packages](rowid INTEGER PRIMARY KEY, [id] TEXT NOT NULL, \"name\" TEXT, `hash` BLOB, PRIMARY KEY(id))";
-        assert_eq!(column_names(sql), ["rowid", "id", "name", "hash"]);
+        assert_eq!(column_names(sql).unwrap(), ["rowid", "id", "name", "hash"]);
+        assert_eq!(
+            column_names("CREATE TABLE x([étiquette] TEXT)".as_bytes()).unwrap(),
+            ["étiquette"]
+        );
+        assert!(column_names(b"CREATE TABLE x([\xff] TEXT)").is_err());
     }
 
     #[test]

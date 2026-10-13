@@ -1,5 +1,5 @@
 //! `bun pm apk|deb|pacman <command>`: the system package managers on an
-//! explicit root, without their binaries.
+//! explicit root. Debian delegates trusted transactions to native APT/dpkg.
 //!
 //! ```text
 //! bun pm apk [--root DIR] [--initdb] [-X URL]... [--arch A] [--keys-dir DIR]
@@ -24,7 +24,8 @@ pub fn is_source_command(name: &[u8]) -> bool {
 pub fn run(source: &[u8], args: &[&[u8]]) -> i32 {
     let code = match source {
         b"apk" => run_apk(args),
-        b"deb" | b"apt" | b"pacman" => Err(Error::Unsupported(format!(
+        b"deb" | b"apt" => super::deb::run(args),
+        b"pacman" => Err(Error::Unsupported(format!(
             "bun pm {}: not implemented yet",
             lossy(source)
         ))),

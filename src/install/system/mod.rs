@@ -6,20 +6,21 @@
 //! "systemDependencies": { "winget:Microsoft.PowerToys": "^0.100", "apk:curl": "*" }
 //! ```
 //!
-//! Every source implements [`Source`]. Resolution is pure data (index +
-//! manifests over HTTP) and runs on every platform, so `bun.lock` gets the same
-//! `"system"` block everywhere; installing is only attempted where
+//! Every source implements [`Source`]. Winget and APK resolve index/manifests
+//! over HTTP across platforms. Debian resolution uses native Linux APT metadata.
+//! Installing is only attempted where
 //! [`Source::host_can_install`] says so, otherwise it is skipped with a warning
 //! (like `optionalDependencies` with a non-matching `os`).
 //!
 //! The installed-file database lives in `<root>/.bun-system/installed.json`
-//! ([`db::InstalledDb`]); `remove`/`upgrade` work from it, without the native
-//! package manager (`winget.exe`, `apk`, `apt`, `pacman`).
+//! ([`db::InstalledDb`]). Debian additionally preserves the native dpkg database
+//! inside the explicit installation root and uses native APT transactions.
 
 pub mod apk;
 pub mod archive;
 pub mod cli;
 pub mod db;
+pub mod deb;
 pub mod lock;
 pub mod mszip;
 pub mod net;
@@ -407,7 +408,8 @@ pub fn source_for(kind: SourceKind) -> Option<Box<dyn Source>> {
     match kind {
         SourceKind::Winget => Some(Box::new(winget::Winget::default())),
         SourceKind::Apk => Some(Box::new(apk::Apk)),
-        SourceKind::Deb | SourceKind::Pacman => None,
+        SourceKind::Deb => Some(Box::new(deb::apt::Deb)),
+        SourceKind::Pacman => None,
     }
 }
 

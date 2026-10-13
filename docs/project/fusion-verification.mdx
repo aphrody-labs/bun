@@ -10,8 +10,17 @@ description: "Recursive source-scoped gates on the declared SSH VPS, with explic
 hashes, prerequisites, exit codes, diagnostic source paths and log locations.
 Native gate output streams into a file rather than accumulating in memory;
 diagnostic extraction reads a bounded 64 KiB tail and evidence hashes cover the
-entire log. Lint/format/typecheck execute installed tooling; native feature tests
+entire log. Bootstrap lint invokes the repository's pinned oxlint launcher.
+After the native build, scoped lint and format execute the candidate's embedded
+OXC owner through `bun bd`, avoiding older runtime package-script routing.
+Typecheck executes the repository toolchain; native feature tests
 execute the freshly built candidate through `bun bd`.
+The source helper suite passes `--config=scripts/aphrody/fusion-test.bunfig.toml`
+because the runtime suite's root configuration only searches `test/`.
+Its research metadata decoder uses the same native `Bun.HTML` DOM parser.
+Only the declared qualification flags can be set by a step: live HTTPS,
+isolated Debian-root fixtures and JSC exception checks. Step flags cannot
+override PATH, factory resources or privileged MCP feature exposure.
 It does not merge repositories or execute snippets downloaded from websites.
 
 ## Plan locally
@@ -41,7 +50,7 @@ at `/home/ubuntu/builds/bun-os-factory/cache/cargo`. Both `CARGO_TARGET_DIR` and
 `APHRODY_CARGO_TARGET_DIR` point there. The older `/home/ubuntu/build` output
 mount exhausted its space and is not the output destination for this task.
 The allocation observation on 2026-10-11 reported approximately 107 GiB of free
-root-filesystem disk and 45 GiB of available RAM; these are dated observations,
+root-filesystem disk and 45 GiB of physical RAM; these are dated observations,
 not permanent capacity guarantees. A fresh owner profile is still required.
 
 Resource CPU requests, `APHRODY_CARGO_JOBS` and `CARGO_BUILD_JOBS` are capped at

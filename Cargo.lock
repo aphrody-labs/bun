@@ -18463,23 +18463,3 @@ dependencies = [
  "syn 3.0.6",
  "winnow",
 ]
-
-[[patch.unused]]
-name = "oxc"
-version = "0.153.0"
-
-[[patch.unused]]
-name = "oxc_minify_napi"
-version = "0.153.0"
-
-[[patch.unused]]
-name = "oxc_parser_napi"
-version = "0.153.0"
-
-[[patch.unused]]
-name = "oxc_transform_napi"
-version = "0.153.0"
-
-[[patch.unused]]
-name = "oxc_transformer_plugins"
-version = "0.153.0"

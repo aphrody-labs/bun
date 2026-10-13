@@ -568,6 +568,118 @@ declare module "bun:windows" {
     instance?: string;
   }): Readonly<WindowsToolchain>;
 
+  interface NtfsJournal {
+    journalId: bigint;
+    firstUsn: bigint;
+    nextUsn: bigint;
+    lowestValidUsn: bigint;
+    maxUsn: bigint;
+    maximumSize: bigint;
+  }
+
+  interface NtfsMftRecord {
+    record: number;
+    parent: number;
+    attributes: number;
+    name: string;
+  }
+
+  interface NtfsUsnRecord {
+    major: number;
+    frn: bigint;
+    parentFrn: bigint;
+    record: number;
+    parentRecord: number;
+    usn: bigint;
+    timestamp: bigint;
+    reason: number;
+    attributes: number;
+    name: string;
+  }
+
+  /** An elevated volume handle for NTFS journal and metadata access. */
+  interface NtfsVolume extends Disposable {
+    readonly drive: string;
+    readonly closed: boolean;
+    queryJournal(): NtfsJournal;
+    createJournal(options?: { maximumSize?: number | bigint; allocationDelta?: number | bigint }): void;
+    queryOrCreateJournal(): NtfsJournal;
+    enumerateMft(bufferBytes?: number): NtfsMftRecord[];
+    readJournal(
+      startUsn: number | bigint,
+      journalId: number | bigint,
+      bufferBytes?: number,
+    ): {
+      records: NtfsUsnRecord[];
+      next: bigint;
+    };
+    close(): void;
+    [Symbol.dispose](): void;
+  }
+
+  const ntfs: {
+    readonly FILE_ATTRIBUTE_DIRECTORY: 16;
+    readonly ROOT_RECORD: 5;
+    readonly Volume: { new (drive?: string): NtfsVolume };
+  };
+
+  /** Declared signing information; byte parsing does not verify a cryptographic trust chain. */
+  interface PeAuthenticode {
+    signer: string | null;
+    issuer: string | null;
+    digest: string | null;
+    certificates: number;
+  }
+
+  interface PeInfo {
+    kind: "exe" | "dll" | "sys" | "efi" | "mui";
+    machine: string;
+    bits: 32 | 64;
+    subsystem: string;
+    characteristics: number;
+    dllCharacteristics: number;
+    timestamp: number;
+    imageBase: bigint;
+    imageSize: number;
+    entryRva: number;
+    checksum: number;
+    isDotnet: boolean;
+    sections: {
+      name: string;
+      virtualAddress: number;
+      virtualSize: number;
+      rawOffset: number;
+      rawSize: number;
+      characteristics: number;
+    }[];
+    imports: { module: string; delay: boolean; functions: string[] }[];
+    exports: { ordinal: number; name: string | null; forwarder: string | null }[];
+    exportName: string | null;
+    version: { fileVersion?: string; productVersion?: string; strings: Record<string, string> } | null;
+    authenticode: PeAuthenticode | null;
+    warnings: string[];
+  }
+
+  /** Pure PE parsing plus Windows catalog lookup; no image execution or loading. */
+  const pe: {
+    readonly parse: (bytes: ArrayBufferView, fileName?: string) => PeInfo | null;
+    readonly looksLikePe: (bytes: ArrayBufferView) => boolean;
+    readonly parseApiSetSchema: (bytes: ArrayBufferView) => Map<string, string[]>;
+    readonly apiSetKey: (moduleName: string) => string | null;
+    readonly authenticode: {
+      readonly parse: (bytes: ArrayBufferView) => PeAuthenticode | null;
+      readonly parseSignedData: (bytes: ArrayBufferView) => PeAuthenticode | null;
+    };
+    readonly catalogFile: (path: string) => string | null;
+    readonly catalogSignature: (path: string) => {
+      catalog: string;
+      signer: string | null;
+      issuer: string | null;
+      digest: string | null;
+    } | null;
+    readonly releaseCatalogContexts: () => void;
+  };
+
   /**
    * Exports of the `@aphrody/bun-windows-<name>` package, the binding of one Windows API family that
    * ships outside the Bun binary. Resolved from the working directory, then from the entry script, and
@@ -578,9 +690,9 @@ declare module "bun:windows" {
    * const kernel32 = windows.family("kernel32");
    * ```
    */
-  function family<T = Record<string, unknown>>(name: string): T;
+  function family<T = Win32Family>(name: string): T;
   /** `windows.families.kernel32` is `windows.family("kernel32")`. `"kernel32" in windows.families` checks the package is installed. */
-  const families: { readonly [name: string]: Record<string, unknown> };
+  const families: { readonly [name: string]: Win32Family };
 
   /** `true` on Windows. */
   const isSupported: boolean;

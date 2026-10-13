@@ -1,10 +1,15 @@
 #include "BrowserRealm.h"
 
-#include "APICast.h"
+#include <JavaScriptCore/APICast.h>
+#include "JavaScriptCore/DeferredWorkTimer.h"
+#include "JavaScriptCore/Exception.h"
 #include "JavaScriptCore/JSLock.h"
-#include "JavaScriptCore/JSValueInlines.h"
+#include "JavaScriptCore/JSCInlines.h"
+#include "JavaScriptCore/MicrotaskQueue.h"
+#include "JavaScriptCore/MicrotaskQueueInlines.h"
 #include "JavaScriptCore/ThrowScope.h"
-#include "NodeVMRunTermination.h"
+#include "JavaScriptCore/TopExceptionScope.h"
+#include "vm/NodeVMRunTermination.h"
 
 #include <JavaScriptCore/JSContextRef.h>
 #include <JavaScriptCore/JSStringRef.h>
@@ -12,6 +17,7 @@
 #include <wtf/text/WTFString.h>
 #include <algorithm>
 #include <cstdint>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <new>
@@ -64,6 +70,25 @@ static void setException(JSContextRef context, JSValueRef* exception, const char
     JSStringRef string = JSStringCreateWithUTF8CString(message);
     *exception = JSValueMakeString(context, string);
     JSStringRelease(string);
+}
+
+static JSValueRef parseNativeJSON(JSContextRef context, JSStringRef json, JSValueRef* exception)
+{
+    auto* global = ::toJS(context);
+    // JSCallbackObject drops its locks before invoking our callback. Keep a
+    // lock and a non-propagating scope across the C API's literal parser.
+    JSC::JSLockHolder locker(global);
+    auto scope = DECLARE_TOP_EXCEPTION_SCOPE(global->vm());
+    JSValueRef value = JSValueMakeFromJSONString(context, json);
+    // The pinned C API does not check the parser's simulated/real exception.
+    // Marshal a real exception through the callback's out parameter, while
+    // retaining termination in the VM for the enclosing evaluation deadline.
+    if (auto* pending = scope.exception()) {
+        *exception = ::toRef(global, pending->value());
+        scope.clearExceptionExceptTermination();
+        return nullptr;
+    }
+    return value;
 }
 
 static BrowserRealmResult copyBytes(std::span<const uint8_t> bytes, int32_t status)
@@ -157,6 +182,10 @@ static JSValueRef domCall(JSContextRef context, JSObjectRef function, JSObjectRe
     if (!thisObject || !exception) {
         return JSValueMakeUndefined(context);
     }
+    if (!JSValueIsObjectOfClass(context, thisObject, domObjectClass())) {
+        setException(context, exception, "Illegal __bunDOM receiver");
+        return JSValueMakeUndefined(context);
+    }
     auto* tree = static_cast<const void*>(JSObjectGetPrivate(thisObject));
     uintptr_t encodedOperation = reinterpret_cast<uintptr_t>(JSObjectGetPrivate(function));
     if (!tree || !encodedOperation) {
@@ -183,7 +212,7 @@ static JSValueRef domCall(JSContextRef context, JSObjectRef function, JSObjectRe
             }
             JSValueRef conversionException = nullptr;
             double number = JSValueToNumber(context, arguments[idIndex], &conversionException);
-            if (conversionException || number < 0 || number > UINT32_MAX || number != static_cast<double>(static_cast<uint32_t>(number))) {
+            if (conversionException || !std::isfinite(number) || number < 0 || number > UINT32_MAX || std::trunc(number) != number) {
                 setException(context, exception, "__bunDOM node ID must be an unsigned integer");
                 return JSValueMakeUndefined(context);
             }
@@ -215,12 +244,15 @@ static JSValueRef domCall(JSContextRef context, JSObjectRef function, JSObjectRe
     WTF::String json = fromUTF8(result.bytes, result.length);
     JSStringRef jsonString = makeJSString(json);
     JSValueRef value = nullptr;
+    JSValueRef decoded = parseNativeJSON(context, jsonString, exception);
     if (result.status == 0)
-        value = JSValueMakeFromJSONString(context, jsonString);
-    else
-        *exception = JSValueMakeFromJSONString(context, jsonString);
+        value = decoded;
+    else if (!*exception)
+        *exception = decoded;
     JSStringRelease(jsonString);
     Bun__BrowserRealm__free_dom_bytes(result.bytes, result.length);
+    if (*exception)
+        return JSValueMakeUndefined(context);
     if (result.status != 0) {
         if (!*exception)
             setException(context, exception, "Native DOM operation failed");
@@ -244,13 +276,16 @@ extern "C" void* Bun__BrowserRealm__create(
     auto* handle = new (std::nothrow) BrowserRealmHandle;
     if (!handle)
         return nullptr;
-    auto group = JSC::toRef(&hostGlobal->vm());
+    auto group = ::toRef(&hostGlobal->vm());
     handle->context = JSGlobalContextCreateInGroup(group, nullptr);
     if (!handle->context) {
         delete handle;
         return nullptr;
     }
-    handle->global = JSC::toJS(handle->context);
+    handle->global = ::toJS(handle->context);
+    // Keep page Promise jobs separate from Bun's host queue. Checkpoints run
+    // explicitly inside evaluate's deadline, before host code can destroy us.
+    handle->global->setMicrotaskQueue(JSC::MicrotaskQueue::create(hostGlobal->vm()));
     handle->tree = tree;
     if (!installDOM(*handle, origin, originLength, frameId, frameIdLength)) {
         JSGlobalContextRelease(handle->context);
@@ -283,6 +318,9 @@ extern "C" bool Bun__BrowserRealm__evaluate(
     JSValueRef exception = nullptr;
     JSValueRef value = nullptr;
     BrowserRealmResult encoded { nullptr, 0, 0 };
+    // Keep the non-propagating API boundary alive until the inner ThrowScope
+    // has been destroyed, so its simulated throw can be checked publicly.
+    auto boundary = DECLARE_TOP_EXCEPTION_SCOPE(handle.global->vm());
     {
         Bun::NodeVMRunTermination termination(handle.global, Seconds::fromMilliseconds(timeoutMs), false, true);
         value = JSEvaluateScript(handle.context, code, nullptr, url, 1, &exception);
@@ -311,9 +349,16 @@ extern "C" bool Bun__BrowserRealm__evaluate(
                 }
             }
         }
+        // Do not invoke Bun's onEachMicrotaskTick hook: only page-owned jobs
+        // belong to this checkpoint, including jobs enqueued by toString.
+        handle.global->microtaskQueue().performMicrotaskCheckpoint<false>(
+            handle.global->vm(), [](JSC::JSGlobalObject*, JSC::JSGlobalObject*) {});
         auto scope = DECLARE_THROW_SCOPE(handle.global->vm());
         bool timedOut = termination.didTimeOut();
         bool ownInterruption = termination.finish(scope);
+        // finish() may install a timeout Error or leave an enclosing stop.
+        // Observe it before entering another exception scope.
+        scope.exception();
         if (ownInterruption) {
             if (termination.vm().hasPendingTermination()) {
                 // An enclosing VM stop wins. Keep it pending and do not let a
@@ -323,7 +368,9 @@ extern "C" bool Bun__BrowserRealm__evaluate(
                 // finish() installed a page Error in the VM. The host API
                 // returns a diagnostic as bytes, so clear that exception
                 // before control returns to the Bun caller.
-                scope.clearException();
+                auto top = DECLARE_TOP_EXCEPTION_SCOPE(termination.vm());
+                if (top.exception())
+                    top.clearException();
                 std::string message;
                 if (timedOut) {
                     message = "Script execution timed out after ";
@@ -337,6 +384,20 @@ extern "C" bool Bun__BrowserRealm__evaluate(
                 encoded = copyString(message, 1);
             }
         }
+        if (termination.vm().hasPendingTermination())
+            encoded.status = 1;
+    }
+    // ThrowScope's destructor simulates a throw even when no real exception
+    // remains. This byte-result ABI handles exceptions itself, so check after
+    // that destructor, before Rust enters its next validated JSC wrapper.
+    if (boundary.exception()) {
+        if (encoded.status == 0) {
+            if (encoded.bytes)
+                std::free(encoded.bytes);
+            encoded = copyString("Page evaluation left a pending exception", 1);
+        }
+        // Never consume a VM-wide or enclosing termination request.
+        boundary.clearExceptionExceptTermination();
     }
     JSStringRelease(code);
     JSStringRelease(url);
@@ -350,6 +411,14 @@ extern "C" void Bun__BrowserRealm__release(void* opaque)
         return;
     auto* handle = static_cast<BrowserRealmHandle*>(opaque);
     if (handle->context) {
+        JSC::JSLockHolder locker(handle->global);
+        // A retained page global must never run callbacks after its native
+        // tree is released. Discard deferred work and clear only its own jobs.
+        handle->global->setMicrotaskRunnability(JSC::QueuedTaskResult::Discard);
+        handle->global->microtaskQueue().clear();
+        // The global lazily allocates its weak-ticket set. Its own teardown
+        // entry point guards an absent set and cancels only this realm's work.
+        handle->global->clearWeakTickets();
         JSGlobalContextRelease(handle->context);
         handle->context = nullptr;
         handle->global = nullptr;

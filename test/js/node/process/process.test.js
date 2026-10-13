@@ -441,10 +441,14 @@ it("process.release", () => {
   const platform = process.platform == "win32" ? "windows" : process.platform;
   const arch = { arm64: "aarch64", x64: "x64" }[process.arch] || process.arch;
   const abi = familySync() === "musl" ? "-musl" : "";
-  const nonbaseline = `https://github.com/oven-sh/bun/releases/download/bun-v${process.versions.bun}/bun-${platform}-${arch}${abi}.zip`;
-  const baseline = `https://github.com/oven-sh/bun/releases/download/bun-v${process.versions.bun}/bun-${platform}-${arch}${abi}-baseline.zip`;
+  // Both compiled flavors keep the fork's release channel and platform ABI.
+  const release = `https://github.com/aphrody-labs/bun/releases/download/bun-v${process.versions.bun}`;
+  const assets = ["", "-full"].flatMap(flavor => [
+    `${release}/bun-${platform}-${arch}${abi}${flavor}.zip`,
+    `${release}/bun-${platform}-${arch}${abi}-baseline${flavor}.zip`,
+  ]);
 
-  expect(process.release.sourceUrl).toBeOneOf([nonbaseline, baseline]);
+  expect(process.release.sourceUrl).toBeOneOf(assets);
 });
 
 it("process.env", () => {
@@ -1681,7 +1685,57 @@ describe.concurrent(() => {
   });
 
   it("process.constrainedMemory()", () => {
-    expect(process.constrainedMemory() >= 0).toBe(true);
+    const constrained = process.constrainedMemory();
+    expect(Number.isFinite(constrained)).toBe(true);
+    expect(Number.isInteger(constrained)).toBe(true);
+    expect(constrained).toBeGreaterThanOrEqual(0);
+  });
+
+  it("process.availableMemory returns a finite process allocation budget", () => {
+    const available = process.availableMemory();
+    expect(Number.isSafeInteger(available)).toBe(true);
+    expect(available).toBeGreaterThanOrEqual(0);
+    expect(available).toBeLessThanOrEqual(require("node:os").totalmem());
+  });
+
+  it.skipIf(process.platform !== "linux")("process memory budgets obey visible cgroup v2 ceilings", async () => {
+    const membership = await Bun.file("/proc/self/cgroup").text();
+    const mountinfo = await Bun.file("/proc/self/mountinfo").text();
+    const unified = membership.split("\n").find(line => line.startsWith("0::"));
+    if (!unified) return; // The pure native fixtures also exercise cgroup v1.
+    const relative = unified.slice(3);
+    if (relative.split("/").includes("..")) return;
+    const unescape = value => value.replace(/\\(040|011|012|134)/g, (_, octal) => String.fromCharCode(parseInt(octal, 8)));
+    let ceiling = null;
+    let found = false;
+    for (const line of mountinfo.split("\n")) {
+      const [mount, filesystem] = line.split(" - ");
+      if (!filesystem?.startsWith("cgroup2 ")) continue;
+      const fields = mount.split(" ");
+      const mountedRoot = unescape(fields[3]);
+      const root = unescape(fields[4]).replace(/\/$/, "");
+      let suffix;
+      if (relative === mountedRoot || relative === "/") suffix = "";
+      else if (mountedRoot === "/") suffix = relative;
+      else if (relative.startsWith(mountedRoot + "/")) suffix = relative.slice(mountedRoot.length);
+      else continue;
+      found = true;
+      let directory = root + suffix.replace(/\/$/, "");
+      while (directory === root || directory.startsWith(root + "/")) {
+        const file = Bun.file(directory + "/memory.max");
+        if (await file.exists()) {
+          const value = (await file.text()).trim();
+          if (/^\d+$/.test(value) && BigInt(value) < 9223372036854710272n) {
+            ceiling = ceiling === null ? Number(value) : Math.min(ceiling, Number(value));
+          }
+        }
+        if (directory === root) break;
+        directory = directory.slice(0, directory.lastIndexOf("/"));
+      }
+    }
+    if (!found) return;
+    expect(process.constrainedMemory()).toBe(ceiling ?? 0);
+    if (ceiling !== null) expect(process.availableMemory()).toBeLessThanOrEqual(ceiling);
   });
 
   it("process.report", () => {

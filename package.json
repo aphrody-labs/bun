@@ -2,7 +2,7 @@
   "name": "bun",
   "version": "1.4.4",
   "private": true,
-  "repository": "github:aphrody-labs/bun-os",
+  "repository": "github:aphrody-labs/bun",
   "workspaces": [
     "./packages/bun-types",
     "./packages/bun-web"
@@ -46,7 +46,7 @@
     "jsc:build": "bun scripts/build.ts --profile=release-local --build-dir=build/release-local --target=WebKit",
     "jsc:build:debug": "bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local --target=WebKit",
     "jsc:build:lto": "bun scripts/build.ts --profile=release-local --lto=on --build-dir=build/release-local-lto --target=WebKit",
-    "typecheck": "bun check --noEmit && bun check --noEmit --project test/tsconfig.json",
+    "typecheck": "bun run typecheck:prepare && bun check --noEmit && bun check --noEmit --project test/tsconfig.json",
     "fmt": "bun fmt --write --ignore-pattern '**/*fixture*.*' scripts packages src/js test",
     "fmt:cpp": "bun run clang-format",
     "fmt:rust": "cargo fmt --all",
@@ -84,7 +84,8 @@
     "buv:docs": "bun scripts/aphrody/buv.ts docs",
     "buv:embedded": "bun scripts/aphrody/buv.ts embedded",
     "buv:bench": "bun scripts/aphrody/bench.ts",
-    "buv:formats": "bun scripts/aphrody/formats.ts"
+    "buv:formats": "bun scripts/aphrody/formats.ts",
+    "typecheck:prepare": "bun run --cwd packages/bun-plugin-tailwind types:prepare"
   },
   "devDependencies": {
     "@lezer/common": "1.5.2",

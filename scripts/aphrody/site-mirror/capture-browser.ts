@@ -92,6 +92,15 @@ export async function capturePage(
       session,
     );
     await command("Page.navigate", { url }, session);
+    await command(
+      "Runtime.evaluate",
+      {
+        expression:
+          "document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))",
+        awaitPromise: true,
+      },
+      session,
+    );
     const themeState = await command(
       "Runtime.evaluate",
       {
@@ -112,7 +121,7 @@ export async function capturePage(
     const state = await command(
       "Runtime.evaluate",
       {
-        expression: `JSON.stringify({url:location.href,title:document.title,readyState:document.readyState,width:innerWidth,height:innerHeight,links:Array.from(document.querySelectorAll('a[href]')).map(a=>({text:a.textContent.trim().slice(0,160),href:a.href})),buttons:Array.from(document.querySelectorAll('button')).map(b=>({text:b.textContent.trim().slice(0,160),label:b.getAttribute('aria-label')})),scripts:Array.from(document.scripts).filter(s=>s.src).map(s=>s.src),text:document.body.innerText.slice(0,60000)})`,
+        expression: `JSON.stringify({url:location.href,title:document.title,readyState:document.readyState,symbolFonts:Array.from(document.fonts).filter(f=>f.family.includes("Symbols")).map(f=>({family:f.family,status:f.status})),symbols:Array.from(document.querySelectorAll(".fusion-symbol")).slice(0,8).map(e=>({name:e.textContent,font:getComputedStyle(e).fontFamily,features:getComputedStyle(e).fontFeatureSettings,width:e.getBoundingClientRect().width})),width:innerWidth,height:innerHeight,links:Array.from(document.querySelectorAll('a[href]')).map(a=>({text:a.textContent.trim().slice(0,160),href:a.href})),buttons:Array.from(document.querySelectorAll('button')).map(b=>({text:b.textContent.trim().slice(0,160),label:b.getAttribute('aria-label')})),scripts:Array.from(document.scripts).filter(s=>s.src).map(s=>s.src),text:document.body.innerText.slice(0,60000)})`,
         returnByValue: true,
       },
       session,
@@ -221,7 +230,16 @@ export async function capturePage(
         await Bun.sleep(25);
       } while (Date.now() < deadline);
     }
+    const keyboard = await command(
+      "Runtime.evaluate",
+      {
+        expression: `(()=>{const input=document.querySelector('#fusion-search #q');if(!input)return JSON.stringify({available:false});input.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));const selected=document.querySelector('#results .sel')?.getAttribute('href')||null;input.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));return JSON.stringify({available:true,selected,searchClosed:document.getElementById('fusion-search').hidden,menuClosed:document.getElementById('fusion-menu')?.hidden,expanded:document.querySelector('button[aria-label="Open menu"]')?.getAttribute('aria-expanded')});})()`,
+        returnByValue: true,
+      },
+      session,
+    );
     Object.assign(report, {
+      keyboard: JSON.parse(String(keyboard.result?.value)),
       controls: JSON.parse(String(controls.result?.value)),
       copyCollector: JSON.parse(String(copied.result?.value)),
       menus,

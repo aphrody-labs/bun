@@ -52,14 +52,9 @@ fn main() {
                 p
             },
             None => {
-                // Fallback: use host V8 (will produce wrong-arch snapshot).
-                eprintln!(
-                    "[bun_browser_js build.rs] WARNING: cross-mksnapshot not found, falling back to \
-                     host V8 snapshot"
+                panic!(
+                    "cross-mksnapshot for {target} is required: refusing to embed a host V8 snapshot in the target browser"
                 );
-                eprintln!("[bun_browser_js build.rs] The snapshot may crash on the target device!");
-                generate_host_snapshot(bootstrap_js, &snapshot_path);
-                return;
             },
         };
 
@@ -148,7 +143,7 @@ fn main() {
     }
 }
 
-/// Generate a snapshot using the host V8 (for native builds or as fallback).
+/// Generate a snapshot using the host V8 for matching native targets.
 fn generate_host_snapshot(bootstrap_js: &str, snapshot_path: &PathBuf) {
     let bootstrap_js = bootstrap_js.to_string();
     let output = deno_core::snapshot::create_snapshot(

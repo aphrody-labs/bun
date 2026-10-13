@@ -33,6 +33,13 @@ loop. The VM registry is authoritative, removes each ID at most once, and
 releases remaining contexts before JSC VM teardown. Explicit `destroy()` is
 idempotent.
 
+Each page has its own JSC microtask queue. Page Promise callbacks are drained
+inside the evaluation deadline, without draining Bun's host microtasks.
+Destruction discards the page queue and cancels its pending deferred-work
+tickets before releasing the context and shared DOM ownership. A live page's
+`FinalizationRegistry` callbacks still require separate deferred-work deadline
+ownership; the synchronous evaluation timeout does not qualify that case.
+
 ## Integration and qualification status
 
 The Rust/C++ bridge, class definition, VM registry, task dispatch, and focused
@@ -45,7 +52,7 @@ source URL/origin metadata; timeout during script and hostile result conversion
 followed by successful host and page execution; explicit and GC teardown;
 VM shutdown with queued finalizer work.
 
-No async jobs, modules, memory quota, network/resource loading, navigation,
+No host async resources, modules, memory quota, network/resource loading, navigation,
 proxy enforcement, or full origin policy is implemented. The creator must be a
 privileged page-owner path that has already selected and authorized the origin
 and frame. `origin` is currently metadata, not an access-control decision.

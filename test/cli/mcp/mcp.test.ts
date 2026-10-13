@@ -6,7 +6,12 @@ import { join } from "path";
 type Json = any;
 
 /** `bun mcp` over stdio with an isolated home, agent directory and memory database. */
-function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, args: string[] = []) {
+function mcp(
+  cwd: string,
+  home: string,
+  extraEnv: Record<string, string> = {},
+  args: string[] = [],
+) {
   const env: Record<string, string | undefined> = {
     ...bunEnv,
     HOME: home,
@@ -18,7 +23,13 @@ function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, a
     BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "0",
     ...extraEnv,
   };
-  for (const k of ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "REDIS_URL", "VALKEY_URL", "BUN_MCP_MAX_TOKENS"])
+  for (const k of [
+    "CLAUDECODE",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "REDIS_URL",
+    "VALKEY_URL",
+    "BUN_MCP_MAX_TOKENS",
+  ])
     if (!(k in extraEnv)) delete env[k];
   const proc = Bun.spawn({
     cmd: [bunExe(), "mcp", ...args],
@@ -56,7 +67,11 @@ function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, a
   async function call(name: string, args: Json = {}) {
     const reply = await request("tools/call", { name, arguments: args });
     if (reply.error) throw new Error(JSON.stringify(reply.error));
-    return reply.result as { content: { type: string; text: string }[]; isError: boolean; _meta?: { cursor: string } };
+    return reply.result as {
+      content: { type: string; text: string }[];
+      isError: boolean;
+      _meta?: { cursor: string };
+    };
   }
   async function initialize() {
     const reply = await request("initialize", {
@@ -64,7 +79,9 @@ function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, a
       capabilities: {},
       clientInfo: { name: "test-client", version: "1.0.0" },
     });
-    proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
+    proc.stdin.write(
+      JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n",
+    );
     proc.stdin.flush();
     return reply;
   }
@@ -82,23 +99,26 @@ function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, a
 }
 
 describe.concurrent("bun mcp", () => {
-  test.each(["generic", "codex", "claude", "agy"])("reads installed plugin skills for %s", async profile => {
-    const target = profile === "generic" ? "codex" : profile;
-    using dir = tempDir("mcp-installed-skills", {
-      "runtime-install/agent/skills/installed-probe/SKILL.md": "# Legacy skill body",
-      [`runtime-install/agent-plugin/${target}/skills/installed-probe/SKILL.md`]:
-        "---\nname: installed-probe\ndescription: Installed plugin probe\n---\n# Installed skill body",
-    });
-    await using server = mcp(String(dir), String(dir), {
-      BUN_INSTALL: join(String(dir), "runtime-install"),
-      BUN_MCP_PROFILE: profile,
-    });
-    await server.initialize();
-    const skill = await server.call("skill_read", { name: "installed-probe" });
-    expect(skill.isError).toBe(false);
-    expect(skill.content[0].text).toContain("Installed skill body");
-    expect(skill.content[0].text).not.toContain("Legacy skill body");
-  });
+  test.each(["generic", "codex", "claude", "agy"])(
+    "reads installed plugin skills for %s",
+    async (profile) => {
+      const target = profile === "generic" ? "codex" : profile;
+      using dir = tempDir("mcp-installed-skills", {
+        "runtime-install/agent/skills/installed-probe/SKILL.md": "# Legacy skill body",
+        [`runtime-install/agent-plugin/${target}/skills/installed-probe/SKILL.md`]:
+          "---\nname: installed-probe\ndescription: Installed plugin probe\n---\n# Installed skill body",
+      });
+      await using server = mcp(String(dir), String(dir), {
+        BUN_INSTALL: join(String(dir), "runtime-install"),
+        BUN_MCP_PROFILE: profile,
+      });
+      await server.initialize();
+      const skill = await server.call("skill_read", { name: "installed-probe" });
+      expect(skill.isError).toBe(false);
+      expect(skill.content[0].text).toContain("Installed skill body");
+      expect(skill.content[0].text).not.toContain("Legacy skill body");
+    },
+  );
 
   test("initialize handshake", async () => {
     using dir = tempDir("mcp-init", {});
@@ -107,9 +127,16 @@ describe.concurrent("bun mcp", () => {
     expect(reply.result.protocolVersion).toBe("2025-06-18");
     expect(reply.result.serverInfo.name).toBe("bun");
     expect(reply.result.serverInfo.version).toStartWith(Bun.version);
-    expect(Object.keys(reply.result.capabilities).sort()).toEqual(["logging", "prompts", "resources", "tools"]);
+    expect(Object.keys(reply.result.capabilities).sort()).toEqual([
+      "logging",
+      "prompts",
+      "resources",
+      "tools",
+    ]);
     expect(reply.result.instructions).toContain("profile generic");
-    expect(reply.result.instructions).toContain("Experimental native file and shell tools are disabled");
+    expect(reply.result.instructions).toContain(
+      "Experimental native file and shell tools are disabled",
+    );
     for (const name of ["read_file", "write_file", "edit_file", "shell"]) {
       const reply = await server.request("tools/call", { name, arguments: {} });
       expect(reply.error.code).toBe(-32602);
@@ -121,7 +148,10 @@ describe.concurrent("bun mcp", () => {
   test("an unknown protocol version gets the latest one", async () => {
     using dir = tempDir("mcp-version", {});
     await using server = mcp(String(dir), String(dir));
-    const reply = await server.request("initialize", { protocolVersion: "1999-01-01", capabilities: {} });
+    const reply = await server.request("initialize", {
+      protocolVersion: "1999-01-01",
+      capabilities: {},
+    });
     expect(reply.result.protocolVersion).toBe("2025-06-18");
   });
 
@@ -170,7 +200,8 @@ describe.concurrent("bun mcp", () => {
       "test",
     ])
       expect(names).toContain(name);
-    for (const name of ["read_file", "write_file", "edit_file", "shell"]) expect(names).not.toContain(name);
+    for (const name of ["read_file", "write_file", "edit_file", "shell"])
+      expect(names).not.toContain(name);
   });
 
   test("native browser MCP parses inert HTML using the shared browser DOM", async () => {
@@ -179,7 +210,9 @@ describe.concurrent("bun mcp", () => {
     await server.initialize();
     const reply = await server.call("html_parse", {
       html: "<!doctype html><script>process.exit(99)</script><table><tr><td>A &amp; B</table><p id='first'>one<p>two",
-      selector: "table > tbody > tr > td, p", include_html: true, limit: 10,
+      selector: "table > tbody > tr > td, p",
+      include_html: true,
+      limit: 10,
     });
     expect(reply.isError).toBe(false);
     const result = JSON.parse(reply.content[0].text);
@@ -188,7 +221,10 @@ describe.concurrent("bun mcp", () => {
     expect(result.matches).toBe(3);
     expect(result.nodes.map((node: Json) => node.text)).toEqual(["A & B", "one", "two"]);
     expect(result.nodes[0].html).toBe("<td>A &amp; B</td>");
-    const other = await server.call("html_parse", { html: "<p>independent</p>", selector: "#first" });
+    const other = await server.call("html_parse", {
+      html: "<p>independent</p>",
+      selector: "#first",
+    });
     expect(JSON.parse(other.content[0].text).matches).toBe(0);
   });
 
@@ -197,7 +233,7 @@ describe.concurrent("bun mcp", () => {
     await using server = mcp(String(dir), String(dir));
     await server.initialize();
     const reply = await server.call("css_parse", {
-      css: '@layer reset, app; .a { width: ; height: 7px; background-image: url(../asset.svg#icon) } .a { height: 9px !important }',
+      css: "@layer reset, app; .a { width: ; height: 7px; background-image: url(../asset.svg#icon) } .a { height: 9px !important }",
     });
     expect(reply.isError).toBe(false);
     const result = JSON.parse(reply.content[0].text);
@@ -231,7 +267,10 @@ describe.concurrent("bun mcp", () => {
     }
     for (const name of ["html_parse", "css_parse"]) {
       const key = name === "html_parse" ? "html" : "css";
-      const reply = await server.request("tools/call", { name, arguments: { [key]: "a".repeat(2 * 1024 * 1024 + 1) } });
+      const reply = await server.request("tools/call", {
+        name,
+        arguments: { [key]: "a".repeat(2 * 1024 * 1024 + 1) },
+      });
       expect(reply.result.isError).toBe(true);
       expect(reply.result.content[0].text).toContain("2 MiB");
     }
@@ -242,11 +281,16 @@ describe.concurrent("bun mcp", () => {
     await using server = mcp(String(dir), String(dir));
     await server.initialize();
     const reply = await server.call("html_parse", {
-      html: `<p>${"日".repeat(400)}</p>`.repeat(150), selector: "p", limit: 100,
-      include_html: true, max_tokens: 50000,
+      html: `<p>${"日".repeat(400)}</p>`.repeat(150),
+      selector: "p",
+      limit: 100,
+      include_html: true,
+      max_tokens: 50000,
     });
     expect(reply.isError).toBe(false);
-    expect(new TextEncoder().encode(reply.content[0].text).byteLength).toBeLessThanOrEqual(48 * 1024);
+    expect(new TextEncoder().encode(reply.content[0].text).byteLength).toBeLessThanOrEqual(
+      48 * 1024,
+    );
     const result = JSON.parse(reply.content[0].text);
     expect(result.matches).toBe(150);
     expect(result.returned).toBeGreaterThan(0);
@@ -327,7 +371,9 @@ describe.concurrent("bun mcp", () => {
     const applied = await server.call("vfs_apply", { plan });
     expect(applied.content[0].text).toStartWith("Applied.");
     expect(applied.isError).toBe(false);
-    expect(readFileSync(join(String(dir), "src/a.ts"), "utf8")).toBe("export const greeting = 'bonjour';\n");
+    expect(readFileSync(join(String(dir), "src/a.ts"), "utf8")).toBe(
+      "export const greeting = 'bonjour';\n",
+    );
     expect(readFileSync(join(String(dir), "src/b.ts"), "utf8")).toContain("'bonjour'");
     expect((await server.call("vfs_apply", { plan })).isError).toBe(true);
 
@@ -337,39 +383,74 @@ describe.concurrent("bun mcp", () => {
 
   test("native file revisions reject stale writes and apply exact previews", async () => {
     using dir = tempDir("mcp-native-files", { "a.txt": "one\ntwo\nthree\n" });
-    await using server = mcp(String(dir), String(dir), { BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1" });
+    await using server = mcp(String(dir), String(dir), {
+      BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1",
+    });
     await server.initialize();
     const read = await server.call("read_file", { path: "a.txt", start_line: 2, line_count: 1 });
     expect(read.content[0].text).toContain("2: two\n");
     expect(read.content[0].text).not.toContain("three");
     const revision = Number(read.content[0].text.match(/revision: (\d+)/)![1]);
-    const preview = await server.call("edit_file", { path: "a.txt", revision, find: "two", replace: "second" });
+    const preview = await server.call("edit_file", {
+      path: "a.txt",
+      revision,
+      find: "two",
+      replace: "second",
+    });
     expect(preview.isError).toBe(false);
     expect(await Bun.file(join(String(dir), "a.txt")).text()).toContain("two");
     const plan = Number(preview.content[0].text.match(/"plan": (\d+)/)![1]);
     await Bun.write(join(String(dir), "a.txt"), "concurrent owner edit\n");
     expect((await server.call("vfs_apply", { plan })).isError).toBe(true);
     expect(await Bun.file(join(String(dir), "a.txt")).text()).toBe("concurrent owner edit\n");
-    expect((await server.call("write_file", { path: "a.txt", revision, content: "lost edit" })).isError).toBe(true);
+    expect(
+      (await server.call("write_file", { path: "a.txt", revision, content: "lost edit" })).isError,
+    ).toBe(true);
     const fresh = await server.call("read_file", { path: "a.txt" });
     const freshRevision = Number(fresh.content[0].text.match(/revision: (\d+)/)![1]);
-    const guarded = await server.call("write_file", { path: "a.txt", revision: freshRevision, content: "reviewed update\n" });
+    const guarded = await server.call("write_file", {
+      path: "a.txt",
+      revision: freshRevision,
+      content: "reviewed update\n",
+    });
     const guardedPlan = Number(guarded.content[0].text.match(/"plan": (\d+)/)![1]);
     expect((await server.call("vfs_apply", { plan: guardedPlan })).isError).toBe(false);
     expect(await Bun.file(join(String(dir), "a.txt")).text()).toBe("reviewed update\n");
-    const create = await server.call("write_file", { path: "new.txt", create_only: true, content: "created\n" });
+    const create = await server.call("write_file", {
+      path: "new.txt",
+      create_only: true,
+      content: "created\n",
+    });
     const createPlan = Number(create.content[0].text.match(/"plan": (\d+)/)![1]);
     expect((await server.call("vfs_apply", { plan: createPlan })).isError).toBe(false);
     expect(await Bun.file(join(String(dir), "new.txt")).text()).toBe("created\n");
-    expect((await server.call("write_file", { path: "new.txt", create_only: true, content: "overwrite" })).isError).toBe(true);
+    expect(
+      (
+        await server.call("write_file", {
+          path: "new.txt",
+          create_only: true,
+          content: "overwrite",
+        })
+      ).isError,
+    ).toBe(true);
   });
 
   test("native file tools reject protected paths and workspace escapes", async () => {
-    using dir = tempDir("mcp-native-paths", { "workspace/.env": "protected", "workspace/binary.txt": "a\0b", "escape.txt": "outside" });
+    using dir = tempDir("mcp-native-paths", {
+      "workspace/.env": "protected",
+      "workspace/binary.txt": "a\0b",
+      "escape.txt": "outside",
+    });
     const workspace = join(String(dir), "workspace");
-    await using server = mcp(workspace, String(dir), { BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1" });
+    await using server = mcp(workspace, String(dir), {
+      BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1",
+    });
     await server.initialize();
-    for (const [path, message] of [[".env", "protected"], ["../escape.txt", "working directory"], ["binary.txt", "binary"]]) {
+    for (const [path, message] of [
+      [".env", "protected"],
+      ["../escape.txt", "working directory"],
+      ["binary.txt", "binary"],
+    ]) {
       const result = await server.call("read_file", { path });
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain(message);
@@ -380,9 +461,14 @@ describe.concurrent("bun mcp", () => {
 
   test("shell executes embedded Bun builtins with environment and exit status", async () => {
     using dir = tempDir("mcp-native-shell", {});
-    await using server = mcp(String(dir), String(dir), { BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1" });
+    await using server = mcp(String(dir), String(dir), {
+      BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1",
+    });
     await server.initialize();
-    const success = await server.call("shell", { command: "echo $BUN_NATIVE_PROBE > result.txt && cat result.txt", env: { BUN_NATIVE_PROBE: "native shell" } });
+    const success = await server.call("shell", {
+      command: "echo $BUN_NATIVE_PROBE > result.txt && cat result.txt",
+      env: { BUN_NATIVE_PROBE: "native shell" },
+    });
     expect(success.content[0].text).toContain("native shell");
     expect(success.content[0].text).toContain("exit: 0");
     expect(success.isError).toBe(false);
@@ -394,7 +480,9 @@ describe.concurrent("bun mcp", () => {
 
   test("shell terminates an owned command at its timeout", async () => {
     using dir = tempDir("mcp-native-shell-timeout", {});
-    await using server = mcp(String(dir), String(dir), { BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1" });
+    await using server = mcp(String(dir), String(dir), {
+      BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "1",
+    });
     await server.initialize();
     const result = await server.call("shell", {
       command: '"$BUN_MCP_PROBE_EXE" -e "for (;;) {}"',
@@ -417,8 +505,10 @@ describe.concurrent("bun mcp", () => {
         description: "String left pad",
         license: "WTFPL",
       }),
-      "node_modules/left-pad/README.md": "# left-pad\n\nPads strings.\n\n## Usage\n\nleftPad('foo', 5)\n",
-      "node_modules/left-pad/index.js": "module.exports = leftPad;\nfunction leftPad(str, len) {}\n",
+      "node_modules/left-pad/README.md":
+        "# left-pad\n\nPads strings.\n\n## Usage\n\nleftPad('foo', 5)\n",
+      "node_modules/left-pad/index.js":
+        "module.exports = leftPad;\nfunction leftPad(str, len) {}\n",
     });
     await using server = mcp(String(dir), String(dir));
     await server.initialize();
@@ -429,17 +519,25 @@ describe.concurrent("bun mcp", () => {
     expect(ingest).not.toContain("secret");
 
     const list = JSON.parse((await server.call("deps_list", { ecosystem: "npm" })).content[0].text);
-    expect(list.dependencies.map((d: Json) => [d.name, d.version])).toEqual([["left-pad", "1.3.0"]]);
+    expect(list.dependencies.map((d: Json) => [d.name, d.version])).toEqual([
+      ["left-pad", "1.3.0"],
+    ]);
 
-    const read = JSON.parse((await server.call("deps_read", { name: "left-pad", path: "index.js" })).content[0].text);
+    const read = JSON.parse(
+      (await server.call("deps_read", { name: "left-pad", path: "index.js" })).content[0].text,
+    );
     expect(read.content).toStartWith("module.exports = leftPad;");
-    expect((await server.call("deps_read", { name: "left-pad", path: "../package.json" })).isError).toBe(true);
+    expect(
+      (await server.call("deps_read", { name: "left-pad", path: "../package.json" })).isError,
+    ).toBe(true);
 
     const hits = JSON.parse(
       (await server.call("deps_search", { query: "leftPad", names: ["left-pad"] })).content[0].text,
     );
     expect(hits.matches.length).toBe(3);
-    const docs = JSON.parse((await server.call("deps_docs", { query: "usage", names: ["left-pad"] })).content[0].text);
+    const docs = JSON.parse(
+      (await server.call("deps_docs", { query: "usage", names: ["left-pad"] })).content[0].text,
+    );
     expect(docs.results[0].heading).toBe("## Usage");
   });
 
@@ -487,7 +585,10 @@ describe.concurrent("bun mcp", () => {
 describe.concurrent("bun mcp install", () => {
   test("adds the bun server to Claude, Codex and agy configs and keeps the others", async () => {
     using dir = tempDir("mcp-install", {
-      ".claude.json": JSON.stringify({ numStartups: 3, mcpServers: { other: { command: "other" } } }),
+      ".claude.json": JSON.stringify({
+        numStartups: 3,
+        mcpServers: { other: { command: "other" } },
+      }),
       ".codex/config.toml": 'model = "x"\n\n[mcp_servers.other]\ncommand = "other"\n',
     });
     const home = String(dir);
@@ -498,8 +599,17 @@ describe.concurrent("bun mcp install", () => {
       BUN_INSTALL: join(home, ".bun"),
       CODEX_HOME: join(home, ".codex"),
     };
-    await using proc = Bun.spawn({ cmd: [bunExe(), "mcp", "install", "all"], env, stdout: "pipe", stderr: "pipe" });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "mcp", "install", "all"],
+      env,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout.text(),
+      proc.stderr.text(),
+      proc.exited,
+    ]);
     expect(stderr).toBe("");
     expect(stdout).toContain("installed claude");
     expect(stdout).toContain("installed codex");
@@ -516,10 +626,14 @@ describe.concurrent("bun mcp install", () => {
     expect(codex).toContain("[mcp_servers.bun]");
     expect(codex).toContain('args = ["mcp"]');
 
-    const agy = JSON.parse(readFileSync(join(home, ".gemini", "config", "mcp_config.json"), "utf8"));
+    const agy = JSON.parse(
+      readFileSync(join(home, ".gemini", "config", "mcp_config.json"), "utf8"),
+    );
     expect(agy.mcpServers.bun.args).toEqual(["mcp"]);
 
-    const manifest = JSON.parse(readFileSync(join(home, ".bun", "agent", "mcp", "manifest.json"), "utf8"));
+    const manifest = JSON.parse(
+      readFileSync(join(home, ".bun", "agent", "mcp", "manifest.json"), "utf8"),
+    );
     expect(manifest.installed).toEqual(["agy", "claude", "codex"]);
     expect(manifest.tools.map((t: Json) => t.name)).toContain("docs_search");
     expect(exitCode).toBe(0);
@@ -537,7 +651,11 @@ describe.concurrent("bun mcp install", () => {
   });
 
   test("tools --markdown prints the tool table", async () => {
-    await using proc = Bun.spawn({ cmd: [bunExe(), "mcp", "tools", "--markdown"], env: bunEnv, stdout: "pipe" });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "mcp", "tools", "--markdown"],
+      env: bunEnv,
+      stdout: "pipe",
+    });
     const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
     expect(stdout).toStartWith("| Tool | Description | Arguments | Kind |");
     expect(stdout).toContain("| `docs_search` |");
@@ -550,7 +668,12 @@ test("bun mcp --http serves streamable HTTP", async () => {
   await using proc = Bun.spawn({
     cmd: [bunExe(), "mcp", "--http", "0"],
     cwd: String(dir),
-    env: { ...bunEnv, HOME: String(dir), USERPROFILE: String(dir), BUN_INSTALL: join(String(dir), ".bun") },
+    env: {
+      ...bunEnv,
+      HOME: String(dir),
+      USERPROFILE: String(dir),
+      BUN_INSTALL: join(String(dir), ".bun"),
+    },
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -565,7 +688,12 @@ test("bun mcp --http serves streamable HTTP", async () => {
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } }),
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2025-06-18" },
+    }),
   });
   expect(res.status).toBe(200);
   expect(res.headers.get("mcp-session-id")).toBeTruthy();
@@ -577,7 +705,11 @@ test("bun mcp --http serves streamable HTTP", async () => {
     body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
   });
   expect(note.status).toBe(202);
-  const foreign = await fetch(url, { method: "POST", headers: { origin: "https://evil.example" }, body: "{}" });
+  const foreign = await fetch(url, {
+    method: "POST",
+    headers: { origin: "https://evil.example" },
+    body: "{}",
+  });
   expect(foreign.status).toBe(403);
   proc.kill();
 });

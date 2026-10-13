@@ -9,7 +9,7 @@ export const PIPELINES = {
   native: {
     workflow: "aphrody-publish-native.yml",
     products: ["@aphrody/bun-plugin-n2b", "@aphrody/bun-plugin-oxc"],
-    artifacts: "native-<id>-<platform>",
+    artifacts: "Factory draft Node-API assets, SHA256SUMS.txt and factory-qualification.json",
     publicationRequired: false,
   },
   mdx: {
@@ -27,7 +27,7 @@ export const PIPELINES = {
   runtime: {
     workflow: "aphrody-release.yml",
     products: ["@aphrody/bun-runtime", "bun-<os>-<arch>.zip", "SHA256SUMS.txt"],
-    artifacts: "smoked-<triplet>, GitHub release zip assets and SHA256SUMS.txt",
+    artifacts: "Factory draft runtime zip assets, SHA256SUMS.txt and factory-qualification.json",
     publicationRequired: true,
   },
 } as const;
@@ -75,6 +75,8 @@ export function nativePlan(
   publish = false,
   version?: string,
   platforms?: string,
+  factoryTag?: string,
+  releaseChannel?: string,
 ): NativePlan {
   ownerRepository(root, repository);
   const tree = new GitTree(root, ref);
@@ -88,10 +90,21 @@ export function nativePlan(
   if (!contract) throw new Error(`Workflow has no dispatch input contract: ${path}`);
   for (const [name, value] of Object.entries(contract) as [string, Document][])
     if (value.default !== undefined) inputs[name] = String(value.default);
+  if (factoryTag !== undefined) {
+    if (!contract["factory-tag"] || !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(factoryTag))
+      throw new Error("Invalid owner factory draft tag");
+    inputs["factory-tag"] = factoryTag;
+  }
+  if (releaseChannel !== undefined) {
+    if (!contract["release-channel"] || !["candidate", "stable"].includes(releaseChannel))
+      throw new Error("Invalid release channel");
+    inputs["release-channel"] = releaseChannel;
+  }
   if (pipeline !== "runtime") inputs["dry-run"] = String(!publish);
   else {
     inputs["publish-npm"] = "false";
-    inputs["publish-only"] = "false";
+    if (contract.publish) inputs.publish = String(publish);
+    else inputs["publish-only"] = "false";
   }
   if (version !== undefined) {
     if (!contract.version || !/^\d+\.\d+\.\d+(?:-aphrody\.\d+)?$/.test(version))
@@ -120,10 +133,14 @@ export function nativePlan(
       if (!allowed.includes(repository)) blockers.push(`Workflow job ${name} excludes ${repository}`);
     }
   }
-  if (spec.publicationRequired && !publish)
+  if (spec.publicationRequired && !publish && !contract.publish)
     blockers.push(
       "Runtime workflow publishes GitHub release assets even with publish-npm=false; explicit --publish is required",
     );
+  if (publish && contract["factory-tag"] && !inputs["factory-tag"])
+    blockers.push("Explicit owner factory draft tag is required before native publication");
+  if (publish && pipeline === "native" && contract["release-channel"] && inputs["release-channel"] !== "stable")
+    blockers.push("npm latest requires stable factory qualification");
   const declaredVersion = JSON.parse(tree.text("package.json") ?? "{}").version;
   if (version && version.split("-aphrody.")[0] !== declaredVersion)
     blockers.push(`Requested ${version} differs from source ${declaredVersion}`);
@@ -172,7 +189,7 @@ export function nativePlan(
     publication: publish,
     qualifications: [
       "Remote dispatch ref must equal selected source SHA",
-      "Every required build/smoke job must complete successfully",
+      "Factory artifacts require exact source, checksums, passing gates and native platform receipts",
       "GitHub artifact digests identify workflow archives, not npm packages",
       "Registry publication and consumer installation require their own exact-version integrity receipts",
     ],
@@ -257,7 +274,10 @@ export async function runReceipt(plan: NativePlan, runId: string, out?: string) 
     if (artifacts.length >= result.total_count || !result.artifacts.length) break;
   }
   const requiredJobs = (run.jobs ?? []).filter((job: Document) =>
-    plan.pipeline === "inspector" ? job.name === "publish" : /^build\s/.test(job.name),
+    plan.pipeline === "inspector" ||
+    ((plan.pipeline === "native" || plan.pipeline === "runtime") && !plan.artifactContract.startsWith("native-"))
+      ? job.name === "publish"
+      : /^build\s/.test(job.name),
   );
   const sourceMatches = run.headSha === plan.source.revision && definition.path === plan.source.workflow;
   const completed = run.status === "completed";
@@ -293,12 +313,14 @@ export async function main(args = Bun.argv.slice(2)) {
     args,
     options: {
       root: { type: "string", default: resolve(import.meta.dir, "../..") },
-      repo: { type: "string", default: "aphrody-labs/bun-os" },
+      repo: { type: "string", default: "aphrody-labs/bun" },
       ref: { type: "string", default: "main" },
       pipeline: { type: "string", default: "native" },
       operation: { type: "string", default: "plan" },
       version: { type: "string" },
       platforms: { type: "string" },
+      "factory-tag": { type: "string" },
+      "release-channel": { type: "string" },
       publish: { type: "boolean" },
       apply: { type: "boolean" },
       remote: { type: "boolean" },
@@ -317,6 +339,8 @@ export async function main(args = Bun.argv.slice(2)) {
     values.publish,
     values.version,
     values.platforms,
+    values["factory-tag"],
+    values["release-channel"],
   );
   let result: Document = { plan };
   if (values.remote || values.operation === "dispatch") result.remote = remoteQualification(plan);

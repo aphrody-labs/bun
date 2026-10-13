@@ -161,9 +161,30 @@ Full documentation is available at <magenta>https://bun.com/docs/cli/run<r>
         #[cfg(windows)]
         {
             let _ = (path, cwd);
-            const WIN: &[u8] = b"C:\\Windows\\System32\\cmd.exe";
-            path_buf[..WIN.len()].copy_from_slice(WIN);
-            return Some(WIN.len());
+            let mut system_directory = bun_paths::w_path_buffer_pool::get();
+            // SAFETY: the pooled UTF-16 buffer is writable for its full length.
+            let length = unsafe {
+                sys::windows::kernel32::GetSystemDirectoryW(
+                    system_directory.0.as_mut_ptr(), system_directory.0.len() as u32,
+                )
+            } as usize;
+            const SUFFIX: &[u8] = b"\\cmd.exe";
+            // Each UTF-16 code unit needs at most three UTF-8 bytes; reserve
+            // the suffix and terminator before invoking the checked converter.
+            if length == 0 || length >= system_directory.0.len()
+                || length * 3 + SUFFIX.len() + 1 > path_buf.len() {
+                return None;
+            }
+            let directory = strings::convert_utf16_to_utf8_in_buffer(&mut path_buf[..], &system_directory.0[..length]);
+            let length = directory.len();
+            if length + SUFFIX.len() >= path_buf.len() {
+                return None;
+            }
+            path_buf[length..length + SUFFIX.len()].copy_from_slice(SUFFIX);
+            let length = length + SUFFIX.len();
+            path_buf[length] = 0;
+            let shell = ZStr::from_buf(&path_buf[..], length);
+            return sys::is_executable_file_path(shell).then_some(length);
         }
 
         #[cfg(not(windows))]
@@ -272,9 +293,6 @@ Full documentation is available at <magenta>https://bun.com/docs/cli/run<r>
         use_system_shell: bool,
         shell_path: Option<&[u8]>,
     ) -> crate::Result<()> {
-        let shell_search_path = shell_path.unwrap_or_else(|| env.get(b"PATH").unwrap_or(b""));
-        let shell_bin =
-            Self::find_shell(shell_search_path, cwd).ok_or(crate::Error::MissingShell)?;
         env.map
             .put(b"npm_lifecycle_event", name)
             .expect("unreachable");
@@ -366,6 +384,11 @@ Full documentation is available at <magenta>https://bun.com/docs/cli/run<r>
             }
             return Ok(());
         }
+
+        // Bun's interpreter has no external-shell prerequisite, including in
+        // minimal root filesystems. Resolve only the requested system shell.
+        let shell_search_path = shell_path.unwrap_or_else(|| env.get(b"PATH").unwrap_or(b""));
+        let shell_bin = Self::find_shell(shell_search_path, cwd).ok_or(crate::Error::MissingShell)?;
 
         use crate::api::bun_process::{Status as SpawnStatus, sync};
 

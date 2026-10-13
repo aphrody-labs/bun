@@ -89,6 +89,21 @@ function withAbi(cfg: Config, abi: Abi): Config {
   return { ...cfg, abi };
 }
 
+describe("native coreutils feature", () => {
+  test("the standard Bun build forwards the enabled native owner to Cargo", () => {
+    const cfg = resolve({ os: "linux", arch: "x64" });
+    expect(cfg.coreutils).toBe(true);
+    const args = cargoBuildInvocation(cfg).args;
+    expect(args[args.indexOf("--features") + 1]).toBe("coreutils");
+  });
+
+  test("the existing build configuration supports an explicit opt out", () => {
+    const cfg = resolve({ os: "linux", arch: "x64", coreutils: false });
+    expect(cfg.coreutils).toBe(false);
+    expect(cargoBuildInvocation(cfg).args).not.toContain("--features");
+  });
+});
+
 describe("allRustTargets", () => {
   test("is exactly the set of triples .buildkite/ci.ts builds", () => {
     const ciScript = readFileSync(join(repoRoot, ".buildkite", "ci.ts"), "utf8");
@@ -98,14 +113,14 @@ describe("allRustTargets", () => {
     const entries =
       matrix[1]!
         .split("\n")
-        .filter(line => !line.trim().startsWith("//"))
+        .filter((line) => !line.trim().startsWith("//"))
         .join("\n")
         .match(/\{[^}]*\}/g) ?? [];
     // CI builds x64 and aarch64 for each of linux, darwin, windows and
     // freebsd; fewer entries than that means the extraction above broke.
     expect(entries.length).toBeGreaterThanOrEqual(8);
 
-    const built = entries.map(entry => {
+    const built = entries.map((entry) => {
       const field = (name: string) => new RegExp(`\\b${name}: "([^"]+)"`).exec(entry)?.[1];
       const os = field("os") as OS;
       const arch = field("arch") as Arch;
@@ -119,10 +134,12 @@ describe("allRustTargets", () => {
   });
 
   test("rust-toolchain.toml preinstalls std for exactly the triples that have a prebuilt one", () => {
-    const { toolchain } = Bun.TOML.parse(readFileSync(join(repoRoot, "rust-toolchain.toml"), "utf8")) as {
+    const { toolchain } = Bun.TOML.parse(
+      readFileSync(join(repoRoot, "rust-toolchain.toml"), "utf8"),
+    ) as {
       toolchain: { targets: string[] };
     };
-    const prebuilt = allRustTargets.filter(triple => !rustTargetIsTier3(triple));
+    const prebuilt = allRustTargets.filter((triple) => !rustTargetIsTier3(triple));
     expect([...toolchain.targets].sort()).toEqual([...prebuilt].sort());
 
     // rust:check-all reaches the remaining triples with -Zbuild-std; that path
@@ -148,7 +165,7 @@ describe("allRustTargets", () => {
 describe("build-std feature set", () => {
   /** The `-Zbuild-std*` args, in order: which std gets built and with which features. */
   function buildStdArgs(cfg: Config): string[] {
-    return cargoBuildInvocation(cfg).args.filter(arg => arg.startsWith("-Zbuild-std"));
+    return cargoBuildInvocation(cfg).args.filter((arg) => arg.startsWith("-Zbuild-std"));
   }
 
   // Cargo's default is `panic-unwind,backtrace,default`. `backtrace` is std's
@@ -164,22 +181,37 @@ describe("build-std feature set", () => {
     expect(buildStdArgs(withAbi(linuxX64, "musl"))).toEqual(release);
     expect(buildStdArgs(withAbi(linuxX64, "android"))).toEqual(release);
     expect(buildStdArgs(resolve({ os: "darwin", arch: "aarch64" }))).toEqual(release);
-    expect(buildStdArgs(resolve({ os: "windows", arch: "x64", winsysroot: "/fake" }))).toEqual(release);
-    expect(buildStdArgs(resolve({ os: "freebsd", arch: "x64", freebsdSysroot: "/fake" }))).toEqual(release);
+    expect(buildStdArgs(resolve({ os: "windows", arch: "x64", winsysroot: "/fake" }))).toEqual(
+      release,
+    );
+    expect(buildStdArgs(resolve({ os: "freebsd", arch: "x64", freebsdSysroot: "/fake" }))).toEqual(
+      release,
+    );
     // Tier 3: builds std from source either way; release still trims it.
-    expect(buildStdArgs(resolve({ os: "freebsd", arch: "aarch64", freebsdSysroot: "/fake" }))).toEqual(release);
+    expect(
+      buildStdArgs(resolve({ os: "freebsd", arch: "aarch64", freebsdSysroot: "/fake" })),
+    ).toEqual(release);
   });
 
   test("every other build compiles std too, with cargo's default feature set", () => {
     const linuxX64: PartialConfig = { os: "linux", arch: "x64", abi: "gnu", linuxSysroot: "/fake" };
     // release-asan and debug-asan: std gets the instrumentation.
     expect(buildStdArgs(resolve({ ...linuxX64, asan: true }))).toEqual([cargoBuildStdArg]);
-    expect(buildStdArgs(resolve({ ...linuxX64, buildType: "Debug", asan: true }))).toEqual([cargoBuildStdArg]);
+    expect(buildStdArgs(resolve({ ...linuxX64, buildType: "Debug", asan: true }))).toEqual([
+      cargoBuildStdArg,
+    ]);
     // A Tier 3 debug build: there is no prebuilt std.
-    const freebsdArm64: PartialConfig = { os: "freebsd", arch: "aarch64", freebsdSysroot: "/fake", buildType: "Debug" };
+    const freebsdArm64: PartialConfig = {
+      os: "freebsd",
+      arch: "aarch64",
+      freebsdSysroot: "/fake",
+      buildType: "Debug",
+    };
     expect(buildStdArgs(resolve(freebsdArm64))).toEqual([cargoBuildStdArg]);
     // A plain debug build: the link takes std's rlibs from the graph like every other crate's, so std is in it.
-    expect(buildStdArgs(resolve({ ...linuxX64, buildType: "Debug", asan: false }))).toEqual([cargoBuildStdArg]);
+    expect(buildStdArgs(resolve({ ...linuxX64, buildType: "Debug", asan: false }))).toEqual([
+      cargoBuildStdArg,
+    ]);
   });
 });
 
@@ -188,8 +220,10 @@ describe("CPU baseline", () => {
   function cpuFlags(cfg: Config): string[] {
     const rustflags = cargoBuildInvocation(cfg).env.CARGO_ENCODED_RUSTFLAGS!.split("\x1f");
     return rustflags.filter(
-      flag =>
-        flag.startsWith("-Ctarget-cpu=") || flag.startsWith("-Ctarget-feature=") || flag.startsWith("-Ztune-cpu="),
+      (flag) =>
+        flag.startsWith("-Ctarget-cpu=") ||
+        flag.startsWith("-Ctarget-feature=") ||
+        flag.startsWith("-Ztune-cpu="),
     );
   }
 
@@ -204,7 +238,9 @@ describe("CPU baseline", () => {
     const linuxGnu = resolve({ os: "linux", arch: "aarch64", abi: "gnu", linuxSysroot: "/fake" });
     expect(cpuFlags(linuxGnu)).toEqual(expected);
     expect(cpuFlags(withAbi(linuxGnu, "musl"))).toEqual(expected);
-    expect(cpuFlags(resolve({ os: "freebsd", arch: "aarch64", freebsdSysroot: "/fake" }))).toEqual(expected);
+    expect(cpuFlags(resolve({ os: "freebsd", arch: "aarch64", freebsdSysroot: "/fake" }))).toEqual(
+      expected,
+    );
     // clang-cl spells it `/clang:-march=...`; no -mtune there (Windows-on-ARM
     // is Snapdragon, generic tuning like MSVC/Chromium/Rust).
     expect(cpuFlags(resolve({ os: "windows", arch: "aarch64", winsysroot: "/fake" }))).toEqual([
@@ -214,9 +250,16 @@ describe("CPU baseline", () => {
   });
 
   test("arm64 android assumes armv8-a+crc tuned for Cortex-A78, like the C++ side", () => {
-    const android = withAbi(resolve({ os: "linux", arch: "aarch64", abi: "gnu", linuxSysroot: "/fake" }), "android");
+    const android = withAbi(
+      resolve({ os: "linux", arch: "aarch64", abi: "gnu", linuxSysroot: "/fake" }),
+      "android",
+    );
     expect(cargoBuildInvocation(android).triple).toBe("aarch64-linux-android");
-    expect(cpuFlags(android)).toEqual(["-Ctarget-cpu=generic", "-Ctarget-feature=+crc", "-Ztune-cpu=cortex-a78"]);
+    expect(cpuFlags(android)).toEqual([
+      "-Ctarget-cpu=generic",
+      "-Ctarget-feature=+crc",
+      "-Ztune-cpu=cortex-a78",
+    ]);
   });
 
   test("darwin arm64 and x64 name the C++ side's CPU model directly", () => {
@@ -279,7 +322,11 @@ describe("ASAN stack-use-after-return instrumentation", () => {
 });
 
 describe("clang's LLVM and rustc's LLVM", () => {
-  function resolveWith(clangVersion: string | undefined, rustLlvmVersion: string | undefined, lto: boolean): Config {
+  function resolveWith(
+    clangVersion: string | undefined,
+    rustLlvmVersion: string | undefined,
+    lto: boolean,
+  ): Config {
     return resolveConfig(
       { os: "linux", arch: "x64", abi: "gnu", linuxSysroot: "/fake", buildType: "Release", lto },
       { ...mockToolchain, clangVersion, rustLlvmVersion },

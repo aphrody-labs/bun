@@ -64,7 +64,8 @@ fn html_parse(_context: &Context, args: &Args<'_>) -> Result<Output, ToolError> 
         let Some(name) = node.as_element() else { continue; };
         let text = tree.text_content(id);
         let (text, text_truncated) = preview(&text, 512);
-        let mut result = json!({ "id": id.raw(), "tag": name.local.as_ref(),
+        let tag: &str = name.local.as_ref();
+        let mut result = json!({ "id": id.raw(), "tag": tag,
             "text": text, "text_truncated": text_truncated });
         truncated |= text_truncated;
         if include_html {

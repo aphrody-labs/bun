@@ -492,6 +492,23 @@ describe.skipIf(!isLinux)("bun:linux reapOrphans", () => {
 });
 
 describe.skipIf(!isLinux)("bun:linux netlink", () => {
+  test("parse retains multiple aligned message payloads", () => {
+    const first = linux.netlink.encode({ type: 18, flags: 0, seq: 1, payload: Uint8Array.of(1) });
+    const second = linux.netlink.encode({
+      type: 19,
+      flags: 0,
+      seq: 2,
+      payload: Uint8Array.of(2, 3),
+    });
+    const combined = new Uint8Array(first.length + second.length);
+    combined.set(first);
+    combined.set(second, first.length);
+    expect(linux.netlink.parse(combined)).toEqual([
+      { type: 18, flags: 0, seq: 1, pid: 0, payload: Uint8Array.of(1) },
+      { type: 19, flags: 0, seq: 2, pid: 0, payload: Uint8Array.of(2, 3) },
+    ]);
+  });
+
   test("encode and parse round-trip", () => {
     const payload = new Uint8Array([1, 2, 3]);
     const message = linux.netlink.encode({ type: 18, flags: 0x301, seq: 9, payload });

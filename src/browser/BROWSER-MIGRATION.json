@@ -229,8 +229,8 @@
       "bytes": 516,
       "sha256": "d82e973f7987b3e150335e374594f158e7116fb8857bc29b968a1c79344087f3",
       "targetSha256": "d82e973f7987b3e150335e374594f158e7116fb8857bc29b968a1c79344087f3",
-      "integratedBytes": 506,
-      "integratedSha256": "5630d112a874b5e58e36f2c9f7f0f5ab903834131f92f694a17d6de1c60675dd"
+      "integratedBytes": 764,
+      "integratedSha256": "b6c0b234a4bdb7da81356a7c5debfdb69f19cbdf3993a8eb0d53ecb218dfe733"
     },
     {
       "sourcePath": "crates/web/web-detect/src/challenge.rs",

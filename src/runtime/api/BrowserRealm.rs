@@ -5,6 +5,7 @@
 //! releases every context before destroying the JSC VM. No page-realm value
 //! crosses into Bun's host realm.
 
+use core::cell::Cell;
 use core::ffi::c_void;
 use std::sync::Arc;
 
@@ -17,7 +18,7 @@ use bun_jsc::virtual_machine::VirtualMachine;
 use crate::api::html_object::HTMLDocument;
 
 #[repr(C)]
-struct NativeResult {
+pub(crate) struct NativeResult {
     bytes: *mut u8,
     length: usize,
     status: i32,
@@ -26,7 +27,7 @@ struct NativeResult {
 unsafe extern "C" {
     fn Bun__BrowserRealm__create(
         host_global: *mut JSGlobalObject,
-        tree: *const Arc<DomTree>,
+        tree: *const c_void,
         origin: *const u8,
         origin_len: usize,
         frame_id: *const u8,
@@ -99,7 +100,7 @@ pub(crate) fn create_realm(global: &JSGlobalObject, frame: &CallFrame) -> JsResu
     let handle = unsafe {
         Bun__BrowserRealm__create(
             global.as_mut_ptr(),
-            tree_ptr,
+            tree_ptr.cast(),
             origin.as_ptr(),
             origin.len(),
             frame_id.as_ptr(),
@@ -112,13 +113,13 @@ pub(crate) fn create_realm(global: &JSGlobalObject, frame: &CallFrame) -> JsResu
     let mut entry = entry;
     entry.handle = handle;
     let vm = global.bun_vm();
-    let (id, poster) = unsafe { vm.as_mut() }.register_browser_realm(entry);
-    Ok(BrowserRealm::to_js_boxed(Box::new(BrowserRealm { id, poster, origin }), global))
+    let (id, poster) = vm.as_mut().register_browser_realm(entry);
+    Ok(BrowserRealm::to_js_boxed(Box::new(BrowserRealm { id: Cell::new(id), poster, origin }), global))
 }
 
-#[bun_jsc::JsClass]
+#[bun_jsc::JsClass(no_constructor)]
 pub(crate) struct BrowserRealm {
-    id: u64,
+    id: Cell<u64>,
     poster: bun_event_loop::JsPoster,
     origin: String,
 }
@@ -126,7 +127,7 @@ pub(crate) struct BrowserRealm {
 impl BrowserRealm {
     #[bun_jsc::host_fn(method)]
     pub(crate) fn evaluate(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
-        if self.id == 0 {
+        if self.id.get() == 0 {
             return Err(global.throw(format_args!("BrowserRealm has been destroyed")));
         }
         let source = string_argument(global, frame, 0, "script")?;
@@ -148,7 +149,7 @@ impl BrowserRealm {
             timeout as u32
         };
         let vm = global.bun_vm();
-        let entry = unsafe { vm.as_mut() }.browser_realm_mut::<Entry>(self.id)
+        let entry = vm.as_mut().browser_realm_mut::<Box<Entry>>(self.id.get())
             .ok_or_else(|| global.throw(format_args!("BrowserRealm was released by its owner VM")))?;
         let mut output = NativeResult { bytes: core::ptr::null_mut(), length: 0, status: 0 };
         // SAFETY: source and URL slices remain live for the synchronous call;
@@ -177,21 +178,21 @@ impl BrowserRealm {
     }
 
     #[bun_jsc::host_fn(method)]
-    pub(crate) fn destroy(&mut self, global: &JSGlobalObject, _: &CallFrame) -> JsResult<JSValue> {
-        let id = core::mem::replace(&mut self.id, 0);
+    pub(crate) fn destroy(&self, global: &JSGlobalObject, _: &CallFrame) -> JsResult<JSValue> {
+        let id = self.id.replace(0);
         if id != 0 {
             // Explicit destroy is synchronous on the owner JS thread.
             let vm = global.bun_vm();
-            unsafe { vm.as_mut() }.release_browser_realm(id);
+            vm.as_mut().release_browser_realm(id);
         }
         Ok(JSValue::UNDEFINED)
     }
 
     pub(crate) fn finalize(self: Box<Self>) {
-        if self.id == 0 {
+        if self.id.get() == 0 {
             return;
         }
-        let task = bun_core::heap::into_raw(Box::new(ReleaseTask { id: self.id }));
+        let task = bun_core::heap::into_raw(Box::new(ReleaseTask { id: self.id.get() }));
         let carrier = ConcurrentTask::ConcurrentTask::create(Task::init(task));
         if let bun_event_loop::Posted::Refused(carrier) = self.poster.post(carrier) {
             // Refusal means teardown has closed the owner loop. The VM's
@@ -211,7 +212,8 @@ impl Taskable for ReleaseTask {
 
     unsafe fn release_unrun(this: *mut Self) {
         // Both dispatch and release-unrun execute on the owner JS thread.
-        Self::run_from_js_thread(this);
+        // SAFETY: the Task dispatcher transfers this owned payload once on its JS thread.
+        unsafe { Self::run_from_js_thread(this) };
     }
 
     unsafe fn context(_: *const Self) -> bun_event_loop::ContextId {
@@ -250,13 +252,16 @@ fn json_string(input: &str) -> String {
 /// no `JSValue` or Bun host pointer enters the page realm.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn Bun__BrowserRealm__dom(
-    tree: *const Arc<DomTree>, op: u32, id: u32,
+    tree: *const c_void, op: u32, id: u32,
     a: *const u8, a_len: usize, b: *const u8, b_len: usize,
 ) -> NativeResult {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        if tree.is_null() || (a_len != 0 && a.is_null()) || (b_len != 0 && b.is_null()) {
+            return Err("native DOM callback received a null argument".to_owned());
+        }
         // SAFETY: C++ stores the address of the Arc field in the VM-owned
         // stable Entry and only calls it while that entry/context is alive.
-        let tree = unsafe { &*tree }.as_ref();
+        let tree = unsafe { &*tree.cast::<Arc<DomTree>>() }.as_ref();
         let a = if a_len == 0 { &[] } else { unsafe { core::slice::from_raw_parts(a, a_len) } };
         let b = if b_len == 0 { &[] } else { unsafe { core::slice::from_raw_parts(b, b_len) } };
         let a = core::str::from_utf8(a).map_err(|_| "DOM argument must be valid UTF-8".to_owned())?;
@@ -281,7 +286,7 @@ pub(crate) unsafe extern "C" fn Bun__BrowserRealm__dom(
             3 => {
                 let node = node(id)?;
                 let is_html = tree.with_node(node, |node| {
-                    node.as_element().is_some_and(|element| element.ns.as_ref() == "http://www.w3.org/1999/xhtml")
+                    node.as_element().is_some_and(|element| <_ as AsRef<str>>::as_ref(&element.ns) == "http://www.w3.org/1999/xhtml")
                 }).unwrap_or(false);
                 let name = if is_html { a.to_ascii_lowercase() } else { a.to_owned() };
                 match tree.with_node(node, |node| node.get_attribute(&name).map(str::to_owned)).flatten() {
@@ -291,7 +296,7 @@ pub(crate) unsafe extern "C" fn Bun__BrowserRealm__dom(
             4 => {
                 let node = node(id)?;
                 let is_html = tree.with_node(node, |node| {
-                    node.as_element().is_some_and(|element| element.ns.as_ref() == "http://www.w3.org/1999/xhtml")
+                    node.as_element().is_some_and(|element| <_ as AsRef<str>>::as_ref(&element.ns) == "http://www.w3.org/1999/xhtml")
                 }).unwrap_or(false);
                 let name = if is_html { a.to_ascii_lowercase() } else { a.to_owned() };
                 if name.is_empty() || name.chars().any(|ch| ch.is_whitespace() || matches!(ch, '\0' | '"' | '\'' | '>' | '/' | '='))

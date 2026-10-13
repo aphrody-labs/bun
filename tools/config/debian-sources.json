@@ -1,0 +1,36 @@
+{
+  "schema": "bun.debian.sources.v1",
+  "recordedAt": "2026-10-11",
+  "host": "vps",
+  "distribution": "Ubuntu 26.04.1 LTS resolute",
+  "sourceRoot": "/home/ubuntu/builds/bun-os-factory/sources/debian-20261011",
+  "acquisition": "native apt-get authenticated Ubuntu deb-src",
+  "embedded": false,
+  "packages": [
+    {
+      "name": "apt",
+      "version": "3.2.0",
+      "source": "https://salsa.debian.org/apt-team/apt",
+      "license": "GPL-2.0-or-later with component notices in COPYING",
+      "archives": [
+        { "file": "apt_3.2.0.dsc", "sha256": "364347278a531cf073f809a14f84617c2b935cfb324bd413aa01c214b6f8a3e8" },
+        { "file": "apt_3.2.0.tar.xz", "sha256": "dcd186912a7b8553cc885412127925858ee340c655e2f26e77eacdab23f48089" }
+      ],
+      "copyrightFile": "apt-3.2.0/COPYING",
+      "copyrightSha256": "5c7835bd455fdea5183f41980f75269c802ce161b4a136a079f4666603bccc2c"
+    },
+    {
+      "name": "dpkg",
+      "version": "1.23.7ubuntu1",
+      "source": "https://git.dpkg.org/cgit/dpkg/dpkg.git",
+      "license": "GPL-2.0-or-later with component notices in debian/copyright",
+      "archives": [
+        { "file": "dpkg_1.23.7ubuntu1.dsc", "sha256": "fef83ee2495cf1021b253590db06086fcf60db6df7d72ba6f80b8a3bd1766da9" },
+        { "file": "dpkg_1.23.7ubuntu1.tar.xz", "sha256": "fa67fcf0f5de3d31f32ff28f9480dbe59cc2a6fe6313d695c5081e44c44b5c4a" }
+      ],
+      "copyrightFile": "dpkg-1.23.7ubuntu1/COPYING",
+      "copyrightSha256": "ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6",
+      "dscUploaderSignature": "unqualified: public key unavailable; Ubuntu APT metadata authenticated"
+    }
+  ]
+}

@@ -8,6 +8,7 @@
 //! 3. `<rP>`: merged YAML manifest, verified by the host against `s256H` →
 //!    [`manifest_deps`], [`pick`], [`install_argv`], [`uninstall_plan`].
 
+use bun_core::strings;
 use core::cmp::Ordering;
 
 use crate::value::Value;
@@ -61,9 +62,15 @@ pub struct VersionRef {
 /// Package ids go into URLs verbatim; reject anything that could escape the path.
 pub fn check_id(id: &str) -> Result<()> {
     let ok = !id.is_empty()
-        && id.bytes().all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'-' | b'_' | b'+'))
+        && id
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'-' | b'_' | b'+'))
         && !id.starts_with('.');
-    if ok { Ok(()) } else { Err(Error::Parse(format!("invalid winget package id \"{id}\""))) }
+    if ok {
+        Ok(())
+    } else {
+        Err(Error::Parse(format!("invalid winget package id \"{id}\"")))
+    }
 }
 
 pub fn url_join(base: &str, rel: &str) -> String {
@@ -75,6 +82,22 @@ pub fn url_join(base: &str, rel: &str) -> String {
     url
 }
 
+fn index_text(cells: &[sqlite::Cell], index: usize) -> Result<Option<String>> {
+    cells
+        .get(index)
+        .and_then(sqlite::Cell::text)
+        .map(|bytes| {
+            core::str::from_utf8(bytes)
+                .map(str::to_owned)
+                .map_err(|error| {
+                    Error::Parse(format!(
+                        "winget index: column {index} is not UTF-8: {error}"
+                    ))
+                })
+        })
+        .transpose()
+}
+
 pub fn parse_index(db: &[u8]) -> Result<Vec<IndexRow>> {
     let db = sqlite::Database::open(db)?;
     let (root, cols) = db.table("packages")?;
@@ -82,24 +105,24 @@ pub fn parse_index(db: &[u8]) -> Result<Vec<IndexRow>> {
     let (Some(c_id), Some(c_name), Some(c_latest), Some(c_hash)) =
         (col("id"), col("name"), col("latest_version"), col("hash"))
     else {
-        return Err(Error::Parse("winget index: unexpected packages table layout".to_owned()));
+        return Err(Error::Parse(
+            "winget index: unexpected packages table layout".to_owned(),
+        ));
     };
     let c_moniker = col("moniker");
     let mut rows = Vec::new();
     db.scan(root, &mut |_, cells| {
-        let text = |i: usize| {
-            cells
-                .get(i)
-                .and_then(sqlite::Cell::text)
-                .map(|t| String::from_utf8_lossy(t).into_owned())
-        };
-        let (Some(id), Some(latest)) = (text(c_id), text(c_latest)) else {
+        let (Some(id), Some(latest)) = (index_text(&cells, c_id)?, index_text(&cells, c_latest)?)
+        else {
             return Ok(());
         };
         rows.push(IndexRow {
             id,
-            name: text(c_name).unwrap_or_default(),
-            moniker: c_moniker.and_then(text),
+            name: index_text(&cells, c_name)?.unwrap_or_default(),
+            moniker: c_moniker
+                .map(|i| index_text(&cells, i))
+                .transpose()?
+                .flatten(),
             latest,
             hash: cells
                 .get(c_hash)
@@ -123,12 +146,17 @@ pub fn find<'a>(rows: &'a [IndexRow], id: &str) -> Result<&'a IndexRow> {
 /// Ranks by exact id/moniker, exact name, id/moniker substring, name substring.
 pub fn search<'a>(rows: &'a [IndexRow], query: &str, limit: usize) -> Vec<&'a IndexRow> {
     let q = query.trim().to_ascii_lowercase();
-    let contains = |hay: &str| hay.to_ascii_lowercase().contains(&q);
+    // Unlike str::contains, the byte primitive treats an empty needle as absent.
+    let contains = |hay: &str| {
+        q.is_empty() || strings::contains(hay.to_ascii_lowercase().as_bytes(), q.as_bytes())
+    };
     let mut hits: Vec<(u8, &IndexRow)> = rows
         .iter()
         .filter_map(|r| {
             let rank = if r.id.eq_ignore_ascii_case(&q)
-                || r.moniker.as_deref().is_some_and(|m| m.eq_ignore_ascii_case(&q))
+                || r.moniker
+                    .as_deref()
+                    .is_some_and(|m| m.eq_ignore_ascii_case(&q))
             {
                 0
             } else if r.name.eq_ignore_ascii_case(&q) {
@@ -144,9 +172,16 @@ pub fn search<'a>(rows: &'a [IndexRow], query: &str, limit: usize) -> Vec<&'a In
         })
         .collect();
     hits.sort_by(|a, b| {
-        a.0.cmp(&b.0).then_with(|| a.1.id.to_ascii_lowercase().cmp(&b.1.id.to_ascii_lowercase()))
+        a.0.cmp(&b.0).then_with(|| {
+            a.1.id
+                .to_ascii_lowercase()
+                .cmp(&b.1.id.to_ascii_lowercase())
+        })
     });
-    hits.into_iter().take(if limit == 0 { usize::MAX } else { limit }).map(|(_, r)| r).collect()
+    hits.into_iter()
+        .take(if limit == 0 { usize::MAX } else { limit })
+        .map(|(_, r)| r)
+        .collect()
 }
 
 /// Versions listed by a parsed `versionData` document, newest first.
@@ -182,7 +217,10 @@ pub fn select_version<'a>(
         range,
         version::compare,
     )
-    .ok_or_else(|| Error::NoMatchingVersion { id: id.to_owned(), range: range.to_owned() })?;
+    .ok_or_else(|| Error::NoMatchingVersion {
+        id: id.to_owned(),
+        range: range.to_owned(),
+    })?;
     versions
         .iter()
         .find(|v| v.version == best)
@@ -267,7 +305,11 @@ impl<'a> Installer<'a> {
         self.node
             .get_ci("InstallerSwitches")
             .and_then(|s| s.str_ci(name))
-            .or_else(|| self.root.get_ci("InstallerSwitches").and_then(|s| s.str_ci(name)))
+            .or_else(|| {
+                self.root
+                    .get_ci("InstallerSwitches")
+                    .and_then(|s| s.str_ci(name))
+            })
     }
 
     /// `NestedInstallerFiles` as `(RelativeFilePath, PortableCommandAlias)`.
@@ -315,8 +357,9 @@ fn arch_rank(host: &str, arch: &str) -> Option<u8> {
     }
 }
 
-pub const SUPPORTED_TYPES: &[&str] =
-    &["portable", "zip", "msi", "wix", "burn", "inno", "nullsoft", "exe", "msix", "appx"];
+pub const SUPPORTED_TYPES: &[&str] = &[
+    "portable", "zip", "msi", "wix", "burn", "inno", "nullsoft", "exe", "msix", "appx",
+];
 
 /// Picks the installer winget would: matching architecture first, then the
 /// requested (or user) scope, then the requested locale, then file-based types.
@@ -326,7 +369,10 @@ pub fn pick<'a>(manifest: &'a Value, id: &str, prefs: &Preferences) -> Result<In
     let want_locale = prefs.locale.as_deref().map(str::to_ascii_lowercase);
     let mut best: Option<((u8, u8, u8, u8), Installer<'a>)> = None;
     for node in manifest.array_ci("Installers") {
-        let p = Installer { node, root: manifest };
+        let p = Installer {
+            node,
+            root: manifest,
+        };
         let Some(arch_score) = arch_rank(&host, &p.lower("Architecture")) else {
             continue;
         };
@@ -352,26 +398,32 @@ pub fn pick<'a>(manifest: &'a Value, id: &str, prefs: &Preferences) -> Result<In
             _ if locale.is_empty() || locale == "en-us" => 2,
             _ => 3,
         };
-        let type_score = if matches!(ty.as_str(), "portable" | "zip") { 0 } else { 1 };
+        let type_score = if matches!(ty.as_str(), "portable" | "zip") {
+            0
+        } else {
+            1
+        };
         let key = (arch_score, scope_score, locale_score, type_score);
         if best.as_ref().is_none_or(|(k, _)| key < *k) {
             best = Some((key, p));
         }
     }
     best.map(|(_, p)| p).ok_or_else(|| {
-        Error::Unsupported(format!("winget: {id} has no installer for {host} that bun can run"))
+        Error::Unsupported(format!(
+            "winget: {id} has no installer for {host} that bun can run"
+        ))
     })
 }
 
 /// Last path segment of a URL, without query or fragment.
 pub fn file_name_of(url: &str) -> &str {
-    let path = &url[..url.find(['?', '#']).unwrap_or(url.len())];
-    &path[path.rfind('/').map_or(0, |i| i + 1)..]
+    let path = &url[..strings::index_of_any(url.as_bytes(), b"?#").unwrap_or(url.len())];
+    &path[strings::last_index_of_char(path.as_bytes(), b'/').map_or(0, |i| i + 1)..]
 }
 
 /// `.ext` of a file name when it looks like a real extension.
 pub fn extension_of(name: &str) -> Option<&str> {
-    let ext = &name[name.rfind('.')?..];
+    let ext = &name[strings::last_index_of_char(name.as_bytes(), b'.')?..];
     (ext.len() > 1 && ext.len() <= 8 && ext.bytes().skip(1).all(|c| c.is_ascii_alphanumeric()))
         .then_some(ext)
 }
@@ -387,7 +439,7 @@ pub fn default_extension(ty: &str) -> &'static str {
 
 /// File name without directories and extension.
 pub fn stem(name: &str) -> &str {
-    let base = &name[name.rfind(['/', '\\']).map_or(0, |i| i + 1)..];
+    let base = &name[strings::last_index_of_any(name.as_bytes(), b"/\\").map_or(0, |i| i + 1)..];
     match extension_of(base) {
         Some(ext) => &base[..base.len() - ext.len()],
         None => base,
@@ -421,7 +473,7 @@ pub fn install_argv(p: &Installer<'_>, ty: &str, file: &str, id: &str) -> Result
                 a.extend(owned(&["ALLUSERS=2", "MSIINSTALLPERUSER=1"]));
             }
             a
-        },
+        }
         "inno" => {
             let mut a = vec![file.to_owned()];
             a.extend(silent.unwrap_or_else(|| {
@@ -430,20 +482,20 @@ pub fn install_argv(p: &Installer<'_>, ty: &str, file: &str, id: &str) -> Result
             match p.lower("Scope").as_str() {
                 "user" => a.push("/CURRENTUSER".to_owned()),
                 "machine" => a.push("/ALLUSERS".to_owned()),
-                _ => {},
+                _ => {}
             }
             a
-        },
+        }
         "nullsoft" => {
             let mut a = vec![file.to_owned()];
             a.extend(silent.unwrap_or_else(|| owned(&["/S"])));
             a
-        },
+        }
         "burn" => {
             let mut a = vec![file.to_owned()];
             a.extend(silent.unwrap_or_else(|| owned(&["/quiet", "/norestart"])));
             a
-        },
+        }
         "exe" => {
             let Some(silent) = silent else {
                 return Err(Error::Unsupported(format!(
@@ -453,15 +505,17 @@ pub fn install_argv(p: &Installer<'_>, ty: &str, file: &str, id: &str) -> Result
             let mut a = vec![file.to_owned()];
             a.extend(silent);
             a
-        },
+        }
         "msix" | "appx" => {
             let mut a = owned(&["powershell", "-NoProfile", "-NonInteractive", "-Command"]);
             a.push(format!("Add-AppxPackage -Path {}", ps_quote(file)));
             a
-        },
+        }
         other => {
-            return Err(Error::Unsupported(format!("winget: unsupported installer type {other}")));
-        },
+            return Err(Error::Unsupported(format!(
+                "winget: unsupported installer type {other}"
+            )));
+        }
     };
     if let Some(custom) = p.switch("Custom")
         && !matches!(ty, "msix" | "appx")
@@ -498,19 +552,25 @@ pub fn uninstall_plan(p: &Installer<'_>, ty: &str) -> UninstallPlan {
     match ty {
         "msi" | "wix" => match code {
             Some(c) => UninstallPlan::Argv(
-                ["msiexec", "/x", c.as_str(), "/quiet", "/norestart"].map(str::to_owned).to_vec(),
+                ["msiexec", "/x", c.as_str(), "/quiet", "/norestart"]
+                    .map(str::to_owned)
+                    .to_vec(),
             ),
             None => UninstallPlan::None,
         },
         "msix" | "appx" => match p.str("PackageFamilyName") {
             Some(pfn) => {
-                let name = &pfn[..pfn.rfind('_').unwrap_or(pfn.len())];
+                let name =
+                    &pfn[..strings::last_index_of_char(pfn.as_bytes(), b'_').unwrap_or(pfn.len())];
                 let mut a = ["powershell", "-NoProfile", "-NonInteractive", "-Command"]
                     .map(str::to_owned)
                     .to_vec();
-                a.push(format!("Get-AppxPackage -Name {} | Remove-AppxPackage", ps_quote(name)));
+                a.push(format!(
+                    "Get-AppxPackage -Name {} | Remove-AppxPackage",
+                    ps_quote(name)
+                ));
                 UninstallPlan::Argv(a)
-            },
+            }
             None => UninstallPlan::None,
         },
         _ => match code {
@@ -533,10 +593,10 @@ pub fn registry_uninstall_argv(
     match ty {
         "inno" => {
             argv.extend(["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"].map(str::to_owned))
-        },
+        }
         "nullsoft" => argv.push("/S".to_owned()),
         "burn" => argv.extend(["/quiet", "/norestart"].map(str::to_owned)),
-        _ => {},
+        _ => {}
     }
     Some(argv)
 }
@@ -563,17 +623,17 @@ pub fn split_args(s: &str) -> Vec<String> {
             '"' => {
                 in_quotes = !in_quotes;
                 has = true;
-            },
+            }
             c if c.is_whitespace() && !in_quotes => {
                 if has {
                     out.push(core::mem::take(&mut cur));
                     has = false;
                 }
-            },
+            }
             c => {
                 cur.push(c);
                 has = true;
-            },
+            }
         }
     }
     if has {
@@ -610,7 +670,11 @@ mod tests {
     }
 
     fn obj(rows: &[(&str, Value)]) -> Value {
-        Value::Object(rows.iter().map(|(k, v)| ((*k).to_owned(), v.clone())).collect())
+        Value::Object(
+            rows.iter()
+                .map(|(k, v)| ((*k).to_owned(), v.clone()))
+                .collect(),
+        )
     }
 
     fn manifest() -> Value {
@@ -649,14 +713,22 @@ mod tests {
     }
 
     fn prefs(arch: &str) -> Preferences {
-        Preferences { arch: arch.to_owned(), scope: None, locale: None, may_elevate: false }
+        Preferences {
+            arch: arch.to_owned(),
+            scope: None,
+            locale: None,
+            may_elevate: false,
+        }
     }
 
     #[test]
     fn picks_by_arch_then_scope() {
         let m = manifest();
         let p = pick(&m, "Test.Tool", &prefs("x64")).unwrap();
-        assert_eq!((p.installer_type(), p.str("ProductCode")), ("msi".to_owned(), Some("{U}")));
+        assert_eq!(
+            (p.installer_type(), p.str("ProductCode")),
+            ("msi".to_owned(), Some("{U}"))
+        );
         assert!(!needs_elevation(&p, "msi"));
         let argv = install_argv(&p, "msi", "C:\\t.msi", "Test.Tool").unwrap();
         assert_eq!(
@@ -674,13 +746,21 @@ mod tests {
         assert_eq!(
             uninstall_plan(&p, "msi"),
             UninstallPlan::Argv(
-                ["msiexec", "/x", "{U}", "/quiet", "/norestart"].map(str::to_owned).to_vec()
+                ["msiexec", "/x", "{U}", "/quiet", "/norestart"]
+                    .map(str::to_owned)
+                    .to_vec()
             )
         );
         let arm = pick(&m, "Test.Tool", &prefs("arm64")).unwrap();
         assert_eq!(arm.installer_type(), "zip");
-        let machine = Preferences { scope: Some("machine".to_owned()), ..prefs("x64") };
-        assert!(needs_elevation(&pick(&m, "Test.Tool", &machine).unwrap(), "msi"));
+        let machine = Preferences {
+            scope: Some("machine".to_owned()),
+            ..prefs("x64")
+        };
+        assert!(needs_elevation(
+            &pick(&m, "Test.Tool", &machine).unwrap(),
+            "msi"
+        ));
         assert_eq!(manifest_deps(&m), ["winget:Dep.One"]);
     }
 
@@ -689,14 +769,25 @@ mod tests {
         let doc = obj(&[(
             "vD",
             Value::Array(vec![
-                obj(&[("v", s("1.0.0")), ("rP", s("m/1.0.0.yaml")), ("s256H", s("AB"))]),
-                obj(&[("v", s("1.10.0")), ("rP", s("m/1.10.0.yaml")), ("s256H", s("CD"))]),
+                obj(&[
+                    ("v", s("1.0.0")),
+                    ("rP", s("m/1.0.0.yaml")),
+                    ("s256H", s("AB")),
+                ]),
+                obj(&[
+                    ("v", s("1.10.0")),
+                    ("rP", s("m/1.10.0.yaml")),
+                    ("s256H", s("CD")),
+                ]),
             ]),
         )]);
         let refs = version_refs(&doc, "Test.Tool").unwrap();
         assert_eq!(refs[0].version, "1.10.0");
         assert_eq!(refs[0].sha256, "cd");
-        assert_eq!(select_version(&refs, "Test.Tool", "<1.5").unwrap().version, "1.0.0");
+        assert_eq!(
+            select_version(&refs, "Test.Tool", "<1.5").unwrap().version,
+            "1.0.0"
+        );
         assert!(select_version(&refs, "Test.Tool", "3").is_err());
         assert!(check_id("../x").is_err());
         assert!(check_id("Microsoft.PowerToys").is_ok());
@@ -707,23 +798,71 @@ mod tests {
             latest: "1".into(),
             hash: vec![0xde, 0xad, 0xbe, 0xef, 0x01],
         };
-        assert_eq!(row.version_data_path(), "packages/A.B/deadbeef/versionData.mszyml");
+        assert_eq!(
+            row.version_data_path(),
+            "packages/A.B/deadbeef/versionData.mszyml"
+        );
         assert_eq!(search(std::slice::from_ref(&row), "AB", 0).len(), 1);
-        assert_eq!(url_join("https://x/cache/", "/packages/a"), "https://x/cache/packages/a");
+        assert_eq!(
+            url_join("https://x/cache/", "/packages/a"),
+            "https://x/cache/packages/a"
+        );
     }
 
     #[test]
     fn helpers() {
-        assert_eq!(split_args(r#"/S /D="C:\Program Files\X""#), ["/S", r"/D=C:\Program Files\X"]);
+        assert_eq!(
+            split_args(r#"/S /D="C:\Program Files\X""#),
+            ["/S", r"/D=C:\Program Files\X"]
+        );
         assert_eq!(ps_quote("it's"), "'it''s'");
         assert_eq!(file_name_of("https://x/a/tool.exe?sig=1"), "tool.exe");
         assert_eq!(stem("bin\\tool.exe"), "tool");
         assert_eq!(extension_of("archive.tar.gz"), Some(".gz"));
         assert_eq!(
             registry_uninstall_argv(None, Some("\"C:\\u.exe\""), "inno").unwrap(),
-            ["C:\\u.exe", "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"]
+            [
+                "C:\\u.exe",
+                "/VERYSILENT",
+                "/SUPPRESSMSGBOXES",
+                "/NORESTART"
+            ]
         );
         assert!(uninstall_needs_elevation(None, Some("msi")));
         assert!(!uninstall_needs_elevation(Some("user"), Some("msi")));
+    }
+
+    #[test]
+    fn index_text_rejects_invalid_utf8_without_replacing_bytes() {
+        let cells = [
+            sqlite::Cell::Text("Éditeur 日本語".as_bytes().to_vec()),
+            sqlite::Cell::Null,
+            sqlite::Cell::Text(vec![0xff]),
+        ];
+        assert_eq!(
+            index_text(&cells, 0).unwrap().as_deref(),
+            Some("Éditeur 日本語")
+        );
+        assert_eq!(index_text(&cells, 1).unwrap(), None);
+        assert_eq!(index_text(&cells, 9).unwrap(), None);
+        assert!(matches!(index_text(&cells, 2), Err(Error::Parse(_))));
+    }
+
+    #[test]
+    fn unicode_paths_and_search_preserve_ascii_matching() {
+        assert_eq!(file_name_of("https://x/日本/é.exe#fragment?x"), "é.exe");
+        assert_eq!(stem("日本\\é.exe"), "é");
+        assert_eq!(extension_of("日本.é"), None);
+        let row = IndexRow {
+            id: "A.B".into(),
+            name: "Éditeur 日本語".into(),
+            moniker: None,
+            latest: "1".into(),
+            hash: vec![],
+        };
+        assert_eq!(search(std::slice::from_ref(&row), "日本", 1).len(), 1);
+        assert_eq!(search(std::slice::from_ref(&row), "a.b", 1).len(), 1);
+        assert_eq!(search(std::slice::from_ref(&row), " \t", 1).len(), 1);
+        assert!(search(std::slice::from_ref(&row), "éditeur", 1).is_empty());
     }
 }

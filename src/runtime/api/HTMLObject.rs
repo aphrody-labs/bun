@@ -48,7 +48,7 @@ pub(crate) fn parse_css(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<
     })
 }
 
-#[bun_jsc::JsClass]
+#[bun_jsc::JsClass(no_constructor)]
 pub(crate) struct HTMLDocument {
     pub(crate) tree: Arc<DomTree>,
 }
@@ -60,7 +60,7 @@ impl HTMLDocument {
 
     fn attribute_name(&self, id: NodeId, name: String) -> String {
         let is_html = self.tree.with_node(id, |node| {
-            node.as_element().is_some_and(|element| element.ns.as_ref() == "http://www.w3.org/1999/xhtml")
+            node.as_element().is_some_and(|element| <_ as AsRef<str>>::as_ref(&element.ns) == "http://www.w3.org/1999/xhtml")
         }).unwrap_or(false);
         if is_html { name.to_ascii_lowercase() } else { name }
     }

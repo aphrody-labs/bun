@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "platforms": ["linux", "windows", "macos"],
+  "sources": ["Cargo.toml", "Cargo.lock", "scripts/build/rust.ts", "scripts/build/config.ts", "scripts/build/profiles.ts", "src/bun_core/env_var.rs", "src/bun_core/feature_flags.rs", "src/runtime/webview/ChromeProcess.rs", "src/browser/crates/js/build.rs"],
+  "combinations": [
+    {
+      "id": "native-html-css",
+      "packages": ["bun_runtime", "bun_css", "bun_browser_dom"],
+      "features": [],
+      "platforms": ["linux", "windows", "macos"],
+      "requirements": ["Complete Bun native link including JSC, mimalloc, Highway, simdutf and WTF", "Candidate Bun.HTML and MCP parser tests"],
+      "jscOnly": true
+    },
+    {
+      "id": "portable-paint",
+      "packages": ["bun_browser_render"],
+      "features": ["bun_browser_render/paint"],
+      "platforms": ["linux", "windows", "macos"],
+      "requirements": ["Pinned text/font/image dependencies and deterministic screenshot fixtures"],
+      "jscOnly": false
+    },
+    {
+      "id": "shared-css-paint",
+      "packages": ["bun_browser_render"],
+      "features": ["bun_browser_render/paint", "bun_browser_render/bun-css"],
+      "platforms": ["linux", "windows", "macos"],
+      "requirements": ["Bun native link: standalone Cargo tests cannot resolve Bun CSS native symbols", "Renderer cascade and screenshot integration tests"],
+      "jscOnly": true
+    },
+    {
+      "id": "browser-render-stealth",
+      "packages": ["bun_browser", "bun_browser_browser", "bun_browser_cdp", "bun_browser_mcp", "bun_browser_service", "bun_browser_render"],
+      "features": ["bun_browser/render", "bun_browser/stealth", "bun_browser_browser/render", "bun_browser_browser/stealth", "bun_browser_cdp/render", "bun_browser_cdp/stealth", "bun_browser_mcp/render", "bun_browser_mcp/stealth", "bun_browser_service/render", "bun_browser_service/stealth", "bun_browser_render/bun-css"],
+      "platforms": ["linux", "windows", "macos"],
+      "requirements": ["wreq pinned prerelease TLS dependencies", "Preserve target-specific prefix-symbols selection", "Bun native renderer linkage", "Page engine migration from deno_core to JSC with DOM/event-loop/GC parity"],
+      "jscOnly": true
+    },
+    {
+      "id": "native-coreutils",
+      "packages": ["bun_runtime"],
+      "features": ["bun_runtime/coreutils"],
+      "platforms": ["linux", "windows", "macos"],
+      "requirements": ["Resolve coreutils in the native build owner unit graph and final binary", "uutils platform applet coverage"],
+      "jscOnly": true
+    }
+  ],
+  "runtimeToggles": [
+    {"name": "BUN_LIVE_WEBSITE_TEST", "source": "test/js/web/html/html-rewriter-doctype.test.ts", "policy": "qualification-only", "reason": "Opt-in live HTTPS test; not a product capability flag"},
+    {"name": "BUN_JSC_validateExceptionChecks", "source": "src/jsc/bindings", "policy": "qualification-only", "reason": "JSC lifetime and exception verification"},
+    {"name": "BUN_JSC_dumpSimulatedThrows", "source": "src/jsc/bindings", "policy": "qualification-only", "reason": "Debug exception diagnostics"},
+    {"name": "BUN_FEATURE_FLAG_EXPERIMENTAL_DOCKER_MUTATIONS", "source": "src/bun_core/env_var.rs", "policy": "explicit-owner-only", "reason": "Mutation authority is separate from browser feature qualification"},
+    {"name": "BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS", "source": "src/bun_core/env_var.rs", "policy": "explicit-owner-only", "reason": "Native host capability exposure requires an explicit owner policy"}
+  ],
+  "incompatibleSelections": [
+    ["pgoGenerate", "pgoUse"],
+    ["webkit=local", "webkit=prebuilt"]
+  ]
+}

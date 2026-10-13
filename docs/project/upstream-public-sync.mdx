@@ -1,0 +1,75 @@
+---
+name: Public upstream collaboration
+---
+
+# Public upstream collaboration
+
+Source code synchronization uses `scripts/aphrody/sync-upstream.ts`: merge the
+upstream Git history, preserve fork-owned presentation, apply the package scope,
+and stop on unresolved semantic conflicts. Rename merge scratch directories are
+unique and resolved through Git, including linked worktrees.
+
+Collaboration synchronization uses the installed GitHub CLI authentication:
+
+```sh
+bun scripts/aphrody/sync-public-upstream.ts --output /factory/artifacts/upstream-public
+```
+
+The exporter verifies that `oven-sh/bun` is public before reading its content.
+It snapshots all issue and pull request entries, issue comments, pull request
+review comments, discussions, discussion comments and replies. Real upstream
+URLs, authors and numbers remain attached to each record. Pull requests remain
+upstream pull requests; the export does not recreate their identity or approval
+status inside the fork. Git carries the corresponding source commit history.
+
+Output is streamed as JSONL outside the checkout. A SHA-256 manifest names the
+finished snapshot. Pagination limits, permission failures and rate limits leave
+an explicit incomplete manifest and `.partial` file; they never replace the
+latest complete manifest. Repeating the command refreshes the snapshot without
+creating duplicate fork issues or discussions. Large exports require sufficient
+GitHub API quota; `--max-pages` bounds each connection (default 1000).
+REST pagination follows GitHub's `Link` header, including cursor-based `after`
+links required for large repositories; each record's stable id prevents overlap.
+The repository issue-comment endpoint can stop at 30,000 records while newer
+comments still exist. A second scan sorts by update time and advances `since`
+with a one-second overlap. Stable ids remove duplicates, including the original
+cached pages. Non-monotone timestamps or a saturated timestamp window stop with
+an incomplete manifest rather than skipping comments. Only the end of this scan
+and all other connections can produce a complete snapshot.
+Each invocation stops after 4000 uncached API requests to leave quota for other
+owner work. Rate-limit failures stop immediately rather than retrying forever.
+
+After a rate limit or transport error, pass `--resume <generation>` from the
+incomplete manifest to the same output directory. Successful API pages are
+checksum-verified and reused; the JSONL is rebuilt from them before continuing
+missing pages. Cached pages commit through an atomic rename, so interrupted
+temporary writes cannot replace a verified page. GraphQL bodies retain variables
+and continuation cursors in their own `variables` object. Reconstruction truncates
+the partial output before writing, so a shorter resumed export retains no stale
+trailing records. A normal run starts a fresh generation. The snapshot is a
+paginated collection over its recorded start/finish interval, not an atomic
+GitHub database backup.
+
+This command does not read provider histories or private fork conversations.
+It does not change GitHub repository visibility, settings, source branches or
+discussion enablement. Repository metadata and publication are separate owner
+operations after review. Approval-only pull request reviews, reaction records
+and edit histories are not included in this conversation snapshot.
+
+Quality gates for the helpers:
+
+```sh
+bun bd test test/internal/aphrody-upstream-sync.test.ts
+bun bd lint --config=oxlint.json scripts/aphrody/sync-upstream.ts scripts/aphrody/sync-public-upstream.ts
+bun bd fmt --check scripts/aphrody/sync-upstream.ts scripts/aphrody/sync-public-upstream.ts test/internal/aphrody-upstream-sync.test.ts
+```
+
+Run these through the qualified SSH factory alongside the native release gates.
+The root scripts additionally define JavaScript lint/typecheck, Rust workspace
+check/Clippy, test runner, generated agent tools and package scope checks. A
+scoped helper pass does not establish a clean complete monorepo or a stable
+cross-platform release.
+
+Pagination follows the [GitHub REST pagination contract](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api)
+and [GraphQL cursor contract](https://docs.github.com/en/graphql/guides/using-pagination-in-the-graphql-api).
+Comment windows use the documented [update sorting and since filter](https://docs.github.com/en/rest/issues/comments#list-issue-comments-for-a-repository).

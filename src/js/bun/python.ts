@@ -1,11 +1,35 @@
 type Pointer = import("bun:ffi").Pointer;
-const { CString, dlopen, FFIType, ptr, read, suffix }: typeof import("bun:ffi") = require("bun:ffi");
-const { existsSync, readdirSync, realpathSync }: typeof import("node:fs") = require("node:fs");
-const { homedir }: typeof import("node:os") = require("node:os");
-const { basename, dirname, isAbsolute, join, resolve }: typeof import("node:path") = require("node:path");
+const {
+  CString,
+  dlopen,
+  ptr,
+  read,
+  suffix,
+}: Pick<
+  typeof import("bun:ffi"),
+  "CString" | "dlopen" | "ptr" | "read" | "suffix"
+> = require("bun:ffi");
+const {
+  FFIType,
+}: {
+  FFIType: Pick<typeof import("bun:ffi").FFIType, "cstring" | "i32" | "ptr" | "void" | "u32">;
+} = require("bun:ffi");
+const { existsSync } = require("node:fs");
+const {
+  readdirSync,
+  realpathSync,
+}: Pick<typeof import("node:fs"), "readdirSync" | "realpathSync"> = require("node:fs");
+const { homedir }: Pick<typeof import("node:os"), "homedir"> = require("node:os");
+const {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  resolve,
+}: typeof import("node:path") = require("node:path");
 function embeddedNativeLibraryPath(name: string): string | null {
   const stem = process.platform === "win32" ? name : `lib${name}`;
-  const matches = Bun.embeddedFiles.flatMap(file => {
+  const matches = Bun.embeddedFiles.flatMap((file) => {
     const path = (file as Blob & { name?: string }).name;
     return path &&
       (basename(path) === `${stem}.${suffix}` ||
@@ -88,7 +112,8 @@ const LIBPYTHON = /^(lib)?python3\.?\d+(\.so(\.1\.0)?|\.dylib|\.dll)$/;
  */
 function buvLibpython(env: NodeJS.ProcessEnv = process.env): string | null {
   const bunLibrary = env["BUV_PYTHON_LIBPYTHON"] || env["BUN_PYTHON_LIBPYTHON"];
-  const explicit = bunLibrary !== undefined && bunLibrary !== "" ? bunLibrary : env["APHRODY_LIBPYTHON"];
+  const explicit =
+    bunLibrary !== undefined && bunLibrary !== "" ? bunLibrary : env["APHRODY_LIBPYTHON"];
   if (explicit !== undefined && explicit !== "") return explicit;
   const runtime = env["BUV_RUNTIME"] || env["VU_RUNTIME"];
   if (runtime !== undefined && runtime !== "") return libpythonIn(resolve(runtime));
@@ -105,10 +130,12 @@ function buvLibpython(env: NodeJS.ProcessEnv = process.env): string | null {
 
 /** The libpython inside a `buv` artifact directory (`lib/` on Unix, the root or `bin/` on Windows), or null. */
 function libpythonIn(current: string): string | null {
-  for (const dir of process.platform === "win32" ? [current, join(current, "bin")] : [join(current, "lib")]) {
+  for (const dir of process.platform === "win32"
+    ? [current, join(current, "bin")]
+    : [join(current, "lib")]) {
     if (!existsSync(dir)) continue;
     const name = readdirSync(dir)
-      .filter(file => LIBPYTHON.test(file))
+      .filter((file) => LIBPYTHON.test(file))
       .sort((a, b) => b.length - a.length)[0];
     if (name !== undefined) return join(dir, name);
   }
@@ -125,7 +152,8 @@ function takeString(symbols: Symbols, raw: Pointer | bigint | number | null): st
 }
 
 const cstr = (text: string): Uint8Array => {
-  if (text.includes("\0")) throw new PythonError(PyStatus.Arg, "Python argument contains a NUL character");
+  if (text.includes("\0"))
+    throw new PythonError(PyStatus.Arg, "Python argument contains a NUL character");
   return new TextEncoder().encode(`${text}\0`);
 };
 
@@ -156,7 +184,10 @@ class Python implements Disposable {
     try {
       if ("bun_py_abi_version" in symbols) {
         if (typeof symbols.bun_py_abi_version !== "function") {
-          throw new PythonError(PyStatus.Unsupported, "Bun Python host has no ABI version function");
+          throw new PythonError(
+            PyStatus.Unsupported,
+            "Bun Python host has no ABI version function",
+          );
         }
         const version = symbols.bun_py_abi_version();
         if (version !== HOST_ABI_VERSION) {
@@ -189,7 +220,10 @@ class Python implements Disposable {
 
   #check(status: number): void {
     if (status !== PyStatus.Ok) {
-      throw new PythonError(status, takeString(this.#symbols, this.#symbols.aphrody_py_last_error()));
+      throw new PythonError(
+        status,
+        takeString(this.#symbols, this.#symbols.aphrody_py_last_error()),
+      );
     }
   }
 
@@ -203,7 +237,7 @@ class Python implements Disposable {
 
   /** `Py_GetVersion()`. */
   version(): string {
-    return this.#out(out => this.#symbols.aphrody_py_version(out));
+    return this.#out((out) => this.#symbols.aphrody_py_version(out));
   }
 
   /** Runs statements in `__main__`. */
@@ -216,7 +250,8 @@ class Python implements Disposable {
   exec(source: string | TemplateStringsArray): void {
     if (typeof source === "string") this.run(source);
     else {
-      if (source.length !== 1) throw new PythonError(PyStatus.Arg, "Python templates cannot interpolate code");
+      if (source.length !== 1)
+        throw new PythonError(PyStatus.Arg, "Python templates cannot interpolate code");
       this.run(source.raw[0]!);
     }
   }
@@ -225,7 +260,7 @@ class Python implements Disposable {
   eval(expression: string): string {
     this.#ensureOpen();
     const source = cstr(expression);
-    return this.#out(out => this.#symbols.aphrody_py_eval(ptr(source), out));
+    return this.#out((out) => this.#symbols.aphrody_py_eval(ptr(source), out));
   }
 
   evalJSON<T = unknown>(expression: string): T {
@@ -242,8 +277,13 @@ class Python implements Disposable {
     const moduleName = cstr(module);
     const functionName = cstr(fn);
     const argument = arg === undefined ? null : cstr(arg);
-    return this.#out(out =>
-      this.#symbols.aphrody_py_call(ptr(moduleName), ptr(functionName), argument === null ? null : ptr(argument), out),
+    return this.#out((out) =>
+      this.#symbols.aphrody_py_call(
+        ptr(moduleName),
+        ptr(functionName),
+        argument === null ? null : ptr(argument),
+        out,
+      ),
     );
   }
 
@@ -266,7 +306,10 @@ class Python implements Disposable {
 type Reply = { id: number; value?: string; error?: { status: number; message: string } };
 class PythonAsync implements AsyncDisposable {
   readonly #worker: Worker;
-  readonly #pending = new Map<number, { resolve: (value: string) => void; reject: (error: Error) => void }>();
+  readonly #pending = new Map<
+    number,
+    { resolve: (value: string) => void; reject: (error: Error) => void }
+  >();
   #next = 0;
   #closing = false;
   #closePromise: Promise<void> | null = null;
@@ -282,9 +325,10 @@ class PythonAsync implements AsyncDisposable {
       if (error) pending.reject(new PythonError(error.status, error.message));
       else pending.resolve(reply.value ?? "");
     };
-    worker.onerror = event => {
+    worker.onerror = (event) => {
       this.#closing = true;
-      for (const pending of this.#pending.values()) pending.reject(new PythonError(PyStatus.State, event.message));
+      for (const pending of this.#pending.values())
+        pending.reject(new PythonError(PyStatus.State, event.message));
       this.#pending.clear();
       worker.terminate();
     };
@@ -327,7 +371,8 @@ class PythonAsync implements AsyncDisposable {
   }
 
   #request(operation: string, args: unknown[] = []) {
-    if (this.#closing) return Promise.reject(new PythonError(PyStatus.State, "Python worker is closed"));
+    if (this.#closing)
+      return Promise.reject(new PythonError(PyStatus.State, "Python worker is closed"));
     if (this.#pending.size >= 256)
       return Promise.reject(new PythonError(PyStatus.State, "Python worker queue is full"));
     const id = ++this.#next;

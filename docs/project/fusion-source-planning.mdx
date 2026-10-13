@@ -47,7 +47,9 @@ are redacted to omit credentials, login names and query parameters.
 
 ## Bounded primary-source research
 
-`summarizeOfficialHtml(url, html)` parses HTML with Bun's native HTMLRewriter.
+`summarizeOfficialHtml(url, html)` extracts metadata with native HTMLRewriter
+and decodes character references with the shared `Bun.HTML` DOM parser. Its
+behavior gate therefore requires the newly built candidate, not an older Bun.
 It accepts HTTPS pages on the declared official Bun, Deno, V8 and WebKit hosts.
 It returns only the title, at most 24 headings and 32 deduplicated links to
 those official hosts. Each text field is limited to 200 characters and parsed

@@ -10,6 +10,8 @@
 param(
   [String]$Version = "latest",
   [String]$BinDir = "",
+  [ValidateSet("perf", "full")]
+  [String]$Flavor = $(if ($env:APHRODY_BUN_FLAVOR) { $env:APHRODY_BUN_FLAVOR } else { "perf" }),
   [Switch]$DebugInfo = $false,
   [Switch]$NoPathUpdate = $false
 )
@@ -21,9 +23,15 @@ $Token = if ($env:GITHUB_TOKEN) { $env:GITHUB_TOKEN } else { $env:GH_TOKEN }
 $Headers = @{ Accept = "application/vnd.github+json" }
 if ($Token) { $Headers.Authorization = "Bearer $Token" }
 
-$Arch = (Get-CimInstance Win32_OperatingSystem).OSArchitecture
-$BunArch = if ($Arch -match "ARM") { "aarch64" } else { "x64" }
+$Arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+$BunArch = switch ($Arch) {
+  "Arm64" { "aarch64" }
+  "X64" { "x64" }
+  default { throw "unsupported Windows architecture: $Arch" }
+}
+if ($DebugInfo -and $Flavor -eq "full") { throw "full debug-info archives are not published" }
 $Target = if ($DebugInfo) { "bun-windows-$BunArch-profile" } else { "bun-windows-$BunArch" }
+if ($Flavor -eq "full") { $Target += "-full" }
 $Exe = if ($DebugInfo) { "bun-profile.exe" } else { "bun.exe" }
 
 $Tag = switch -Regex ($Version) {
@@ -91,6 +99,12 @@ try {
   $ExpectedVersion = $Tag -replace "^(bun-v|aphrody-v)", ""
   $ActualVersion = & $Candidate --version
   if ($LASTEXITCODE -ne 0 -or $ActualVersion -cne $ExpectedVersion) { throw "downloaded runtime version does not match the selected release ($ActualVersion != $ExpectedVersion)" }
+  if ($Flavor -eq "full") {
+    $Manifest = Get-Content -LiteralPath (Join-Path $Tmp "$Target/release-flavor.json") -Raw | ConvertFrom-Json
+    if ($Manifest.flavor -cne "full" -or $Manifest.compiledFeatures.coreutils -ne $true) {
+      throw "full archive must contain its compiled feature manifest"
+    }
+  }
 
   $Root = if ($env:BUN_INSTALL) { $env:BUN_INSTALL } else { Join-Path $HOME ".bun" }
   $Bin = if ($BinDir) { [System.IO.Path]::GetFullPath($BinDir) } elseif ($env:APHRODY_BUN_BIN_DIR) { [System.IO.Path]::GetFullPath($env:APHRODY_BUN_BIN_DIR) } else { Join-Path $Root "bin" }

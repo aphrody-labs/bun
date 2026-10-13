@@ -3088,6 +3088,8 @@ JSC_DEFINE_HOST_FUNCTION(functionJsGc,
 extern "C" [[ZIG_EXPORT(nothrow)]] void JSC__JSGlobalObject__addGc(JSC::JSGlobalObject* globalObject)
 {
     auto& vm = JSC::getVM(globalObject);
+    // CLI setup may call this before entering the VM API lock.
+    JSC::JSLockHolder locker(vm);
     globalObject->putDirectNativeFunction(vm, globalObject, JSC::Identifier::fromString(vm, "gc"_s), 0, functionJsGc, ImplementationVisibility::Public, JSC::NoIntrinsic, PropertyAttribute::DontEnum | 0);
     Bun::setExposeGcInNewContexts(true);
 }

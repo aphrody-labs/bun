@@ -18,7 +18,10 @@ declare module "bun" {
   type ArrayBufferView<TArrayBuffer extends ArrayBufferLike = ArrayBufferLike> =
     | NodeJS.TypedArray<TArrayBuffer>
     | DataView<TArrayBuffer>;
-  type BufferSource = NodeJS.TypedArray<ArrayBufferLike> | DataView<ArrayBufferLike> | ArrayBufferLike;
+  type BufferSource =
+    | NodeJS.TypedArray<ArrayBufferLike>
+    | DataView<ArrayBufferLike>
+    | ArrayBufferLike;
   type StringOrBuffer = string | NodeJS.TypedArray | ArrayBufferLike;
   type XMLHttpRequestBodyInit = Blob | BufferSource | FormData | URLSearchParams | string;
   type ReadableStreamController<T> = ReadableStreamDefaultController<T>;
@@ -411,7 +414,10 @@ declare module "bun" {
     readonly source: Bun.MessageEventSource | null;
   }
 
-  type MessageEvent<T = any> = Bun.__internal.UseLibDomIfAvailable<"MessageEvent", BunMessageEvent<T>>;
+  type MessageEvent<T = any> = Bun.__internal.UseLibDomIfAvailable<
+    "MessageEvent",
+    BunMessageEvent<T>
+  >;
 
   interface ReadableStreamDefaultReadManyResult<T> {
     done: boolean;
@@ -1125,7 +1131,11 @@ declare module "bun" {
       input: T,
       replacer?: undefined | null,
       space?: string | number,
-    ): T extends Function | symbol | undefined ? undefined : T extends object ? string : string | undefined;
+    ): T extends Function | symbol | undefined
+      ? undefined
+      : T extends object
+        ? string
+        : string | undefined;
   }
 
   /** Persistent HTML5 DOM backed by the same tree as the native browser engine. */
@@ -1340,7 +1350,9 @@ declare module "bun" {
     interface NodeInput {
       name: string;
       attributes?: { [name: string]: Scalar | null | undefined } | null;
-      children?: Array<Scalar | NodeInput | Comment | ProcessingInstruction | null | undefined> | null;
+      children?: Array<
+        Scalar | NodeInput | Comment | ProcessingInstruction | null | undefined
+      > | null;
     }
 
     /**
@@ -1395,8 +1407,16 @@ declare module "bun" {
      * // '<p class="x">Hi <b>!</b></p>'
      * ```
      */
-    function stringify(value: NodeInput | Document, replacer?: undefined | null, space?: string | number): string;
-    function stringify(value: unknown, replacer?: undefined | null, space?: string | number): string | undefined;
+    function stringify(
+      value: NodeInput | Document,
+      replacer?: undefined | null,
+      space?: string | number,
+    ): string;
+    function stringify(
+      value: unknown,
+      replacer?: undefined | null,
+      space?: string | number,
+    ): string | undefined;
   }
 
   /**
@@ -1482,7 +1502,9 @@ declare module "bun" {
      * Bun.JSONL.parse('{bad}\n'); // throws SyntaxError
      * ```
      */
-    export function parse(input: string | NodeJS.TypedArray | DataView<ArrayBufferLike> | ArrayBufferLike): unknown[];
+    export function parse(
+      input: string | NodeJS.TypedArray | DataView<ArrayBufferLike> | ArrayBufferLike,
+    ): unknown[];
 
     /**
      * Parse a JSONL chunk, designed for streaming use.
@@ -1592,7 +1614,11 @@ declare module "bun" {
      * // obj: *1
      * ```
      */
-    export function stringify(input: unknown, replacer?: undefined | null, space?: string | number): string;
+    export function stringify(
+      input: unknown,
+      replacer?: undefined | null,
+      space?: string | number,
+    ): string;
   }
 
   /**
@@ -2153,7 +2179,11 @@ declare module "bun" {
      * // }
      * ```
      */
-    export function stringify(input: unknown, replacer?: undefined | null, space?: string | number): string | undefined;
+    export function stringify(
+      input: unknown,
+      replacer?: undefined | null,
+      space?: string | number,
+    ): string | undefined;
   }
 
   /**
@@ -2187,7 +2217,14 @@ declare module "bun" {
    */
   function write(
     destination: BunFile | S3File | PathLike,
-    input: Blob | NodeJS.TypedArray | ArrayBufferLike | string | BlobPart[] | Archive | ReadableStream,
+    input:
+      | Blob
+      | NodeJS.TypedArray
+      | ArrayBufferLike
+      | string
+      | BlobPart[]
+      | Archive
+      | ReadableStream,
     options?: {
       /**
        * If writing to a PathLike, set the permission bits (`0` to `0o777`) of the file,
@@ -2223,7 +2260,7 @@ declare module "bun" {
    * @returns A promise that resolves with the number of bytes written.
    */
   function write(
-    destination: BunFile,
+    destination: BunFile | S3File,
     input: Response | Request,
     options?: {
       /**
@@ -2378,7 +2415,10 @@ declare module "bun" {
    * @param buffers An array of typed arrays to concatenate.
    * @returns An `ArrayBuffer` with the data from all the buffers.
    */
-  function concatArrayBuffers(buffers: Array<ArrayBufferView | ArrayBufferLike>, maxLength?: number): ArrayBuffer;
+  function concatArrayBuffers(
+    buffers: Array<ArrayBufferView | ArrayBufferLike>,
+    maxLength?: number,
+  ): ArrayBuffer;
   function concatArrayBuffers(
     buffers: Array<ArrayBufferView | ArrayBufferLike>,
     maxLength: number,
@@ -2801,7 +2841,15 @@ declare module "bun" {
      * @param options - The options to use for the write.
      */
     write(
-      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer | Request | Response | BunFile | ReadableStream,
+      data:
+        | string
+        | ArrayBufferView
+        | ArrayBuffer
+        | SharedArrayBuffer
+        | Request
+        | Response
+        | BunFile
+        | ReadableStream,
       options?: {
         highWaterMark?: number;
         /**
@@ -2940,18 +2988,48 @@ declare module "bun" {
     Hash;
 
   interface Hash {
-    wyhash: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer, seed?: bigint) => bigint;
+    wyhash: (
+      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+      seed?: bigint,
+    ) => bigint;
     adler32: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer) => number;
-    crc32: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer, seed?: number) => number;
+    crc32: (
+      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+      seed?: number,
+    ) => number;
     cityHash32: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer) => number;
-    cityHash64: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer, seed?: bigint) => bigint;
-    xxHash32: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer, seed?: number) => number;
-    xxHash64: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer, seed?: bigint) => bigint;
-    xxHash3: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer, seed?: bigint) => bigint;
-    murmur32v3: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer, seed?: number) => number;
-    murmur32v2: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer, seed?: number) => number;
-    murmur64v2: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer, seed?: bigint) => bigint;
-    rapidhash: (data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer, seed?: bigint) => bigint;
+    cityHash64: (
+      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+      seed?: bigint,
+    ) => bigint;
+    xxHash32: (
+      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+      seed?: number,
+    ) => number;
+    xxHash64: (
+      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+      seed?: bigint,
+    ) => bigint;
+    xxHash3: (
+      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+      seed?: bigint,
+    ) => bigint;
+    murmur32v3: (
+      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+      seed?: number,
+    ) => number;
+    murmur32v2: (
+      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+      seed?: number,
+    ) => number;
+    murmur64v2: (
+      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+      seed?: bigint,
+    ) => bigint;
+    rapidhash: (
+      data: string | ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
+      seed?: bigint,
+    ) => bigint;
   }
 
   type JavaScriptLoader = "jsx" | "js" | "ts" | "tsx";
@@ -3300,9 +3378,9 @@ declare module "bun" {
      * @default "esm"
      */
     format?: /**
-     * ECMAScript Module format
-     */
-    | "esm"
+       * ECMAScript Module format
+       */
+      | "esm"
       /**
        * CommonJS format
        * **Experimental**
@@ -4979,7 +5057,10 @@ declare module "bun" {
    *
    * @param path The path to the file as a byte buffer (the buffer is copied). If the path starts with `s3://`, the file behaves like {@link S3File}
    */
-  function file(path: ArrayBufferLike | Uint8Array<ArrayBuffer>, options?: BlobPropertyBag): BunFile;
+  function file(
+    path: ArrayBufferLike | Uint8Array<ArrayBuffer>,
+    options?: BlobPropertyBag,
+  ): BunFile;
 
   /**
    * [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) powered by the fastest system calls available for operating on files.
@@ -5080,7 +5161,9 @@ declare module "bun" {
        * @param cert - The leaf certificate of the server, as in `fetch()`. Unlike in `tls.connect()`, it has no `issuerCertificate`
        * @returns An error if the server is unauthorized, otherwise undefined
        */
-      checkServerIdentity?: NonNullable<import("node:tls").ConnectionOptions["checkServerIdentity"]>;
+      checkServerIdentity?: NonNullable<
+        import("node:tls").ConnectionOptions["checkServerIdentity"]
+      >;
     };
   };
 
@@ -5369,7 +5452,11 @@ declare module "bun" {
      *
      * Like {@link console.table}, except it returns a string
      */
-    function table(tabularData: object | unknown[], properties?: string[], options?: { colors?: boolean }): string;
+    function table(
+      tabularData: object | unknown[],
+      properties?: string[],
+      options?: { colors?: boolean },
+    ): string;
     function table(tabularData: object | unknown[], options?: { colors?: boolean }): string;
   }
 
@@ -5462,10 +5549,10 @@ declare module "bun" {
   function color(
     input: ColorInput,
     outputFormat?: /**
-     * True color ANSI color string, for use in terminals
-     * @example \x1b[38;2;100;200;200m
-     */
-    | "ansi"
+       * True color ANSI color string, for use in terminals
+       * @example \x1b[38;2;100;200;200m
+       */
+      | "ansi"
       | "ansi-16"
       | "ansi-16m"
       /**
@@ -5523,19 +5610,28 @@ declare module "bun" {
    * @param input Any color input
    * @param outputFormat Specify `[rgba]` to output as a `[r, g, b, a]` array
    */
-  function color(input: ColorInput, outputFormat: "[rgba]"): [number, number, number, number] | null;
+  function color(
+    input: ColorInput,
+    outputFormat: "[rgba]",
+  ): [number, number, number, number] | null;
   /**
    * Convert any color input to rgb
    * @param input Any color input
    * @param outputFormat Specify `{rgb}` to output as an object with `r`, `g`, and `b` properties
    */
-  function color(input: ColorInput, outputFormat: "{rgb}"): { r: number; g: number; b: number } | null;
+  function color(
+    input: ColorInput,
+    outputFormat: "{rgb}",
+  ): { r: number; g: number; b: number } | null;
   /**
    * Convert any color input to rgba
    * @param input Any color input
    * @param outputFormat Specify `{rgba}` to output as an object with `r`, `g`, `b`, and `a` properties
    */
-  function color(input: ColorInput, outputFormat: "{rgba}"): { r: number; g: number; b: number; a: number } | null;
+  function color(
+    input: ColorInput,
+    outputFormat: "{rgba}",
+  ): { r: number; g: number; b: number; a: number } | null;
   /**
    * Convert any color input to a number
    * @param input Any color input
@@ -5572,7 +5668,9 @@ declare module "bun" {
      *
      * @see https://bun.com/docs/runtime/module-graph#errors
      */
-    onError?: ((error: unknown, kind: "uncaughtException" | "unhandledRejection") => void) | undefined;
+    onError?:
+      | ((error: unknown, kind: "uncaughtException" | "unhandledRejection") => void)
+      | undefined;
   }
 
   /**
@@ -5752,7 +5850,15 @@ declare module "bun" {
     function memoryFootprint(): number | undefined;
   }
 
-  type DigestEncoding = "utf8" | "ucs2" | "utf16le" | "latin1" | "ascii" | "base64" | "base64url" | "hex";
+  type DigestEncoding =
+    | "utf8"
+    | "ucs2"
+    | "utf16le"
+    | "latin1"
+    | "ascii"
+    | "base64"
+    | "base64url"
+    | "hex";
 
   /**
    * Whether ANSI colors are enabled for stdin and stdout
@@ -5960,7 +6066,10 @@ declare module "bun" {
      *
      * @param input Data to add to the hash. `Uint8Array` or `ArrayBuffer` is faster than a string
      */
-    update(input: Bun.BlobOrStringOrBuffer, inputEncoding?: import("crypto").Encoding): CryptoHasher;
+    update(
+      input: Bun.BlobOrStringOrBuffer,
+      inputEncoding?: import("crypto").Encoding,
+    ): CryptoHasher;
 
     /**
      * Perform a deep copy of the hasher
@@ -7667,7 +7776,11 @@ declare module "bun" {
        * @param interfaceAddress Optional interface address to use
        * @returns true on success
        */
-      addSourceSpecificMembership(sourceAddress: string, groupAddress: string, interfaceAddress?: string): boolean;
+      addSourceSpecificMembership(
+        sourceAddress: string,
+        groupAddress: string,
+        interfaceAddress?: string,
+      ): boolean;
       /**
        * Leave a source-specific multicast group.
        * @param sourceAddress The source address
@@ -7675,7 +7788,11 @@ declare module "bun" {
        * @param interfaceAddress Optional interface address to use
        * @returns true on success
        */
-      dropSourceSpecificMembership(sourceAddress: string, groupAddress: string, interfaceAddress?: string): boolean;
+      dropSourceSpecificMembership(
+        sourceAddress: string,
+        groupAddress: string,
+        interfaceAddress?: string,
+      ): boolean;
     }
 
     export interface ConnectedSocket<DataBinaryType extends BinaryType> extends BaseUDPSocket {
@@ -7750,7 +7867,11 @@ declare module "bun" {
     /**
      * @deprecated use BaseOptions or the specific options for the specific {@link spawn} or {@link spawnSync} usage
      */
-    type OptionsObject<In extends Writable, Out extends Readable, Err extends Readable> = BaseOptions<In, Out, Err>;
+    type OptionsObject<
+      In extends Writable,
+      Out extends Readable,
+      Err extends Readable,
+    > = BaseOptions<In, Out, Err>;
 
     interface BaseOptions<In extends Writable, Out extends Readable, Err extends Readable> {
       /**
@@ -8113,11 +8234,17 @@ declare module "bun" {
       maxBuffer?: number;
     }
 
-    interface SpawnSyncOptions<In extends Writable, Out extends Readable, Err extends Readable>
-      extends BaseOptions<In, Out, Err> {}
+    interface SpawnSyncOptions<
+      In extends Writable,
+      Out extends Readable,
+      Err extends Readable,
+    > extends BaseOptions<In, Out, Err> {}
 
-    interface SpawnOptions<In extends Writable, Out extends Readable, Err extends Readable>
-      extends BaseOptions<In, Out, Err> {
+    interface SpawnOptions<
+      In extends Writable,
+      Out extends Readable,
+      Err extends Readable,
+    > extends BaseOptions<In, Out, Err> {
       /**
        * If true, the stdout and stderr pipes don't automatically start reading
        * data. Reading begins only when you access the `stdout` or `stderr`
@@ -8755,7 +8882,11 @@ declare module "bun" {
      * @see {@link CronJob} for the returned handle.
      * @see {@link Bun.cron.parse} to preview the next fire time.
      */
-    (schedule: CronWithAutocomplete, handler: (this: CronJob) => unknown, options?: CronOptions): CronJob;
+    (
+      schedule: CronWithAutocomplete,
+      handler: (this: CronJob) => unknown,
+      options?: CronOptions,
+    ): CronJob;
     /**
      * Register an **OS-level** cron job that runs a JavaScript/TypeScript module on a schedule.
      *
@@ -8891,7 +9022,11 @@ declare module "bun" {
      * const second = first ? Bun.cron.parse("@hourly", first) : null;
      * ```
      */
-    parse(expression: CronWithAutocomplete, relativeDate?: Date | number, options?: CronOptions): Date | null;
+    parse(
+      expression: CronWithAutocomplete,
+      relativeDate?: Date | number,
+      options?: CronOptions,
+    ): Date | null;
   };
 
   /** Utility type for any process from {@link Bun.spawn()} with both stdout and stderr set to `"pipe"` */
@@ -9277,7 +9412,10 @@ declare module "bun" {
      * const client = new SomeClient({ fetch: session.fetch });
      * ```
      */
-    readonly fetch: (input: string | URL | Request, init?: BunFetchRequestInit) => Promise<Response>;
+    readonly fetch: (
+      input: string | URL | Request,
+      init?: BunFetchRequestInit,
+    ) => Promise<Response>;
     /**
      * Close the idle connections in this session's pool. Requests in flight
      * finish, and the session stays usable.
@@ -9670,7 +9808,10 @@ declare module "bun" {
      */
     static clipboardChangeCount(): number;
 
-    constructor(input: string | ArrayBuffer | NodeJS.TypedArray | Blob, options?: Image.ConstructorOptions);
+    constructor(
+      input: string | ArrayBuffer | NodeJS.TypedArray | Blob,
+      options?: Image.ConstructorOptions,
+    );
 
     /** Set target dimensions. Omit `height` to keep the source aspect ratio. */
     resize(width: number, height?: number, options?: Image.ResizeOptions): this;
@@ -10125,10 +10266,26 @@ declare module "bun" {
      * // Kitty shm_open's the name, reads ${size} PNG bytes, unlinks.
      * ```
      */
-    screenshot(options?: { encoding?: "blob"; format?: "png" | "jpeg" | "webp"; quality?: number }): Promise<Blob>;
-    screenshot(options: { encoding: "buffer"; format?: "png" | "jpeg" | "webp"; quality?: number }): Promise<Buffer>;
-    screenshot(options: { encoding: "base64"; format?: "png" | "jpeg" | "webp"; quality?: number }): Promise<string>;
-    screenshot(options: { encoding: "shmem"; format?: "png" | "jpeg" | "webp"; quality?: number }): Promise<{
+    screenshot(options?: {
+      encoding?: "blob";
+      format?: "png" | "jpeg" | "webp";
+      quality?: number;
+    }): Promise<Blob>;
+    screenshot(options: {
+      encoding: "buffer";
+      format?: "png" | "jpeg" | "webp";
+      quality?: number;
+    }): Promise<Buffer>;
+    screenshot(options: {
+      encoding: "base64";
+      format?: "png" | "jpeg" | "webp";
+      quality?: number;
+    }): Promise<string>;
+    screenshot(options: {
+      encoding: "shmem";
+      format?: "png" | "jpeg" | "webp";
+      quality?: number;
+    }): Promise<{
       /** POSIX shm name (pass to `shm_open(2)` or Kitty `t=s`). */
       name: string;
       /** Encoded image size in bytes. */
@@ -10342,7 +10499,11 @@ declare module "bun" {
    * - A Blob containing existing archive data (tar, tar.gz or zip)
    * - A TypedArray or ArrayBuffer containing existing archive data (tar, tar.gz or zip)
    */
-  type ArchiveInput = Record<string, BlobPart | ArchiveEntry> | Blob | ArrayBufferView | ArrayBufferLike;
+  type ArchiveInput =
+    | Record<string, BlobPart | ArchiveEntry>
+    | Blob
+    | ArrayBufferView
+    | ArrayBufferLike;
 
   /**
    * Container format of an archive built from an object.
@@ -10562,7 +10723,11 @@ declare module "bun" {
      * await Bun.Archive.write("output.tar.gz", files, { compress: "gzip" });
      * ```
      */
-    static write(path: string, data: ArchiveInput | Archive, options?: ArchiveOptions): Promise<void>;
+    static write(
+      path: string,
+      data: ArchiveInput | Archive,
+      options?: ArchiveOptions,
+    ): Promise<void>;
 
     /**
      * Extract the archive contents to a directory on disk.
