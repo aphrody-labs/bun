@@ -6,13 +6,15 @@ proxying, caching and the configured modules.
 
 ```ts
 import { Nginx } from "bun:nginx";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 const provider = await Nginx.probe({ binary: "/usr/sbin/nginx" });
 if (!provider.available) throw new Error(provider.message);
 
 await using nginx = await Nginx.create({
   binary: "/usr/sbin/nginx",
-  prefix: "/home/ubuntu/apps/my-nginx",
+  prefix: join(homedir(), "apps", "my-nginx"),
   configFile: "nginx.conf",
   timeoutMs: 10_000,
 });
