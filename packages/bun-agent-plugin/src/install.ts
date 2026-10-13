@@ -6,14 +6,14 @@
 // under ~/.gemini. Other plugins and settings are left as they are; `uninstall` takes back exactly what was added.
 
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { isAphrodyBun } from "./hooks/common.ts";
-import { MARKETPLACE, PLUGIN } from "./spec.ts";
+import { MARKETPLACE, PLUGIN, TARGETS, type Target } from "./spec.ts";
 
-export type Target = "claude" | "codex" | "agy";
-export const ALL_TARGETS: Target[] = ["claude", "codex", "agy"];
+export type { Target } from "./spec.ts";
+export const ALL_TARGETS: Target[] = [...TARGETS];
 
 export type InstallOptions = {
   /** Home directory to install into (default: the user's). Set, it also keeps the agents' CLIs out of it. */
@@ -44,11 +44,28 @@ function paths(home: string, real: boolean) {
     claudeSettings: join(env("CLAUDE_CONFIG_DIR") ?? join(home, ".claude"), "settings.json"),
     codexHome: env("CODEX_HOME") ?? join(home, ".codex"),
     gemini: join(home, ".gemini"),
+    opencode: env("OPENCODE_CONFIG_DIR") ?? join(env("XDG_CONFIG_HOME") ?? join(home, ".config"), "opencode"),
   };
 }
 
 function str(v: string | Uint8Array | undefined): string {
   return v === undefined ? "" : typeof v === "string" ? v : new TextDecoder().decode(v);
+}
+
+/** Only remove or replace installed skill trees that still equal our managed source. */
+function sameTree(left: string, right: string): boolean {
+  if (!existsSync(left) || !existsSync(right)) return false;
+  const a = readdirSync(left, { withFileTypes: true });
+  const b = readdirSync(right, { withFileTypes: true });
+  if (a.length !== b.length) return false;
+  return a.every(entry => {
+    const peer = b.find(x => x.name === entry.name);
+    if (!peer || entry.isSymbolicLink() || peer.isSymbolicLink() || entry.isDirectory() !== peer.isDirectory())
+      return false;
+    return entry.isDirectory()
+      ? sameTree(join(left, entry.name), join(right, entry.name))
+      : readFileSync(join(left, entry.name)).equals(readFileSync(join(right, entry.name)));
+  });
 }
 
 /** Replaces (or appends, or with `body` undefined removes) the delimited block of a text file. */
@@ -103,7 +120,14 @@ function which(cmd: string): boolean {
 function run(cmd: string[], actions: string[], dryRun: boolean | undefined) {
   actions.push(`$ ${cmd.join(" ")}`);
   if (dryRun) return;
-  spawnSync(cmd[0], cmd.slice(1), { stdio: "ignore", shell: process.platform === "win32" });
+  const result = spawnSync(cmd[0], cmd.slice(1), {
+    stdio: "ignore",
+    shell: process.platform === "win32",
+    windowsHide: true,
+    timeout: 15000,
+  });
+  if (result.error || result.status !== 0)
+    throw new Error(`${cmd[0]} registration failed: ${result.error?.message ?? result.status}`);
 }
 
 function detected(home: string, real: boolean): Target[] {
@@ -111,7 +135,9 @@ function detected(home: string, real: boolean): Target[] {
   const out: Target[] = [];
   if (existsSync(dirname(p.claudeSettings)) || (real && which("claude"))) out.push("claude");
   if (existsSync(p.codexHome) || (real && which("codex"))) out.push("codex");
-  if (existsSync(p.gemini) || (real && (which("agy") || which("gemini")))) out.push("agy");
+  if (existsSync(join(p.gemini, "config")) || (real && which("agy"))) out.push("agy");
+  if (existsSync(p.gemini) || (real && which("gemini"))) out.push("gemini");
+  if (existsSync(p.opencode) || (real && which("opencode"))) out.push("opencode");
   return out;
 }
 
@@ -119,16 +145,27 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
   const home = options.home ?? homedir();
   const real = options.home === undefined;
   const p = paths(home, real);
-  const meta = JSON.parse(str(files.get("claude/meta.json")));
+  const meta = JSON.parse(str(files.get("meta.json") ?? files.get("claude/meta.json")));
   const previous = readJson(join(p.root, "install.json"));
   const executable = typeof Bun !== "undefined" && isAphrodyBun() ? process.execPath : undefined;
   if (executable) {
     files = new Map(files);
-    for (const path of ["claude/.mcp.json", "codex/.mcp.json", "agy/mcp_config.json", "agy/gemini-extension.json"]) {
+    for (const path of [
+      "claude/.mcp.json",
+      "codex/.mcp.json",
+      "agy/mcp_config.json",
+      "gemini/gemini-extension.json",
+      "local/mcp.json",
+    ]) {
       if (!files.has(path)) continue;
       const config = JSON.parse(str(files.get(path)));
       if (config.mcpServers?.bun) config.mcpServers.bun.command = executable;
       files.set(path, JSON.stringify(config, null, 2) + "\n");
+    }
+    if (files.has("opencode/opencode.json")) {
+      const config = JSON.parse(str(files.get("opencode/opencode.json")));
+      config.mcp.bun.command[0] = executable;
+      files.set("opencode/opencode.json", JSON.stringify(config, null, 2) + "\n");
     }
     const config = files.get("codex/config.toml");
     if (config)
@@ -137,8 +174,62 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
         str(config).replace(/^command = "bun"$/m, `command = ${JSON.stringify(executable)}`),
       );
   }
+  // Antigravity does not document a plugin-root variable; resolve hook paths at installation.
+  if (files.has("agy/hooks.json")) {
+    files = new Map(files);
+    const config = JSON.parse(str(files.get("agy/hooks.json")));
+    for (const group of Object.values(config) as Record<string, any>[]) {
+      for (const handlers of Object.values(group) as any[][]) {
+        for (const entry of handlers) {
+          for (const handler of entry.hooks ?? [entry]) {
+            handler.command = handler.command.replace(/hooks\/([\w-]+)\.ts/, (_: string, name: string) =>
+              JSON.stringify(join(p.root, "agy", "hooks", `${name}.ts`).replaceAll("\\", "/")),
+            );
+          }
+        }
+      }
+    }
+    files.set("agy/hooks.json", JSON.stringify(config, null, 2) + "\n");
+  }
   const actions: string[] = [];
   let targets = options.targets ?? (options.update && previous.targets ? previous.targets : detected(home, real));
+  // One shared generated snapshot: refresh every previously installed adapter together.
+  targets = [...new Set([...(previous.targets ?? []), ...targets])];
+  const previousSkills: string[] = existsSync(join(p.root, "skills.json"))
+    ? JSON.parse(readFileSync(join(p.root, "skills.json"), "utf8"))
+    : [];
+  if (targets.includes("agy")) {
+    const dir = join(p.gemini, "config", "plugins", PLUGIN);
+    if (existsSync(dir) && !sameTree(dir, join(p.root, "agy")))
+      throw new Error(`Existing or modified Antigravity plugin owner: ${dir}`);
+  }
+  if (targets.includes("gemini")) {
+    const dir = join(p.gemini, "extensions", PLUGIN);
+    if (existsSync(dir) && !sameTree(dir, join(p.root, "gemini")) && !sameTree(dir, join(p.root, "agy")))
+      throw new Error(`Existing Gemini extension owner: ${dir}`);
+  }
+  if (targets.includes("opencode")) {
+    const path = real && process.env.OPENCODE_CONFIG ? process.env.OPENCODE_CONFIG : join(p.opencode, "opencode.json");
+    if (!existsSync(path) && existsSync(join(p.opencode, "opencode.jsonc")))
+      throw new Error(
+        "OpenCode JSONC config exists: choose an explicit JSON config with OPENCODE_CONFIG; no configuration overwritten",
+      );
+    const config = existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
+    if (config.instructions !== undefined && !Array.isArray(config.instructions))
+      throw new Error(`Invalid OpenCode instructions at ${path}`);
+    const owned = readJson(join(p.root, "opencode", "opencode.json")).mcp?.bun;
+    if (config.mcp?.bun && JSON.stringify(config.mcp.bun) !== JSON.stringify(owned))
+      throw new Error(`Existing OpenCode bun MCP owner at ${path}`);
+    const plugin = join(p.opencode, "plugins", "bun.ts");
+    const expected = `export { BunPlugin } from ${JSON.stringify(join(p.root, "opencode", "plugins", "bun.ts").replaceAll("\\", "/"))};\n`;
+    if (existsSync(plugin) && readFileSync(plugin, "utf8") !== expected)
+      throw new Error(`Existing OpenCode plugin owner: ${plugin}`);
+    for (const name of new Set([...previousSkills, ...JSON.parse(str(files.get("skills.json")))])) {
+      const dir = join(p.opencode, "skills", name);
+      if (existsSync(dir) && !sameTree(dir, join(p.root, "opencode", "skills", name)))
+        throw new Error(`Existing skill owner: ${dir}`);
+    }
+  }
   const record = (targets: Target[]) =>
     JSON.stringify(
       {
@@ -147,7 +238,7 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
         hash: meta.hash,
         bun: bunRevision(),
         executable,
-        targets,
+        targets: [...new Set([...(previous.targets ?? []), ...targets])],
       },
       null,
       2,
@@ -155,7 +246,12 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
   if (options.update && !previous.hash) {
     return { root: p.root, version: meta.version, targets: [], actions, skipped: "not installed" };
   }
-  if (options.update && previous.hash === meta.hash && previous.executable === executable) {
+  if (
+    options.update &&
+    previous.hash === meta.hash &&
+    previous.executable === executable &&
+    targets.every(t => previous.targets?.includes(t))
+  ) {
     if (!options.dryRun && previous.bun !== bunRevision()) writeFileSync(join(p.root, "install.json"), record(targets));
     return { root: p.root, version: meta.version, targets, actions, skipped: "up to date" };
   }
@@ -168,7 +264,13 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
   // 1. The plugin directory, which is the marketplace of Claude Code and Codex.
   actions.push(`write ${p.root} (${files.size} files)`);
   if (!options.dryRun) {
-    for (const d of ["claude", "codex", "agy", ".claude-plugin", ".agents"])
+    if (targets.includes("opencode")) {
+      for (const name of previousSkills) {
+        const dir = join(p.opencode, "skills", name);
+        if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+      }
+    }
+    for (const d of [...ALL_TARGETS, ".claude-plugin", ".agents"])
       rmSync(join(p.root, d), { recursive: true, force: true });
     for (const [rel, content] of files) write(join(p.root, rel), content);
   }
@@ -207,14 +309,13 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
     const agents = existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : "";
     actions.push(`merge ${agentsPath}: Aphrody runtime rules`);
     write(agentsPath, upsertBlock(agents, str(files.get("codex/AGENTS.md")), markdown));
-    if (real && which("codex")) run(["codex", "plugin", "add", PLUGIN_ID], actions, options.dryRun);
+    // The config is the registration contract; clients vary in install/add CLI verbs.
+    if (real && which("codex")) run(["codex", "plugin", "list", "--json"], actions, options.dryRun);
   }
 
-  // 4. Antigravity reads plugins from ~/.gemini/config/plugins; Gemini CLI extensions from ~/.gemini/extensions.
+  // 4. Antigravity is distinct from Gemini CLI.
   if (targets.includes("agy")) {
     const dirs = [join(p.gemini, "config", "plugins", PLUGIN)];
-    if (existsSync(join(p.gemini, "extensions")) || (real && which("gemini")))
-      dirs.push(join(p.gemini, "extensions", PLUGIN));
     for (const dir of dirs) {
       actions.push(`copy ${join(p.root, "agy")} -> ${dir}`);
       if (options.dryRun) continue;
@@ -222,7 +323,47 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
       mkdirSync(dirname(dir), { recursive: true });
       cpSync(join(p.root, "agy"), dir, { recursive: true });
     }
+    if (real && which("agy")) run(["agy", "plugin", "install", join(p.root, "agy")], actions, options.dryRun);
   }
+
+  if (targets.includes("gemini")) {
+    const dir = join(p.gemini, "extensions", PLUGIN);
+    actions.push(`link Gemini extension ${join(p.root, "gemini")}`);
+    if (real && which("gemini")) run(["gemini", "extensions", "link", join(p.root, "gemini")], actions, options.dryRun);
+    else if (!options.dryRun) {
+      rmSync(dir, { recursive: true, force: true });
+      mkdirSync(dirname(dir), { recursive: true });
+      cpSync(join(p.root, "gemini"), dir, { recursive: true });
+    }
+  }
+  if (targets.includes("opencode")) {
+    const path = real && process.env.OPENCODE_CONFIG ? process.env.OPENCODE_CONFIG : join(p.opencode, "opencode.json");
+    // Never replace a JSONC config or an existing server/provider definition silently.
+    const config = existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
+    config.$schema ??= "https://opencode.ai/config.json";
+    config.mcp ??= {};
+    config.mcp.bun = JSON.parse(str(files.get("opencode/opencode.json"))).mcp.bun;
+    config.instructions ??= [];
+    const rules = join(p.root, "opencode", "AGENTS.md");
+    if (!config.instructions.includes(rules)) config.instructions.push(rules);
+    actions.push(`merge ${path}: Bun MCP and instructions; install native OpenCode adapter`);
+    write(path, JSON.stringify(config, null, 2) + "\n");
+    // Plugin imports the shared engine from the generated root, without duplicating it.
+    write(
+      join(p.opencode, "plugins", "bun.ts"),
+      `export { BunPlugin } from ${JSON.stringify(join(p.root, "opencode", "plugins", "bun.ts").replaceAll("\\", "/"))};\n`,
+    );
+    const skillsRoot = join(p.opencode, "skills");
+    if (!options.dryRun) {
+      mkdirSync(skillsRoot, { recursive: true });
+      for (const name of JSON.parse(str(files.get("skills.json")))) {
+        const dir = join(skillsRoot, name);
+        cpSync(join(p.root, "opencode", "skills", name), dir, { recursive: true });
+      }
+    }
+  }
+  if (targets.includes("local"))
+    actions.push(`portable MCP/skills bundle: ${join(p.root, "local")}; provider settings unchanged`);
 
   write(join(p.root, "install.json"), record(targets));
   if (!options.quiet) for (const a of actions) console.log(a);
@@ -236,6 +377,21 @@ export function uninstall(options: InstallOptions = {}): InstallReport {
   const previous = readJson(join(p.root, "install.json"));
   const targets: Target[] = options.targets ?? previous.targets ?? ALL_TARGETS;
   const actions: string[] = [];
+  // Refuse partial destructive uninstall when a user-edited adapter still depends on the shared root.
+  for (const [target, dir, source] of [
+    ["agy", join(p.gemini, "config", "plugins", PLUGIN), "agy"],
+    ["agy", join(p.gemini, "antigravity-cli", "plugins", PLUGIN), "agy"],
+    ["gemini", join(p.gemini, "extensions", PLUGIN), "gemini"],
+  ] as const) {
+    if (targets.includes(target) && existsSync(dir) && !sameTree(dir, join(p.root, source)))
+      throw new Error(`Modified or unrelated adapter preserved: ${dir}`);
+  }
+  if (targets.includes("opencode") && previous.targets?.includes("opencode")) {
+    const plugin = join(p.opencode, "plugins", "bun.ts");
+    const expected = `export { BunPlugin } from ${JSON.stringify(join(p.root, "opencode", "plugins", "bun.ts").replaceAll("\\", "/"))};\n`;
+    if (existsSync(plugin) && readFileSync(plugin, "utf8") !== expected)
+      throw new Error(`Modified OpenCode adapter preserved with its shared root: ${plugin}`);
+  }
   const write = (path: string, content: string) => !options.dryRun && writeFileSync(path, content);
   if (targets.includes("claude")) {
     if (real && which("claude")) {
@@ -253,7 +409,6 @@ export function uninstall(options: InstallOptions = {}): InstallReport {
     }
   }
   if (targets.includes("codex")) {
-    if (real && which("codex")) run(["codex", "plugin", "remove", PLUGIN_ID], actions, options.dryRun);
     for (const [file, comment] of [
       ["config.toml", toml],
       ["AGENTS.md", markdown],
@@ -265,10 +420,45 @@ export function uninstall(options: InstallOptions = {}): InstallReport {
     }
   }
   if (targets.includes("agy")) {
-    for (const dir of [join(p.gemini, "config", "plugins", PLUGIN), join(p.gemini, "extensions", PLUGIN)]) {
+    if (real && which("agy")) run(["agy", "plugin", "uninstall", PLUGIN], actions, options.dryRun);
+    for (const dir of [
+      join(p.gemini, "config", "plugins", PLUGIN),
+      join(p.gemini, "antigravity-cli", "plugins", PLUGIN),
+    ]) {
       if (!existsSync(dir)) continue;
       actions.push(`remove ${dir}`);
       if (!options.dryRun) rmSync(dir, { recursive: true, force: true });
+    }
+  }
+  if (targets.includes("gemini")) {
+    if (real && which("gemini")) run(["gemini", "extensions", "uninstall", PLUGIN], actions, options.dryRun);
+    else {
+      const dir = join(p.gemini, "extensions", PLUGIN);
+      actions.push(`remove ${dir}`);
+      if (!options.dryRun) rmSync(dir, { recursive: true, force: true });
+    }
+  }
+  if (targets.includes("opencode") && previous.targets?.includes("opencode")) {
+    const path = real && process.env.OPENCODE_CONFIG ? process.env.OPENCODE_CONFIG : join(p.opencode, "opencode.json");
+    if (existsSync(path)) {
+      const config = JSON.parse(readFileSync(path, "utf8"));
+      const owned = readJson(join(p.root, "opencode", "opencode.json")).mcp?.bun;
+      if (JSON.stringify(config.mcp?.bun) === JSON.stringify(owned)) delete config.mcp.bun;
+      const rules = join(p.root, "opencode", "AGENTS.md");
+      if (Array.isArray(config.instructions))
+        config.instructions = config.instructions.filter((s: string) => s !== rules);
+      actions.push(`unmerge ${path}: owned Bun integration`);
+      write(path, JSON.stringify(config, null, 2) + "\n");
+    }
+    if (!options.dryRun) {
+      const plugin = join(p.opencode, "plugins", "bun.ts");
+      const expected = `export { BunPlugin } from ${JSON.stringify(join(p.root, "opencode", "plugins", "bun.ts").replaceAll("\\", "/"))};\n`;
+      if (existsSync(plugin) && readFileSync(plugin, "utf8") === expected) rmSync(plugin);
+      for (const name of readJson(join(p.root, "skills.json")) as unknown as string[]) {
+        const dir = join(p.opencode, "skills", name);
+        if (existsSync(dir) && sameTree(dir, join(p.root, "opencode", "skills", name)))
+          rmSync(dir, { recursive: true, force: true });
+      }
     }
   }
   if (
@@ -277,6 +467,12 @@ export function uninstall(options: InstallOptions = {}): InstallReport {
   ) {
     actions.push(`remove ${p.root}`);
     if (!options.dryRun) rmSync(p.root, { recursive: true, force: true });
+  } else if (!options.dryRun) {
+    writeFileSync(
+      join(p.root, "install.json"),
+      JSON.stringify({ ...previous, targets: previous.targets.filter((t: Target) => !targets.includes(t)) }, null, 2) +
+        "\n",
+    );
   }
   if (!options.quiet) for (const a of actions) console.log(a);
   return { root: p.root, version: previous.version ?? "", targets, actions };

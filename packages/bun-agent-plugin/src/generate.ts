@@ -22,6 +22,7 @@ import {
   PREFER,
   REPOSITORY,
   SKILL_ROOTS,
+  TARGETS,
 } from "./spec.ts";
 
 export type Files = Map<string, string | Uint8Array>;
@@ -34,7 +35,6 @@ export type GenerateOptions = {
   skillDirs?: string[];
 };
 
-const TARGETS = ["claude", "codex", "agy"] as const;
 const N2B_PACKAGES = "packages/bun-n2b/crates/n2b-registry/registry/packages.toml";
 
 // ─── Reading sources ───────────────────────────────────────────────────────
@@ -307,7 +307,7 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
     const owner = DERIVED_SKILLS.find(d => d.fiches.some(r => r.test(f.name)))!;
     groups.get(owner.name)!.push(f);
   }
-  const claude = text(join(root, "CLAUDE.md"));
+  const claude = maybe(join(root, "AGENTS.md")) ?? text(join(root, "CLAUDE.md"));
   const rules = agentRules(root);
   const out: Skill[] = [];
   const make = (name: string, description: string, body: string[], extra: [string, string][] = []) => {
@@ -514,12 +514,26 @@ export function generate(options: GenerateOptions): Files {
     }),
   );
   const hash = hashOf(
-    new Map([...common, ["instructions", instructions], ["lsp", JSON.stringify(lspExt)], ["v", version]]),
+    new Map([
+      ...common,
+      ["instructions", instructions],
+      ["generator", text(join(pkg, "src", "generate.ts"))],
+      ["installer", text(join(pkg, "src", "install.ts"))],
+      ["spec", text(join(pkg, "src", "spec.ts"))],
+      ["adapters", text(join(pkg, "src", "opencode-plugin.ts"))],
+      ["contracts", text(join(pkg, "docs", "agent-adapters.md"))],
+      ["lsp", JSON.stringify(lspExt)],
+      ["v", version],
+    ]),
   );
   const pluginVersion = `${version}+${hash.slice(0, 12)}`;
   const meta = json({ name: PLUGIN, version: pluginVersion, bunVersion: version, hash });
 
   const files: Files = new Map();
+  files.set("meta.json", meta);
+  files.set("skills.json", json(skills.map(s => s.name)));
+  files.set("AGENTS.md", instructions);
+  files.set("agent-adapters.md", text(join(pkg, "docs", "agent-adapters.md")));
   const hook = (script: string, t: string, root: string) =>
     `bun --no-install --no-env-file "${root}/hooks/${script}.ts" ${t}`;
   for (const t of TARGETS) {
@@ -528,17 +542,20 @@ export function generate(options: GenerateOptions): Files {
   }
 
   // Claude Code
-  const claudeHooks = (t: "claude" | "codex", rootVar: string) => ({
+  const commandHooks = (t: "claude" | "codex", rootVar: string) => ({
     hooks: {
       SessionStart: [
         {
-          matcher: "startup|resume|clear|compact",
+          ...(t === "claude" ? { matcher: "startup|resume|clear|compact" } : {}),
           hooks: [{ type: "command", command: hook("session-start", t, rootVar), timeout: 10 }],
         },
       ],
       PreToolUse: [
         {
-          matcher: t === "claude" && prefer.length ? ["Bash", ...prefer.map(p => p.instead)].join("|") : "Bash",
+          matcher:
+            t === "claude" && prefer.length
+              ? ["Bash", ...prefer.map(p => p.instead)].join("|")
+              : "Bash|Shell|exec_command|shell_command|grep_files|list_files",
           hooks: [{ type: "command", command: hook("pre-tool-use", t, rootVar), timeout: 5 }],
         },
       ],
@@ -576,7 +593,7 @@ export function generate(options: GenerateOptions): Files {
     }),
   );
   files.set("claude/.mcp.json", json(mcp));
-  files.set("claude/hooks/hooks.json", json(claudeHooks("claude", "${CLAUDE_PLUGIN_ROOT}")));
+  files.set("claude/hooks/hooks.json", json(commandHooks("claude", "${CLAUDE_PLUGIN_ROOT}")));
   files.set(
     ".claude-plugin/marketplace.json",
     json({
@@ -614,7 +631,7 @@ export function generate(options: GenerateOptions): Files {
     }),
   );
   files.set("codex/.mcp.json", json(mcp));
-  files.set("codex/hooks/hooks.json", json(claudeHooks("codex", "${PLUGIN_ROOT}")));
+  files.set("codex/hooks/hooks.json", json(commandHooks("codex", "${PLUGIN_ROOT}")));
   files.set("codex/AGENTS.md", instructions);
   files.set(
     "codex/config.toml",
@@ -643,19 +660,70 @@ export function generate(options: GenerateOptions): Files {
     }),
   );
 
-  // Antigravity (agy) plugin, which is also a Gemini CLI extension.
+  // Gemini has its own event names and millisecond timeouts, separate from Antigravity.
+  files.set("gemini/GEMINI.md", instructions);
+  files.set(
+    "gemini/gemini-extension.json",
+    json({
+      name: PLUGIN,
+      version: pluginVersion,
+      contextFileName: "GEMINI.md",
+      mcpServers: { [MCP_SERVER.name]: { command: MCP_SERVER.command, args: MCP_SERVER.args } },
+    }),
+  );
+  const geminiHook = (script: string) => ({
+    type: "command",
+    name: `${PLUGIN}-${script}`,
+    command: hook(script, "gemini", "${extensionPath}"),
+    timeout: 10000,
+  });
+  files.set(
+    "gemini/hooks/hooks.json",
+    json({
+      hooks: {
+        SessionStart: [{ hooks: [geminiHook("session-start")] }],
+        BeforeTool: [{ matcher: "run_shell_command|grep_search|glob", hooks: [geminiHook("pre-tool-use")] }],
+        AfterTool: [{ matcher: "run_shell_command", hooks: [geminiHook("post-tool-use")] }],
+        BeforeAgent: [{ hooks: [geminiHook("user-prompt-submit")] }],
+      },
+    }),
+  );
+
+  // OpenCode consumes native JS plugins, not a Claude hooks.json.
+  files.set("opencode/AGENTS.md", instructions);
+  files.set(
+    "opencode/opencode.json",
+    json({
+      $schema: "https://opencode.ai/config.json",
+      mcp: { [MCP_SERVER.name]: { type: "local", command: [MCP_SERVER.command, ...MCP_SERVER.args], enabled: true } },
+    }),
+  );
+  files.set(
+    "opencode/plugins/bun.ts",
+    text(join(pkg, "src", "opencode-plugin.ts")).replaceAll('"./hooks/', '"../hooks/'),
+  );
+
+  // A local model is not a harness. Export standard resources without inventing event support.
+  files.set("local/AGENTS.md", instructions);
+  files.set(
+    "local/mcp.json",
+    json({
+      mcpServers: {
+        [MCP_SERVER.name]: { command: MCP_SERVER.command, args: MCP_SERVER.args },
+      },
+    }),
+  );
+  files.set(
+    "local/README.md",
+    "# Portable Bun integration\n\nUse AGENTS.md and skills/ in a harness that supports them, and merge mcp.json using that harness's MCP schema. No automatic hooks or provider settings are assumed. Local models use their existing harness (Codex, OpenCode, or another MCP client); this bundle does not download models or change authentication.\n",
+  );
+
+  // Antigravity remains a distinct adapter; its hook protocol is not Gemini's.
   files.set(
     "agy/plugin.json",
     json({
       name: PLUGIN,
-      displayName: DISPLAY_NAME,
       description,
-      version: pluginVersion,
-      suggestedPrompts: [
-        "Build this Bun checkout and run the tests of the file I am changing",
-        "Migrate this project's npm and node commands to the Aphrody runtime",
-        "Which Bun crate implements this API?",
-      ],
     }),
   );
   files.set(
@@ -670,7 +738,7 @@ export function generate(options: GenerateOptions): Files {
   files.set(
     "agy/hooks.json",
     json({
-      [`${PLUGIN}-session`]: { PreInvocation: [agyHook("session-start")] },
+      [`${PLUGIN}-session`]: { SessionStart: [agyHook("session-start")] },
       [`${PLUGIN}-commands`]: {
         PreToolUse: [{ matcher: "run_command", hooks: [agyHook("pre-tool-use")] }],
         PostToolUse: [{ matcher: "run_command", hooks: [agyHook("post-tool-use")] }],
@@ -678,17 +746,6 @@ export function generate(options: GenerateOptions): Files {
     }),
   );
   files.set("agy/rules/AGENTS.md", instructions);
-  files.set("agy/GEMINI.md", instructions);
-  files.set(
-    "agy/gemini-extension.json",
-    json({
-      name: PLUGIN,
-      version: pluginVersion,
-      description,
-      contextFileName: "GEMINI.md",
-      mcpServers: { [MCP_SERVER.name]: { command: MCP_SERVER.command, args: MCP_SERVER.args } },
-    }),
-  );
 
   for (const [path, content] of files) {
     if (typeof content !== "string") continue;
@@ -710,6 +767,8 @@ export function inputFiles(root: string, pkg = join(root, "packages", "bun-agent
   for (const base of COMMAND_ROOTS) for (const f of sorted(join(root, base))) add(join(root, base, f));
   for (const f of sorted(join(pkg, "memory"))) add(join(pkg, "memory", f));
   for (const f of sorted(join(pkg, "src"))) if (f.endsWith(".ts")) add(join(pkg, "src", f));
+  for (const f of sorted(join(pkg, "docs"))) add(join(pkg, "docs", f));
+  add(join(root, "AGENTS.md"));
   for (const h of HOOKS) add(join(pkg, "src", "hooks", h));
   add(join(root, N2B_PACKAGES));
   for (const f of ["package.json", "README.md", "bin/bun-agent-plugin.ts"]) add(join(pkg, f));

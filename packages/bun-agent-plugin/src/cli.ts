@@ -1,8 +1,8 @@
 // bun-agent-plugin: the Aphrody runtime (aphrody-labs/bun) as a plugin for Claude Code, Codex and Antigravity/Gemini CLI.
 //
-//   install [claude|codex|agy]... [--home DIR] [--dry-run] [--update] [--quiet] [--json]
-//   uninstall [claude|codex|agy]... [--home DIR] [--dry-run]
-//   generate [--out DIR] [--check]       write the three plugins (default: <package>/dist)
+//   install [claude|codex|gemini|opencode|local|agy]... [--home DIR] [--dry-run] [--update] [--quiet] [--json]
+//   uninstall [claude|codex|gemini|opencode|local|agy]... [--home DIR] [--dry-run]
+//   generate [--out DIR] [--check]       write agent adapters (default: <package>/dist)
 //   pack --out FILE                      the archive `bun agent-plugin` embeds
 //   inputs                               the files generate reads (one per line)
 //   memory --from DIR                    import memory fiches (bun-*.md), sanitized, into <package>/memory
@@ -108,7 +108,8 @@ function packageFiles(): Files {
   const out: Files = new Map();
   for (const rel of ["package.json", "README.md"])
     if (existsSync(join(pkg, rel))) out.set(rel, readFileSync(join(pkg, rel), "utf8"));
-  for (const dir of ["bin", "src", "skills"]) for (const [rel, v] of readTree(join(pkg, dir))) out.set(`${dir}/${rel}`, v);
+  for (const dir of ["bin", "src", "skills", "docs"])
+    for (const [rel, v] of readTree(join(pkg, dir))) out.set(`${dir}/${rel}`, v);
   return out;
 }
 

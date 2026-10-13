@@ -6,6 +6,10 @@ export const DISPLAY_NAME = "Bun (Aphrody runtime)";
 export const REPOSITORY = "https://github.com/aphrody-labs/bun";
 export const AUTHOR = { name: "aphrody-labs", url: "https://github.com/aphrody-labs" };
 
+/** Harnesses, independent of the selected model/provider. `local` is a portable MCP/skills bundle. */
+export const TARGETS = ["claude", "codex", "gemini", "opencode", "local", "agy"] as const;
+export type Target = (typeof TARGETS)[number];
+
 /** The MCP server every target registers: the built-in server of the Aphrody runtime, over stdio. */
 export const MCP_SERVER = { name: "bun", command: "bun", args: ["mcp"] };
 
@@ -26,7 +30,7 @@ export const PREFER: { instead: string; bash: string; use: string[] }[] = [
 ];
 
 /** Where repository skills come from, first match of a name wins. Each is `<dir>/<name>/SKILL.md`. */
-export const SKILL_ROOTS = ["packages/bun-agent-plugin/skills", ".claude/skills", "skills", ".agents/skills"];
+export const SKILL_ROOTS = ["packages/bun-agent-plugin/skills", ".agents/skills", "skills", ".claude/skills"];
 /** Slash commands become skills too (`<name>.md` with a `description` front matter). */
 export const COMMAND_ROOTS = [".claude/commands"];
 

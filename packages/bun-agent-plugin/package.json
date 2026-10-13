@@ -22,6 +22,7 @@
     "src",
     "memory",
     "skills",
+    "docs",
     "README.md"
   ],
   "engines": {

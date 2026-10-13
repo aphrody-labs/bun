@@ -13,7 +13,8 @@ declare module "bun:graph-native" {
     max_output_bytes?: number;
   }
   export type GraphConfidence = "EXTRACTED" | "INFERRED" | "AMBIGUOUS";
-  export interface GraphNode {
+  /** Accepted input; omitted fields receive defaults in the Rust deserializer. */
+  export interface GraphNodeInput {
     id: string;
     label: string;
     file_type?: "code" | "document" | "concept" | "rationale";
@@ -24,7 +25,17 @@ declare module "bun:graph-native" {
     community_name?: string | null;
     package?: string | null;
   }
-  export interface GraphLink {
+  /** Rust serializes every field, including absent metadata as null. */
+  export interface GraphNode extends GraphNodeInput {
+    file_type: "code" | "document" | "concept" | "rationale";
+    source_file: string | null;
+    source_location: string | null;
+    lang: string | null;
+    community: number | null;
+    community_name: string | null;
+    package: string | null;
+  }
+  export interface GraphLinkInput {
     source: string;
     target: string;
     relation: string;
@@ -35,14 +46,24 @@ declare module "bun:graph-native" {
     source_location?: string | null;
     context?: string | null;
   }
+  export interface GraphLink extends GraphLinkInput {
+    confidence_score: number;
+    weight: number;
+    source_file: string | null;
+    source_location: string | null;
+    context: string | null;
+  }
   export interface GraphDocument {
     nodes: GraphNode[];
     links: GraphLink[];
+    root: string | null;
+    built_at_commit: string | null;
+  }
+  export type GraphInput = {
+    nodes: GraphNodeInput[];
     root?: string | null;
     built_at_commit?: string | null;
-  }
-  export type GraphInput = Omit<GraphDocument, "links"> &
-    ({ links: GraphLink[]; edges?: never } | { edges: GraphLink[]; links?: never });
+  } & ({ links: GraphLinkInput[]; edges?: never } | { edges: GraphLinkInput[]; links?: never });
   export interface GraphSourceFile {
     path: string;
     content: string;

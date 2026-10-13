@@ -1,9 +1,9 @@
 ---
 title: Agent plugin
-description: The Aphrody runtime as a plugin for Claude Code, Codex and Antigravity/Gemini CLI, with its MCP server, hooks and skills
+description: The Aphrody runtime for Claude Code, Codex, Gemini CLI, OpenCode and local-model harnesses, with native adapters, MCP and shared skills
 ---
 
-`bun agent-plugin` installs the Aphrody runtime's plugin into the coding agents found on the machine: Claude Code, Codex, and Antigravity (`agy`) or Gemini CLI. Each gets the same three things:
+`bun agent-plugin` integrates the Aphrody runtime with Claude Code, Codex, Gemini CLI, OpenCode and local-model harnesses. Rules, skills and command rewriting have one source; each harness gets its native configuration and event protocol. Antigravity (`agy`) remains a separate adapter.
 
 - the runtime's MCP server, `bun mcp`, over stdio;
 - hooks that run `bun`, `bunx` and `bun uv` instead of `node`, `npm`, `npx`, `yarn`, `pnpm`, `pip` and `python`, and `bun bd test` instead of `bun test` inside a Bun checkout;
@@ -16,7 +16,7 @@ bun agent-plugin install
 ```
 
 ```bash Some agents
-bun agent-plugin install claude codex
+bun agent-plugin install codex gemini opencode local
 ```
 
 ```bash From a checkout
@@ -25,7 +25,7 @@ bun x bun-agent-plugin install
 
 </CodeGroup>
 
-The plugin is carried inside the `bun` executable, so it always matches it. `bun upgrade` reinstalls it after replacing the executable, and the plugin's own session hook does the same when the `bun` on `PATH` is a different version from the one the plugin was made for.
+The build embeds a plugin snapshot in `bun`. A checkout-generated plugin can differ from the installed executable; verify both identities with `doctor`. Installation does not change the selected model, credentials, sessions or local model weights.
 
 ## What gets installed
 
@@ -36,7 +36,9 @@ Everything lands in `~/.bun/agent-plugin` (`$BUN_INSTALL/agent-plugin`). The age
 | Claude Code | `~/.bun/agent-plugin/claude`   | `extraKnownMarketplaces.aphrody-bun` and `enabledPlugins["bun@aphrody-bun"]` in `~/.claude/settings.json`, then `claude plugin install` when the CLI is on `PATH` |
 | Codex       | `~/.bun/agent-plugin/codex`    | a delimited block in `~/.codex/config.toml` (`[marketplaces.aphrody-bun]`, `[plugins."bun@aphrody-bun"]`) and in `~/.codex/AGENTS.md`                             |
 | Antigravity | `~/.gemini/config/plugins/bun` | a plugin directory: `plugin.json`, `mcp_config.json`, `hooks.json`, `rules/`, `skills/`                                                                           |
-| Gemini CLI  | `~/.gemini/extensions/bun`     | the same directory, read through `gemini-extension.json` and `GEMINI.md`                                                                                          |
+| Gemini CLI  | `~/.bun/agent-plugin/gemini` | native extension linked through `gemini extensions link`, `GEMINI.md`, `BeforeTool`/`AfterTool` hooks with millisecond timeouts |
+| OpenCode | `~/.bun/agent-plugin/opencode` | merge Bun MCP/instructions into `opencode.json`, native JS plugin and skills in the OpenCode config directory |
+| Local harness | `~/.bun/agent-plugin/local` | portable `AGENTS.md`, skills and MCP configuration; no assumed hook protocol or model-server configuration |
 
 Other plugins, marketplaces and settings are left as they are.
 
@@ -87,7 +89,9 @@ bun scripts/aphrody/agent-plugin.ts generate --check  # fails when dist is stale
 bun scripts/aphrody/agent-plugin.ts install           # generate and install
 ```
 
-Its inputs are the repository's skills (`.claude/skills`, `skills`, `.agents/skills`, first one of a name wins) and slash commands (`.claude/commands`), more skill directories given with `--skills <dir>`, this page (the rules below), `docs/docs.json` and the pages it lists, `CLAUDE.md`, `test/CLAUDE.md`, `src/CLAUDE.md`, the scripts of `package.json`, the crates of `Cargo.toml`, the exports of `test/harness.ts`, the tools of `bun mcp`, the languages of `bun lsp` and the notes in `packages/bun-agent-plugin/memory`. The same inputs give the same bytes; the plugin's version is the version of Bun followed by a hash of its contents.
+Its inputs include package-owned skills (`packages/bun-agent-plugin/skills`), neutral repository skills (`.agents/skills`, `skills`) and Claude-compatible source paths as a fallback (`.claude/skills`, `.claude/commands`). The first skill of a name wins. `AGENTS.md` is preferred for repository guidance, with `CLAUDE.md` compatibility. Runtime tool catalogs, declarations, documentation and memory fiches are extracted from the checkout; adapters are generated rather than maintained separately.
+
+See [adapter contracts](../../packages/bun-agent-plugin/docs/agent-adapters.md) for source schemas and real qualification limits. A local model uses the selected harness's adapter; an inference endpoint alone cannot load skills or execute MCP tools. No Claude JSON hooks are registered with OpenCode or Gemini.
 
 The build packs the result into the executable (`codegen/agent-plugin.bin`), which `bun agent-plugin` extracts.
 
@@ -96,5 +100,5 @@ The build packs the result into the executable (`codegen/agent-plugin.bin`), whi
 - Use the Aphrody runtime (aphrody-labs/bun) for everything JavaScript, TypeScript and Python: `bun` instead of `node`, `bun install`/`bun add`/`bun remove`/`bun run` instead of `npm`, `yarn` and `pnpm`, `bunx` instead of `npx`, `bun uv` instead of `pip`, `python` and `uv`.
 - Check which `bun` runs with `bun agent-plugin doctor --json`. Stable releases such as `1.4.4+<commit>` are identified by `process.release.sourceUrl` under `https://github.com/aphrody-labs/bun/releases/download/`, with a matching release version and native `Bun.revision` commit. Older `-aphrody.N` revisions remain recognized. The plugin's content hash identifies the plugin, not the runtime; this provenance check does not verify an archive checksum. If the runtime is not recognized, install it (`curl -fsSL https://aphrody.app/install | bash`, or `powershell -c "irm aphrody.app/install.ps1|iex"` on Windows) or upgrade it (`bun upgrade`).
 - The `bun` MCP server (`bun mcp`) exposes the tools of the Aphrody runtime to the agent; prefer them over ad hoc scripts when they cover the task.
-- In a checkout of the Bun repository, build with `bun bd` and test with `bun bd test <file>`: plain `bun test` runs the installed `bun`, not your changes. Read `CLAUDE.md` at the root of the checkout first.
+- In a checkout of the Bun repository, build with `bun bd` and test with `bun bd test <file>`: plain `bun test` runs the installed `bun`, not your changes. Read `AGENTS.md` and the repository's applicable guidance first; `CLAUDE.md` remains a compatible source, not a restriction to Claude.
 - For a task on Bun itself, load the matching skill of this plugin (`bun-build`, `bun-tests`, `bun-crates`, `bun-runtime`, `bun-docs`) and the reference it lists.

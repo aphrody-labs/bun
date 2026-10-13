@@ -4,7 +4,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { input, reply } from "./common.ts";
+import { input, reply, target } from "./common.ts";
 
 type Native = { skill: string; search: string; instead: { names: string[]; use: string }[] };
 
@@ -28,7 +28,7 @@ if (native && prompt) {
   if (hits.length)
     reply({
       hookSpecificOutput: {
-        hookEventName: "UserPromptSubmit",
+        hookEventName: target() === "gemini" ? "BeforeAgent" : "UserPromptSubmit",
         additionalContext:
           `Bun-native replacements for what this prompt names (skill ${native.skill}; more: examples_search of bun mcp or ${native.search}<words>):\n` +
           hits.join("\n"),

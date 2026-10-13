@@ -22,4 +22,7 @@ if (
 }
 
 if (t === "agy") reply({});
-else if (hint) reply({ hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: hint } });
+else if (hint)
+  reply({
+    hookSpecificOutput: { hookEventName: t === "gemini" ? "AfterTool" : "PostToolUse", additionalContext: hint },
+  });

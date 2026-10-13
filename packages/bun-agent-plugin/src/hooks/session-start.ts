@@ -57,6 +57,7 @@ if (aphrody && installed && installed.bun !== Bun.version_with_sha) {
     try {
       writeFileSync(stamp, Bun.version_with_sha);
       spawn(process.execPath, ["agent-plugin", "install", "--update", "--quiet"], {
+        windowsHide: true,
         detached: true,
         stdio: "ignore",
         env: { ...process.env, BUN_BE_BUN: "1" },

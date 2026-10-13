@@ -33,13 +33,18 @@ const result = command
   : undefined;
 
 if (!result) {
-  const hint = t === "claude" ? preferHint(t, event, commandOf(event)) : undefined;
-  if (hint) reply({ hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: hint } });
+  const hint = preferHint(t, event, commandOf(event));
+  if (hint)
+    reply({
+      hookSpecificOutput: { hookEventName: t === "gemini" ? "BeforeTool" : "PreToolUse", additionalContext: hint },
+    });
   else if (t === "agy") reply({});
 } else {
   const reason = `Aphrody runtime: ${result.changes.join("; ")}`;
   const autoAllow = process.env.BUN_AGENT_PLUGIN_AUTO_ALLOW === "1";
-  if (t === "agy") {
+  if (t === "gemini") {
+    reply({ decision: "allow", hookSpecificOutput: { tool_input: { ...event.tool_input, command: result.command } } });
+  } else if (t === "agy") {
     reply({ decision: autoAllow ? "allow" : "ask", reason, overwrite: { CommandLine: result.command } });
   } else {
     const bypass = autoAllow || event.permission_mode === "bypassPermissions" || event.permission_mode === "never";

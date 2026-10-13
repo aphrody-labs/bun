@@ -1,13 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
 import { bunEnv, bunExe, isASAN, tempDir } from "harness";
 import { join, relative, resolve } from "path";
 import { lspExtensions, mcpTools } from "../../../packages/bun-agent-plugin/src/catalog.ts";
@@ -23,18 +15,13 @@ const cli = join(pkg, "bin", "bun-agent-plugin.ts");
 
 describe("runtime identity", () => {
   const commit = "65c232c1d" + "0".repeat(31);
-  const sourceUrl =
-    "https://github.com/aphrody-labs/bun/releases/download/bun-v1.4.4/bun-windows-x64.zip";
+  const sourceUrl = "https://github.com/aphrody-labs/bun/releases/download/bun-v1.4.4/bun-windows-x64.zip";
   test("recognizes stable native provenance and matching commit", () => {
     expect(isAphrodyRuntime("1.4.4+65c232c1d", sourceUrl, commit)).toBe(true);
     expect(isAphrodyRuntime("v1.4.4 (65c232c1d)", sourceUrl, commit)).toBe(true);
-    expect(
-      isAphrodyRuntime(
-        "v1.4.4 (65c232c1d)",
-        sourceUrl.replace("bun-v1.4.4/", "bun-v1.4.4-debug/"),
-        commit,
-      ),
-    ).toBe(true);
+    expect(isAphrodyRuntime("v1.4.4 (65c232c1d)", sourceUrl.replace("bun-v1.4.4/", "bun-v1.4.4-debug/"), commit)).toBe(
+      true,
+    );
     expect(isAphrodyRuntime("1.4.3-aphrody.4+41211b568")).toBe(true);
   });
   test("rejects upstream, lookalike URLs and inconsistent native identities", () => {
@@ -53,14 +40,7 @@ describe("runtime identity", () => {
   });
   test("doctor identifies the running native runtime through the shared helper", async () => {
     using home = tempDir("agent-plugin-doctor-identity", {});
-    const { stdout, exitCode } = await run([
-      bunExe(),
-      cli,
-      "doctor",
-      "--json",
-      "--home",
-      String(home),
-    ]);
+    const { stdout, exitCode } = await run([bunExe(), cli, "doctor", "--json", "--home", String(home)]);
     expect(exitCode).toBe(0);
     expect(JSON.parse(stdout)).toMatchObject({ aphrody: true, version: Bun.version_with_sha });
   });
@@ -75,10 +55,7 @@ function tree(dir: string, base = dir, out: Record<string, string> = {}): Record
   return out;
 }
 
-async function run(
-  cmd: string[],
-  options: { stdin?: string; env?: Record<string, string>; cwd?: string } = {},
-) {
+async function run(cmd: string[], options: { stdin?: string; env?: Record<string, string>; cwd?: string } = {}) {
   await using proc = Bun.spawn({
     cmd,
     cwd: options.cwd,
@@ -87,11 +64,7 @@ async function run(
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   return { stdout, stderr, exitCode };
 }
 
@@ -103,12 +76,14 @@ describe("generate", () => {
     const claude = json("claude/.claude-plugin/plugin.json");
     const codex = json("codex/.codex-plugin/plugin.json");
     const agy = json("agy/plugin.json");
-    const gemini = json("agy/gemini-extension.json");
+    const gemini = json("gemini/gemini-extension.json");
     const meta = json("claude/meta.json");
-    for (const m of [claude, codex, agy, gemini]) {
+    for (const m of [claude, codex, gemini]) {
       expect(m.name).toBe("bun");
       expect(m.version).toBe(meta.version);
     }
+    expect(Object.keys(agy).sort()).toEqual(["description", "name"]);
+    expect(agy.name).toBe("bun");
     expect(meta.version).toStartWith(`${meta.bunVersion}+`);
     expect(codex.interface.shortDescription.length).toBeLessThanOrEqual(30);
     expect(json(".claude-plugin/marketplace.json").plugins[0]).toMatchObject({
@@ -127,21 +102,21 @@ describe("generate", () => {
       });
       const hooks = json(`${t}/hooks/hooks.json`).hooks;
       expect(Object.keys(hooks).sort()).toEqual(["PostToolUse", "PreToolUse", "SessionStart", "UserPromptSubmit"]);
-      expect(hooks.PreToolUse[0].matcher).toBe(t === "claude" ? "Bash|Grep|Glob" : "Bash");
+      expect(hooks.PreToolUse[0].matcher).toBe(
+        t === "claude" ? "Bash|Grep|Glob" : "Bash|Shell|exec_command|shell_command|grep_files|list_files",
+      );
     }
     expect(json("agy/mcp_config.json").mcpServers.bun).toEqual({ command: "bun", args: ["mcp"] });
     expect(json("agy/hooks.json")["bun-commands"].PreToolUse[0].matcher).toBe("run_command");
     expect(String(files.get("codex/AGENTS.md"))).toContain("## Skills");
-    expect(String(files.get("agy/GEMINI.md"))).toBe(String(files.get("agy/rules/AGENTS.md")));
+    expect(files.has("agy/GEMINI.md")).toBe(false);
+    expect(files.has("agy/gemini-extension.json")).toBe(false);
+    expect(json("agy/hooks.json")["bun-session"].SessionStart[0].timeout).toBe(10);
   });
 
   test("ships the repository skills, the derived skills and their references in every target", () => {
     const skills = (t: string) =>
-      [
-        ...new Set(
-          [...files.keys()].filter((k) => k.startsWith(`${t}/skills/`)).map((k) => k.split("/")[2]),
-        ),
-      ].sort();
+      [...new Set([...files.keys()].filter(k => k.startsWith(`${t}/skills/`)).map(k => k.split("/")[2]))].sort();
     expect(skills("claude")).toEqual(skills("codex"));
     expect(skills("claude")).toEqual(skills("agy"));
     expect(skills("claude")).toEqual(
@@ -178,14 +153,12 @@ describe("generate", () => {
   );
 
   test("declares the tools of `bun mcp` and the languages of `bun lsp` as their sources define them", () => {
-    const tools = mcpTools(root).map((t) => t.name);
+    const tools = mcpTools(root).map(t => t.name);
     expect(tools).toEqual(expect.arrayContaining(["graph_symbols", "docs_search", "git_ingest"]));
     expect(json("claude/hooks/tools.json").tools).toEqual(
-      tools.filter((name) => !["read_file", "write_file", "edit_file", "shell"].includes(name)),
+      tools.filter(name => !["read_file", "write_file", "edit_file", "shell"].includes(name)),
     );
-    expect(String(files.get("codex/AGENTS.md"))).toContain(
-      "BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS=1",
-    );
+    expect(String(files.get("codex/AGENTS.md"))).toContain("BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS=1");
     const lsp = lspExtensions(root);
     const declared = json("claude/.claude-plugin/plugin.json").lspServers;
     if (Object.keys(lsp).length)
@@ -204,8 +177,7 @@ describe("generate", () => {
         'Tool {\n        name: "alpha_one",\n        title: "First",\n        description: "x",\n},\n',
       "src/mcp/tools/host.rs":
         "Tool {\n        name: bun_host::tools::FIND_NAME,\n        title: bun_host::tools::FIND_TITLE,\n},\n",
-      "src/host/tools.rs":
-        'pub const FIND_NAME: &str = "host_find";\npub const FIND_TITLE: &str = "Find a host";\n',
+      "src/host/tools.rs": 'pub const FIND_NAME: &str = "host_find";\npub const FIND_TITLE: &str = "Find a host";\n',
       "src/mcp/tools/agent.rs": "// generated from its `tools.json`\n",
       "src/agent_tools/tools.json": JSON.stringify({
         tools: [{ name: "deps_list", title: "List dependencies" }],
@@ -237,8 +209,7 @@ describe("generate", () => {
     "takes more skill directories",
     () => {
       using dir = tempDir("agent-plugin-skills", {
-        "extra-skill/SKILL.md":
-          "---\nname: extra-skill\ndescription: An extra skill\n---\n\nBody\n",
+        "extra-skill/SKILL.md": "---\nname: extra-skill\ndescription: An extra skill\n---\n\nBody\n",
       });
       const more = generate({ root, pkg, skillDirs: [String(dir)] });
       expect(String(more.get("codex/skills/extra-skill/SKILL.md"))).toContain("Body");
@@ -334,9 +305,7 @@ describe("hooks", () => {
           }),
         }),
       ]);
-      expect(JSON.parse(codex.stdout).hookSpecificOutput.permissionDecisionReason).toContain(
-        "Run instead: bunx tsc",
-      );
+      expect(JSON.parse(codex.stdout).hookSpecificOutput.permissionDecisionReason).toContain("Run instead: bunx tsc");
       expect(JSON.parse(agy.stdout)).toMatchObject({
         decision: "ask",
         overwrite: { CommandLine: "bun x.js" },
@@ -422,20 +391,13 @@ describe("bun agent-plugin", () => {
       const plugin = tree(join(h, ".bun/agent-plugin"));
       expect(JSON.parse(plugin["claude/.claude-plugin/plugin.json"]).name).toBe("bun");
       for (const target of ["claude", "codex"]) {
-        expect(resolve(JSON.parse(plugin[`${target}/.mcp.json`]).mcpServers.bun.command)).toBe(
-          resolve(bunExe()),
-        );
+        expect(resolve(JSON.parse(plugin[`${target}/.mcp.json`]).mcpServers.bun.command)).toBe(resolve(bunExe()));
       }
-      expect(resolve(JSON.parse(plugin["agy/mcp_config.json"]).mcpServers.bun.command)).toBe(
-        resolve(bunExe()),
-      );
+      expect(resolve(JSON.parse(plugin["agy/mcp_config.json"]).mcpServers.bun.command)).toBe(resolve(bunExe()));
       expect(resolve(JSON.parse(plugin["install.json"]).executable)).toBe(resolve(bunExe()));
       expect(existsSync(join(h, ".gemini/config/plugins/bun/hooks.json"))).toBe(true);
 
-      const again = await run(
-        [bunExe(), "agent-plugin", "install", "--update", "--home", h, "--json"],
-        { cwd: h },
-      );
+      const again = await run([bunExe(), "agent-plugin", "install", "--update", "--home", h, "--json"], { cwd: h });
       expect(JSON.parse(again.stdout).skipped).toBe("up to date");
 
       const uninstall = await run([bunExe(), "agent-plugin", "uninstall", "--home", h, "--quiet"], {
@@ -444,11 +406,7 @@ describe("bun agent-plugin", () => {
       expect(uninstall.stderr).toBe("");
       expect(JSON.parse(readFileSync(join(h, ".claude/settings.json"), "utf8"))).toEqual(settings);
       expect(readFileSync(join(h, ".codex/config.toml"), "utf8")).toBe(config);
-      expect(
-        existsSync(join(h, ".codex/AGENTS.md"))
-          ? readFileSync(join(h, ".codex/AGENTS.md"), "utf8")
-          : "",
-      ).toBe("");
+      expect(existsSync(join(h, ".codex/AGENTS.md")) ? readFileSync(join(h, ".codex/AGENTS.md"), "utf8") : "").toBe("");
       expect(existsSync(join(h, ".gemini/config/plugins/bun"))).toBe(false);
       expect(existsSync(join(h, ".bun/agent-plugin"))).toBe(false);
       expect([install.exitCode, again.exitCode, uninstall.exitCode]).toEqual([0, 0, 0]);

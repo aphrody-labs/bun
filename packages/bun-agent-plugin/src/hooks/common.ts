@@ -5,11 +5,12 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-export type Target = "claude" | "codex" | "agy";
+export type Target = "claude" | "codex" | "agy" | "gemini";
 
 export function target(): Target {
   const t = process.argv[2];
-  return t === "codex" || t === "agy" ? t : "claude";
+  if (t === "claude" || t === "codex" || t === "agy" || t === "gemini") return t;
+  throw new Error(`Unknown hook target: ${t ?? "missing"}`);
 }
 
 export async function input(): Promise<Record<string, any>> {
@@ -91,9 +92,13 @@ export function preferHint(t: Target, event: Record<string, any>, command: strin
   } catch {
     return undefined;
   }
-  const rule = file.prefer.find(p => p.instead === event.tool_name || (command && new RegExp(p.bash).test(command)));
+  const tool =
+    ({ grep_search: "Grep", grep_files: "Grep", glob: "Glob", list_files: "Glob" } as Record<string, string>)[
+      event.tool_name
+    ] ?? event.tool_name;
+  const rule = file.prefer.find(p => p.instead === tool || (command && new RegExp(p.bash).test(command)));
   if (!rule) return undefined;
-  const stamp = join(tmpdir(), `bun-agent-plugin-${session}-${rule.instead}`);
+  const stamp = join(tmpdir(), `bun-agent-plugin-${t}-${session}-${rule.instead}`);
   if (existsSync(stamp)) return undefined;
   try {
     writeFileSync(stamp, "");
