@@ -66,12 +66,14 @@ function git(checkout: string, args: string[]) {
 
 export async function syncSite(
   config: SiteSyncConfig,
-  options: { dryRun?: boolean; force?: boolean; offline?: boolean } = {},
+  options: { dryRun?: boolean; force?: boolean; offline?: boolean; source?: string } = {},
 ) {
   const inputs = await siteSyncInputs(config);
   git(config.checkout, ["fetch", "--quiet", "origin", "main"]);
   const source = git(config.checkout, ["rev-parse", "origin/main^{commit}"]);
   if (!/^[a-f0-9]{40}$/.test(source)) throw new Error("Expected an immutable origin/main revision");
+  if (options.source !== undefined && options.source !== source)
+    throw new Error("Site generator revision differs from synchronized origin/main");
   const stamp = { schema: 1, commit: source, evidence: inputs.sha256 };
   if (!options.force && !options.dryRun) {
     try {
@@ -148,6 +150,7 @@ if (import.meta.main) {
       "dry-run": { type: "boolean" },
       force: { type: "boolean" },
       offline: { type: "boolean" },
+      source: { type: "string" },
     },
   });
   try {
@@ -155,7 +158,12 @@ if (import.meta.main) {
     const config = JSON.parse(await readProtected(file)) as SiteSyncConfig;
     console.log(
       JSON.stringify(
-        await syncSite(config, { dryRun: values["dry-run"], force: values.force, offline: values.offline }),
+        await syncSite(config, {
+          dryRun: values["dry-run"],
+          force: values.force,
+          offline: values.offline,
+          source: values.source,
+        }),
       ),
     );
   } catch {

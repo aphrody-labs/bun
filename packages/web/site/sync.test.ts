@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
+import { existsSync } from "node:fs";
 import { tempDir } from "../../../test/harness";
-import { siteSyncInputs, validateSiteSyncConfig, type SiteSyncConfig } from "./sync";
+import { siteSyncInputs, syncSite, validateSiteSyncConfig, type SiteSyncConfig } from "./sync";
 
 const fact = (target: string) => ({
   schema: 1,
@@ -69,4 +70,31 @@ test("receipt ordering is immaterial while duplicate target and forged binary me
   await expect(siteSyncInputs({ ...value, runtimeFactFiles: files })).rejects.toThrow("duplicate");
   await Bun.write(files[0]!, JSON.stringify({ ...fact("win32-x64"), binary: { bytes: 64, sha256: "invented" } }));
   await expect(siteSyncInputs(value)).rejects.toThrow("receipt");
+});
+
+test("a main push after the generator export fails before creating publication work", async () => {
+  using directory = tempDir("site-sync-revision", {
+    "manifest.json": "{}",
+    "windows.json": JSON.stringify(fact("win32-x64")),
+    "source.txt": "first",
+  });
+  const root = String(directory);
+  const git = (...args: string[]) => {
+    const child = Bun.spawnSync(["git", "-C", root, ...args], { stdout: "pipe", stderr: "pipe", timeout: 10000 });
+    if (child.exitCode !== 0) throw new Error(child.stderr.toString());
+    return child.stdout.toString().trim();
+  };
+  const commit = () =>
+    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-am", "fixture");
+  git("init", "--initial-branch=main");
+  git("add", ".");
+  commit();
+  git("remote", "add", "origin", root);
+  const exported = git("rev-parse", "HEAD");
+  await Bun.write(join(root, "source.txt"), "second");
+  commit();
+  const value = config(root);
+  await expect(syncSite(value, { dryRun: true, source: exported })).rejects.toThrow("generator revision differs");
+  expect(git("rev-parse", "origin/main")).not.toBe(exported);
+  expect(existsSync(value.buildRoot)).toBe(false);
 });
