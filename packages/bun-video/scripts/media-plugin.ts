@@ -2,7 +2,7 @@ import { basename, dirname, isAbsolute, join } from "node:path";
 import type { BunPlugin } from "bun";
 
 const mediaDLL =
-  /^(?:(?:avcodec|avdevice|avfilter|avformat|avutil|swresample|swscale|postproc|ass|fribidi|libplacebo)(?:-\d+)?|zlib1|z|bz2|freetype|harfbuzz|libpng16|brotlicommon|brotlidec|brotlienc|libgcc_s_seh-1|libstdc\+\+-6|libwinpthread-1|libssp-0|msvcr100)\.dll$/i;
+  /^(?:(?:avcodec|avdevice|avfilter|avformat|avutil|swresample|swscale|postproc|ass|fribidi|libplacebo)(?:-\d+)?|zlib1|z|bz2|freetype|harfbuzz|libpng16|brotlicommon|brotlidec|brotlienc|libgcc_s_seh-1|libstdc\+\+-6|libwinpthread-1|libssp-0|msvcr100|msvcp140|vcruntime140(?:_1)?)\.dll$/i;
 
 /** PE import tables identify the adjacent DLLs the qualified executables actually load. */
 export function windowsPEImports(bytes: Uint8Array): string[] {
