@@ -194,16 +194,16 @@ export function registerCompileRules(n: Ninja, cfg: Config): void {
   // so the fixup runs after the link succeeds and the declared output is
   // already the final, patched, re-signed artifact. See shims.ts.
   const linkCommand = cfg.windows
-    ? `${cxx} /nologo -fuse-ld=lld ${q(`/clang:-B${dirname(cfg.ld)}`)} ${responseFiles ? "/Fe$out @$out.rsp" : "@$out.rsp $lazy /Fe$out /link $ldflags"}`
-    : `${cxx} @$out.rsp ${responseFiles ? "" : "$lazy $ldflags "}-o $out${machoPostlinkCommand(cfg)}`;
+    ? `${cxx} /nologo -fuse-ld=lld ${q(`/clang:-B${dirname(cfg.ld)}`)} ${responseFiles ? "/Fe$out @$out.rsp" : "@$out.rsp $lazy $driverflags /Fe$out /link $ldflags"}`
+    : `${cxx} @$out.rsp ${responseFiles ? "" : "$lazy $driverflags $ldflags "}-o $out${machoPostlinkCommand(cfg)}`;
   n.rule("link", {
     command: linkCommand,
     description: "link $out",
     rspfile: "$out.rsp",
     rspfile_content: responseFiles
       ? cfg.windows
-        ? "$in_newline $lazy /link $ldflags"
-        : "$in_newline $lazy $ldflags"
+        ? "$in_newline $lazy $driverflags /link $ldflags"
+        : "$in_newline $lazy $driverflags $ldflags"
       : "$in_newline",
   });
 
@@ -476,6 +476,8 @@ export interface LinkOpts {
   lazyObjects?: string[];
   /** Linker flags. */
   flags: string[];
+  /** C++ driver options, before clang-cl's /link separator. */
+  driverFlags?: string[];
   /**
    * Files the link reads that aren't in $in — symbol lists (symbols.def,
    * symbols.txt, the ELF export list), linker scripts (linker.lds), manifests.
@@ -500,7 +502,7 @@ export function link(n: Ninja, cfg: Config, out: string, objects: string[], opts
 
   const lazy = opts.lazyObjects ?? [];
   const lazyInputs: string[] = [];
-  const vars = { ldflags: opts.flags.join(" "), lazy: "" };
+  const vars = { ldflags: opts.flags.join(" "), driverflags: (opts.driverFlags ?? []).join(" "), lazy: "" };
   let inputs = [...objects, ...lazy, ...opts.libs];
   if (lazy.length > 0 && linksWithLld(cfg)) {
     // The group rides in a response file of its own (written now — the list

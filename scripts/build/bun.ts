@@ -197,7 +197,12 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   depsByName.set(uv.name, uvDep);
   const rust = emitRust(n, cfg, {
     codegenOrderOnly: codegen.rustInputs,
-    rustSources: [...sources.rust, ...uvRustSources(cfg), ...windowsToolchainRustSources(cfg), ...dotnetHostRustSources(cfg)],
+    rustSources: [
+      ...sources.rust,
+      ...uvRustSources(cfg),
+      ...windowsToolchainRustSources(cfg),
+      ...dotnetHostRustSources(cfg),
+    ],
     vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs, ...uvDep.outputs],
     shimValidations: emitShimVerify(n, cfg),
   });
@@ -436,11 +441,16 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   const depLink = lazyDepObjects(cfg, depObjects);
   const linkObjects = [...cxxObjects, ...cObjects, ...depLink.eager, ...rust.rlibs, ...windowsRes];
   const ldflags = [...flags.ldflags, ...systemLibs(cfg)];
-  if (rust.nativeLink !== undefined) ldflags.push(quote(`@${rust.nativeLink}`, cfg.host.os === "windows"));
+  const driverFlags: string[] = [];
+  if (rust.nativeLink !== undefined) {
+    const nativeLink = cfg.windows ? `/clang:-Wl,@${rust.nativeLink}` : `@${rust.nativeLink}`;
+    (cfg.windows ? driverFlags : ldflags).push(quote(nativeLink, cfg.host.os === "windows"));
+  }
   const exe = link(n, cfg, exeName, linkObjects, {
     libs: depLibs,
     lazyObjects: depLink.lazy,
     flags: ldflags,
+    driverFlags,
     implicitInputs: [
       ...linkImplicitInputs(cfg),
       ...shimInputs,
