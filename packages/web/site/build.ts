@@ -9,6 +9,7 @@
 //   bun packages/web/site/build.ts --out <dir> [--src <arbre du dépôt>] [--origin https://aphrody.app]
 //       [--commit <sha>] [--repo aphrody-labs/bun] [--perf <dossier des perf-report.json>] [--perf-run <url>]
 //       [--releases <releases.json> | --offline] [--data <site-data.json>]
+//       [--home-capture-root <capture>] [--home-runtime-fact <receipt.json> ...] [--home-graph <graph-summary.json>]
 //
 // --src pointe sur un arbre extrait (git archive) ou sur le dépôt lui-même (défaut). La publication
 // (packages/web/site/publish.ts) extrait origin/main, collecte site-data.json et appelle ce script depuis
@@ -40,6 +41,7 @@ import {
   plainText,
   type GeneratedPage,
 } from "./pages.ts";
+import { buildUpstreamHome, loadRuntimeHomeFacts, type HomeGraphFact } from "./upstream-home.ts";
 
 export { formatBytes };
 
@@ -291,7 +293,123 @@ export type BuildOptions = {
   /** Données de la distribution, du runtime et de l'organisation (collect.ts) ; sans elles, pas de pages produit. */
   data?: SiteData | null;
   now?: Date;
+  /** Explicit capture and measured receipts; no runtime inference from the build executable. */
+  home?: HomeBuildOptions;
 };
+
+export type HomeBuildOptions = { captureRoot: string; runtimeFactFiles: readonly string[]; graphFile?: string };
+type Receipt = { sha256: string; bytes: number };
+const sha256 = (bytes: Uint8Array | string) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+
+export function parseHomeBuildOptions(argv: readonly string[]): HomeBuildOptions | undefined {
+  const flags = new Set(["--home-capture-root", "--home-runtime-fact", "--home-graph"]);
+  let captureRoot: string | undefined, graphFile: string | undefined;
+  const runtimeFactFiles: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const name = argv[i]!;
+    if (!flags.has(name)) {
+      if (name.startsWith("--home-")) throw new Error(`Unknown home option ${name}`);
+      continue;
+    }
+    const value = argv[++i];
+    if (!value || value.startsWith("--")) throw new Error(`Missing value for ${name}`);
+    if (name === "--home-runtime-fact") runtimeFactFiles.push(resolve(value));
+    else if (name === "--home-capture-root") {
+      if (captureRoot) throw new Error("Duplicate home capture root");
+      captureRoot = resolve(value);
+    } else {
+      if (graphFile) throw new Error("Duplicate home graph receipt");
+      graphFile = resolve(value);
+    }
+  }
+  if (!captureRoot && (runtimeFactFiles.length || graphFile))
+    throw new Error("Home receipts require --home-capture-root");
+  if (
+    runtimeFactFiles.length > 8 ||
+    new Set(runtimeFactFiles.map(path => (process.platform === "win32" ? path.toLowerCase() : path))).size !==
+      runtimeFactFiles.length
+  )
+    throw new Error("Duplicate or excessive home runtime receipts");
+  return captureRoot ? { captureRoot, runtimeFactFiles, ...(graphFile ? { graphFile } : {}) } : undefined;
+}
+
+export async function loadHomeGraphReceipt(path: string) {
+  const file = Bun.file(path);
+  if (file.size < 1 || file.size > 1024 * 1024) throw new Error("Graph receipt exceeds its byte budget");
+  const bytes = await file.bytes();
+  if (bytes.length < 1 || bytes.length > 1024 * 1024) throw new Error("Graph receipt exceeds its byte budget");
+  const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  if (
+    !/^[a-f0-9]{40}$/.test(value.source) ||
+    (value.repository !== undefined && value.repository !== "aphrody-labs/bun") ||
+    (value.native?.profile !== undefined && value.native.profile !== "bun")
+  )
+    throw new Error("Invalid Bun graph source receipt");
+  const count = (value: unknown) =>
+    typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+  const nodes = value.nodes ?? value.native?.coverage?.nodes,
+    edges = value.edges ?? value.native?.coverage?.edges;
+  if ([nodes, edges].some(value => value !== undefined && count(value) === undefined))
+    throw new Error("Invalid measured graph counts");
+  const fact: HomeGraphFact = {
+    source: value.source,
+    ...(nodes === undefined ? {} : { nodes }),
+    ...(edges === undefined ? {} : { edges }),
+    ...(value.truncated === true || value.native?.coverage?.truncated === true ? { truncated: true } : {}),
+  };
+  const catalog = {
+    files: count(value.files),
+    domains: Array.isArray(value.domains) ? value.domains.length : undefined,
+    links: Array.isArray(value.links) ? value.links.length : undefined,
+  };
+  return { fact, receipt: { sha256: sha256(bytes), bytes: bytes.length }, catalog };
+}
+
+async function prepareHome(o: BuildOptions) {
+  if (!o.home) return undefined;
+  if (o.repo !== "aphrody-labs/bun") throw new Error("Captured Bun home requires the Bun source repository");
+  const source = resolve(o.src),
+    out = resolve(o.out);
+  const contains = (parent: string, child: string) => {
+    const path = relative(parent, child);
+    return path === "" || (!path.startsWith("..") && !path.startsWith("/") && !/^[A-Za-z]:/.test(path));
+  };
+  if (
+    contains(out, source) ||
+    contains(out, resolve(o.home.captureRoot)) ||
+    [...o.home.runtimeFactFiles, ...(o.home.graphFile ? [o.home.graphFile] : [])].some(path =>
+      contains(out, resolve(path)),
+    )
+  )
+    throw new Error("Home output must not overwrite its source or input receipts");
+  const receipts: (Receipt & { source: string; target: string })[] = [];
+  const facts = await loadRuntimeHomeFacts(o.home.runtimeFactFiles, {
+    onReceipt: ({ index, fact, sha256, bytes }) => {
+      receipts[index] = { source: fact.source, target: fact.target, sha256, bytes };
+    },
+  });
+  const graph = o.home.graphFile ? await loadHomeGraphReceipt(o.home.graphFile) : undefined;
+  const home = await buildUpstreamHome({
+    captureRoot: o.home.captureRoot,
+    sourceRoot: o.src,
+    source: o.commit,
+    origin: o.origin,
+    facts,
+    graph: graph?.fact,
+  });
+  const provenance = {
+    ...home.provenance,
+    inputReceipts: {
+      runtime: receipts,
+      graph: graph ? { source: graph.fact.source, ...graph.receipt, catalog: graph.catalog } : null,
+    },
+  };
+  const bytes = new TextEncoder().encode(JSON.stringify(provenance, null, 2) + "\n");
+  const assets = home.assets.map(asset =>
+    asset.path === "home-provenance.json" ? { path: asset.path, bytes, sha256: sha256(bytes) } : asset,
+  );
+  return { ...home, provenance, assets, graph };
+}
 
 /** Onglets du haut : les pages de la distribution, puis la doc du runtime et ses pages. */
 const TOP_TABS: [label: string, href: string, needsData: boolean][] = [
@@ -310,6 +428,8 @@ const absolutizeRootLinks = (markdown: string, origin: string) =>
   mapOutsideFences(markdown, chunk => chunk.replace(/\]\(\/(?!\/)/g, `](${origin}/`));
 
 export async function build(o: BuildOptions) {
+  // Reject missing or invalid evidence before writing any site files.
+  const home = await prepareHome(o);
   const docs = join(o.src, "docs");
   const docsJson = JSON.parse(readFileSync(join(docs, "docs.json"), "utf8"));
   const { tabs, pages } = readNavigation(docsJson);
@@ -678,6 +798,22 @@ ${runtimeInstallCommands(o.origin)}
     );
 
   // 404, robots, sitemap, ressources, manifeste
+  if (home) {
+    write(join(o.out, "index.html"), home.html);
+    for (const asset of home.assets) write(join(o.out, asset.path), asset.bytes);
+    if (home.graph && !generatedPaths.has("/graph")) {
+      const { fact, receipt, catalog } = home.graph;
+      write(
+        join(o.out, "graph", "index.html"),
+        page({
+          path: "/graph",
+          title: titled("Source graph"),
+          tabs: topTabs(),
+          body: `<h1>Source graph</h1><p>Source <a href="https://github.com/${o.repo}/tree/${fact.source}">${fact.source}</a>. <a href="/home-provenance.json">Input receipt SHA-256 ${receipt.sha256}</a>.</p><p>${catalog.files === undefined ? "" : `${catalog.files} tracked catalog entries. `}${catalog.domains === undefined ? "" : `${catalog.domains} source domains. `}${catalog.links === undefined ? "" : `${catalog.links} resolved source relationships. `}Source extraction has its own scope and parser limits; these counts do not qualify runtime behavior.</p><p>Use the <a href="/#home-search">read-only docs and graph search</a> for cited answers from its source snapshot.</p>`,
+        }),
+      );
+    }
+  }
   write(
     join(o.out, "404.html"),
     page({
@@ -704,6 +840,7 @@ ${runtimeInstallCommands(o.origin)}
     "/downloads",
     "/release-notes",
     ...ordered.map(p => pageUrl(p.slug)),
+    ...(home?.graph ? ["/graph"] : []),
   ];
   write(
     join(o.out, "sitemap.xml"),
@@ -730,6 +867,16 @@ ${runtimeInstallCommands(o.origin)}
         latestRelease: latest?.tag ?? null,
         perfReports: reports.map(r => r.platform),
         scripts: served,
+        home: home
+          ? {
+              source: o.commit,
+              provenance: {
+                path: "home-provenance.json",
+                sha256: home.assets.find(asset => asset.path === "home-provenance.json")!.sha256,
+              },
+              inputs: home.provenance.inputReceipts,
+            }
+          : null,
       },
       null,
       2,
@@ -749,6 +896,14 @@ ${runtimeInstallCommands(o.origin)}
     latest: latest?.tag ?? null,
     reports: reports.length,
     scripts: served,
+    home: home
+      ? {
+          source: o.commit,
+          assets: home.assets.length,
+          runtimeTargets: home.provenance.runtime.map(fact => fact.target),
+          graphSource: home.graph?.fact.source ?? null,
+        }
+      : null,
   };
 }
 
@@ -1084,6 +1239,7 @@ if (import.meta.main) {
     perfRun: option("--perf-run"),
     releases,
     data: dataFile ? (JSON.parse(readFileSync(dataFile, "utf8")) as SiteData) : null,
+    home: parseHomeBuildOptions(args),
   });
   const size = walk(resolve(out)).reduce((n, f) => n + statSync(f).size, 0);
   console.log(

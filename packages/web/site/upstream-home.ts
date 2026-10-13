@@ -185,14 +185,22 @@ export function normalizeRuntimeHomeFact(input: unknown): RuntimeHomeFact {
     },
   });
 }
-export async function loadRuntimeHomeFacts(paths: readonly string[]) {
+export async function loadRuntimeHomeFacts(
+  paths: readonly string[],
+  options?: { onReceipt?: (receipt: { index: number; fact: RuntimeHomeFact; sha256: string; bytes: number }) => void },
+) {
   if (paths.length > 8) throw new Error("Runtime capability receipt count exceeds the target budget");
   return Promise.all(
-    paths.map(async path => {
+    paths.map(async (path, index) => {
       const file = Bun.file(path);
       if (file.size < 1 || file.size > 1024 * 1024)
         throw new Error("Runtime capability receipt exceeds its byte budget");
-      return normalizeRuntimeHomeFact(await file.json());
+      const bytes = await file.bytes();
+      if (bytes.length < 1 || bytes.length > 1024 * 1024)
+        throw new Error("Runtime capability receipt exceeds its byte budget");
+      const fact = normalizeRuntimeHomeFact(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)));
+      options?.onReceipt?.({ index, fact, sha256: sha(bytes), bytes: bytes.length });
+      return fact;
     }),
   );
 }
