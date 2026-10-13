@@ -5,6 +5,15 @@ on:
     tags:
       - "bun-video-v*"
   workflow_dispatch:
+    inputs:
+      qualification-tag:
+        description: Exact-source runtime release carrying all eight native full receipts
+        type: string
+        required: true
+      types-version:
+        description: Exact published Bun types version for the isolated native package consumer gate
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -16,11 +25,18 @@ concurrency:
 jobs:
   release:
     if: github.repository == 'aphrody-labs/bun'
-    runs-on: ubuntu-latest
+    runs-on: windows-2025
     timeout-minutes: 30
     defaults:
       run:
+        shell: bash
         working-directory: packages/bun-video
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      BUN_VIDEO_R2_BUCKET: ${{ secrets.BUN_VIDEO_R2_BUCKET }}
+      BUN_VIDEO_TYPES_VERSION: ${{ inputs.types-version || vars.BUN_VIDEO_TYPES_VERSION }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -30,22 +46,45 @@ jobs:
           bun-version: latest
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
-      - name: Native type, lint and format checks
-        run: bun run check
-      - name: Pack release artifact
-        run: bun run pack
-      - name: Publish npm next
-        if: ${{ secrets.NPM_TOKEN != '' }}
+      - name: Verify eight native full release receipts before publication
+        shell: bash
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+          QUALIFICATION_TAG: ${{ inputs.qualification-tag }}
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          version=$(bun -e 'console.log((await Bun.file("package.json").json()).version)')
+          tag="${QUALIFICATION_TAG:-bun-v$version}"
+          bun scripts/aphrody/release-aggregation.ts download-verify "$tag" "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$version" candidate
+      - name: Use the exact-source qualified native Windows runtime
+        working-directory: .
+        run: |
+          bun -e '
+            const { join } = await import("node:path");
+            const directory = join(process.env.RUNNER_TEMP, "qualified-native-runtime");
+            await new Bun.Archive(await Bun.file(join(process.env.RUNNER_TEMP, "full-qualification", "bun-windows-x64-full.zip")).bytes()).extract(directory);
+            require("node:fs").appendFileSync(process.env.GITHUB_PATH, join(directory, "bun-windows-x64-full") + "\n");
+          '
+      - name: Build, pack and qualify the native Windows x64 library consumer
+        env:
+          BUN_MEDIA_JOBS: "2"
+        run: |
+          test -n "$BUN_VIDEO_TYPES_VERSION" || { echo "An exact published Bun types version is required"; exit 1; }
+          bun run qualify:package
+      - id: qualified
+        name: Select the exact outside-consumer-qualified package archive
+        run: |
+          bun -e '
+            const receipt = await Bun.file("../../build/media/video-package-qualification/package-consumer-qualification.json").json();
+            if (receipt.passed !== true || receipt.types?.source !== "registry" || !/^[a-z0-9][a-z0-9.-]*\.tgz$/.test(receipt.archive)) throw new Error("Missing exact registry consumer-qualified archive");
+            require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT, `archive=${receipt.archive}\n`);
+          '
+      - name: Publish npm next
+        if: env.NPM_TOKEN != ''
         run: |
           printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > "$RUNNER_TEMP/npmrc"
-          NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc" bun publish --access public --tag next
+          NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc" bun scripts/publish.ts
       - name: Upload artifact to Cloudflare R2
-        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' && secrets.BUN_VIDEO_R2_BUCKET != '' }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          BUN_VIDEO_R2_BUCKET: ${{ secrets.BUN_VIDEO_R2_BUCKET }}
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' && env.BUN_VIDEO_R2_BUCKET != ''
         run: |
-          bunx wrangler r2 object put "$BUN_VIDEO_R2_BUCKET/bun-video/$GITHUB_REF_NAME/$(basename *.tgz)" --file "$(pwd)/$(basename *.tgz)" --remote
+          bunx wrangler r2 object put "$BUN_VIDEO_R2_BUCKET/bun-video/$GITHUB_REF_NAME/${{ steps.qualified.outputs.archive }}" --file "$GITHUB_WORKSPACE/build/media/video-package-qualification/${{ steps.qualified.outputs.archive }}" --remote

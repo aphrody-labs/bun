@@ -190,7 +190,7 @@ export async function verifyMediaSDKLayout(component: MediaSDKComponent, target:
       const candidates = [
         join(prefix, "include", includeDirectory, "version_major.h"),
         join(prefix, "include", includeDirectory, "version.h"),
-      ];
+      ] as const;
       const header = (await Bun.file(candidates[0]).exists()) ? candidates[0] : candidates[1];
       const source = Bun.file(await confinedFile(prefix, header));
       if (source.size > 1024 * 1024) throw new Error("SDK header exceeded its size bound");
@@ -206,7 +206,7 @@ export async function verifyMediaSDKLayout(component: MediaSDKComponent, target:
           : join(prefix, "lib", `lib${library}.so.${major}`);
       files.push(await confinedFile(prefix, libraryFile));
       if (target.startsWith("windows")) {
-        const imports = [join(prefix, "lib", `${library}.lib`), join(prefix, "lib", `lib${library}.dll.a`)];
+        const imports = [join(prefix, "lib", `${library}.lib`), join(prefix, "lib", `lib${library}.dll.a`)] as const;
         const found = (await Bun.file(imports[0]).exists()) ? imports[0] : imports[1];
         files.push(await confinedFile(prefix, found));
       }
@@ -236,7 +236,7 @@ export async function verifyMediaSDKLayout(component: MediaSDKComponent, target:
     );
     files.push(await confinedFile(prefix, join(prefix, target.startsWith("windows") ? "bin/mpv.exe" : "bin/mpv")));
     if (target.startsWith("windows")) {
-      const imports = [join(prefix, "lib/mpv.lib"), join(prefix, "lib/libmpv.dll.a")];
+      const imports = [join(prefix, "lib/mpv.lib"), join(prefix, "lib/libmpv.dll.a")] as const;
       files.push(await confinedFile(prefix, (await Bun.file(imports[0]).exists()) ? imports[0] : imports[1]));
     }
   }

@@ -6,7 +6,24 @@ import {
   runtimeFlavorManifest,
   runtimeReleaseMatrix,
   vpsRuntimeReleasePlan,
+  nativeFullReleasePlan,
 } from "./release-matrix.ts";
+
+test("eight full native allocations bind public bootstraps without claiming qualification", () => {
+  const plan = nativeFullReleasePlan("a".repeat(40));
+  expect(plan.qualified).toBe(false);
+  expect(plan.targets).toHaveLength(8);
+  expect(plan.maxJobs).toBe(2);
+  for (const target of plan.targets) {
+    expect(target.bootstrap.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(target.bootstrap.url).toStartWith("https://github.com/aphrody-labs/bun/releases/download/");
+    expect(target.command).toContain("-j2");
+    expect(target.command).toContain("--coreutils=on");
+    expect(target.command).toContain("--video-native=on");
+    expect(target.requires.join(" ")).toContain("native");
+  }
+  expect(() => nativeFullReleasePlan("main")).toThrow("exact source revision");
+});
 
 test("both compiled flavors preserve every upstream release target", () => {
   const matrix = runtimeReleaseMatrix();
@@ -63,7 +80,7 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
       "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts",
       "/home/ubuntu/builds/bun-os-factory/sources/bun/tools/config/fusion-factory.json",
     ]);
-    expect(step.command).toContain("-j6");
+    expect(step.command).toContain("-j2");
     expect(
       step.command.some(arg =>
         arg.startsWith("--build-dir=/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/"),

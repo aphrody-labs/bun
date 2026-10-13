@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "repository": "aphrody-labs/bun",
+  "qualification": "Pinned public owner bytes; native architecture/version/revision/provenance execution required before use",
+  "bootstraps": {
+    "linux-x64": {
+      "tag": "aphrody-v1.4.3-aphrody.2",
+      "source": "f7a7086b602e39e7a2aee653a87af5f3f369a650",
+      "url": "https://github.com/aphrody-labs/bun/releases/download/aphrody-v1.4.3-aphrody.2/bun-linux-x64.zip",
+      "sha256": "e264e07fd87b09646fbafba0088974893a397beb08b4a721e699a454c48246d8",
+      "bytes": 40830991
+    },
+    "linux-aarch64": {
+      "tag": "aphrody-v1.4.3-aphrody.2",
+      "source": "f7a7086b602e39e7a2aee653a87af5f3f369a650",
+      "url": "https://github.com/aphrody-labs/bun/releases/download/aphrody-v1.4.3-aphrody.2/bun-linux-aarch64.zip",
+      "sha256": "4aab02870deb53b05c23a67a3d897bce7f5ce10987a05013a2fc244338f5942b",
+      "bytes": 40531352
+    },
+    "linux-x64-musl": {
+      "tag": "aphrody-v1.4.3-aphrody.2",
+      "source": "f7a7086b602e39e7a2aee653a87af5f3f369a650",
+      "url": "https://github.com/aphrody-labs/bun/releases/download/aphrody-v1.4.3-aphrody.2/bun-linux-x64-musl.zip",
+      "sha256": "06a20b260026aa87bfcc68a41c7d8fc90f5ff89f9b0ca0058abdfdf0a3a9aceb",
+      "bytes": 38546953
+    },
+    "linux-aarch64-musl": {
+      "tag": "aphrody-v1.4.3-aphrody.2",
+      "source": "f7a7086b602e39e7a2aee653a87af5f3f369a650",
+      "url": "https://github.com/aphrody-labs/bun/releases/download/aphrody-v1.4.3-aphrody.2/bun-linux-aarch64-musl.zip",
+      "sha256": "83bd1287a15bc51280a5bc99405fa278f44e30ba36538d461992c55c03685170",
+      "bytes": 38140193
+    },
+    "darwin-x64": {
+      "tag": "aphrody-v1.4.3-aphrody.2",
+      "source": "f7a7086b602e39e7a2aee653a87af5f3f369a650",
+      "url": "https://github.com/aphrody-labs/bun/releases/download/aphrody-v1.4.3-aphrody.2/bun-darwin-x64.zip",
+      "sha256": "73b590e1c02be6bf749335c4ef3a77861e893e1b81326616e86a9397d6e95df0",
+      "bytes": 32558874
+    },
+    "darwin-aarch64": {
+      "tag": "aphrody-v1.4.3-aphrody.2",
+      "source": "f7a7086b602e39e7a2aee653a87af5f3f369a650",
+      "url": "https://github.com/aphrody-labs/bun/releases/download/aphrody-v1.4.3-aphrody.2/bun-darwin-aarch64.zip",
+      "sha256": "35001777c8f1ee6c07f7a16e9474c42f222ca155cc250e075fc22883ad6d8989",
+      "bytes": 29644195
+    },
+    "windows-x64": {
+      "tag": "aphrody-v1.4.3-aphrody.2",
+      "source": "f7a7086b602e39e7a2aee653a87af5f3f369a650",
+      "url": "https://github.com/aphrody-labs/bun/releases/download/aphrody-v1.4.3-aphrody.2/bun-windows-x64.zip",
+      "sha256": "8fe2d7d8658a3e651f99f6683691579df8bab60c6e5af48f7e295ba139a9c6a9",
+      "bytes": 44116107
+    },
+    "windows-aarch64": {
+      "tag": "aphrody-v1.4.3-aphrody.2",
+      "source": "f7a7086b602e39e7a2aee653a87af5f3f369a650",
+      "url": "https://github.com/aphrody-labs/bun/releases/download/aphrody-v1.4.3-aphrody.2/bun-windows-aarch64.zip",
+      "sha256": "a9ec464f99720fcd2670d5e6256f1a57deb0b9488c9163591a0962ae9d765278",
+      "bytes": 39387542
+    }
+  }
+}

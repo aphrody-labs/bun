@@ -24,6 +24,10 @@ on:
         description: Comma-separated package directories to publish (default all)
         type: string
         default: ""
+      qualification-tag:
+        description: Exact-source runtime release carrying all eight native full receipts
+        type: string
+        default: ""
 
 concurrency:
   group: aphrody-publish-npm
@@ -44,6 +48,15 @@ jobs:
           bun-version: latest
       - name: Test publish script
         run: bun test test/internal/aphrody-publish-npm.test.ts
+      - name: Verify eight native full release receipts before publication
+        if: inputs.dry-run != true
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+          QUALIFICATION_TAG: ${{ inputs.qualification-tag || github.ref_name }}
+        run: |
+          version=$(bun -e 'console.log((await Bun.file("package.json").json()).version)')
+          channel=candidate; case "$QUALIFICATION_TAG" in bun-v*) channel=stable;; esac
+          bun scripts/aphrody/release-aggregation.ts download-verify "$QUALIFICATION_TAG" "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$version" "$channel"
       - name: Publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

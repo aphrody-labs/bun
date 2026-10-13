@@ -104,4 +104,96 @@ Each assembled platform artifact is marked `channel: candidate` and
 `completeFactoryReleaseQualified: false`. Its stable version string does not
 promote the global runtime release. Global publication still consumes the existing
 factory/source/platform gates. Use a fresh revision-bound draft tag for new
-artifacts; the older `bun-v1.4.4` tag points at its original immutable revision.
+artifacts; never overwrite an existing version or its source pin.
+
+## Eight-product publication barrier
+
+`scripts/aphrody/release-aggregation.ts` verifies the eight full products against
+one exact source SHA and version. It rehashes each ZIP, every payload member,
+the embedded and external media receipts, both source SDK packs, and all native
+gate logs. Publication consumes this aggregate in addition to the existing
+factory qualification; the stable integration policy remains unchanged.
+
+For each existing target, deliver these flat files together:
+
+- `bun-<target>-full.zip`
+- `bun-<target>-full.qualification.json`: the existing assembly receipt, including
+  its archive identity, copied under a target-specific delivery name
+- `bun-<target>-full.platform-gates.json`: a `NativePlatformQualification` from
+  `release-aggregation.ts`, bound to the exact archive/runtime/application hashes,
+  native OS/architecture, source SHA, version and catalogue FFmpeg/mpv source pins
+- `bun-<target>-full-<gate-id>.log`: the hash-bound platform gate evidence
+
+Required platform gates are `runtime-regressions`, `native-closure`,
+`native-install`, `native-path`, and `native-update`. Windows also requires
+`winget-manifest` and `winget-install`. These receipts must record real native
+execution. Wine, cross compilation, a runner label, an empty log or copied
+qualification from another binary cannot establish that execution.
+
+The worker must exercise the changed binary with local fixtures, audit the
+complete loader closure and GNU symbol floor, install into a disposable local
+home, resolve the installed executable through PATH in a new process, and run
+update/integrity checks against an exact-source local fixture. Windows workers
+must validate the exact x64/arm64 installer manifests and execute the portable
+package with the native Winget client. Manifest validation alone does not prove
+installation. Source assembly does not write these additional successful gates.
+
+```sh
+bun scripts/aphrody/release-aggregation.ts aggregate /absolute/products <source-SHA> 1.4.4 candidate
+bun scripts/aphrody/release-aggregation.ts verify /absolute/products <source-SHA> 1.4.4 candidate
+bun scripts/aphrody/release-aggregation.ts download-verify <runtime-tag> /absolute/empty-directory <source-SHA> 1.4.4 candidate
+```
+
+The downloader verifies both the Git tag commit and release source, requires all
+eight sets of evidence, and downloads only their explicit filenames. It uses
+bounded GitHub subprocesses and rechecks the downloaded bytes. Missing or failed
+evidence stops publication. Dry-run package preparation remains available.
+The runtime workflow rechecks the aggregate before publication and R2 mirroring;
+npm, crates and native-package workflows verify it before uploading.
+
+The Bun Video workflow separately builds its current Windows x64 library with
+the qualified exact-source Windows runtime. Its outside-consumer gate requires
+an exact published Bun types version (`types-version`, or the public repository
+variable `BUN_VIDEO_TYPES_VERSION` for tag runs). npm and R2 consume the exact
+qualified tarball through the package's existing publisher. This Windows library
+receipt does not qualify a Linux or ARM library package.
+
+## Native CI allocation and bootstraps
+
+`nativeFullReleasePlan(source)` in the existing `release-matrix.ts` allocates the
+eight targets to their native runners with `-j2` and one heavy job per host. The
+main/tag release plan exposes this allocation alongside the existing VPS plan.
+It records requirements and `qualified: false`; it does not dispatch native
+builds or invent SDK/platform receipts.
+
+| Targets | Native runner | ABI execution |
+| --- | --- | --- |
+| Linux GNU x64 / arm64 | `ubuntu-24.04` / `ubuntu-24.04-arm` | Same-architecture GNU container and closure audit |
+| Linux musl x64 / arm64 | `ubuntu-24.04` / `ubuntu-24.04-arm` | Same-architecture `alpine:3.24` container; no QEMU |
+| macOS x64 / arm64 | `macos-15-intel` / `macos-15` | Native macOS process |
+| Windows x64 / arm64 | `windows-2025` / `windows-11-arm` | Native Windows process |
+
+Runner names follow the [GitHub hosted runner catalogue](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+Container actions run on the Linux host; ABI execution runs inside the native
+container as described by [GitHub container jobs](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/run-jobs-in-a-container).
+The documented hosted disk allowance does not establish the factory's Windows
+20 GiB free-space preflight. Fresh disk/memory checks and the pinned toolchain
+remain required; stock runner LLVM versions do not replace the source pin.
+
+The all-release public inventory on 2026-10-13 found all eight bootstrap archives
+under `aphrody-v1.4.3-aphrody.2`, source
+`f7a7086b602e39e7a2aee653a87af5f3f369a650`.
+`scripts/aphrody/release-bootstraps.json` records the GitHub asset URLs, sizes and
+SHA-256 digests matched against that release's `SHA256SUMS.txt`. The existing R2
+latest manifest exposes only three platform archives; the `.2` checksum URL on
+R2 returned 404. Bootstrap binaries have not been executed by this source audit.
+Before a native worker uses one, it must verify its bytes, architecture, version,
+revision and Aphrody `sourceUrl` through native execution. A bootstrap is a build
+tool, not a qualification receipt for the new source.
+
+Complete normalized FFmpeg/mpv SDKs are still missing for Linux GNU ARM, both
+musl targets, both macOS targets and Windows ARM. Existing Windows x64 and
+portable Linux x64 evidence does not fill those six gaps. The SDK factory,
+native source/toolchain provisioning, and real platform gate producers must
+complete these targets before any eight-full aggregate can pass. No CI run or
+publication is established by the source changes above.

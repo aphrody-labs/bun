@@ -24,6 +24,10 @@ on:
         description: "Existing owner factory draft tag (empty: plan only)"
         type: string
         default: ""
+      qualification-tag:
+        description: "Exact-source runtime tag carrying all eight native full receipts (required to publish)"
+        type: string
+        default: ""
       release-channel:
         description: "Stable publication requires complete integration qualification"
         type: choice
@@ -64,8 +68,8 @@ jobs:
             const source = "/home/ubuntu/builds/bun-browser-fusion";
             const owner = "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts";
             const steps = selected.map(t => ({ id:t.id, key:t.key, triple:t.triple, asset:t.file, directory:source,
-              command:["bun",owner,source+"/tools/config/fusion-factory.json","env","CARGO_TARGET_DIR=/home/ubuntu/builds/bun-os-factory/artifacts/native/"+t.id+"/"+t.key,"bash","scripts/build/rust/cargo-serial.sh","build","--manifest-path",t.dir+"/Cargo.toml","--release","--locked","-p",t.crate,"--target",t.triple,"-j6"] }));
-            await Bun.write("native-factory-plan.json",JSON.stringify({schema:1,revision:process.env.GITHUB_SHA,host:"vps",maxJobs:6,parallelHeavyJobs:1,reserveDiskGiB:8,reserveMemoryGiB:2,requires:["clean source at revision","qualified target toolchain","Cargo check/test/strict Clippy","native addon smoke per platform","hashed package manifests and receipts"],steps},null,2));
+              command:["bun",owner,source+"/tools/config/fusion-factory.json","env","CARGO_TARGET_DIR=/home/ubuntu/builds/bun-os-factory/artifacts/native/"+t.id+"/"+t.key,"bash","scripts/build/rust/cargo-serial.sh","build","--manifest-path",t.dir+"/Cargo.toml","--release","--locked","-p",t.crate,"--target",t.triple,"-j2"] }));
+            await Bun.write("native-factory-plan.json",JSON.stringify({schema:1,revision:process.env.GITHUB_SHA,host:"vps",maxJobs:2,parallelHeavyJobs:1,reserveDiskGiB:8,reserveMemoryGiB:2,requires:["clean source at revision","qualified target toolchain","Cargo check/test/strict Clippy","native addon smoke per platform","hashed package manifests and receipts"],steps},null,2));
           '
       - uses: actions/upload-artifact@v6
         with:
@@ -122,6 +126,13 @@ jobs:
               if(receipt.assets[id+".package.json"]!==expected) throw new Error("Factory package manifest differs from committed source: "+id);
             }
           '
+      - name: Verify eight native full release receipts before publication
+        if: inputs.dry-run != true
+        env:
+          QUALIFICATION_TAG: ${{ inputs.qualification-tag }}
+        run: |
+          version=$(bun -e 'console.log((await Bun.file("package.json").json()).version)')
+          bun scripts/aphrody/release-aggregation.ts download-verify "$QUALIFICATION_TAG" "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$version" "$RELEASE_CHANNEL"
       - name: Stage or publish verified native packages
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

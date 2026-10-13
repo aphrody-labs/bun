@@ -1,5 +1,6 @@
 import { buildArgs, findTarget, releaseTargets, type ReleaseTarget } from "./build-host.ts";
 import { createMullvadBuildPlan } from "./mullvad-sidecar.ts";
+import bootstraps from "./release-bootstraps.json";
 
 export type RuntimeFlavor = "perf" | "full";
 export type RuntimeReleaseTarget = ReleaseTarget & {
@@ -64,7 +65,63 @@ export function runtimeReleaseMatrix(targets: string[] = []): RuntimeReleaseTarg
 }
 
 export function runtimeFlavorArgs(target: RuntimeReleaseTarget, lto = true, versionTag?: string): string[] {
-  return [...buildArgs(target, { lto, versionTag }), `--coreutils=${target.coreutils ? "on" : "off"}`];
+  return [
+    ...buildArgs(target, { lto, ...(versionTag !== undefined ? { versionTag } : {}) }),
+    `--coreutils=${target.coreutils ? "on" : "off"}`,
+  ];
+}
+
+/** Native execution allocation; a runner label and a public bootstrap are not qualification. */
+export function nativeFullReleasePlan(revision: string) {
+  if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error("Native release requires an exact source revision");
+  if (bootstraps.schema !== 1 || bootstraps.repository !== "aphrody-labs/bun")
+    throw new Error("Unknown release bootstrap owner");
+  return {
+    schema: 1,
+    source: revision,
+    maxJobs: 2,
+    parallelHeavyJobsPerHost: 1,
+    qualified: false,
+    targets: runtimeReleaseMatrix()
+      .filter(target => target.flavor === "full")
+      .map(target => {
+        const bootstrap = bootstraps.bootstraps[target.target as keyof typeof bootstraps.bootstraps];
+        if (
+          !bootstrap ||
+          !/^[a-f0-9]{40}$/.test(bootstrap.source) ||
+          !/^[a-f0-9]{64}$/.test(bootstrap.sha256) ||
+          !/^aphrody-v[0-9A-Za-z.+-]+$/.test(bootstrap.tag) ||
+          !Number.isSafeInteger(bootstrap.bytes) ||
+          bootstrap.bytes < 1 ||
+          bootstrap.bytes > 2 * 1024 ** 3 ||
+          bootstrap.url !==
+            `https://github.com/aphrody-labs/bun/releases/download/${bootstrap.tag}/${target.sourceTriplet}.zip`
+        )
+          throw new Error(`Missing pinned owner bootstrap: ${target.target}`);
+        return {
+          target: target.target,
+          triplet: target.triplet,
+          runner: target.runner,
+          platform: target.os === "windows" ? "win32" : target.os,
+          arch: target.arch === "aarch64" ? "arm64" : "x64",
+          ...(target.container ? { nativeABIContainer: target.container } : {}),
+          bootstrap,
+          command: ["bun", "bd", ...runtimeFlavorArgs(target), "--video-native=on", "-j2"],
+          assemblyOwner: "scripts/aphrody/media-release.ts",
+          sdkOwner: "scripts/aphrody/media-sdk-factory.ts",
+          qualificationOwner: "scripts/aphrody/release-aggregation.ts",
+          requires: [
+            "fresh disk/memory preflight and existing heavy lock",
+            "bootstrap byte checksum, native architecture/version/revision/sourceUrl execution",
+            "source checkout exactly at source SHA and clean owned inputs",
+            "pinned native toolchain and target sysroot",
+            "complete FFmpeg/mpv SDK built and executed on this native ABI",
+            "changed-binary regressions, dependency closure, install/PATH/update receipts",
+            ...(target.os === "windows" ? ["native Winget manifest validation and install receipt"] : []),
+          ],
+        };
+      }),
+  };
 }
 
 export function runtimeFlavorManifest(target: RuntimeReleaseTarget, revision: string) {
@@ -95,12 +152,7 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], 
   const config = source + "/tools/config/fusion-factory.json";
   const selected = runtimeReleaseMatrix(targets);
   const needsMullvad = selected.some(target => target.target === "linux-x64");
-  const mullvad = needsMullvad
-    ? createMullvadBuildPlan(
-        revision,
-          mullvadSource ?? revision,
-      )
-    : undefined;
+  const mullvad = needsMullvad ? createMullvadBuildPlan(revision, mullvadSource ?? revision) : undefined;
   return {
     schema: 1,
     revision,
@@ -108,7 +160,7 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], 
     source,
     executionOwner: "aphrody infra ssh exec --host vps",
     lock: "/home/ubuntu/build/locks/heavy.lock",
-    maxJobs: 6,
+    maxJobs: 2,
     reserveDiskGiB: 8,
     reserveMemoryGiB: 2,
     parallelHeavyJobs: 1,
@@ -128,7 +180,7 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], 
         "bun",
         "scripts/build.ts",
         ...runtimeFlavorArgs(target),
-        "-j6",
+        "-j2",
         `--build-dir=${artifacts}/${target.triplet}`,
       ],
       qualification:
@@ -204,7 +256,7 @@ export function windowsRuntimeReleasePlan(revision: string, targets: string[] = 
     source,
     executionOwner: "local Windows workstation",
     lock: "C:/bun/artifacts/locks/heavy.lock",
-    maxJobs: 1,
+    maxJobs: 2,
     reserveDiskGiB: 20,
     reserveMemoryGiB: 6,
     parallelHeavyJobs: 1,
@@ -221,7 +273,7 @@ export function windowsRuntimeReleasePlan(revision: string, targets: string[] = 
         "bun",
         "scripts/build.ts",
         ...runtimeFlavorArgs(target),
-        "-j4",
+        "-j2",
         `--build-dir=${artifacts}/${target.triplet}`,
       ],
       qualification:
@@ -237,16 +289,18 @@ if (import.meta.main) {
   const revision = process.argv[2];
   const [host = "vps", ...targets] = process.argv.slice(3);
   if (!revision)
-    throw new Error("Usage: bun scripts/aphrody/release-matrix.ts <exact-revision> [vps|windows] [target ...]");
+    throw new Error("Usage: bun scripts/aphrody/release-matrix.ts <exact-revision> [vps|windows|native] [target ...]");
   console.log(
     JSON.stringify(
       host === "windows"
         ? windowsRuntimeReleasePlan(revision, targets.length ? targets : undefined)
-        : host === "vps"
-          ? vpsRuntimeReleasePlan(revision, targets)
-          : (() => {
-              throw new Error(`unknown factory host: ${host}`);
-            })(),
+        : host === "native"
+          ? nativeFullReleasePlan(revision)
+          : host === "vps"
+            ? vpsRuntimeReleasePlan(revision, targets)
+            : (() => {
+                throw new Error(`unknown factory host: ${host}`);
+              })(),
       null,
       2,
     ),

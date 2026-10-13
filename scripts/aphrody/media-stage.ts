@@ -419,7 +419,11 @@ export async function applyMediaStage(plan: MediaStagePlan) {
 }
 
 export async function stageMediaBundle(destination: string, options: MediaStageOptions = {}) {
-  const plan = await planMediaStage({ destination, prefix: options.prefix, target: options.target });
+  const plan = await planMediaStage({
+    destination,
+    ...(options.prefix !== undefined ? { prefix: options.prefix } : {}),
+    ...(options.target !== undefined ? { target: options.target } : {}),
+  });
   if (options.apply) return applyMediaStage(plan);
   return {
     applied: false,
@@ -446,6 +450,13 @@ if (import.meta.main) {
   )
     throw new Error("usage: bun run media:stage ABS_BUN_DIRECTORY [--apply] [--target TARGET]");
   console.log(
-    JSON.stringify(await stageMediaBundle(destination, { apply: args.includes("--apply"), target }), null, 2),
+    JSON.stringify(
+      await stageMediaBundle(destination, {
+        apply: args.includes("--apply"),
+        ...(target !== undefined ? { target } : {}),
+      }),
+      null,
+      2,
+    ),
   );
 }

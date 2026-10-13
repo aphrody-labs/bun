@@ -6,6 +6,9 @@ permissions:
   contents: read
 
 on:
+  push:
+    branches: ["main"]
+    tags: ["bun-v*", "aphrody-v*"]
   workflow_dispatch:
     inputs:
       version:
@@ -53,6 +56,8 @@ jobs:
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
+      - name: Test source publication guards
+        run: bun test ./scripts/aphrody/release-aggregation.test.ts ./scripts/aphrody/release-workflows.test.ts ./scripts/aphrody/release-matrix.test.ts ./scripts/aphrody/release-factory.test.ts ./scripts/aphrody/release-r2.test.ts
       - id: plan
         env:
           INPUT_VERSION: ${{ inputs.version }}
@@ -66,17 +71,47 @@ jobs:
             const targets = (process.env.INPUT_TARGETS || "").split(",").map(s => s.trim()).filter(Boolean);
             const plan = factory.vpsRuntimeReleasePlan(process.env.GITHUB_SHA, targets);
             await Bun.write("factory-plan.json", JSON.stringify(plan, null, 2) + "\n");
-            require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\ntag=${runtime.releaseTag(version)}\n`);
+            await Bun.write("native-full-plan.json", JSON.stringify(factory.nativeFullReleasePlan(process.env.GITHUB_SHA), null, 2) + "\n");
+            const tag = process.env.GITHUB_REF_TYPE === "tag" ? process.env.GITHUB_REF_NAME : runtime.releaseTag(version);
+            if (runtime.versionFromTag(tag) !== version) throw new Error("Release tag version differs from source");
+            require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\ntag=${tag}\n`);
           '
       - uses: actions/upload-artifact@v6
         with:
           name: factory-plan
-          path: factory-plan.json
+          path: |
+            factory-plan.json
+            native-full-plan.json
+          if-no-files-found: error
+
+  aggregate:
+    needs: plan
+    if: inputs.publish || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      RELEASE_CHANNEL: ${{ inputs.release-channel || 'candidate' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ env.BUN_HOST_VERSION }}
+      - name: Verify all eight exact-source native full products
+        run: bun scripts/aphrody/release-aggregation.ts download-verify "$TAG" "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$VERSION" "$RELEASE_CHANNEL"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: media-full-qualification-${{ github.sha }}
+          path: ${{ runner.temp }}/full-qualification/media-full-qualification.json
           if-no-files-found: error
 
   publish:
-    needs: plan
-    if: inputs.publish && needs.plan.result == 'success'
+    needs: [plan, aggregate]
+    if: inputs.publish && needs.aggregate.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -107,8 +142,13 @@ jobs:
           done
           [ "$kind" = commit ] && [ "$revision" = "$GITHUB_SHA" ]
           gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D dist
+      - uses: actions/download-artifact@v6
+        with:
+          name: media-full-qualification-${{ github.sha }}
+          path: ${{ runner.temp }}/full-aggregate
       - name: Verify exact source, checksums, gates and native platform receipts
         run: |
+          bun scripts/aphrody/release-aggregation.ts verify "$GITHUB_WORKSPACE/dist" "$GITHUB_SHA" "$VERSION" "$RELEASE_CHANNEL" "$RUNNER_TEMP/full-aggregate/media-full-qualification.json"
           bun -e '
             const { verifyFactoryRelease } = await import("./scripts/aphrody/release-factory.ts");
             const targets = (process.env.INPUT_TARGETS || "").split(",").map(s => s.trim()).filter(Boolean);
@@ -132,6 +172,7 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
+          bun scripts/aphrody/release-aggregation.ts verify "$GITHUB_WORKSPACE/dist" "$GITHUB_SHA" "$VERSION" "$RELEASE_CHANNEL" "$RUNNER_TEMP/full-aggregate/media-full-qualification.json"
           if [ "$RELEASE_CHANNEL" = stable ]; then
             bun scripts/aphrody/release-r2.ts
           else

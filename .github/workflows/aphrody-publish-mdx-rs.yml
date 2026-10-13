@@ -24,6 +24,10 @@ on:
         description: "Comma-separated matrix keys (empty: all); only smoke-qualified runtime platforms may run"
         type: string
         default: ""
+      qualification-tag:
+        description: "Exact-source runtime tag carrying all eight native full receipts (required to publish)"
+        type: string
+        default: ""
 
 concurrency:
   group: aphrody-publish-mdx-rs
@@ -66,6 +70,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       TRIPLE: ${{ matrix.triple }}
@@ -87,7 +92,7 @@ jobs:
           if command -v apk >/dev/null; then apk add --no-cache musl-dev gcc >/dev/null; fi
           cd /src/packages/bun-build-mdx-rs
           rustc --version
-          cargo build --release --locked --target "$TRIPLE"
+          cargo build --release --locked --target "$TRIPLE" -j2
           EOF
           docker run --rm -v "$GITHUB_WORKSPACE/packages:/src/packages" -v "$RUNNER_TEMP:/work" -e TRIPLE \
             -e CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=-crt-static" \
@@ -116,7 +121,7 @@ jobs:
           rustup toolchain install stable --profile minimal --target "$TRIPLE"
           cd packages/bun-build-mdx-rs
           rustc --version
-          cargo build --release --locked --target "$TRIPLE"
+          cargo build --release --locked --target "$TRIPLE" -j2
 
       - name: Collect
         shell: bash
@@ -172,6 +177,15 @@ jobs:
         with:
           path: ${{ runner.temp }}/artifacts
           pattern: mdx-*
+      - name: Verify eight native full release receipts before publication
+        if: inputs.dry-run != true
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+          QUALIFICATION_TAG: ${{ inputs.qualification-tag }}
+        run: |
+          version=$(bun -e 'console.log((await Bun.file("package.json").json()).version)')
+          channel=candidate; case "$QUALIFICATION_TAG" in bun-v*) channel=stable;; esac
+          bun scripts/aphrody/release-aggregation.ts download-verify "$QUALIFICATION_TAG" "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$version" "$channel"
       - name: Publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

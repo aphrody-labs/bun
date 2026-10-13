@@ -28,5 +28,9 @@ export function mediaSDKHostTarget(): MediaSDKTarget {
     if (!report?.header) throw new Error("Cannot detect Linux libc for the media SDK");
     glibcVersionRuntime = report.header.glibcVersionRuntime;
   }
-  return (hostTarget = mediaSDKTargetFor({ platform: process.platform, arch: process.arch, glibcVersionRuntime }));
+  return (hostTarget = mediaSDKTargetFor({
+    platform: process.platform,
+    arch: process.arch,
+    ...(glibcVersionRuntime !== undefined ? { glibcVersionRuntime } : {}),
+  }));
 }

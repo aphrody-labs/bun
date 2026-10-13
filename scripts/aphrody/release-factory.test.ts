@@ -39,7 +39,7 @@ async function candidateFixture(
     directory: string,
   ) => Promise<void>,
 ) {
-  using directory = tempDir("factory-windows-candidate");
+  using directory = tempDir("factory-windows-candidate", {});
   const root = String(directory);
   const artifact = join(root, "bun.exe");
   const qualification = join(root, "qualification.json");
@@ -140,7 +140,7 @@ test("Windows candidate delivery rejects bad hashes, failed gates and altered ev
 });
 
 test("Windows candidate PE validation rejects malformed headers, wrong architecture, DLLs and GUI images", async () => {
-  using directory = tempDir("factory-candidate-pe");
+  using directory = tempDir("factory-candidate-pe", {});
   const path = join(String(directory), "bun.exe");
   for (const [offset, value] of [
     [0, 0],
@@ -305,7 +305,9 @@ test("current delivery workflows default to factory plans and require a native d
       const text = await Bun.file(new URL(`../../.github/workflows/${name}`, import.meta.url)).text();
       await Bun.write(join(directory, ".github/workflows", name), text);
       const workflow = Bun.YAML.parse(text) as { jobs: Record<string, unknown> };
-      expect(Object.keys(workflow.jobs)).toEqual(["plan", "publish"]);
+      expect(Object.keys(workflow.jobs)).toEqual(
+        name === "aphrody-release.yml" ? ["plan", "aggregate", "publish"] : ["plan", "publish"],
+      );
     }
     for (const args of [
       ["init", "--quiet", "--initial-branch=main"],

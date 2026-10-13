@@ -18,6 +18,10 @@ on:
         description: "Build and pack without publishing"
         type: boolean
         default: false
+      qualification-tag:
+        description: "Exact-source runtime tag carrying all eight native full receipts (required to publish)"
+        type: string
+        default: ""
 
 concurrency:
   group: aphrody-publish-web-inspector
@@ -38,6 +42,15 @@ jobs:
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
+      - name: Verify eight native full release receipts before publication
+        if: inputs.dry-run != true
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+          QUALIFICATION_TAG: ${{ inputs.qualification-tag }}
+        run: |
+          version=$(bun -e 'console.log((await Bun.file("package.json").json()).version)')
+          channel=candidate; case "$QUALIFICATION_TAG" in bun-v*) channel=stable;; esac
+          bun scripts/aphrody/release-aggregation.ts download-verify "$QUALIFICATION_TAG" "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$version" "$channel"
       - name: Build and publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
