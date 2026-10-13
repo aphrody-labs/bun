@@ -5,7 +5,7 @@ export function withoutMissingRustWrappers(input: NodeJS.ProcessEnv): NodeJS.Pro
   for (const key of Object.keys(env)) {
     if (!/^(RUSTC_WRAPPER|CARGO_BUILD_RUSTC_WRAPPER|RUSTC_WORKSPACE_WRAPPER)$/i.test(key)) continue;
     const wrapper = env[key];
-    if (wrapper && !Bun.which(wrapper, { PATH: path })) delete env[key];
+    if (wrapper && !Bun.which(wrapper, path === undefined ? {} : { PATH: path })) delete env[key];
   }
   return env;
 }

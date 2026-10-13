@@ -96,7 +96,7 @@ export function computeNativeSDKABI(cfg: Config, dep: Dependency) {
     for (const [path, file] of [
       ["VC/Tools/MSVC", "include/yvals_core.h"],
       ["Windows Kits/10/Include", "shared/sdkddkver.h"],
-    ]) {
+    ] as const) {
       const directory = join(cfg.winsysroot, path);
       if (!existsSync(directory)) throw new Error("Native SDK Windows toolchain headers are missing");
       const versions = readdirSync(directory);
@@ -235,8 +235,9 @@ export function compatibleNativeSDK(
     return;
   }
   if (exact.length !== 1) throw new Error("Native SDK index contains ambiguous compatible assets");
-  validateNativeSDKAsset(exact[0]);
-  return exact[0];
+  const asset = exact[0]!;
+  validateNativeSDKAsset(asset);
+  return asset;
 }
 
 export function selectNativeSDK(

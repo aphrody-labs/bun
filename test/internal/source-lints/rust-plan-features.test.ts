@@ -31,3 +31,9 @@ test("metadata preserves explicit package features and feature selection flags",
   expect(metadataFeatureArgs(["-pbun_runtime", "--all-features"])).toEqual(["--all-features"]);
   expect(metadataFeatureArgs(["--lib", "--target-dir", "build/rust-target"])).toEqual([]);
 });
+
+test("metadata refuses a missing Cargo selector value instead of consuming another flag", () => {
+  for (const selector of ["-p", "--package", "-F", "--features"])
+    for (const suffix of [[], ["--all-features"]])
+      expect(() => metadataFeatureArgs([selector, ...suffix])).toThrow(`Missing value for Cargo ${selector}`);
+});

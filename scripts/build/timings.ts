@@ -548,7 +548,7 @@ export function criticalPath(build: Build): { steps: PathStep[]; totalMs: number
     if (end > totalMs) [lastEdge, totalMs] = [edge, end];
   }
   const steps: PathStep[] = [];
-  for (let at = lastEdge, blocks = 0; at !== undefined; ) {
+  for (let at = lastEdge, blocks = 0; at !== undefined;) {
     const x = build.last.get(at);
     if (x !== undefined) steps.unshift({ execution: x, blocksNextForMs: steps.length === 0 ? duration(x) : blocks });
     const via = timing(at).via;
@@ -807,6 +807,7 @@ const ruleLane: Record<RuleName, Lane> = {
   dep_codegen: "dependencies",
   dep_configure: "dependencies",
   dep_fetch: "dependencies",
+  dep_fetch_native_sdk: "dependencies",
   dep_fetch_prebuilt: "dependencies",
   dep_host_cc: "dependencies",
   dep_prebuild: "dependencies",

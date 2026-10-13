@@ -182,17 +182,22 @@ export function metadataFeatureArgs(args: readonly string[]): string[] {
   const features: string[] = [];
   const flags: string[] = [];
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (arg === "-p" || arg === "--package") selected.push(args[++i]);
+    const arg = args[i]!;
+    const nextValue = () => {
+      const value = args[++i];
+      if (!value || value.startsWith("-")) throw new Error(`Missing value for Cargo ${arg}`);
+      return value;
+    };
+    if (arg === "-p" || arg === "--package") selected.push(nextValue());
     else if (arg.startsWith("--package=")) selected.push(arg.slice(10));
     else if (arg.startsWith("-p") && arg.length > 2) selected.push(arg.slice(2));
-    else if (arg === "--features" || arg === "-F") features.push(args[++i]);
+    else if (arg === "--features" || arg === "-F") features.push(nextValue());
     else if (arg.startsWith("--features=")) features.push(arg.slice(11));
     else if (arg.startsWith("-F") && arg.length > 2) features.push(arg.slice(2));
     else if (arg === "--all-features" || arg === "--no-default-features") flags.push(arg);
   }
   // Unlike build, metadata has no package selector. Qualify features for the selected crate.
-  const pkg = selected.length === 1 ? selected[0].split("@")[0] : undefined;
+  const pkg = selected.length === 1 ? selected[0]!.split("@")[0] : undefined;
   const qualified = features
     .flatMap(value => value.split(/[\s,]+/).filter(Boolean))
     .map(feature => (pkg && !feature.includes("/") ? `${pkg}/${feature}` : feature));
