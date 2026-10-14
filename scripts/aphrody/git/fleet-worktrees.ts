@@ -88,7 +88,7 @@ async function reconcileLocal(repo: string): Promise<Result> {
       );
   }
   if (current === base && !(await git(repo, "status", "--porcelain")).stdout) {
-    await git(repo, "pull", "--ff-only", "origin", base);
+    await git(repo, "pull", "--rebase", "origin", base);
   }
   if (mergeWorktrees) {
     const list = await git(repo, "worktree", "list", "--porcelain");
@@ -103,7 +103,10 @@ async function reconcileLocal(repo: string): Promise<Result> {
     }
   }
   await git(repo, "worktree", "prune");
-  if (current) {
+  const origin = await git(repo, "remote", "get-url", "origin");
+  if (current && origin.code === 0) {
+    const pulled = await git(repo, "pull", "--rebase", "origin", current);
+    if (pulled.code !== 0) return { host: "local", repo, ok: false, detail: pulled.stderr };
     const pushed = await git(repo, "push", "origin", current);
     if (pushed.code !== 0) return { host: "local", repo, ok: false, detail: pushed.stderr };
   }
@@ -111,7 +114,7 @@ async function reconcileLocal(repo: string): Promise<Result> {
 }
 
 const remoteProgram = String.raw`
-set -eu
+set -u
 apply="$1"; commit_tracked="$2"; merge_worktrees="$3"
 for root in "$HOME/src" "$HOME/apps"; do
   test -d "$root" || continue
@@ -126,7 +129,7 @@ for root in "$HOME/src" "$HOME/apps"; do
     test -n "$base" || base=$(git -C "$repo" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)
     test -n "$base" || base="$current"
     if test "$apply" != 1; then printf '%s|%s|%s\n' "$repo" "$current" "$base"; continue; fi
-    git -C "$repo" fetch --all --prune
+    git -C "$repo" fetch --all --prune || { printf '%s|ERROR|fetch failed\n' "$repo"; continue; }
     if test "$commit_tracked" = 1 && ! git -C "$repo" diff --quiet; then
       git -C "$repo" add -u
       git -C "$repo" diff --cached --quiet || git -C "$repo" -c user.name=aphrody-dev -c user.email=contact@aphrody.com commit -m 'chore: checkpoint fleet workspace'
@@ -138,7 +141,10 @@ for root in "$HOME/src" "$HOME/apps"; do
       done
     fi
     git -C "$repo" worktree prune
-    test -z "$current" || git -C "$repo" push origin "$current"
+    if test -n "$current" && test -n "$origin"; then
+      git -C "$repo" pull --rebase origin "$current" || { printf '%s|ERROR|rebase failed\n' "$repo"; continue; }
+      git -C "$repo" push origin "$current" || { printf '%s|ERROR|push failed\n' "$repo"; continue; }
+    fi
     printf '%s|%s|%s\n' "$repo" "$current" "$base"
   done
 done
@@ -172,7 +178,9 @@ async function remote(host: string): Promise<Result[]> {
     .filter(Boolean)
     .map(line => {
       const [repo = "*", current = "", base = ""] = line.split("|");
-      return { host, repo, ok: true, detail: `${current || "detached"} -> ${base}` };
+      return current === "ERROR"
+        ? { host, repo, ok: false, detail: base }
+        : { host, repo, ok: true, detail: `${current || "detached"} -> ${base}` };
     });
 }
 
