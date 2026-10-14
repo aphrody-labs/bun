@@ -4,3 +4,6 @@
 [submodule "aphrody-worktrunk"]
 	path = vendor/worktrunk
 	url = https://github.com/aphrody-labs/worktrunk.git
+[submodule "vendor/fluentui"]
+	path = vendor/fluentui
+	url = https://github.com/aphrody-labs/fluentui.git

@@ -1,6 +1,6 @@
 # @aphrody/bun-fluent
 
-Fluent 2 design tokens for Bun. The token sources of [microsoft/fluentui](https://github.com/microsoft/fluentui) `packages/tokens` (MIT, `LICENSE-fluentui.txt`, absorbed from fluentui `8abb0781d7d8` into `src/tokens`) as:
+Fluent 2 design tokens for Bun. The token sources of [aphrody-labs/fluentui](https://github.com/aphrody-labs/fluentui) `packages/tokens` (MIT, `LICENSE-fluentui.txt`, pinned by `vendor/fluentui` and absorbed into `src/tokens`) as:
 
 - JS: `webLightTheme`, `webDarkTheme`, `teamsLightTheme`..., `typographyStyles`, `brandWeb`, every global token.
 - CSS: `fluentTokensCss()` writes the custom properties read by `@fluentui/react-components` (`--colorBrandBackground`, `--borderRadiusMedium`, `--shadow8`, `--durationFast`...); light on `:root`, dark on `.dark` and on `prefers-color-scheme: dark` unless `.light` is set.
