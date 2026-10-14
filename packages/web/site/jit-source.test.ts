@@ -1,9 +1,52 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, symlinkSync } from "node:fs";
-import { join } from "node:path";
+import { join, posix, resolve } from "node:path";
 import { tempDir } from "../../../test/harness";
 import { GitTree } from "./collect";
 import { exportJitWorkspaceMetadata, jitWorkspaceMetadata, verifyJitCloudflareDependencies } from "./jit-source";
+
+test("the actual JIT archive closes generator and Worker relative imports", async () => {
+  using fixture = tempDir("site-jit-closure", {});
+  const root = resolve(import.meta.dir, "../../..");
+  const shell = await Bun.file(join(import.meta.dir, "auto-publish.sh")).text();
+  const line = shell.split(/\r?\n/).find(line => line.startsWith('git -C "$checkout" archive '))!;
+  const paths = line.slice(line.indexOf('"$site_source" ') + 15, line.indexOf(" | tar")).split(" ");
+  const tree = new GitTree(root, "HEAD");
+  const available = new Set(
+    [...tree.files.keys()].filter(file => paths.some(path => file === path || file.startsWith(path + "/"))),
+  );
+  const entries = ["scripts/aphrody/release-surfaces.ts", "packages/web/cloudflare/src/worker.ts"];
+  const seen = new Set<string>();
+  const compiler = new Bun.Transpiler({ loader: "ts", target: "bun" });
+  let queue = [...entries];
+  while (queue.length) {
+    const batch = [...new Set(queue)].filter(path => !seen.has(path));
+    queue = [];
+    if (seen.size + batch.length > 300) throw new Error("JIT import closure exceeds its fixture bound");
+    const files = tree.readBytes(batch);
+    for (const path of batch) {
+      if (!available.has(path)) throw new Error("Import missing from actual JIT archive: " + path);
+      seen.add(path);
+      const bytes = files.get(path)!;
+      await Bun.write(join(String(fixture), path), bytes);
+      for (const dependency of compiler.scan(bytes).imports) {
+        if (!dependency.path.startsWith(".")) continue;
+        const base = posix.normalize(posix.join(posix.dirname(path), dependency.path));
+        const target = [
+          base,
+          ...[".ts", ".tsx", ".js", ".mjs", "/index.ts", "/index.js"].map(suffix => base + suffix),
+        ].find(candidate => tree.has(candidate));
+        if (!target || !available.has(target)) throw new Error("Import missing from actual JIT archive: " + base);
+        queue.push(target);
+      }
+    }
+  }
+  const entrypoints = entries.map(path => join(String(fixture), path));
+  const result = await Bun.build({ entrypoints, target: "bun", packages: "external" });
+  if (!result.success) throw new Error(result.logs.map(log => String(log)).join("\n"));
+  expect(result.outputs.length).toBe(2);
+  expect((await result.outputs[0]!.text()).includes("GraphRedisCache")).toBe(true);
+});
 
 test("JIT workspace discovery reads the immutable patterns and excludes other package trees", () => {
   const contents = new Map([
