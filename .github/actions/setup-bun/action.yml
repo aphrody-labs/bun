@@ -128,7 +128,9 @@ runs:
           "$RUNNER_TEMP/.bun/bin/bun" -e '
             const expectedArch = process.env.EXPECTED_ARCH === "aarch64" ? "arm64" : "x64";
             const expectedPlatform = process.env.EXPECTED_PLATFORM === "windows" ? "win32" : process.env.EXPECTED_PLATFORM;
-            const expectedVersion = process.env.EXPECTED_TAG.replace(/^(?:bun-v|aphrody-v)/, "");
+            const expectedVersion = process.env.EXPECTED_TAG
+              .replace(/^(?:bun-v|aphrody-v)/, "")
+              .replace(/-aphrody\.\d+$/, "");
             if (process.arch !== expectedArch || process.platform !== expectedPlatform || Bun.version !== expectedVersion)
               throw new Error("Bootstrap native architecture or version differs");
             if (process.env.EXPECTED_SOURCE && Bun.revision !== process.env.EXPECTED_SOURCE)
