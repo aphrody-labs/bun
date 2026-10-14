@@ -57,6 +57,8 @@ jobs:
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
+      - name: Resolve committed workspace dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Test source publication guards
         run: bun test ./scripts/aphrody/release-aggregation.test.ts ./scripts/aphrody/release-workflows.test.ts ./scripts/aphrody/release-native-worker.test.ts ./scripts/aphrody/release-matrix.test.ts ./scripts/aphrody/release-factory.test.ts ./scripts/aphrody/release-r2.test.ts
       - id: plan
@@ -123,6 +125,8 @@ jobs:
           endpoint: ${{ secrets.R2_ENDPOINT }}
           access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
           secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      - name: Resolve committed workspace dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Native capacity, source and owner prerequisites
         run: bun scripts/aphrody/release-native-worker.ts preflight "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
       - name: Build SDK, runtime and sidecars, then execute exact native gates
@@ -156,6 +160,8 @@ jobs:
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
+      - name: Resolve committed workspace dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
       - uses: actions/download-artifact@v6
         with:
           pattern: native-full-*-${{ github.sha }}
@@ -189,6 +195,8 @@ jobs:
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
+      - name: Resolve committed workspace dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Download existing owner factory draft
         run: |
           gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json isDraft,targetCommitish > release.json

@@ -49,6 +49,17 @@ test("runtime publication depends on the aggregate and rechecks assets before R2
   );
 });
 
+test("fresh release jobs resolve the locked SDK workspace before loading publication owners", async () => {
+  const jobs = (await workflow("aphrody-release")).jobs;
+  for (const name of ["plan", "native-full", "aggregate", "publish"]) {
+    const steps = jobs[name]!.steps!;
+    const install = steps.findIndex(step => step.run === "bun install --frozen-lockfile --ignore-scripts");
+    const owner = steps.findIndex(step => step.run?.includes("scripts/aphrody/release-"));
+    expect(install).toBeGreaterThanOrEqual(0);
+    expect(owner).toBeGreaterThan(install);
+  }
+});
+
 test("eight native producers consume the source plan with bounded jobs and same-run receipts", async () => {
   const jobs = (await workflow("aphrody-release")).jobs;
   const native = jobs["native-full"]!;
