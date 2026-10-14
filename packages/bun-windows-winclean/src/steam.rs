@@ -2,7 +2,7 @@
 //! Steam compatibility database queries and URI launch.
 
 use crate::{dispatch::failed, system};
-use aphrody_subsystem::SubsystemError;
+use crate::SubsystemError;
 use serde_json::Value;
 
 pub(crate) fn open_steam_uri(uri: &str) -> Result<Value, SubsystemError> {

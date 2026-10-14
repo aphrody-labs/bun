@@ -412,7 +412,7 @@ mod tests {
         );
         assert!(matches!(
             invalid_type,
-            Err(aphrody_subsystem::SubsystemError::InvalidArguments(_))
+            Err(crate::SubsystemError::InvalidArguments(_))
         ));
 
         let empty_pattern = crate::dispatch::call_rust(
@@ -424,7 +424,7 @@ mod tests {
         );
         assert!(matches!(
             empty_pattern,
-            Err(aphrody_subsystem::SubsystemError::InvalidArguments(_))
+            Err(crate::SubsystemError::InvalidArguments(_))
         ));
     }
 
@@ -485,7 +485,7 @@ mod tests {
         );
         assert!(matches!(
             invalid_type,
-            Err(aphrody_subsystem::SubsystemError::InvalidArguments(_))
+            Err(crate::SubsystemError::InvalidArguments(_))
         ));
 
         let empty_pattern = crate::dispatch::call_rust(
@@ -498,7 +498,7 @@ mod tests {
         );
         assert!(matches!(
             empty_pattern,
-            Err(aphrody_subsystem::SubsystemError::InvalidArguments(_))
+            Err(crate::SubsystemError::InvalidArguments(_))
         ));
     }
 }

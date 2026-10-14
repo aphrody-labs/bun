@@ -7,7 +7,7 @@
 //! independently so a provider returning one failing property does not discard
 //! the rest of the element.
 
-use aphrody_subsystem::SubsystemError;
+use crate::SubsystemError;
 use serde_json::Value;
 
 #[cfg(windows)]

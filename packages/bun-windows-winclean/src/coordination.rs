@@ -10,7 +10,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-use aphrody_subsystem::SubsystemError;
+use crate::SubsystemError;
 use serde_json::{Value, json};
 
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);

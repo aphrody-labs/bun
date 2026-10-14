@@ -49,6 +49,18 @@ pub enum Error {
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
+#[derive(Debug, thiserror::Error)]
+pub enum SubsystemError {
+    #[error("unknown tool: {0}")]
+    UnknownTool(String),
+    #[error("invalid arguments: {0}")]
+    InvalidArguments(String),
+    #[error("{0}")]
+    Failed(String),
+    #[error("subsystem unavailable: {0}")]
+    Unavailable(String),
+}
+
 pub const CATALOG_JSON: &str = include_str!("tools.json");
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

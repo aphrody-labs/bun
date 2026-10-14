@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Concrete Rust dispatch for the WinClean compatibility catalog.
 
-use aphrody_subsystem::SubsystemError;
+use crate::SubsystemError;
 use base64::Engine;
 use serde_json::Value;
 

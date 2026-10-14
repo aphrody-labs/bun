@@ -2,7 +2,7 @@
 //! Transient Win32 notification compatibility.
 
 use crate::dispatch::string_arg;
-use aphrody_subsystem::SubsystemError;
+use crate::SubsystemError;
 use serde_json::Value;
 
 /// Show the frozen transient Win32 balloon contract.
