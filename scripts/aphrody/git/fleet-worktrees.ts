@@ -107,8 +107,11 @@ async function reconcileLocal(repo: string): Promise<Result> {
   if (current && origin.code === 0) {
     const pulled = await git(repo, "pull", "--rebase", "origin", current);
     if (pulled.code !== 0) return { host: "local", repo, ok: false, detail: pulled.stderr };
-    const pushed = await git(repo, "push", "origin", current);
-    if (pushed.code !== 0) return { host: "local", repo, ok: false, detail: pushed.stderr };
+    const ahead = await git(repo, "rev-list", "--count", `origin/${current}..${current}`);
+    if (ahead.stdout !== "0") {
+      const pushed = await git(repo, "push", "origin", current);
+      if (pushed.code !== 0) return { host: "local", repo, ok: false, detail: pushed.stderr };
+    }
   }
   return { host: "local", repo, ok: true, detail: `${current || "detached"} -> ${base}` };
 }
@@ -143,7 +146,8 @@ for root in "$HOME/src" "$HOME/apps"; do
     git -C "$repo" worktree prune
     if test -n "$current" && test -n "$origin"; then
       git -C "$repo" pull --rebase origin "$current" || { printf '%s|ERROR|rebase failed\n' "$repo"; continue; }
-      git -C "$repo" push origin "$current" || { printf '%s|ERROR|push failed\n' "$repo"; continue; }
+      ahead=$(git -C "$repo" rev-list --count "origin/$current..$current")
+      if test "$ahead" != 0; then git -C "$repo" push origin "$current" || { printf '%s|ERROR|push failed\n' "$repo"; continue; }; fi
     fi
     printf '%s|%s|%s\n' "$repo" "$current" "$base"
   done
