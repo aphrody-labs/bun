@@ -12,8 +12,10 @@ git -C "$checkout" rev-parse --git-dir >/dev/null
 exec 9>"${XDG_RUNTIME_DIR:-/tmp}/aphrody-site-publish.lock"
 flock -n 9 || { echo "publication déjà en cours"; exit 0; }
 
-git -C "$checkout" fetch -q origin refs/heads/main:refs/remotes/origin/main
-site_source=$(git -C "$checkout" rev-parse 'origin/main^{commit}')
+site_remote=${APHRODY_SITE_SOURCE_REMOTE:-origin}
+[[ "$site_remote" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] || { echo "remote source invalide" >&2; exit 1; }
+git -C "$checkout" fetch -q "$site_remote" "refs/heads/main:refs/remotes/$site_remote/main"
+site_source=$(git -C "$checkout" rev-parse "refs/remotes/$site_remote/main^{commit}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 git -C "$checkout" archive "$site_source" packages/web/site packages/web/cloudflare packages/bun-cloudflare packages/bun-agent-plugin packages/bun-types scripts/aphrody src/agent_tools src/codegen/generate-agent-tools.ts .claude/skills package.json | tar -x -C "$work"

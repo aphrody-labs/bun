@@ -32,6 +32,7 @@ test("main synchronization rejects missing measured evidence and relative protec
   const value = config(String(directory));
   expect(() => validateSiteSyncConfig(value)).not.toThrow();
   expect(() => validateSiteSyncConfig({ ...value, credentialFile: "relative-key" })).toThrow("absolute");
+  expect(() => validateSiteSyncConfig({ ...value, sourceRemote: "-upload-pack=other" })).toThrow("remote");
   expect(() => validateSiteSyncConfig({ ...value, runtimeFactFiles: [] })).toThrow("measured");
   expect(() =>
     validateSiteSyncConfig({ ...value, runtimeFactFiles: [...value.runtimeFactFiles, ...value.runtimeFactFiles] }),
@@ -97,5 +98,15 @@ test("a main push after the generator export fails before creating publication w
   const value = config(root);
   await expect(syncSite(value, { dryRun: true, source: exported })).rejects.toThrow("generator revision differs");
   expect(git("rev-parse", "origin/main")).not.toBe(exported);
+  expect(existsSync(value.buildRoot)).toBe(false);
+  git("remote", "add", "bun-source", root);
+  const originSource = git("rev-parse", "origin/main");
+  await Bun.write(join(root, "source.txt"), "third");
+  commit();
+  await expect(
+    syncSite({ ...value, sourceRemote: "bun-source" }, { dryRun: true, source: originSource }),
+  ).rejects.toThrow("generator revision differs");
+  expect(git("rev-parse", "bun-source/main")).not.toBe(originSource);
+  expect(git("rev-parse", "origin/main")).toBe(originSource);
   expect(existsSync(value.buildRoot)).toBe(false);
 });

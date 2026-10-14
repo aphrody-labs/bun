@@ -15,10 +15,16 @@ export type SiteSyncConfig = {
   ownerConnectionFile: string;
   readerConnectionFile: string;
   credentialFile: string;
+  sourceRemote?: string;
 };
 const hash = (bytes: Uint8Array | string) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 
 export function validateSiteSyncConfig(value: SiteSyncConfig): void {
+  if (
+    value.sourceRemote !== undefined &&
+    (typeof value.sourceRemote !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(value.sourceRemote))
+  )
+    throw new TypeError("Site source remote reference is invalid");
   for (const field of [
     "checkout",
     "captureRoot",
@@ -69,8 +75,9 @@ export async function syncSite(
   options: { dryRun?: boolean; force?: boolean; offline?: boolean; source?: string } = {},
 ) {
   const inputs = await siteSyncInputs(config);
-  git(config.checkout, ["fetch", "--quiet", "origin", "refs/heads/main:refs/remotes/origin/main"]);
-  const source = git(config.checkout, ["rev-parse", "origin/main^{commit}"]);
+  const remote = config.sourceRemote ?? "origin";
+  git(config.checkout, ["fetch", "--quiet", remote, `refs/heads/main:refs/remotes/${remote}/main`]);
+  const source = git(config.checkout, ["rev-parse", `refs/remotes/${remote}/main^{commit}`]);
   if (!/^[a-f0-9]{40}$/.test(source)) throw new Error("Expected an immutable origin/main revision");
   if (options.source !== undefined && options.source !== source)
     throw new Error("Site generator revision differs from synchronized origin/main");
