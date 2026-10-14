@@ -3,6 +3,7 @@ import type { IngestParams } from "./ingest.ts";
 import { createNeonHTTPClient } from "@aphrody/bun-plugin-neon/http";
 import { publicSiteAPI } from "../../site/site-api.ts";
 import { siteRag } from "./site-rag.ts";
+import { yoloAPI } from "./yolo-api.ts";
 
 export { Ingest } from "./ingest.ts";
 export { Room } from "./room.ts";
@@ -15,13 +16,13 @@ function log(level: "info" | "error", message: string, fields: Record<string, un
 }
 
 /** Constant-time bearer check: both sides are hashed so timingSafeEqual sees equal lengths. */
-async function authorized(request: Request, env: Env): Promise<boolean> {
+async function authorized(request: Request, env: Env, secret = env.APP_SECRET): Promise<boolean> {
   const header = request.headers.get("Authorization") ?? "";
-  if (!header.startsWith("Bearer ") || !env.APP_SECRET) return false;
+  if (!header.startsWith("Bearer ") || !secret) return false;
   const encoder = new TextEncoder();
   const [given, expected] = await Promise.all([
     crypto.subtle.digest("SHA-256", encoder.encode(header.slice(7))),
-    crypto.subtle.digest("SHA-256", encoder.encode(env.APP_SECRET)),
+    crypto.subtle.digest("SHA-256", encoder.encode(secret)),
   ]);
   return crypto.subtle.timingSafeEqual(given, expected);
 }
@@ -40,9 +41,11 @@ async function files(request: Request, env: Env, bucketName: string, key: string
   if (!key) {
     if (request.method !== "GET") return error(405, "method not allowed");
     const url = new URL(request.url);
+    const prefix = url.searchParams.get("prefix"),
+      cursor = url.searchParams.get("cursor");
     const listing = await bucket.list({
-      prefix: url.searchParams.get("prefix") ?? undefined,
-      cursor: url.searchParams.get("cursor") ?? undefined,
+      ...(prefix === null ? {} : { prefix }),
+      ...(cursor === null ? {} : { cursor }),
       limit: 100,
     });
     return json({
@@ -139,7 +142,7 @@ async function bunSearch(request: Request, env: Env, ctx: ExecutionContext): Pro
   const found = await env.BUN_NATIVE.query(embedded.data[0]!, {
     topK: k,
     returnMetadata: "all",
-    filter: kind ? { kind } : undefined,
+    ...(kind ? { filter: { kind } } : {}),
   });
   const body = {
     query: q,
@@ -222,6 +225,15 @@ async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<R
 export default {
   async fetch(request, env, ctx) {
     try {
+      const decision = await yoloAPI(request, env, {
+        authorized: (request, secret) => authorized(request, env, secret),
+        async siteRead(query) {
+          if (!env.NEON_DATABASE_URL) return error(503, "public site database unavailable");
+          const sql = createNeonHTTPClient({ connectionString: env.NEON_DATABASE_URL, expectedDatabase: "bun_site" });
+          return publicSiteAPI(query, sql);
+        },
+      });
+      if (decision) return decision;
       return await api(request, env, ctx);
     } catch (e) {
       log("error", "request failed", {

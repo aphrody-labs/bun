@@ -13,9 +13,9 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "strict": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "isolatedModules": true,
-    "types": ["@cloudflare/workers-types/experimental", "node"]
+    "types": ["@cloudflare/workers-types/experimental"]
   },
   "include": ["src", "maintenance/worker.ts", "worker-configuration.d.ts"]
 }

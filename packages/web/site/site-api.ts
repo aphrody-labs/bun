@@ -34,7 +34,7 @@ export async function publicSiteAPI(
           {
             ...(head ? {} : options.rag),
             query: query.get("q") ?? "",
-            limit: query.has("limit") ? Number(query.get("limit")) : undefined,
+            ...(query.has("limit") ? { limit: Number(query.get("limit")) } : {}),
           },
           request.signal,
         );
@@ -47,16 +47,16 @@ export async function publicSiteAPI(
           ? await getPublicSiteDocument(sql, query.get("path")!, snapshotId)
           : await searchPublicSiteDocs(sql, {
               query: query.get("q") ?? "",
-              limit: query.has("limit") ? Number(query.get("limit")) : undefined,
-              snapshotId,
+              ...(query.has("limit") ? { limit: Number(query.get("limit")) } : {}),
+              ...(snapshotId === undefined ? {} : { snapshotId }),
             });
         break;
       case "/api/site/graph":
         value = await getPublicSiteGraph(sql, {
-          domain: query.get("domain") ?? undefined,
-          query: query.get("q") ?? undefined,
-          limit: query.has("limit") ? Number(query.get("limit")) : undefined,
-          snapshotId,
+          ...(query.has("domain") ? { domain: query.get("domain")! } : {}),
+          ...(query.has("q") ? { query: query.get("q")! } : {}),
+          ...(query.has("limit") ? { limit: Number(query.get("limit")) } : {}),
+          ...(snapshotId === undefined ? {} : { snapshotId }),
         });
         break;
       case "/api/site/releases":
