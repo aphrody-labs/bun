@@ -1,0 +1,2 @@
+axum/** -text -eol -filter -whitespace linguist-vendored
+leptos/** -text -eol -filter -whitespace linguist-vendored

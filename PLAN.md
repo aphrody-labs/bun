@@ -1,5 +1,16 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## Axum and Leptos source exploration — 2026-10-14
+
+Complete MIT-licensed snapshots from aphrody-labs/axum at
+`c59208c86fded335cd85e388030ad59347b0e5ae` and aphrody-labs/leptos at
+`7ec903d4008ddf7679e771863f7b8b90f5cdebde` live in the canonical vendor tree.
+Per-file Git blob and SHA-256 verification covers 490 Axum and 1541 Leptos
+files. A generated inventory covers all 168 Cargo manifests, features and
+dependencies. Two Explore audits map their fullstack contracts to existing
+Bun Web APIs and Rust owners. No Cargo patch or Leptos runtime adapter is
+introduced. See [comparison and qualification limits](docs/project/fullstack-rust-comparison.md).
+
 ## Material source ownership — 2026-10-13
 
 `packages/web/rust/crates/site` consumes `aphrody-m3-tokens` from the Material
