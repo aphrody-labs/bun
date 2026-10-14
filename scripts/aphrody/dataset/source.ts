@@ -120,7 +120,9 @@ export async function inventory(source: PublicSource, signal?: AbortSignal) {
 class Bytes {
   private pending: Uint8Array = new Uint8Array(0);
   private offset = 0;
-  constructor(private readonly reader: ReadableStreamDefaultReader<Uint8Array>) {}
+  constructor(private readonly reader: {
+    read(): Promise<{ done: true; value?: Uint8Array } | { done?: false; value: Uint8Array }>;
+  }) {}
   async take(maximum: number): Promise<Uint8Array> {
     if (this.offset === this.pending.length) {
       const next = await this.reader.read();
@@ -536,5 +538,73 @@ export async function exportGraphSnapshot(
     astComplete: false,
     trained: false,
     shards: rows.shards,
+  };
+}
+
+/** The graph owner consumes the same verified cat-file batch as the source exporter. */
+export async function createGitIndexInput(source: PublicSource, signal?: AbortSignal) {
+  const files = await inventory(source, signal);
+  const byPath = new Map(files.map(file => [file.path, file]));
+  const reader = new Blobs(source.root, signal);
+  let queue: Promise<unknown> = Promise.resolve();
+  let closed = false;
+  const input: import("bun:graph-index").GitIndexInput = {
+    kind: "git",
+    repository: source.repository,
+    revision: source.revision,
+    files: (async function* () {
+      for (const file of files) {
+        signal?.throwIfAborted();
+        yield { ...file, mode: file.mode as import("bun:graph-index").GitSourceFile["mode"] };
+      }
+    })(),
+    readFile(descriptor, operationSignal) {
+      const file = byPath.get(descriptor.path);
+      if (
+        closed ||
+        !file ||
+        file.gitBlob !== descriptor.gitBlob ||
+        file.mode !== descriptor.mode ||
+        file.bytes !== descriptor.bytes ||
+        file.mode === "160000" ||
+        file.bytes > 16 * 1024 * 1024
+      )
+        return Promise.reject(new Error("Graph read is not an owned bounded Git blob"));
+      const task = queue.then(async () => {
+        signal?.throwIfAborted();
+        operationSignal?.throwIfAborted();
+        const result = new Uint8Array(file.bytes);
+        let offset = 0;
+        const hasher = new Bun.CryptoHasher("sha1").update("blob " + file.bytes + "\0");
+        for await (const chunk of reader.read(file)) {
+          signal?.throwIfAborted();
+          operationSignal?.throwIfAborted();
+          result.set(chunk, offset);
+          offset += chunk.length;
+          hasher.update(chunk);
+        }
+        if (offset !== file.bytes || hasher.digest("hex") !== file.gitBlob)
+          throw new Error("Graph Git blob identity failed");
+        return result;
+      });
+      queue = task.catch(() => {
+        reader.kill();
+        closed = true;
+      });
+      return task;
+    },
+  };
+  return {
+    input,
+    async [Symbol.asyncDispose]() {
+      await queue;
+      if (!closed)
+        try {
+          await reader.close();
+        } finally {
+          reader.kill();
+          closed = true;
+        }
+    },
   };
 }

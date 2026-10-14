@@ -35,6 +35,19 @@ impl ExecCommand {
         // Clone the positional so `ctx` can be reborrowed `&mut` for
         // `init_and_run_from_source` below.
         let script: Box<[u8]> = ctx.positionals[1].clone();
+        let mut arguments = super::arguments::command_arguments(ctx)
+            .into_iter()
+            .map(Box::<[u8]>::from)
+            .collect::<Vec<_>>();
+        // sh -c convention: the first trailing argument names $0, followed by $1, $2, ... .
+        let argv0 = if arguments.is_empty() {
+            Box::<[u8]>::from(&b"bun"[..])
+        } else {
+            arguments.remove(0)
+        };
+        ctx.passthrough = arguments;
+        ctx.positionals.truncate(1);
+        ctx.positionals.push(argv0);
         // this is a hack: make dummy bundler so we can use its `.runEnvLoader()` function to populate environment variables probably should split out the functionality
         let mut bundle = Transpiler::init(
             exec_arena(),

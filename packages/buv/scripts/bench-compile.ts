@@ -65,7 +65,7 @@ cases["interpreter timestamp cache, warm"] = median(warm, {}, 15);
 
 const compiled = stage("compiled");
 const compile = Bun.spawnSync(
-  [python, "-c", await Bun.file(join(ROOT, "crates/buv-runtime/py/compile.py")).text(), compiled],
+  [python, "-c", await Bun.file(join(ROOT, "../../src/runtime/cli/python_compile.py")).text(), compiled],
   {
     stdout: "pipe",
     stderr: "pipe",

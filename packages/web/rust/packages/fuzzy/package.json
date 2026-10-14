@@ -18,7 +18,7 @@
   "scripts": {
     "typecheck": "bun check --noEmit",
     "test": "bun test",
-    "lint": "oxlint src test scripts",
+    "lint": "bun lint src test scripts",
     "fixtures": "bun scripts/gen-fixtures.ts"
   },
   "devDependencies": {

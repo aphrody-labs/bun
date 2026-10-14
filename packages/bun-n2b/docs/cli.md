@@ -1,20 +1,20 @@
 # n2b command line
 
-`n2b --help` lists every flag. `bunx @aphrody/bun-plugin-n2b` and `aphrody n2b` accept the same
+`bun n2b --help` lists every flag. `bun n2b` and `aphrody n2b` accept the same
 arguments.
 
 ## Scan and fix
 
 ```sh
-n2b                          # scan the current directory, text report
-n2b path/to/project --report json
-n2b --fix                    # apply the safe rewrites
-n2b --aggressive             # also apply the rewrites marked `aggressive`
-n2b --migrate                # --aggressive plus migration side effects
-n2b --fix --dry-run          # compute the rewrites without writing files
-n2b --migrate --dry-run      # print the migration plan without touching the project
-n2b --since origin/main      # scan only what changed since a git ref
-n2b monorepo --submodules --jobs 2 --max-files 100000 --max-report-bytes 67108864 --dry-run
+bun n2b                          # scan the current directory, text report
+bun n2b path/to/project --report json
+bun n2b --fix                    # apply the safe rewrites
+bun n2b --aggressive             # also apply the rewrites marked `aggressive`
+bun n2b --migrate                # --aggressive plus migration side effects
+bun n2b --fix --dry-run          # compute the rewrites without writing files
+bun n2b --migrate --dry-run      # print the migration plan without touching the project
+bun n2b --since origin/main      # scan only what changed since a git ref
+bun n2b monorepo --submodules --jobs 2 --max-files 100000 --max-report-bytes 67108864 --dry-run
 ```
 
 | Flag                     | Effect                                                                                            |
@@ -89,14 +89,14 @@ or the argument type cannot be proven safe. It also refuses partial calls and in
 | `audit`                                        | Lists GitHub issues and pull requests that mention Bun or Node.js.                                                                                                                            |
 | `web`                                          | Scans the scripts of a rendered page artifact.                                                                                                                                                |
 | `analyze`                                      | Scans and audits one or more repositories, then links findings to their GitHub issues. The `ai` crate feature adds fastembed embeddings.                                                      |
-| `patch`                                        | `n2b patch <pkg>` applies the rules to `node_modules/<pkg>` through `bun patch`. `n2b patch --self` writes the rewrites of the current project as a diff (`n2b.patch`) without editing files. |
+| `patch`                                        | `bun n2b patch <pkg>` applies the rules to `node_modules/<pkg>` through `bun patch`. `bun n2b patch --self` writes the rewrites of the current project as a diff (`n2b.patch`) without editing files. |
 | `bunpp`                                        | Scaffolds `@bun++/node-<module>` packages for Node modules that Bun lacks (`scaffold`, `scaffold-all`, `status`, `sync`, `doctor`).                                                           |
 | `llmstxt`                                      | Generates `llms.txt` and `llms-full.txt` from a crawled site. Needs `siteone-crawler`.                                                                                                        |
 | `app`, `bin`, `linux`, `win32`, `wasm`, `rust` | Project scaffolders.                                                                                                                                                                          |
 
 ## The `n2b.json` manifest
 
-n2b looks for `n2b.json` in the project root, then in each parent directory. CLI flags override the
+bun n2b looks for `n2b.json` in the project root, then in each parent directory. CLI flags override the
 manifest, and the manifest overrides the defaults.
 
 ```json

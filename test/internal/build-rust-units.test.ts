@@ -7,6 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import { tempDir } from "harness";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 
 import type { Config } from "../../scripts/build/config.ts";
@@ -19,6 +20,8 @@ import {
 } from "../../scripts/build/rust/plan.ts";
 import {
   parseBuildScriptOutput,
+  nativeWebPBuildScriptOutput,
+  bindStaticBuildScriptOutput,
   rustcInvocation,
   timePass,
   writeDepfile,
@@ -31,7 +34,110 @@ import {
   type ManifestContext,
   type RustUnit,
   type RustcUnitManifest,
+  type BuildScriptRunManifest,
 } from "../../scripts/build/rust/units.ts";
+
+test("native WebP build-script uses one provider, tracks headers, and refuses ABI/source drift", () => {
+  const script = 'panic!("the fixture must never compile a second codec");\n';
+  using dir = tempDir("rust-native-webp-owner", {
+    source: {
+      "build.rs": script,
+      src: {
+        "ffi.rs":
+          "pub const WEBP_ENCODER_ABI_VERSION: u32 = 527;\npub const WEBP_DECODER_ABI_VERSION: u32 = 521;\npub const WEBP_MUX_ABI_VERSION: u32 = 264;\npub const WEBP_DEMUX_ABI_VERSION: u32 = 263;\n",
+      },
+    },
+    include: {
+      webp: {
+        "encode.h": "#define WEBP_ENCODER_ABI_VERSION 0x0210\n",
+        "decode.h": "#define WEBP_DECODER_ABI_VERSION 0x0210\n",
+        "mux.h": "#define WEBP_MUX_ABI_VERSION 0x0109\n",
+        "demux.h": "#define WEBP_DEMUX_ABI_VERSION 0x0107\n",
+      },
+    },
+    "canonical-libwebp.a": "fixture native input\n",
+    out: {},
+  });
+  const root = String(dir);
+  const native = {
+    sourceCommit: "b7e29b9d75bd31422b00c2a446d49d7af06c328d",
+    includes: [join(root, "include")],
+    inputs: [join(root, "canonical-libwebp.a")],
+    linkInputs: [join(root, "canonical-libwebp.a")],
+    buildScriptSHA256: createHash("sha256").update(script).digest("hex"),
+  };
+  const manifest: BuildScriptRunManifest = {
+    kind: "build-script-run",
+    crateName: "libwebp_sys",
+    cwd: root,
+    output: join(root, "output.json"),
+    depfile: join(root, "output.d"),
+    env: { CARGO_PKG_NAME: "libwebp-sys", CARGO_PKG_VERSION: "0.9.6" },
+    libraryPath: { variable: "PATH", prepend: [] },
+    script: {
+      program: join(root, "missing-build-script-must-not-run"),
+      outDir: join(root, "out"),
+      manifestDir: join(root, "source"),
+      linksDeps: [],
+      local: false,
+      trackedEnv: {},
+      nativeWebP: native,
+    },
+  };
+  const result = parseBuildScriptOutput(nativeWebPBuildScriptOutput(manifest)!);
+  expect(result.linkLibs).toEqual([]);
+  expect(result.rerunIfChanged).toContain(join(root, "include", "webp", "encode.h"));
+  expect(result.rerunIfChanged).toContain(join(root, "canonical-libwebp.a"));
+  writeFileSync(join(root, "unit.json"), JSON.stringify(manifest));
+  const built = Bun.spawnSync(
+    [
+      Bun.which("bun")!,
+      "--no-env-file",
+      join(import.meta.dir, "../../scripts/build/rust/run.ts"),
+      "build-script",
+      join(root, "unit.json"),
+    ],
+    { stdout: "pipe", stderr: "pipe", timeout: 5000 },
+  );
+  expect(built.stderr.toString()).toBe("");
+  expect(built.exitCode).toBe(0);
+  expect(JSON.parse(readFileSync(manifest.output, "utf8")).linkLibs).toEqual([]);
+  expect(JSON.parse(readFileSync(manifest.output, "utf8")).outDirFiles).toEqual([]);
+  writeFileSync(join(root, "include", "webp", "encode.h"), "#define WEBP_ENCODER_ABI_VERSION 0x0310\n");
+  expect(() => nativeWebPBuildScriptOutput(manifest)).toThrow("encoder ABI differs");
+  writeFileSync(join(root, "source", "build.rs"), "different build script\n");
+  expect(() => nativeWebPBuildScriptOutput(manifest)).toThrow("reviewed build script changed");
+});
+
+test("static sysroot bindings own only their archive and preserve the libmnl dependency", () => {
+  using dir = tempDir("rust-static-netlink-owner", {
+    "libnftnl.a": "fixture archive\n",
+    "libmnl.a": "fixture archive\n",
+    pkgconfig: { "libnftnl.pc": "Version: 1.2.0\n", "libmnl.pc": "Version: 1.0.5\n" },
+  });
+  const root = String(dir);
+  const unit = {
+    script: { staticLibrary: { name: "nftnl", directory: root, minimumVersion: "1.1.5" } },
+  } as BuildScriptRunManifest;
+  const output = parseBuildScriptOutput(
+    "cargo:rustc-link-lib=nftnl\ncargo:rustc-link-search=native=canonical\ncargo::rustc-env=LIBNFTNL_VERSION=1.1.5\n",
+  );
+  bindStaticBuildScriptOutput(unit, output);
+  expect(output.linkLibs).toEqual(["static=nftnl"]);
+  expect(output.linkSearch).toEqual(["native=canonical"]);
+  expect(output.env).toEqual([["LIBNFTNL_VERSION", "1.1.5"]]);
+  expect(output.rerunIfChanged).toContain(join(root, "libnftnl.a"));
+  expect(() =>
+    bindStaticBuildScriptOutput(
+      unit,
+      parseBuildScriptOutput("cargo:rustc-link-lib=static=nftnl\ncargo:rustc-link-lib=static=mnl\n"),
+    ),
+  ).toThrow("exactly its canonical archive");
+  writeFileSync(join(root, "pkgconfig", "libnftnl.pc"), "Version: 1.1.4\n");
+  expect(() => bindStaticBuildScriptOutput(unit, parseBuildScriptOutput("cargo:rustc-link-lib=nftnl\n"))).toThrow(
+    "older than bindings require",
+  );
+});
 
 test("Rust plans watch vendored package manifests and their inherited or explicit workspace", () => {
   using dir = tempDir("rust-plan-manifest-inputs", {
@@ -174,9 +280,7 @@ describe("parseBuildScriptOutput", () => {
   });
 
   test("turns a malformed directive into a warning instead of dropping it", () => {
-    const out = parseBuildScriptOutput(
-      [`cargo:no-equals-sign`, `cargo:rustc-link-arg-bin=missing-the-arg`].join("\n"),
-    );
+    const out = parseBuildScriptOutput([`cargo:no-equals-sign`, `cargo:rustc-link-arg-bin=missing-the-arg`].join("\n"));
     expect(out.warnings).toEqual([
       "invalid directive `cargo:no-equals-sign`",
       "invalid rustc-link-arg-bin `cargo:rustc-link-arg-bin=missing-the-arg`",
@@ -255,16 +359,12 @@ describe("writeDepfile", () => {
 describe("timePass", () => {
   test("reads a `-Z time-passes` line as a phase that ends now, and leaves every other line alone", () => {
     const before = Date.now();
-    const phase = timePass(
-      `time: {"pass":"type_check_crate","time":1.5,"rss_start":1,"rss_end":2}`,
-    )!;
+    const phase = timePass(`time: {"pass":"type_check_crate","time":1.5,"rss_start":1,"rss_end":2}`)!;
     expect(phase.name).toBe("type_check_crate");
     expect(phase.endMs).toBeGreaterThanOrEqual(before);
     expect(phase.endMs - phase.startMs).toBe(1500);
     // A diagnostic, an artifact notice, and rustc's text form of the same flag.
-    expect(
-      timePass(`{"$message_type":"diagnostic","rendered":"warning: time: {"}`),
-    ).toBeUndefined();
+    expect(timePass(`{"$message_type":"diagnostic","rendered":"warning: time: {"}`)).toBeUndefined();
     expect(timePass(`{"$message_type":"artifact","emit":"metadata"}`)).toBeUndefined();
     expect(timePass(`time:   0.001; rss:   46MB ->   49MB (   +2MB)\tparse_crate`)).toBeUndefined();
   });
@@ -281,18 +381,9 @@ describe("rustcInvocation", () => {
       providedStaticLibraries: ["zstd"],
     });
     const invocation = rustcInvocation(unit);
-    expect(invocation.argv).toEqual([
-      "--crate-name",
-      "demo",
-      "-l",
-      "other",
-      "--cfg",
-      "from_script",
-    ]);
+    expect(invocation.argv).toEqual(["--crate-name", "demo", "-l", "other", "--cfg", "from_script"]);
     expect(invocation.env.FROM_SCRIPT).toBe("1");
-    expect(rustcInvocation({ ...unit, providedStaticLibraries: undefined }).argv).toContain(
-      "static=zstd",
-    );
+    expect(rustcInvocation({ ...unit, providedStaticLibraries: undefined }).argv).toContain("static=zstd");
   });
 
   test("a supplied static provider refuses a build script requesting a dynamic library", () => {
@@ -361,7 +452,7 @@ describe("rustcInvocation", () => {
         buildScriptOutput: join(String(dir), "own.json"),
       }),
     );
-    expect(argv.filter((a) => a.startsWith("link-arg="))).toEqual([
+    expect(argv.filter(a => a.startsWith("link-arg="))).toEqual([
       "link-arg=--all",
       "link-arg=--bins",
       "link-arg=--mine",
@@ -410,11 +501,7 @@ describe("buildRustGraph + unitManifest", () => {
     "/cargo/registry/dep-a/Cargo.toml",
   );
   const local = pkg("my-bin", null, "/ws/src/my-bin/Cargo.toml");
-  const unit = (
-    p: MetadataPackage,
-    kind: "lib" | "bin",
-    deps: UnitGraphUnit["dependencies"],
-  ): UnitGraphUnit => ({
+  const unit = (p: MetadataPackage, kind: "lib" | "bin", deps: UnitGraphUnit["dependencies"]): UnitGraphUnit => ({
     pkg_id: p.id,
     target: {
       kind: [kind],
@@ -464,9 +551,7 @@ describe("buildRustGraph + unitManifest", () => {
       version: 1,
       units: [
         unit(registry, "lib", []),
-        unit(local, "bin", [
-          { index: 0, extern_crate_name: "dep_a", public: false, noprelude: false },
-        ]),
+        unit(local, "bin", [{ index: 0, extern_crate_name: "dep_a", public: false, noprelude: false }]),
       ],
       roots: [1],
     },
@@ -479,10 +564,7 @@ describe("buildRustGraph + unitManifest", () => {
     host: info(triple),
     target: info(triple),
   });
-  const context = (
-    graph: ReturnType<typeof buildRustGraph>,
-    timeTrace = false,
-  ): ManifestContext => ({
+  const context = (graph: ReturnType<typeof buildRustGraph>, timeTrace = false): ManifestContext => ({
     cfg: {
       ci: false,
       debug: false,
@@ -519,9 +601,7 @@ describe("buildRustGraph + unitManifest", () => {
       plan.unitGraph.units = [
         compiled,
         { ...script, platform },
-        unit(local, "lib", [
-          { index: 1, extern_crate_name: "build_script_build", public: false, noprelude: false },
-        ]),
+        unit(local, "lib", [{ index: 1, extern_crate_name: "build_script_build", public: false, noprelude: false }]),
       ];
       plan.unitGraph.roots = [2];
       const graph = buildRustGraph(plan, "/build/rust-target");
@@ -531,25 +611,29 @@ describe("buildRustGraph + unitManifest", () => {
       ctx.cfg.hostCxx = "/llvm/bin/clang++";
       ctx.cfg.hostAr = "/llvm/bin/llvm-ar";
       ctx.baseEnv = { CC: "/llvm/bin/clang-cl", CXX: "/llvm/bin/clang-cl", AR: "/llvm/bin/llvm-lib" };
-      return unitManifest(ctx, graph.units.find(unit => unit.kind === "build-script-run")!).env;
+      return unitManifest(
+        ctx,
+        graph.units.find(unit => unit.kind === "build-script-run")!,
+      ).env;
     };
     const hostEnv = scriptEnv(null);
     const targetEnv = scriptEnv(triple);
     expect([hostEnv.TARGET, hostEnv.CC, hostEnv.CXX, hostEnv.AR]).toEqual([
-      host, "/llvm/bin/clang", "/llvm/bin/clang++", "/llvm/bin/llvm-ar",
+      host,
+      "/llvm/bin/clang",
+      "/llvm/bin/clang++",
+      "/llvm/bin/llvm-ar",
     ]);
     expect([targetEnv.TARGET, targetEnv.CC, targetEnv.CXX, targetEnv.AR]).toEqual([
-      triple, "/llvm/bin/clang-cl", "/llvm/bin/clang-cl", "/llvm/bin/llvm-lib",
+      triple,
+      "/llvm/bin/clang-cl",
+      "/llvm/bin/clang-cl",
+      "/llvm/bin/llvm-lib",
     ]);
   });
 
   test("static Windows C dependencies keep linker symbols without exporting their addon ABI", () => {
-    const scriptEnv = (
-      name: string,
-      version: string,
-      target = triple,
-      rootName = "bun_runtime",
-    ) => {
+    const scriptEnv = (name: string, version: string, target = triple, rootName = "bun_runtime") => {
       const dependency = pkg(name, registry.source, `/cargo/registry/${name}/Cargo.toml`);
       dependency.version = version;
       const root = { ...local, name: rootName };
@@ -566,17 +650,13 @@ describe("buildRustGraph + unitManifest", () => {
           ...compiled,
           platform: target,
           mode: "run-custom-build",
-          dependencies: [
-            { index: 0, extern_crate_name: "build_script_build", public: false, noprelude: false },
-          ],
+          dependencies: [{ index: 0, extern_crate_name: "build_script_build", public: false, noprelude: false }],
         },
-        unit(root, "lib", [
-          { index: 1, extern_crate_name: "build_script_build", public: false, noprelude: false },
-        ]),
+        unit(root, "lib", [{ index: 1, extern_crate_name: "build_script_build", public: false, noprelude: false }]),
       ];
       plan.unitGraph.roots = [2];
       const graph = buildRustGraph(plan, "/build/rust-target");
-      const run = graph.units.find((value) => value.kind === "build-script-run");
+      const run = graph.units.find(value => value.kind === "build-script-run");
       if (!run) throw new Error("Missing real build script run unit");
       const ctx = context(graph);
       ctx.baseEnv.CFLAGS_x86_64_pc_windows_msvc = "/MT";
@@ -591,12 +671,8 @@ describe("buildRustGraph + unitManifest", () => {
         "/MT /clang:-fvisibility-from-dllstorageclass /clang:-fvisibility-dllexport=hidden",
       );
       expect(env.CFLAGS).toBeUndefined();
-      expect(scriptEnv(name, version, triple, "dynamic-plugin").CFLAGS_x86_64_pc_windows_msvc).toBe(
-        "/MT",
-      );
-      expect(
-        scriptEnv(name, version, "x86_64-unknown-linux-gnu").CFLAGS_x86_64_pc_windows_msvc,
-      ).toBe("/MT");
+      expect(scriptEnv(name, version, triple, "dynamic-plugin").CFLAGS_x86_64_pc_windows_msvc).toBe("/MT");
+      expect(scriptEnv(name, version, "x86_64-unknown-linux-gnu").CFLAGS_x86_64_pc_windows_msvc).toBe("/MT");
     }
     expect(scriptEnv("aws-lc-sys", "0.46.0").CFLAGS_x86_64_pc_windows_msvc).toBe("/MT");
     expect(scriptEnv("talpid-core", "1.0.0").BUN_WINFW_STATIC).toBe("1");
@@ -636,21 +712,89 @@ describe("buildRustGraph + unitManifest", () => {
     graph.root.kind = "lib";
     bindings.pkg = { ...bindings.pkg, name: "zstd-sys", version: "2.1.0+zstd.1.5.7" };
     bindings.features = ["std"];
-    expect(
-      (unitManifest(context(graph), bindings) as RustcUnitManifest).providedStaticLibraries,
-    ).toEqual(["zstd"]);
+    expect((unitManifest(context(graph), bindings) as RustcUnitManifest).providedStaticLibraries).toEqual(["zstd"]);
     bindings.platform = "host";
-    expect(
-      (unitManifest(context(graph), bindings) as RustcUnitManifest).providedStaticLibraries,
-    ).toBeUndefined();
+    expect((unitManifest(context(graph), bindings) as RustcUnitManifest).providedStaticLibraries).toBeUndefined();
     bindings.platform = triple;
     bindings.features.push("legacy");
-    expect(() => unitManifest(context(graph), bindings)).toThrow(
-      "does not support zstd-sys features",
-    );
+    expect(() => unitManifest(context(graph), bindings)).toThrow("does not support zstd-sys features");
     bindings.features = ["std"];
     bindings.pkg.version = "2.0.10+zstd.1.5.6";
     expect(() => unitManifest(context(graph), bindings)).toThrow("requires Zstd 1.5.7 bindings");
+  });
+
+  test("WebP target bindings require Bun's resolved native inputs and preserve host build scripts", () => {
+    const graph = buildRustGraph(planWith([]), "/build/rust-target");
+    const bindings = graph.units[0]!;
+    graph.root.pkg = { ...graph.root.pkg, name: "bun_runtime" };
+    graph.root.kind = "lib";
+    bindings.pkg = { ...bindings.pkg, name: "libwebp-sys", version: "0.9.6" };
+    bindings.features = ["default", "std", "parallel", "neon"];
+    const compiled = { ...bindings, kind: "build-script" as const };
+    const script = {
+      ...bindings,
+      kind: "build-script-run" as const,
+      scriptOutDir: "/build/out",
+      deps: [{ unit: compiled, externName: "build_script_build", public: false, noprelude: false, nounused: false }],
+    };
+    const ctx = context(graph);
+    ctx.nativeWebP = {
+      sourceCommit: "b7e29b9d75bd31422b00c2a446d49d7af06c328d",
+      includes: ["/provider/include"],
+      inputs: ["/provider/libwebp.a"],
+      linkInputs: ["/provider/libwebp.a"],
+    };
+    const native = unitManifest(ctx, script) as BuildScriptRunManifest;
+    expect(native.script.nativeWebP?.linkInputs).toEqual(["/provider/libwebp.a"]);
+    expect(native.script.nativeWebP?.buildScriptSHA256).toBe(
+      "2d61293ca8eb96dc44a2958d3cd88129a96ca900cbd8d245f98f99dcfa810a05",
+    );
+    script.platform = "host";
+    expect((unitManifest(ctx, script) as BuildScriptRunManifest).script.nativeWebP).toBeUndefined();
+    script.platform = triple;
+    script.pkg = { ...script.pkg, version: "0.10.0" };
+    expect(() => unitManifest(ctx, script)).toThrow("reviewed libwebp-sys 0.9.6");
+    script.pkg.version = "0.9.6";
+    ctx.nativeWebP.linkInputs = [];
+    expect(() => unitManifest(ctx, script)).toThrow("resolved native WebP link inputs");
+  });
+
+  test("Linux sysroot mnl/nftnl build scripts use separate static providers", () => {
+    const plan = planWith([]);
+    plan.target = info("x86_64-unknown-linux-gnu");
+    const graph = buildRustGraph(plan, "/build/rust-target");
+    const bindings = graph.units[0]!;
+    graph.root.pkg = { ...graph.root.pkg, name: "bun_runtime" };
+    graph.root.kind = "lib";
+    const ctx = context(graph);
+    ctx.cfg.sysroot = "/sdk";
+    bindings.pkg = { ...bindings.pkg, name: "mnl-sys", version: "0.2.2" };
+    bindings.features = ["mnl-1-0-4"];
+    const compiled = { ...bindings, kind: "build-script" as const };
+    const script = {
+      ...bindings,
+      kind: "build-script-run" as const,
+      scriptOutDir: "/build/out",
+      deps: [{ unit: compiled, externName: "build_script_build", public: false, noprelude: false, nounused: false }],
+    };
+    const mnl = unitManifest(ctx, script) as BuildScriptRunManifest;
+    expect(mnl.env.LIBMNL_LIB_DIR).toBe(join("/sdk", "usr", "lib"));
+    expect(mnl.script.staticLibrary).toEqual({
+      name: "mnl",
+      directory: join("/sdk", "usr", "lib"),
+      minimumVersion: "1.0.4",
+    });
+    const mnlBinding = { ...bindings, pkg: { ...bindings.pkg, id: "mnl-sys 0.2.2" }, deps: [] };
+    bindings.pkg = { ...bindings.pkg, name: "nftnl-sys", version: "0.6.4" };
+    bindings.deps = [{ unit: mnlBinding, externName: "mnl_sys", public: false, noprelude: false, nounused: false }];
+    script.pkg = bindings.pkg;
+    script.features = ["nftnl-1-1-5", "nftnl-1-1-2"];
+    const nftnl = unitManifest(ctx, script) as BuildScriptRunManifest;
+    expect(nftnl.env.LIBNFTNL_LIB_DIR).toBe(join("/sdk", "usr", "lib"));
+    expect(nftnl.script.staticLibrary?.minimumVersion).toBe("1.1.5");
+    expect(nftnl.env.LIBMNL_LIB_DIR).toBeUndefined();
+    bindings.deps = [];
+    expect(() => unitManifest(ctx, script)).toThrow("unique libmnl dependency");
   });
 
   // The whole command line, in order: cargo's position for each group of flags is part of what is reproduced
@@ -662,10 +806,7 @@ describe("buildRustGraph + unitManifest", () => {
     "-L",
     `dependency=${join("/build/rust-target/shim", "host", "deps")}`,
   ];
-  const diagnostics = [
-    "--error-format=json",
-    "--json=diagnostic-rendered-ansi,artifacts,future-incompat",
-  ];
+  const diagnostics = ["--error-format=json", "--json=diagnostic-rendered-ansi,artifacts,future-incompat"];
   const checkCfg = ["--check-cfg", "cfg(docsrs,test)", "--check-cfg", "cfg(feature, values())"];
   const BIN_ARGS = (bin: RustUnit, dep: RustUnit) => [
     "--crate-name",
@@ -752,9 +893,7 @@ describe("buildRustGraph + unitManifest", () => {
     expect(graph.root).toBe(bin);
     expect(bin.kind).toBe("bin");
     expect(bin.output).toBe(join("/build/rust-target/shim", triple, "my_bin.exe"));
-    expect(dep.output).toBe(
-      join("/build/rust-target/shim", triple, "deps", `libdep_a-${dep.hash}.rlib`),
-    );
+    expect(dep.output).toBe(join("/build/rust-target/shim", triple, "deps", `libdep_a-${dep.hash}.rlib`));
 
     const m = unitManifest(context(graph), bin) as RustcUnitManifest;
     expect(m.kind).toBe("bin");
@@ -767,37 +906,22 @@ describe("buildRustGraph + unitManifest", () => {
 
     const depManifest = unitManifest(context(graph), dep) as RustcUnitManifest;
     expect(depManifest.binDestination).toBeUndefined();
-    expect(depManifest.rmetaNinjaName).toBe(
-      join("rust-target/shim", triple, "deps", `libdep_a-${dep.hash}.rmeta`),
-    );
+    expect(depManifest.rmetaNinjaName).toBe(join("rust-target/shim", triple, "deps", `libdep_a-${dep.hash}.rmeta`));
     expect(depManifest.linkArgSelectors).toEqual(["all"]);
     expect(depManifest.args).toEqual(DEP_ARGS(dep));
   });
 
   test("a library root's link takes the target libraries, with one panic runtime and no host code", () => {
     // What a `-Zbuild-std` graph looks like: std depends on both panic runtimes, and a proc-macro brings host-only crates.
-    const names = [
-      "panic_abort",
-      "panic_unwind",
-      "std",
-      "macro_dep",
-      "my_macro",
-      "my-root",
-    ] as const;
-    const pkgs = Object.fromEntries(
-      names.map((name) => [name, pkg(name, null, `/ws/src/${name}/Cargo.toml`)]),
-    );
+    const names = ["panic_abort", "panic_unwind", "std", "macro_dep", "my_macro", "my-root"] as const;
+    const pkgs = Object.fromEntries(names.map(name => [name, pkg(name, null, `/ws/src/${name}/Cargo.toml`)]));
     const dep = (index: number, name: string) => ({
       index,
       extern_crate_name: name,
       public: false,
       noprelude: false,
     });
-    const lib = (
-      name: (typeof names)[number],
-      platform: string | null,
-      deps: UnitGraphUnit["dependencies"],
-    ) => ({
+    const lib = (name: (typeof names)[number], platform: string | null, deps: UnitGraphUnit["dependencies"]) => ({
       ...unit(pkgs[name]!, "lib", deps),
       platform,
     });
@@ -822,22 +946,20 @@ describe("buildRustGraph + unitManifest", () => {
           lib("macro_dep", null, []),
           procMacro,
           lib("my-root", triple, [dep(2, "std"), dep(4, "my_macro")]),
-        ].map((u) => ({ ...u, profile: { ...u.profile, panic } })),
+        ].map(u => ({ ...u, profile: { ...u.profile, panic } })),
         roots: [5],
       },
-      packages: Object.fromEntries(Object.values(pkgs).map((p) => [p.id, p])),
+      packages: Object.fromEntries(Object.values(pkgs).map(p => [p.id, p])),
     });
 
     const abort = buildRustGraph(plan("abort"), "/build/rust-target");
     expect(abort.root.kind).toBe("lib");
     // The root is named like every other library: by its crate and its hash.
-    expect(abort.root.output).toBe(
-      join("/build/rust-target", triple, "deps", `libmy_root-${abort.root.hash}.rlib`),
-    );
-    expect(linkedRlibs(abort).map((u) => u.crateName)).toEqual(["my_root", "std", "panic_abort"]);
+    expect(abort.root.output).toBe(join("/build/rust-target", triple, "deps", `libmy_root-${abort.root.hash}.rlib`));
+    expect(linkedRlibs(abort).map(u => u.crateName)).toEqual(["my_root", "std", "panic_abort"]);
 
     const unwind = buildRustGraph(plan("unwind"), "/build/rust-target");
-    expect(linkedRlibs(unwind).map((u) => u.crateName)).toEqual(["my_root", "std", "panic_unwind"]);
+    expect(linkedRlibs(unwind).map(u => u.crateName)).toEqual(["my_root", "std", "panic_unwind"]);
   });
 
   test("--time-trace=on has rustc report its passes, to a file beside the unit's output", () => {
@@ -846,20 +968,13 @@ describe("buildRustGraph + unitManifest", () => {
     expect((unitManifest(context(graph), dep) as RustcUnitManifest).phases).toBeUndefined();
 
     const traced = unitManifest(context(graph, true), dep) as RustcUnitManifest;
-    expect(traced.args).toEqual([
-      ...DEP_ARGS(dep),
-      "-Z",
-      "time-passes",
-      "-Z",
-      "time-passes-format=json",
-    ]);
+    expect(traced.args).toEqual([...DEP_ARGS(dep), "-Z", "time-passes", "-Z", "time-passes-format=json"]);
     expect(traced.phases).toBe(`${dep.output}.phases.json`);
   });
 
   test("target rustflags change where an artifact is written but not how its symbols are mangled", () => {
     const plain = buildRustGraph(planWith([]), "/build/rust-target/shim").units[0];
-    const flagged = buildRustGraph(planWith(["-Ctarget-cpu=native"]), "/build/rust-target/shim")
-      .units[0];
+    const flagged = buildRustGraph(planWith(["-Ctarget-cpu=native"]), "/build/rust-target/shim").units[0];
     expect(flagged.hash).not.toBe(plain.hash);
     expect(flagged.symbolHash).toBe(plain.symbolHash);
   });

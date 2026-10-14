@@ -171,7 +171,7 @@ await Bun.write(
 	`export const articles = ` + JSON.stringify(data, null, 2),
 );
 
-execSync('bun x prettier src/data/articles.ts --write');
+execSync('bun fmt src/data/articles.ts --write');
 
 // render cards
 const serveUrl = await bundle({

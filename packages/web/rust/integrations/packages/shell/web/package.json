@@ -21,7 +21,7 @@
   "scripts": {
     "build": "bun run build:wasm",
     "build:wasm": "bash ../../../scripts/build/shell/build-wasm.sh",
-    "lint": "oxlint src test",
+    "lint": "bun lint src test",
     "test": "bun test",
     "typecheck": "bun check -p tsconfig.json --noEmit"
   },

@@ -7,11 +7,11 @@
 	"description": "Run a Remotion Studio with a server backend",
 	"main": "dist",
 	"scripts": {
-		"lint": "eslint src",
+		"lint": "bun lint src",
 		"test": "bun test src",
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"make": "tsgo -d"
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d"
 	},
 	"author": "Jonny Burger <jonny@remotion.dev>",
 	"contributors": [],
@@ -47,8 +47,8 @@
 		"@remotion/eslint-config-internal": "workspace:*",
 		"eslint": "catalog:",
 		"prettier": "catalog:",
-		"@types/node": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"@types/node": "catalog:"
+
 	},
 	"exports": {
 		".": "./dist/index.js",

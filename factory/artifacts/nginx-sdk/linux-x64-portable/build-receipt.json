@@ -1,0 +1,1001 @@
+{
+  "schema": 1,
+  "kind": "bun-nginx-native-provider-build",
+  "platform": "linux",
+  "arch": "x64",
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "bunVersion": "1.4.4",
+    "bunRevision": "f54a341270501b3b77ea3dc4a728f33fa44810db"
+  },
+  "destination": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable",
+  "source": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/nginx",
+  "ngxRust": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/ngx-rust",
+  "module": "/home/ubuntu/build/bun-os-obscura-4634063/packages/bun-nginx/native",
+  "objects": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/objects",
+  "sources": [
+    {
+      "repository": "https://github.com/nginx/nginx.git",
+      "revision": "0a5db852e18d1c22c62a5ede1412ac3f416111a0",
+      "release": "1.31.6",
+      "path": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/nginx",
+      "license": "BSD-2-Clause",
+      "licensePath": "vendor/nginx/LICENSE",
+      "tree": "c9c6afad8fbaf7e73b06b0f6fa6686c1bc798668",
+      "inventorySha256": "12aecff98da5a3e8deef012eac5e20f9072f9693f59a850b26e90fc8607cf34e",
+      "licenseSha256": "08845fe39e06b51dad7685c28140ab49577a86e947523e16b536a46caf89ad5c"
+    },
+    {
+      "repository": "https://github.com/nginx/ngx-rust.git",
+      "revision": "cf58b5270dc5e9b855dab765e9f13ba2a12c7709",
+      "package": "ngx",
+      "version": "0.5.0",
+      "path": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/ngx-rust",
+      "license": "Apache-2.0",
+      "licensePath": "vendor/ngx-rust/LICENSE",
+      "vendoredFeature": false,
+      "initializeNestedNginxSubmodule": false,
+      "tree": "263d009778a49a787b9b10acd57bddc824615356",
+      "inventorySha256": "5c078aa5d5d2fdbf76d7777d7d8accd2e9cd7e78429e1c5693b335e24a9b2f0b",
+      "licenseSha256": "444e7731cbe71bc2f52bbbffb809f41ca562524e4e2945da78cf3b41305b3de0"
+    }
+  ],
+  "moduleInputs": [
+    {
+      "name": "Cargo.toml",
+      "sha256": "88c1bfe64bc61d320bee5f9a0fe350df64836c33c2bac42fd1a760adf88ecbc8"
+    },
+    {
+      "name": "Cargo.lock",
+      "sha256": "ef1944e5c55b09b2d59d89b6fad7f43cee4084fe8fe6e7c233d109e884220964"
+    },
+    {
+      "name": "build.rs",
+      "sha256": "f5a2077118f875dc1ae1483bafe743c7081ff203dc27852c82d6844c79b2c982"
+    },
+    {
+      "name": "config",
+      "sha256": "d831d9f8136d00be64df2e76f437ba47ce05a31eda38e35401992aaf487fb61f"
+    },
+    {
+      "name": "config.make",
+      "sha256": "02952213c7bc645234f99d60266237c9f95f50d3591fb238abfc9d9c140a40df"
+    },
+    {
+      "name": "src/lib.rs",
+      "sha256": "11da8ab1da038e17b0687d5626b41e8c637dc6bd11935bc43f1bd216d91c9d47"
+    },
+    {
+      "name": "sources.json",
+      "sha256": "cbeea03826dfbc11b170ba8fc03c93f1c42be02f4e6d88ba2d78f46023bba14d"
+    }
+  ],
+  "portableSDK": {
+    "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/sdk-receipt.json",
+    "sha256": "6e750fa6fe7c8398c575ab8b16848c846b54f15133687fbff86ae9a706d30809",
+    "receipt": {
+      "schema": 1,
+      "kind": "bun-nginx-portable-sdk",
+      "target": "linux-x64-gnu",
+      "requiredGlibcMaximum": "2.17",
+      "sysroot": "/opt/linux-sysroot-glibc",
+      "compiler": "/usr/lib/llvm-23/bin/clang",
+      "gccDirectory": "/opt/linux-sysroot-glibc/usr/lib/gcc/x86_64-linux-gnu/13",
+      "dependencyPrefix": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix",
+      "zlibPrefix": "/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix",
+      "compatibilityObject": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/bun-glibc-compat.o",
+      "cryptArchive": "/opt/linux-sysroot-glibc/usr/lib/x86_64-linux-gnu/libcrypt.a",
+      "wrapSymbols": [
+        "__explicit_bzero_chk",
+        "__libc_start_main",
+        "__pthread_key_create",
+        "_dl_find_object",
+        "copy_file_range",
+        "dladdr",
+        "dlerror",
+        "dlsym",
+        "dlvsym",
+        "exp",
+        "exp2",
+        "exp2f",
+        "expf",
+        "fcntl64",
+        "fstat",
+        "fstat64",
+        "fstatat",
+        "fstatat64",
+        "getentropy",
+        "getrandom",
+        "gettid",
+        "glob64",
+        "log",
+        "log2",
+        "log2f",
+        "logf",
+        "memfd_create",
+        "mknod",
+        "posix_spawn_file_actions_addchdir_np",
+        "pow",
+        "powf",
+        "pthread_attr_setstack",
+        "pthread_attr_setstacksize",
+        "pthread_getattr_np",
+        "pthread_getspecific",
+        "pthread_key_create",
+        "pthread_key_delete",
+        "pthread_kill",
+        "pthread_mutex_trylock",
+        "pthread_mutexattr_destroy",
+        "pthread_mutexattr_init",
+        "pthread_mutexattr_settype",
+        "pthread_once",
+        "pthread_rwlock_destroy",
+        "pthread_rwlock_rdlock",
+        "pthread_rwlock_unlock",
+        "pthread_rwlock_wrlock",
+        "pthread_setspecific",
+        "quick_exit",
+        "statx"
+      ],
+      "files": [
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/aead.h",
+          "bytes": 30801,
+          "sha256": "535e654f64d28c998ff1f30662a49382c940626fea8457312ac6750e088bdeb8"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/aes.h",
+          "bytes": 8004,
+          "sha256": "4b50e83dc06664c639162e0bf661ce763f1877e908ecfc95c1c049964ca23c1a"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/arm_arch.h",
+          "bytes": 963,
+          "sha256": "97ea2d5efa6c86705eb5ce1748ebe7aadf2b6a443a0478e8085f6b215aa00bc1"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/asm_base.h",
+          "bytes": 8307,
+          "sha256": "5864eaf0cbc85aa718f1c052490774f8d48dadbd7d557997b4d8f8a534a92cf8"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/asn1.h",
+          "bytes": 95433,
+          "sha256": "cab9e602e6505deb1d15cd30db98c0ead9fb662aff33dac73192fd43aaf3bd1a"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/asn1_mac.h",
+          "bytes": 721,
+          "sha256": "381df1896ca8712ac8f7dbbd1edc78ba30fa0c7dcc770c8cbcc4a6c00e918519"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/asn1t.h",
+          "bytes": 21017,
+          "sha256": "4c6a53bb263606e8fa11d94c8614b0636dca220db996074096e153ffbe0f7e20"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/base.h",
+          "bytes": 19504,
+          "sha256": "2ce9111445e62c6d533c090d5878b14c6247436006569738664725dcf6bf5241"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/base64.h",
+          "bytes": 6474,
+          "sha256": "522fb7f2d5ed76c7dbaba24cc845cfc3956d8b390af0355611772b2ccdb80947"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/bio.h",
+          "bytes": 44714,
+          "sha256": "63e86a524ac6bf56a29c207667894258e29f47c24092ff7eca6181380cd1cd87"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/blake2.h",
+          "bytes": 2937,
+          "sha256": "da1b383233d252feab973259205307d75c207fcc740514a9c89cffd9aa9a6f32"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/blowfish.h",
+          "bytes": 1768,
+          "sha256": "60c14d11c7b6b6d450fa0af441f5b6b591f7125eea17049a3210e4282348efa7"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/bn.h",
+          "bytes": 44292,
+          "sha256": "182eb6e96a6857ad44a5decac23917ce61d8f1d33984bd33cb6c7eb7d93188ce"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/buf.h",
+          "bytes": 2978,
+          "sha256": "0a385eaa83b3235ec7221c500d83c642ca7314adaee384c79738b8f24699d817"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/buffer.h",
+          "bytes": 720,
+          "sha256": "505303736b03861eee3c2e69af5d6e05480a241d0a0f248b88b5d28b2ea28656"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/bytestring.h",
+          "bytes": 38642,
+          "sha256": "a8c665a2dcd5775f596a216ec6d06e4c4fced82bf2b5916b74bdf07a5613bd06"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/cast.h",
+          "bytes": 3869,
+          "sha256": "ce14ce9f0eedfecd21dd779752e71c121dd90e99a27594e5cf99b407c6d21f22"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/chacha.h",
+          "bytes": 1771,
+          "sha256": "f7add7c08603f7f779f505d6d953bd49591867237010e099ade2a68fc556d453"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/cipher.h",
+          "bytes": 36561,
+          "sha256": "68ed84c7ffc3e55ee02422f8b56b0ad4c411042f00195d496ef0353962bf9add"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/cmac.h",
+          "bytes": 3004,
+          "sha256": "213fc920b60c5ed5e37ae9125e54cea765cf2db40b068135b2223ae272b57cf0"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/cms.h",
+          "bytes": 5890,
+          "sha256": "6410d3e5426b1969001255b3ef366de983633227724dd96f7562c70f123e70ec"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/conf.h",
+          "bytes": 4312,
+          "sha256": "42b0ccbbce5a2789ddee2b8b1caf833bdcf88a560d6916fca6bb419fa4b98395"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/configuration.h",
+          "bytes": 721,
+          "sha256": "afd5b37536540025c0e1c8c249fddf0d52472671c5b6c4db855023e1de9efe16"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/cpu.h",
+          "bytes": 740,
+          "sha256": "37e0794c54903614c6ff1e4ed7bc4cd715c1384b69fe069231d8d17394191d93"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/crypto.h",
+          "bytes": 8933,
+          "sha256": "8f564ce18fbf0d8264a460e7f8f38377f921ccf54a3c6223236b0bd9828dbe66"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/ctrdrbg.h",
+          "bytes": 4659,
+          "sha256": "67058b58a7cc7dbd759084fdf6408f16740f1952ffb9619dc40681d3b2a604eb"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/curve25519.h",
+          "bytes": 8282,
+          "sha256": "fbf68122611e593394cfdea0027d98ead16327cc139f278bcc484c5dcc8070df"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/des.h",
+          "bytes": 5796,
+          "sha256": "c142f8902a3da542a7b87a6ed00747fbfa09484a3b4fdae3fc9806319d91922e"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/dh.h",
+          "bytes": 14263,
+          "sha256": "a2b59f73d1bc9bcdafd221815137b85b76a293c8dd79649b59097a93cebb42ce"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/digest.h",
+          "bytes": 17158,
+          "sha256": "5356709ce0f19ee0d7b0c390bfc9b5c6de000dad8f8d7ff7b7c93b539570f1c8"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/dsa.h",
+          "bytes": 16014,
+          "sha256": "b372f90e8c85a28e0ce551c570c10cd092a4a9fa11272f29e4f123d753587d44"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/dtls1.h",
+          "bytes": 702,
+          "sha256": "14346432daeaa8635337867ead2c3c53c5f48be7ca620499c2bd32bee452a8e6"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/e_os2.h",
+          "bytes": 754,
+          "sha256": "1e2c0c602b8668c2dbe21bb28c2ba7ccec221ee893b811cdf5c0f8841a29869f"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/ec.h",
+          "bytes": 24615,
+          "sha256": "5e2fba4f04ed44642fb9d1a4a8548941de0f98f4fc4960e20e04f1de0192e2e6"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/ec_key.h",
+          "bytes": 15735,
+          "sha256": "b3a3f43d3cc1d62141e0d772eb9af877053cc7dc925d306303e54625dd82a53e"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/ecdh.h",
+          "bytes": 2664,
+          "sha256": "f777d4f789f5e9dfe716863ab94ccec4606e9e5501405256391dbc03654a4f1b"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/ecdsa.h",
+          "bytes": 10424,
+          "sha256": "411e982ca05ee30de21d28787782b523215ba37cf92eeaaf2e284258dbaf0bf6"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/engine.h",
+          "bytes": 3591,
+          "sha256": "21c845a2c2f46707e428c6831ab77451ac7c7f98d7186df4cc3b4f2a57290beb"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/err.h",
+          "bytes": 16325,
+          "sha256": "1d8cabcbbd0b43ca81dca6372f1a6d77f6cfb140a357c73f323070e4f75b0673"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/evp.h",
+          "bytes": 79770,
+          "sha256": "9fe65dafd7d6bd57b2bba49329a57f08d0d72cc5b020c55ad22ad87b6293a44e"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/evp_errors.h",
+          "bytes": 2484,
+          "sha256": "ae960d8003f46e752c39a35f02cb4abb0549b4ca5307b51cf926f5f8681b6c5c"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/ex_data.h",
+          "bytes": 4759,
+          "sha256": "739aea8f9b53209f5d7eb691b8eaf2198a9beeb2168ba96e5b9ab8c5ef4ab78f"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/hkdf.h",
+          "bytes": 2740,
+          "sha256": "d3b8b1bc5cdf0d9cf622474e3a28a4e00a95e8ce34b8def1b3ca85528f6d8b44"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/hmac.h",
+          "bytes": 5530,
+          "sha256": "3b6f833c1efefca7b42be7129f548b97ec336da9cc15f59bedf0de7ce55f902b"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/hpke.h",
+          "bytes": 19645,
+          "sha256": "f5f945e66c6950aa5d8ccf055c41d464e2f97d97fd6bfca3ee6898798dce03b5"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/hrss.h",
+          "bytes": 4529,
+          "sha256": "cca40df994aa065a982ae49e6991118c1ab06a4dc15d9aa123d492c0f35b2a83"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/is_boringssl.h",
+          "bytes": 692,
+          "sha256": "9a5fc2426ef1dc80577ad05df4c127f39066f2766b7c4f1724f4a7e40e3c16c9"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/kdf.h",
+          "bytes": 4022,
+          "sha256": "c45dfb81b7d23d5879660182487c5b8744aa1c8bac5bc155d626342f0a2e4851"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/lhash.h",
+          "bytes": 718,
+          "sha256": "497edaddda8e4e1dbe0ea2d75b0b1ef5b0d9e680833b4d8dcd4242e300f5faf0"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/md4.h",
+          "bytes": 2427,
+          "sha256": "30e04fdf8ad14d4ea4fd97a842c6ae1e7477d4bfef121f2bb88688b7cf656340"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/md5.h",
+          "bytes": 2155,
+          "sha256": "2a896a71da3f46b20dc2248ed8b6a84841a06233f2ccee86742c8f79eccabc45"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/mem.h",
+          "bytes": 8851,
+          "sha256": "8f39170250bf899da0d2b3babffe593fb72ce73b64e50f076403e62b1763eff7"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/mldsa.h",
+          "bytes": 22943,
+          "sha256": "74264725958945ae5b91723abb8ddba8dade91f8d2aecbca7831750fb7e5302e"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/mlkem.h",
+          "bytes": 9359,
+          "sha256": "0c7de5cc34d2a9b19f51a2d47ffc9674bd8f04045556e6d19f697a10fb6ca07d"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/nid.h",
+          "bytes": 217424,
+          "sha256": "4b570cb81a287e681298ad038964a3b6817aa83989945c8eca4f32521c97d919"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/obj.h",
+          "bytes": 9472,
+          "sha256": "bad43c9844bf3f84e4b8834990ea982640409931ce74078fa55e8b6b704c90ed"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/obj_mac.h",
+          "bytes": 744,
+          "sha256": "557d8cca1a8ca8202c4ab8d909a8c6b51205d22b16c46316b61a339f677592cb"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/objects.h",
+          "bytes": 720,
+          "sha256": "ee694cf3de5603a0afa90702bac2984467f96381d9b1c515aee255261b04f074"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/opensslconf.h",
+          "bytes": 4153,
+          "sha256": "5e7b8b9f8116f0470e26b6fab8133c907c2a0beb85b6b2f6b861dc0a93abb220"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/opensslv.h",
+          "bytes": 723,
+          "sha256": "cd5e0a2c5e2f90e9ab769a6e3649faa3ee0a09605b61cca4d5761aac513e8dca"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/ossl_typ.h",
+          "bytes": 721,
+          "sha256": "7080c676195064662c7e014bc7e7d3ca56b42d707ed458b4c4a1aa38fee21eb9"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/params.h",
+          "bytes": 1260,
+          "sha256": "d60761824563669ccaa50ba67034b6ff1f9a91f3c6c80f0d5cd92ddfb8bce19c"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/pem.h",
+          "bytes": 41033,
+          "sha256": "b920304e33ecefb17214fc2403894e46cfc968fa30ebd359b87e95cafe3b3b8d"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/pkcs12.h",
+          "bytes": 722,
+          "sha256": "9d553ef37579b8ea1e79c2f2ea60e30731634a34febec07cf49f7a43301974e9"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/pkcs7.h",
+          "bytes": 9076,
+          "sha256": "3e63815491048baf493a00978bfaaf7256c925a6479d47a72bcb99c7bd306564"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/pkcs8.h",
+          "bytes": 12457,
+          "sha256": "4397e85e46870f92b73f7475fe6edea6abf1c11dad637df5401acd68b2d60b2a"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/pki/certificate.h",
+          "bytes": 3148,
+          "sha256": "cb24d19f7c1a0a6fbb2aa629e8b2798d0748aa036efdb40fba75730585a928e1"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/pki/ocsp.h",
+          "bytes": 4694,
+          "sha256": "888eed5bd636e8a96963d3b56f2257e68598ba3d7e7586b516bc1ee0e02a85ab"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/pki/signature_verify_cache.h",
+          "bytes": 1985,
+          "sha256": "f2bea3b0259ab7db5ef0a901c17b820c1867263fdb89b3fb4538626580999644"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/pki/verify.h",
+          "bytes": 6886,
+          "sha256": "8ad18ea817216320309b91bebd145d7b570b7694e69ced064a1bc2f73a4191d5"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/pki/verify_error.h",
+          "bytes": 5452,
+          "sha256": "2aa23d6c7c218066b702ab5f6f4cbe72dde23d354d6eff67897fea6259618012"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/poly1305.h",
+          "bytes": 1839,
+          "sha256": "098084a7ed9699c95f81439741b64f89aa97d369d14c136880798672592b249a"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/pool.h",
+          "bytes": 5572,
+          "sha256": "5594dcd62ef2f4c96245c4bec3b76687c7bc28aacedb6ba1a6345e1c7182e3e0"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/posix_time.h",
+          "bytes": 1845,
+          "sha256": "9b5fcc2826ec7d7372d946245c5a9ccd3a46a6a6e009a5b23f1a6f9b3d8a6e41"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/prefix_symbols.h",
+          "bytes": 694773,
+          "sha256": "2ea492f37db6a1020486b97721b7666423c3d87b26de89054e94040840d37866"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/prefix_symbols_internal_S.h",
+          "bytes": 54747,
+          "sha256": "f1eb8c59ade30ea3431a41adf7025a25fec5933e19bb2dc2735839b0dbbab202"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/prefix_symbols_internal_c.h",
+          "bytes": 23189,
+          "sha256": "f0701ebab044dcacbd49ea93d45ea7833da9cc06c11175593cb288956548ffc3"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/rand.h",
+          "bytes": 5195,
+          "sha256": "831a5ffb9c6263269b5a5f7b510b06fb7cf585e91a5c5342656ff5368d0a2d7b"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/rc4.h",
+          "bytes": 1515,
+          "sha256": "448b824fb503e949de5bcf0538facc53fede6db7e07e0af1a450bd768a9021b0"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/ripemd.h",
+          "bytes": 2441,
+          "sha256": "f3837670736a50afd85b4aaa14e49cbb3c197cf28f6460249032a393c61a1e14"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/rsa.h",
+          "bytes": 41542,
+          "sha256": "a9b1bbe40409f361e784fd541e99e6c080a00562d76e1fcc8b2f94ed67599ffa"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/safestack.h",
+          "bytes": 702,
+          "sha256": "452ce602199e2c4daa64cb1f99e13a3b44d6bcb369ec10544de18afd624b5f4f"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/service_indicator.h",
+          "bytes": 904,
+          "sha256": "1c21bbef23b675f5b5f30d5f02004198b00e728ea9f3b68b8fe29454f58bd755"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/sha.h",
+          "bytes": 3798,
+          "sha256": "34646c36160aa4a6f0b66cf6333e352ce3bc86d082493a0890fa086d85cf6c2c"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/sha2.h",
+          "bytes": 8956,
+          "sha256": "650a76c08e11bddce727ce7c4bad8fbf41ec6ad9c1a6bedd004f4b6fa5084e45"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/siphash.h",
+          "bytes": 1138,
+          "sha256": "093f7c0317cde5ddcdade4725d7f1e8322448058134206d0b3007290ce2ba27b"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/slhdsa.h",
+          "bytes": 12006,
+          "sha256": "bb8c918850fe7e6cd53c5dc01e1dca6285ef84e5cdfab816f073ba495a9e6a38"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/span.h",
+          "bytes": 13570,
+          "sha256": "97eac1151e5d6ecbd5b143c19b59eb85bb8bf286aae939643d05dbe2f343a86b"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/srtp.h",
+          "bytes": 720,
+          "sha256": "575f16608b3c212bdc8065685866cc7f8cc15535ce9a62a63faf34bc30562dac"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/ssl.h",
+          "bytes": 357978,
+          "sha256": "bec7e972131a431102fcf77a4e3359be0c51128d43d3a3f47f7bc26c6ecf666e"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/ssl3.h",
+          "bytes": 6106,
+          "sha256": "3b369538ee125b3a26d8a3ca984f9fcecd027fa845335a30a21262376996724f"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/stack.h",
+          "bytes": 34362,
+          "sha256": "8710b183d1c4bb340f43c7df8724813d1b690f3fb44c66f0958959d8a0327a84"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/target.h",
+          "bytes": 8614,
+          "sha256": "92f91e96efbe79652af2b8a56b2b56ca163484a6567f4fa42b8b9c4f8c966c72"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/thread.h",
+          "bytes": 4299,
+          "sha256": "415c4e46e68d55966dc5229ddc1794fc2cb3eeba5a585ea0b0461c088f2852ab"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/time.h",
+          "bytes": 807,
+          "sha256": "27324150f712c58522b9a10ea0de522585d30f4f47834f4aaa33d84379946c35"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/tls1.h",
+          "bytes": 10366,
+          "sha256": "56615a8877a7af97a6411a55555664c9589baf907747bedaf03a1d49b8b90cc1"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/tls_prf.h",
+          "bytes": 1721,
+          "sha256": "ef8f24a1179898292d1f1bc3bd340fec17fee80ee23f0159017ae89b58ebf417"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/trust_token.h",
+          "bytes": 17324,
+          "sha256": "3013f84b2966700dfc8d546c8195893455cb0ee05fc60ba6f3818e8fca5c50fb"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/type_check.h",
+          "bytes": 1203,
+          "sha256": "8e008fb2aa3509d043ecce47c47378f36255158e0f67ff716367bcdbf947354e"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/types.h",
+          "bytes": 721,
+          "sha256": "afd5b37536540025c0e1c8c249fddf0d52472671c5b6c4db855023e1de9efe16"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/x509.h",
+          "bytes": 269718,
+          "sha256": "d33d25b952cee1598b064c8ca37c1f0529273d9748b9dae8fa54eb7cc49415e0"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/x509_vfy.h",
+          "bytes": 721,
+          "sha256": "b6ef1735a5fab43fca1c30de68d5ca1e158be4e193ba75929bfe0ff85e860c8b"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/x509v3.h",
+          "bytes": 2727,
+          "sha256": "2d3053959f303ff9ebb7457554329bdbc0727dd87ed542537cfbe9aa4fce4802"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/x509v3_errors.h",
+          "bytes": 3510,
+          "sha256": "bf5d6f21271973610b3ff1c0a017d0f7557b9b1799c29f7a12ae3004ce90280f"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include/openssl/xwing.h",
+          "bytes": 4497,
+          "sha256": "680cde2d69133345374d5a398c5ce12cc483712b0174aaacdd42673146da978b"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/bun-glibc-compat.o",
+          "bytes": 32304,
+          "sha256": "2ca928e669a395f8fc7aa9c02326f639f4a40789bcaa541f587941ebb26d9ea3"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/cmake/OpenSSL/OpenSSLConfig.cmake",
+          "bytes": 2019,
+          "sha256": "a6b5eb20369bdab80bed35fa8e325af2e46e7626247bd43a8d8f3bd1ab8b68df"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/cmake/OpenSSL/OpenSSLTargets-release.cmake",
+          "bytes": 1301,
+          "sha256": "36df2d1497cfed5a6e8029d51decc6b207faf7ef4110398b803dd4439d4c5e68"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/cmake/OpenSSL/OpenSSLTargets.cmake",
+          "bytes": 4358,
+          "sha256": "7c23ef222fac019d1d41f0cad9f3c25f9cb26aac9188a5141641fbc6b117926f"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/libcrypto.a",
+          "bytes": 19379850,
+          "sha256": "1792d41c0a47e183cdbaac77222b1eda762bb1207d3e6462afd916a954738b3d"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/libssl.a",
+          "bytes": 9819256,
+          "sha256": "8e102fe8d26180432009821787ec7f1247195cc94ebc51abe5c520cdbd95489d"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/share/licenses/boringssl/LICENSE",
+          "bytes": 13115,
+          "sha256": "827c8d8fc207c2392794eef9e00fe246f9f61fdcc132556c275be3dd8c3cd97f"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/include/pcre2.h",
+          "bytes": 46818,
+          "sha256": "e7338291ec4be54b70a8c96d873ef985098b1d91fce3c0dfd2d1b0e0597e6097"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/lib/x86_64-linux-gnu/libpcre2-8.a",
+          "bytes": 780696,
+          "sha256": "ad97f272428ba575d3f5b830960a314547454149dfa6b1b4d266fe21a9ef7278"
+        },
+        {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/share/doc/libpcre2-dev/copyright",
+          "bytes": 3123,
+          "sha256": "f65dae37239e4d61a1bdeaf2ded76b8569d012a054aa042233b78615e7a83210"
+        },
+        {
+          "path": "/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/include/zlib.h",
+          "bytes": 94787,
+          "sha256": "8bc935aeb8909d05fe58f9286a0fe2c674a41638c374786ee888485ab5ff4409"
+        },
+        {
+          "path": "/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/include/zconf.h",
+          "bytes": 5495,
+          "sha256": "dcb0a2b20ac38181012fbc430d1c229cf6eb7758ce8ab26a618c8a0808c3e76e"
+        },
+        {
+          "path": "/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/lib/libz.a",
+          "bytes": 285630,
+          "sha256": "6683bec636018afd385fc70b7d8565339dc7c89a91c425d9ffb36c1a4b9fa10c"
+        },
+        {
+          "path": "/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/share/licenses/zlib-ng/LICENSE.md",
+          "bytes": 867,
+          "sha256": "6c9f0d975b41afaa34d22f55bb8986ce69e5cb7ad327cb2b28820cd425edf5ee"
+        },
+        {
+          "path": "/opt/linux-sysroot-glibc/usr/lib/x86_64-linux-gnu/libcrypt.a",
+          "bytes": 271570,
+          "sha256": "29a00a0beb25a1f99392bddf8933f652a38a3fc176876447ac686874ac59bc80"
+        }
+      ],
+      "provenance": {
+        "pcre2": {
+          "schema": 1,
+          "kind": "ubuntu-signed-pcre2-sdk",
+          "package": {
+            "Package": "libpcre2-dev",
+            "Source": "pcre2",
+            "Priority": "optional",
+            "Section": "libdevel",
+            "Installed-Size": "2496",
+            "Maintainer": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+            "Architecture": "amd64",
+            "Version": "10.34-7ubuntu0.1",
+            "Depends": "libc6-dev, libpcre2-8-0 (= 10.34-7ubuntu0.1), libpcre2-16-0 (= 10.34-7ubuntu0.1), libpcre2-32-0 (= 10.34-7ubuntu0.1), libpcre2-posix2 (= 10.34-7ubuntu0.1)",
+            "Conflicts": "libpcre3-dev (<< 2:8.35-8)",
+            "Filename": "pool/main/p/pcre2/libpcre2-dev_10.34-7ubuntu0.1_amd64.deb",
+            "Size": "672460",
+            "MD5sum": "ad4817edfdf006d55a576fe3ace06e7a",
+            "SHA1": "ee42e5569a3c254a9e2ba9010ae0527b1bc42f88",
+            "SHA256": "42ad7a56a2f6f75f3666b8cbd7e3fcd058c5686aeddaf1b57201c3b28d46310d",
+            "SHA512": "f720d34ead6eb659680fdbd7a62b7896c847c183e6f0664c216cb537805920cd5614da6017f071a6d77b5094119f052384cd55f02c5573f1249168699ee639a5",
+            "Homepage": "https://pcre.org/",
+            "Description": "New Perl Compatible Regular Expression Library - development files",
+            "Description-md5": "83cd6126abdeb5c5410938130ac41e86",
+            "Multi-Arch": "same",
+            "Original-Maintainer": "Matthew Vernon <matthew@debian.org>",
+            "Origin": "Ubuntu",
+            "Bugs": "https://bugs.launchpad.net/ubuntu/+filebug"
+          },
+          "suite": "focal-updates",
+          "signature": {
+            "fingerprint": "790BC7277767219C42C86F933B4FE6ACC0B21F32",
+            "status": "[GNUPG:] PLAINTEXT 74 0 \n[GNUPG:] NEWSIG\n[GNUPG:] KEY_CONSIDERED 790BC7277767219C42C86F933B4FE6ACC0B21F32 0\n[GNUPG:] SIG_ID N5M7fPuWcMD1SgituKDdQXUvm00 2026-10-13 1791897801\n[GNUPG:] GOODSIG 3B4FE6ACC0B21F32 Ubuntu Archive Automatic Signing Key (2012) <ftpmaster@ubuntu.com>\n[GNUPG:] VALIDSIG 790BC7277767219C42C86F933B4FE6ACC0B21F32 2026-10-13 1791897801 0 4 0 1 10 01 790BC7277767219C42C86F933B4FE6ACC0B21F32\n[GNUPG:] NEWSIG\n[GNUPG:] KEY_CONSIDERED F6ECB3762474EDA9D21B7022871920D1991BC93C 0\n[GNUPG:] SIG_ID F+/pHV+JdfY1IOu59K7J3QmZxLM 2026-10-13 1791897802\n[GNUPG:] GOODSIG 871920D1991BC93C Ubuntu Archive Automatic Signing Key (2018) <ftpmaster@ubuntu.com>\n[GNUPG:] VALIDSIG F6ECB3762474EDA9D21B7022871920D1991BC93C 2026-10-13 1791897802 0 4 0 1 10 01 F6ECB3762474EDA9D21B7022871920D1991BC93C\n",
+            "keyring": {
+              "path": "/usr/share/keyrings/ubuntu-archive-keyring.gpg",
+              "bytes": 3607,
+              "sha256": "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31"
+            }
+          },
+          "metadata": {
+            "inRelease": {
+              "url": "https://archive.ubuntu.com/ubuntu/dists/focal-updates/InRelease",
+              "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/provenance/InRelease",
+              "bytes": 127797,
+              "sha256": "c37d1da1296c7f382a29d9f9f222033f41b87d7266eda37f92d850d7d56b618e"
+            },
+            "release": {
+              "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/provenance/Release",
+              "bytes": 126147,
+              "sha256": "a4d3d8c61579ce9c5d436748d6b86ad76cbbb0b02da2837652d6bd372a95676f"
+            },
+            "packages": {
+              "url": "https://archive.ubuntu.com/ubuntu/dists/focal-updates/main/binary-amd64/Packages.xz",
+              "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/provenance/Packages.xz",
+              "bytes": 4004184,
+              "sha256": "14dd9c435e0d8c2eee390396babb01f7438d0d37cae09e029b6d1485ddc5a54d"
+            }
+          },
+          "archive": {
+            "url": "https://archive.ubuntu.com/ubuntu/pool/main/p/pcre2/libpcre2-dev_10.34-7ubuntu0.1_amd64.deb",
+            "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/provenance/libpcre2-dev_10.34-7ubuntu0.1_amd64.deb",
+            "bytes": 672460,
+            "sha256": "42ad7a56a2f6f75f3666b8cbd7e3fcd058c5686aeddaf1b57201c3b28d46310d"
+          },
+          "prefix": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix"
+        },
+        "boringssl": {
+          "repository": "oven-sh/boringssl",
+          "revision": "41bf9b59c2ebf277a7aa427e1ecad5cc80dd4d4f",
+          "source": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/boringssl",
+          "cacheStamp": "fbfd7ac5266b38d4",
+          "cmake": {
+            "path": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/boringssl/CMakeLists.txt",
+            "bytes": 34592,
+            "sha256": "e4eec4b553a4471d5ed6ccac54612f964924dc3a3b9d78aa92a7d5a24ff097e3"
+          },
+          "hooksRequired": false
+        },
+        "zlib": {
+          "source": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/zlib",
+          "revision": "12731092979c6d07f42da27da673a9f6c7b13586",
+          "cmake": {
+            "path": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/zlib/CMakeLists.txt",
+            "bytes": 66316,
+            "sha256": "095dfb3b21c4402d39cfc1e928893d2ffc53713ea897048617818a7a8b6eaec9"
+          }
+        },
+        "compatibility": {
+          "source": {
+            "path": "/home/ubuntu/build/bun-os-obscura-4634063/src/jsc/bindings/workaround-missing-symbols.cpp",
+            "bytes": 23317,
+            "sha256": "e6cab5c4aac15f496a88d2ac6e307acb87a836e01ab62051f01caa196d77c226"
+          },
+          "behaviouralQualified": false
+        },
+        "sharedLibraryBaselineQualified": false
+      }
+    }
+  },
+  "portableReleaseQualified": false,
+  "jobs": 2,
+  "configureArguments": [
+    "--builddir=/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/objects",
+    "--prefix=/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/prefix",
+    "--with-compat",
+    "--with-threads",
+    "--with-http_ssl_module",
+    "--with-http_v2_module",
+    "--with-http_v3_module",
+    "--with-stream",
+    "--with-stream_ssl_module",
+    "--with-stream_ssl_preread_module",
+    "--with-mail",
+    "--with-mail_ssl_module",
+    "--with-debug",
+    "--with-cc=/usr/lib/llvm-23/bin/clang",
+    "--with-cc-opt=--target=x86_64-linux-gnu --sysroot=/opt/linux-sysroot-glibc --gcc-install-dir=/opt/linux-sysroot-glibc/usr/lib/gcc/x86_64-linux-gnu/13 -I/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include -I/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/include -I/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/include",
+    "--with-ld-opt=--target=x86_64-linux-gnu --sysroot=/opt/linux-sysroot-glibc --gcc-install-dir=/opt/linux-sysroot-glibc/usr/lib/gcc/x86_64-linux-gnu/13 -fuse-ld=lld -static-libgcc -Wl,-E -Wl,--gc-sections -Wl,--as-needed /home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/bun-glibc-compat.o -Wl,--wrap=__explicit_bzero_chk -Wl,--wrap=__libc_start_main -Wl,--wrap=__pthread_key_create -Wl,--wrap=_dl_find_object -Wl,--wrap=copy_file_range -Wl,--wrap=dladdr -Wl,--wrap=dlerror -Wl,--wrap=dlsym -Wl,--wrap=dlvsym -Wl,--wrap=exp -Wl,--wrap=exp2 -Wl,--wrap=exp2f -Wl,--wrap=expf -Wl,--wrap=fcntl64 -Wl,--wrap=fstat -Wl,--wrap=fstat64 -Wl,--wrap=fstatat -Wl,--wrap=fstatat64 -Wl,--wrap=getentropy -Wl,--wrap=getrandom -Wl,--wrap=gettid -Wl,--wrap=glob64 -Wl,--wrap=log -Wl,--wrap=log2 -Wl,--wrap=log2f -Wl,--wrap=logf -Wl,--wrap=memfd_create -Wl,--wrap=mknod -Wl,--wrap=posix_spawn_file_actions_addchdir_np -Wl,--wrap=pow -Wl,--wrap=powf -Wl,--wrap=pthread_attr_setstack -Wl,--wrap=pthread_attr_setstacksize -Wl,--wrap=pthread_getattr_np -Wl,--wrap=pthread_getspecific -Wl,--wrap=pthread_key_create -Wl,--wrap=pthread_key_delete -Wl,--wrap=pthread_kill -Wl,--wrap=pthread_mutex_trylock -Wl,--wrap=pthread_mutexattr_destroy -Wl,--wrap=pthread_mutexattr_init -Wl,--wrap=pthread_mutexattr_settype -Wl,--wrap=pthread_once -Wl,--wrap=pthread_rwlock_destroy -Wl,--wrap=pthread_rwlock_rdlock -Wl,--wrap=pthread_rwlock_unlock -Wl,--wrap=pthread_rwlock_wrlock -Wl,--wrap=pthread_setspecific -Wl,--wrap=quick_exit -Wl,--wrap=statx -L/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib -L/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/lib/x86_64-linux-gnu -L/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/lib -Wl,-Bstatic -lstdc++ /opt/linux-sysroot-glibc/usr/lib/x86_64-linux-gnu/libcrypt.a -Wl,-Bdynamic -ldl -lpthread -lm",
+    "--add-module=/home/ubuntu/build/bun-os-obscura-4634063/packages/bun-nginx/native"
+  ],
+  "commands": [
+    {
+      "executable": "sh",
+      "args": [
+        "auto/configure",
+        "--builddir=/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/objects",
+        "--prefix=/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/prefix",
+        "--with-compat",
+        "--with-threads",
+        "--with-http_ssl_module",
+        "--with-http_v2_module",
+        "--with-http_v3_module",
+        "--with-stream",
+        "--with-stream_ssl_module",
+        "--with-stream_ssl_preread_module",
+        "--with-mail",
+        "--with-mail_ssl_module",
+        "--with-debug",
+        "--with-cc=/usr/lib/llvm-23/bin/clang",
+        "--with-cc-opt=--target=x86_64-linux-gnu --sysroot=/opt/linux-sysroot-glibc --gcc-install-dir=/opt/linux-sysroot-glibc/usr/lib/gcc/x86_64-linux-gnu/13 -I/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include -I/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/include -I/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/include",
+        "--with-ld-opt=--target=x86_64-linux-gnu --sysroot=/opt/linux-sysroot-glibc --gcc-install-dir=/opt/linux-sysroot-glibc/usr/lib/gcc/x86_64-linux-gnu/13 -fuse-ld=lld -static-libgcc -Wl,-E -Wl,--gc-sections -Wl,--as-needed /home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/bun-glibc-compat.o -Wl,--wrap=__explicit_bzero_chk -Wl,--wrap=__libc_start_main -Wl,--wrap=__pthread_key_create -Wl,--wrap=_dl_find_object -Wl,--wrap=copy_file_range -Wl,--wrap=dladdr -Wl,--wrap=dlerror -Wl,--wrap=dlsym -Wl,--wrap=dlvsym -Wl,--wrap=exp -Wl,--wrap=exp2 -Wl,--wrap=exp2f -Wl,--wrap=expf -Wl,--wrap=fcntl64 -Wl,--wrap=fstat -Wl,--wrap=fstat64 -Wl,--wrap=fstatat -Wl,--wrap=fstatat64 -Wl,--wrap=getentropy -Wl,--wrap=getrandom -Wl,--wrap=gettid -Wl,--wrap=glob64 -Wl,--wrap=log -Wl,--wrap=log2 -Wl,--wrap=log2f -Wl,--wrap=logf -Wl,--wrap=memfd_create -Wl,--wrap=mknod -Wl,--wrap=posix_spawn_file_actions_addchdir_np -Wl,--wrap=pow -Wl,--wrap=powf -Wl,--wrap=pthread_attr_setstack -Wl,--wrap=pthread_attr_setstacksize -Wl,--wrap=pthread_getattr_np -Wl,--wrap=pthread_getspecific -Wl,--wrap=pthread_key_create -Wl,--wrap=pthread_key_delete -Wl,--wrap=pthread_kill -Wl,--wrap=pthread_mutex_trylock -Wl,--wrap=pthread_mutexattr_destroy -Wl,--wrap=pthread_mutexattr_init -Wl,--wrap=pthread_mutexattr_settype -Wl,--wrap=pthread_once -Wl,--wrap=pthread_rwlock_destroy -Wl,--wrap=pthread_rwlock_rdlock -Wl,--wrap=pthread_rwlock_unlock -Wl,--wrap=pthread_rwlock_wrlock -Wl,--wrap=pthread_setspecific -Wl,--wrap=quick_exit -Wl,--wrap=statx -L/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib -L/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/lib/x86_64-linux-gnu -L/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/lib -Wl,-Bstatic -lstdc++ /opt/linux-sysroot-glibc/usr/lib/x86_64-linux-gnu/libcrypt.a -Wl,-Bdynamic -ldl -lpthread -lm",
+        "--add-module=/home/ubuntu/build/bun-os-obscura-4634063/packages/bun-nginx/native"
+      ],
+      "cwd": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/nginx"
+    },
+    {
+      "executable": "make",
+      "args": [
+        "-f",
+        "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/objects/Makefile",
+        "-j2"
+      ],
+      "cwd": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/nginx"
+    }
+  ],
+  "environment": {
+    "BUN_NGX_RUST_SOURCE_DIR": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/ngx-rust",
+    "NGX_CARGO": "bun /home/ubuntu/build/bun-os-obscura-4634063/scripts/build/rust/cargo-serial.ts",
+    "CARGO_BUILD_JOBS": "2",
+    "NGX_RUSTC_OPT": "--locked --jobs=2",
+    "ngx_cargo_profile": "ngx-release",
+    "CC": "/usr/lib/llvm-23/bin/clang",
+    "CFLAGS": "--target=x86_64-linux-gnu --sysroot=/opt/linux-sysroot-glibc --gcc-install-dir=/opt/linux-sysroot-glibc/usr/lib/gcc/x86_64-linux-gnu/13 -I/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include -I/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/include -I/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/include",
+    "LIBCLANG_PATH": "/usr/lib/llvm-23/lib",
+    "BINDGEN_EXTRA_CLANG_ARGS": "--target=x86_64-linux-gnu --sysroot=/opt/linux-sysroot-glibc --gcc-install-dir=/opt/linux-sysroot-glibc/usr/lib/gcc/x86_64-linux-gnu/13 -I/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include -I/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/include -I/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/include",
+    "RUSTFLAGS": "-C linker=/usr/lib/llvm-23/bin/clang -C link-arg=--target=x86_64-linux-gnu -C link-arg=--sysroot=/opt/linux-sysroot-glibc -C link-arg=--gcc-install-dir=/opt/linux-sysroot-glibc/usr/lib/gcc/x86_64-linux-gnu/13 -C link-arg=-fuse-ld=lld -C link-arg=-static-libgcc -C link-arg=/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/bun-glibc-compat.o -C link-arg=-Wl,--wrap=__explicit_bzero_chk -C link-arg=-Wl,--wrap=__libc_start_main -C link-arg=-Wl,--wrap=__pthread_key_create -C link-arg=-Wl,--wrap=_dl_find_object -C link-arg=-Wl,--wrap=copy_file_range -C link-arg=-Wl,--wrap=dladdr -C link-arg=-Wl,--wrap=dlerror -C link-arg=-Wl,--wrap=dlsym -C link-arg=-Wl,--wrap=dlvsym -C link-arg=-Wl,--wrap=exp -C link-arg=-Wl,--wrap=exp2 -C link-arg=-Wl,--wrap=exp2f -C link-arg=-Wl,--wrap=expf -C link-arg=-Wl,--wrap=fcntl64 -C link-arg=-Wl,--wrap=fstat -C link-arg=-Wl,--wrap=fstat64 -C link-arg=-Wl,--wrap=fstatat -C link-arg=-Wl,--wrap=fstatat64 -C link-arg=-Wl,--wrap=getentropy -C link-arg=-Wl,--wrap=getrandom -C link-arg=-Wl,--wrap=gettid -C link-arg=-Wl,--wrap=glob64 -C link-arg=-Wl,--wrap=log -C link-arg=-Wl,--wrap=log2 -C link-arg=-Wl,--wrap=log2f -C link-arg=-Wl,--wrap=logf -C link-arg=-Wl,--wrap=memfd_create -C link-arg=-Wl,--wrap=mknod -C link-arg=-Wl,--wrap=posix_spawn_file_actions_addchdir_np -C link-arg=-Wl,--wrap=pow -C link-arg=-Wl,--wrap=powf -C link-arg=-Wl,--wrap=pthread_attr_setstack -C link-arg=-Wl,--wrap=pthread_attr_setstacksize -C link-arg=-Wl,--wrap=pthread_getattr_np -C link-arg=-Wl,--wrap=pthread_getspecific -C link-arg=-Wl,--wrap=pthread_key_create -C link-arg=-Wl,--wrap=pthread_key_delete -C link-arg=-Wl,--wrap=pthread_kill -C link-arg=-Wl,--wrap=pthread_mutex_trylock -C link-arg=-Wl,--wrap=pthread_mutexattr_destroy -C link-arg=-Wl,--wrap=pthread_mutexattr_init -C link-arg=-Wl,--wrap=pthread_mutexattr_settype -C link-arg=-Wl,--wrap=pthread_once -C link-arg=-Wl,--wrap=pthread_rwlock_destroy -C link-arg=-Wl,--wrap=pthread_rwlock_rdlock -C link-arg=-Wl,--wrap=pthread_rwlock_unlock -C link-arg=-Wl,--wrap=pthread_rwlock_wrlock -C link-arg=-Wl,--wrap=pthread_setspecific -C link-arg=-Wl,--wrap=quick_exit -C link-arg=-Wl,--wrap=statx -C link-arg=-Wl,-Bstatic -C link-arg=-lstdc++ -C link-arg=-Wl,-Bdynamic -C link-arg=-ldl -C link-arg=-lpthread -C link-arg=-lm"
+  },
+  "heavyLock": "/home/ubuntu/build/locks/heavy.lock",
+  "executionSupported": true,
+  "missingGates": [
+    "native module compile",
+    "HTTP and HEAD",
+    "event-loop timer and client abort",
+    "reload/quit lifecycle",
+    "invalid configuration",
+    "dynamic ABI mismatch",
+    "shared-library and libc baseline"
+  ],
+  "nativeModuleQualified": false,
+  "allReleasePlatformsQualified": false,
+  "configuration": {
+    "source": [
+      {
+        "repository": "https://github.com/nginx/nginx.git",
+        "revision": "0a5db852e18d1c22c62a5ede1412ac3f416111a0",
+        "release": "1.31.6",
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/nginx",
+        "license": "BSD-2-Clause",
+        "licensePath": "vendor/nginx/LICENSE",
+        "tree": "c9c6afad8fbaf7e73b06b0f6fa6686c1bc798668",
+        "inventorySha256": "12aecff98da5a3e8deef012eac5e20f9072f9693f59a850b26e90fc8607cf34e",
+        "licenseSha256": "08845fe39e06b51dad7685c28140ab49577a86e947523e16b536a46caf89ad5c"
+      },
+      {
+        "repository": "https://github.com/nginx/ngx-rust.git",
+        "revision": "cf58b5270dc5e9b855dab765e9f13ba2a12c7709",
+        "package": "ngx",
+        "version": "0.5.0",
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/vendor/ngx-rust",
+        "license": "Apache-2.0",
+        "licensePath": "vendor/ngx-rust/LICENSE",
+        "vendoredFeature": false,
+        "initializeNestedNginxSubmodule": false,
+        "tree": "263d009778a49a787b9b10acd57bddc824615356",
+        "inventorySha256": "5c078aa5d5d2fdbf76d7777d7d8accd2e9cd7e78429e1c5693b335e24a9b2f0b",
+        "licenseSha256": "444e7731cbe71bc2f52bbbffb809f41ca562524e4e2945da78cf3b41305b3de0"
+      }
+    ],
+    "arguments": [
+      "--builddir=/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/objects",
+      "--prefix=/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/prefix",
+      "--with-compat",
+      "--with-threads",
+      "--with-http_ssl_module",
+      "--with-http_v2_module",
+      "--with-http_v3_module",
+      "--with-stream",
+      "--with-stream_ssl_module",
+      "--with-stream_ssl_preread_module",
+      "--with-mail",
+      "--with-mail_ssl_module",
+      "--with-debug",
+      "--with-cc=/usr/lib/llvm-23/bin/clang",
+      "--with-cc-opt=--target=x86_64-linux-gnu --sysroot=/opt/linux-sysroot-glibc --gcc-install-dir=/opt/linux-sysroot-glibc/usr/lib/gcc/x86_64-linux-gnu/13 -I/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/include -I/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/include -I/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/include",
+      "--with-ld-opt=--target=x86_64-linux-gnu --sysroot=/opt/linux-sysroot-glibc --gcc-install-dir=/opt/linux-sysroot-glibc/usr/lib/gcc/x86_64-linux-gnu/13 -fuse-ld=lld -static-libgcc -Wl,-E -Wl,--gc-sections -Wl,--as-needed /home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib/bun-glibc-compat.o -Wl,--wrap=__explicit_bzero_chk -Wl,--wrap=__libc_start_main -Wl,--wrap=__pthread_key_create -Wl,--wrap=_dl_find_object -Wl,--wrap=copy_file_range -Wl,--wrap=dladdr -Wl,--wrap=dlerror -Wl,--wrap=dlsym -Wl,--wrap=dlvsym -Wl,--wrap=exp -Wl,--wrap=exp2 -Wl,--wrap=exp2f -Wl,--wrap=expf -Wl,--wrap=fcntl64 -Wl,--wrap=fstat -Wl,--wrap=fstat64 -Wl,--wrap=fstatat -Wl,--wrap=fstatat64 -Wl,--wrap=getentropy -Wl,--wrap=getrandom -Wl,--wrap=gettid -Wl,--wrap=glob64 -Wl,--wrap=log -Wl,--wrap=log2 -Wl,--wrap=log2f -Wl,--wrap=logf -Wl,--wrap=memfd_create -Wl,--wrap=mknod -Wl,--wrap=posix_spawn_file_actions_addchdir_np -Wl,--wrap=pow -Wl,--wrap=powf -Wl,--wrap=pthread_attr_setstack -Wl,--wrap=pthread_attr_setstacksize -Wl,--wrap=pthread_getattr_np -Wl,--wrap=pthread_getspecific -Wl,--wrap=pthread_key_create -Wl,--wrap=pthread_key_delete -Wl,--wrap=pthread_kill -Wl,--wrap=pthread_mutex_trylock -Wl,--wrap=pthread_mutexattr_destroy -Wl,--wrap=pthread_mutexattr_init -Wl,--wrap=pthread_mutexattr_settype -Wl,--wrap=pthread_once -Wl,--wrap=pthread_rwlock_destroy -Wl,--wrap=pthread_rwlock_rdlock -Wl,--wrap=pthread_rwlock_unlock -Wl,--wrap=pthread_rwlock_wrlock -Wl,--wrap=pthread_setspecific -Wl,--wrap=quick_exit -Wl,--wrap=statx -L/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/lib -L/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/dependencies/prefix/usr/lib/x86_64-linux-gnu -L/home/ubuntu/builds/bun-os-factory/artifacts/media-sdk/zlib-linux-x64-portable/prefix/lib -Wl,-Bstatic -lstdc++ /opt/linux-sysroot-glibc/usr/lib/x86_64-linux-gnu/libcrypt.a -Wl,-Bdynamic -ldl -lpthread -lm",
+      "--add-module=/home/ubuntu/build/bun-os-obscura-4634063/packages/bun-nginx/native"
+    ],
+    "headersSha256": "85dcd28ddf41ad3630ed6a1c6545bd6d30d9487c503f536c0cf10caf59108e89"
+  },
+  "configurationSha256": "fe719ed850c656d9c98f58f01e80836bb98b3365776387259124d8b7b8c81a32",
+  "executable": {
+    "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/objects/nginx",
+    "sha256": "7c4b83794387538549a46b91c71bbd01980c87b685b6636adcd91bb39438823a",
+    "bytes": 19982905
+  },
+  "mismatchFixture": {
+    "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/objects/ngx_bun_runtime/ngx-release/libngx_http_bun_module.so",
+    "sha256": "f5e4440a62d7199ee183af69fc7a75a44b5561a9590a31cd2be861d3f2f4dea8",
+    "releaseArtifact": false,
+    "deliberatelyIncompatible": true,
+    "dependencies": [
+      {
+        "file": "lib/libgcc_s.so.1",
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/objects/ngx_bun_runtime/ngx-release/libgcc_s.so.1",
+        "bytes": 193889,
+        "sha256": "fce2e9790ab37414e783cdf0f02efea829f6dcdc726109e038303cf6da71e5a5",
+        "source": {
+          "path": "/opt/linux-sysroot-glibc/lib/x86_64-linux-gnu/libgcc_s.so.1",
+          "sha256": "d196304da7b13cc28d15b64f61ae1d3a8e8c369754f2cea9144a58d84ffcdefc"
+        },
+        "notice": {
+          "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/objects/ngx_bun_runtime/ngx-release/share/licenses/libgcc/copyright",
+          "sha256": "d7815dd2364180835891947d96d808878204dea45b8597602a7952332195fbea"
+        },
+        "releaseArtifact": false
+      }
+    ]
+  }
+}

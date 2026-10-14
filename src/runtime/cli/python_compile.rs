@@ -6,7 +6,7 @@ use std::ffi::OsString;
 use bun_core::{Global, ZStr};
 use uv_command_support::ExitStatus;
 
-const SOURCE: &str = include_str!("../../../packages/buv/crates/buv-runtime/py/compile.py");
+const SOURCE: &str = include_str!("python_compile.py");
 const HELP: &str = "Usage: buv compile <entry.py> [--format exe|shared|wasm] [--outfile <path>]\n\
     --backend cython|nuitka   Isolated native compiler (default: Cython)\n\
     --module-name <name>      CPython extension's import name and PyInit_* ABI\n\

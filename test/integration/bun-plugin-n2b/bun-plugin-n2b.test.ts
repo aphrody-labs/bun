@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, spyOn, test } from "bun:test";
 import { bunEnv, bunExe, tempDir } from "harness";
 import { existsSync, readFileSync } from "node:fs";
 import { join, sep } from "node:path";
@@ -11,8 +11,10 @@ const pkgDir = join(import.meta.dir, "..", "..", "..", "packages", "bun-n2b");
 const bin = join(pkgDir, "bin", "n2b.ts");
 
 type Api = typeof import("../../../packages/bun-n2b/src/index.ts");
+type CliApi = typeof import("../../../packages/bun-n2b/src/cli.ts");
 type Shims = typeof import("../../../packages/bun-n2b/src/shims/index.ts");
 let n2b: Api;
+let cliApi: CliApi;
 let shims: Shims;
 
 beforeAll(async () => {
@@ -26,6 +28,7 @@ beforeAll(async () => {
     if (build.exitCode !== 0) throw new Error(`build-napi failed:\n${build.stdout}\n${build.stderr}`);
   }
   n2b = await import("../../../packages/bun-n2b/src/index.ts");
+  cliApi = await import("../../../packages/bun-n2b/src/cli.ts");
   shims = await import("../../../packages/bun-n2b/src/shims/index.ts");
 }, 900_000);
 
@@ -79,6 +82,37 @@ describe("API", () => {
 
   test("scan rejects an unknown mode", () => {
     expect(() => n2b.scan(".", { mode: "nope" as never })).toThrow();
+  });
+
+  test("CLI report helpers stay in process and preserve scan write defaults", async () => {
+    using dir = tempDir("n2b-cli-api", { "project/index.ts": nodeFile });
+    const spawn = spyOn(Bun, "spawn").mockImplementation(() => {
+      throw new Error("CLI report helpers must not spawn a process");
+    });
+    const spawnSync = spyOn(Bun, "spawnSync").mockImplementation(() => {
+      throw new Error("CLI report helpers must not spawn a process");
+    });
+    try {
+      const report = await cliApi.scan("project", { cwd: String(dir), mode: "fix", dryRun: true });
+      expect(report.files.some(file => file.findings.some(finding => finding.rule_id === "imports/node-prefix"))).toBe(true);
+      expect(readFileSync(join(String(dir), "project/index.ts"), "utf8")).toBe(nodeFile);
+      const rules = (await cliApi.rules()) as { id: string }[];
+      expect(rules.map(rule => rule.id)).toContain("imports/node-prefix");
+      const prompt = await cliApi.promptMarkdown(join(String(dir), "project"));
+      expect(prompt).toStartWith("# Node.js → Bun migration task\n");
+      expect(prompt).toContain("imports/node-prefix");
+      await cliApi.scan("project", { cwd: String(dir), mode: "fix" });
+      expect(readFileSync(join(String(dir), "project/index.ts"), "utf8")).toContain('from "node:fs"');
+      await expect(cliApi.scan("missing", { cwd: String(dir) })).rejects.toMatchObject({
+        code: 2,
+        stderr: expect.stringContaining("project root is not a directory"),
+      });
+      expect(spawn).not.toHaveBeenCalled();
+      expect(spawnSync).not.toHaveBeenCalled();
+    } finally {
+      spawn.mockRestore();
+      spawnSync.mockRestore();
+    }
   });
 });
 

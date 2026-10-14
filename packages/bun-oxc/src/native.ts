@@ -3,9 +3,9 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type * as Minify from "../vendor/oxc-minify/index";
-import type * as Parser from "../vendor/oxc-parser/index";
-import type * as Transform from "../vendor/oxc-transform/index";
+import type * as Minify from "./minify-core/index";
+import type * as Parser from "./parser-core/index";
+import type * as Transform from "./transform-core/index";
 
 /** `{ code, map }` returned by the bridge functions. */
 export interface CodeOutput {

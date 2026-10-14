@@ -77,11 +77,11 @@
     "types": "./dist/index.d.ts"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "bun ../../../../../../scripts/aphrody/emit-typescript.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "typecheck:examples": "tsc --noEmit -p tsconfig.check.json"
+    "typecheck": "bun check --noEmit",
+    "typecheck:examples": "bun check --noEmit -p tsconfig.check.json"
   },
   "dependencies": {
     "@hyperframes/core": "workspace:*",
@@ -91,7 +91,6 @@
   "devDependencies": {
     "@types/node": "^25.0.10",
     "happy-dom": "^20.9.0",
-    "typescript": "^5.0.0",
     "vitest": "^4.1.11"
   },
   "engines": {

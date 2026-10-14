@@ -1,5 +1,7 @@
 # Hyperframes
 
+Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.
+
 Open-source video rendering framework: write HTML, render video.
 
 ## Skills
@@ -56,12 +58,12 @@ any test file that no runner reaches.
 
 ### Linting & Formatting
 
-Uses **oxlint** and **oxfmt** (not eslint, not prettier, not biome).
+Run `bun lint` and `bun fmt` directly. They use Bun's embedded Oxc engines; do not launch standalone Oxc tools for these checks.
 
 ```bash
-bunx oxlint <files>        # Lint
-bunx oxfmt <files>         # Format
-bunx oxfmt --check <files> # Check formatting (CI / pre-commit)
+bun lint <files>        # Lint
+bun fmt <files>         # Format
+bun fmt --check <files> # Check formatting (CI / pre-commit)
 ```
 
 Always lint and format changed files before committing. Lefthook pre-commit hooks enforce this automatically.

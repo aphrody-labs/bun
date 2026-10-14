@@ -1,0 +1,179 @@
+[package]
+name = "bun_ecma_playground_napi"
+version = "0.0.1"
+authors = ["Boshen <boshenc@gmail.com>", "Oxc contributors"]
+categories = ["compilers", "development-tools", "web-programming"]
+edition = "2024"
+homepage.workspace = true
+include = ["/src", "build.rs"]
+keywords = ["JavaScript", "TypeScript", "linter", "minifier", "parser"]
+license = "MIT"
+publish = false
+repository.workspace = true
+rust-version = "1.97.0"
+description = "A collection of JavaScript tools written in Rust."
+
+[lints.rust]
+absolute_paths_not_starting_with_crate = "warn"
+non_ascii_idents = "warn"
+unit_bindings = "warn"
+tail_expr_drop_order = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+unused_unsafe = "warn"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ["cfg(coverage)", "cfg(coverage_nightly)"]
+
+[lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+allow_attributes = "warn"
+clone_on_ref_ptr = "warn"
+self_named_module_files = "warn"
+empty_drop = "warn"
+empty_structs_with_brackets = "warn"
+empty_enum_variants_with_brackets = "warn"
+exit = "warn"
+format_push_string = "warn"
+fn_to_numeric_cast_any = "warn"
+unnecessary_self_imports = "warn"
+try_err = "warn"
+error_impl_error = "warn"
+filetype_is_file = "warn"
+get_unwrap = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+unnecessary_safety_comment = "warn"
+undocumented_unsafe_blocks = "warn"
+infinite_loop = "warn"
+map_with_unused_argument_over_ranges = "warn"
+unused_result_ok = "warn"
+pathbuf_init_then_push = "warn"
+pub_underscore_fields = "warn"
+non_zero_suggestions = "warn"
+precedence_bits = "warn"
+struct_excessive_bools = "allow"
+too_many_lines = "allow"
+must_use_candidate = "allow"
+wildcard_imports = "allow"
+doc_markdown = "allow"
+similar_names = "allow"
+fn_params_excessive_bools = "allow"
+too_many_arguments = "allow"
+non_std_lazy_statics = "allow"
+result_large_err = "allow"
+missing_const_for_fn = "allow"
+option_if_let_else = "allow"
+or_fun_call = "allow"
+cognitive_complexity = "allow"
+non_send_fields_in_send_ty = "allow"
+use_self = "allow"
+significant_drop_tightening = "allow"
+branches_sharing_code = "allow"
+fallible_impl_from = "allow"
+useless_let_if_seq = "allow"
+impl_trait_in_params = "allow"
+significant_drop_in_scrutinee = "warn"
+iter_on_single_items = "warn"
+unused_peekable = "warn"
+too_long_first_doc_paragraph = "warn"
+suspicious_operation_groupings = "warn"
+redundant_clone = "warn"
+byte_char_slices = "allow"
+question_mark = "allow"
+multiple_crate_versions = "allow"
+
+[lints.clippy.all]
+level = "warn"
+priority = -1
+
+[lints.clippy.pedantic]
+level = "warn"
+priority = -1
+
+[lints.clippy.complexity]
+level = "warn"
+priority = -1
+
+[lints.clippy.nursery]
+level = "warn"
+priority = -1
+
+[lints.clippy.cargo]
+level = "warn"
+priority = -1
+
+[lib]
+crate-type = ["cdylib", "lib"]
+test = false
+doctest = false
+name = "oxc_playground_napi"
+path = "src/lib.rs"
+
+[dependencies.oxc]
+version = "=0.153.0"
+path = "../../../transpiler/ecma_engine"
+features = ["ast_visit", "codegen", "minifier", "mangler", "semantic", "serialize", "transformer", "isolated_declarations", "regular_expression", "cfg"]
+package = "bun_ecma"
+
+[dependencies.oxc_compat]
+version = "=0.153.0"
+path = "../../../transpiler/compat"
+package = "bun_ecma_compat"
+
+[dependencies.oxc_formatter]
+path = "../../format_js"
+package = "bun_format_js"
+version = "=0.72.0"
+
+[dependencies.oxc_formatter_core]
+path = "../../format_core"
+package = "bun_format_core"
+version = "=0.72.0"
+
+[dependencies.oxc_linter]
+path = "../../linter"
+package = "bun_linter"
+version = "=1.87.0"
+
+[dependencies.oxc_napi]
+version = "=0.153.0"
+path = "../common"
+package = "bun_ecma_napi"
+
+[dependencies.oxc_transformer_plugins]
+version = "=0.153.0"
+path = "../../../transpiler/plugins"
+package = "bun_ecma_transformer_plugins"
+
+[dependencies.lazy-regex]
+version = "3.6.0"
+
+[dependencies.napi]
+version = "3"
+features = ["async"]
+
+[dependencies.napi-derive]
+version = "3"
+
+[dependencies.rustc-hash]
+version = "2"
+
+[dependencies.serde]
+version = "1"
+
+[dependencies.serde_json]
+version = "1"
+
+[build-dependencies.napi-build]
+version = "2"
+
+[package.metadata.bun.upstream]
+package = "oxc_playground_napi"
+repository = "https://github.com/oxc-project/oxc"
+homepage = "https://oxc.rs"

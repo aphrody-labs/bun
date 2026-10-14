@@ -1,5 +1,5 @@
 // Surface publique de Node (lib/*.js + doc/api/*.md d'un clone aphrody-labs/node) croisée avec
-// les règles n2b (packages/bun-n2b/crates/n2b-registry/registry) et ce que le Bun qui exécute
+// les règles n2b (src/migrate/registry/data) et ce que le Bun qui exécute
 // le script expose réellement.
 //
 //   bun scripts/aphrody/node-api-surface.ts [--node C:/forks/node] [--out docs/aphrody/merge]
@@ -18,7 +18,7 @@ const { values } = parseArgs({
 });
 const nodeRoot = values.node!;
 const outDir = values.out!;
-const registryDir = join(import.meta.dir, "../../packages/bun-n2b/crates/n2b-registry/registry");
+const registryDir = join(import.meta.dir, "../../src/migrate/registry/data");
 const require = createRequire(import.meta.path);
 
 type Status = "règle n2b" | "natif Bun" | "absent de Bun" | "membre d'instance";
@@ -234,7 +234,7 @@ const nodeSha = (await Bun.$`git -C ${nodeRoot} rev-parse --short HEAD`.quiet().
 const md: string[] = [
   "# M-n2b-node : surface publique de Node couverte par n2b",
   "",
-  `Généré par \`bun scripts/aphrody/node-api-surface.ts\` depuis aphrody-labs/node@${nodeSha} (lib/*.js, doc/api/*.md) et le registre n2b (\`packages/bun-n2b/crates/n2b-registry/registry\`), avec Bun ${Bun.version}. Détail par API : \`M-n2b-node.json\`.`,
+  `Généré par \`bun scripts/aphrody/node-api-surface.ts\` depuis aphrody-labs/node@${nodeSha} (lib/*.js, doc/api/*.md) et le registre n2b (\`src/migrate/registry/data\`), avec Bun ${Bun.version}. Détail par API : \`M-n2b-node.json\`.`,
   "",
   "Statuts :",
   "",

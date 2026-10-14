@@ -1,0 +1,1696 @@
+use crate::{
+    config::{Syntax, TemplatePlaceholder},
+    error::{Error, ErrorKind, PResult},
+    pos::Span,
+};
+use oxc_allocator::{Allocator, Vec as ArenaVec};
+use std::{cmp::Ordering, iter::Peekable};
+use token::*;
+pub use token::{Token, TokenWithSpan};
+
+mod convert;
+mod misc;
+mod symbol;
+pub mod token;
+
+/// A byte iterator over the source, yielding `(offset, byte)` pairs — the
+/// byte-oriented counterpart of [`std::str::CharIndices`]. The tokenizer only
+/// ever branches on ASCII bytes; every byte of a multi-byte UTF-8 sequence is
+/// `>= 0x80`, which the grammar treats uniformly as a name/ident code point, so
+/// scanning byte-by-byte consumes whole code points and never stops mid-char.
+#[derive(Clone)]
+struct ByteIndices<'a> {
+    iter: std::slice::Iter<'a, u8>,
+    offset: usize,
+}
+
+impl<'a> ByteIndices<'a> {
+    #[inline]
+    fn new(source: &'a str) -> Self {
+        Self { iter: source.as_bytes().iter(), offset: 0 }
+    }
+}
+
+impl Iterator for ByteIndices<'_> {
+    type Item = (usize, u8);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let &byte = self.iter.next()?;
+        let offset = self.offset;
+        self.offset += 1;
+        Some((offset, byte))
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct TokenizerState<'a> {
+    chars: Peekable<ByteIndices<'a>>,
+    current_indent: u16,
+    indents: Vec<u16>,
+    /// Depth of `(...)` nesting. In the indented syntax, newlines inside a group
+    /// are insignificant (multi-line param/arg lists), so indentation tracking is
+    /// suspended while this is non-zero.
+    paren_depth: u32,
+    /// `//` starts a line comment (Scss / Sass / Less).
+    /// Cleared while `parse_sass_custom_property_value` rescans a value as text.
+    pub(crate) line_comments: bool,
+    /// Brace depth of a Scss / Sass `#{...}` interpolation. While non-zero,
+    /// `//` is SassScript comment syntax even when the surrounding custom-property
+    /// value is being tokenized as text.
+    sass_interpolation_depth: u32,
+    /// A string / url template scanner consumed the `#` of a Sass `#{`
+    /// interpolation, so the next bare `{` token opens that interpolation.
+    sass_interpolation_opener_pending: bool,
+    /// Number of line comments consumed. Unlike the collected comment list this
+    /// counts even when comment collection is off, so `parse_sass_custom_property_value`
+    /// can tell that its typed attempt read a `//` and rescan the value as text.
+    pub(crate) line_comments_seen: usize,
+}
+
+pub struct Tokenizer<'a> {
+    source: &'a str,
+    syntax: Syntax,
+    template_placeholder: Option<TemplatePlaceholder>,
+    comments: Option<ArenaVec<'a, Comment<'a>>>,
+    pub(crate) state: TokenizerState<'a>,
+}
+
+impl<'a> Tokenizer<'a> {
+    pub fn new(
+        allocator: &'a Allocator,
+        source: &'a str,
+        syntax: Syntax,
+        template_placeholder: Option<TemplatePlaceholder>,
+        collect_comments: bool,
+    ) -> Self {
+        let mut chars = ByteIndices::new(source).peekable();
+        if syntax == Syntax::Sass {
+            while chars.next_if(|(_, c)| matches!(c, b'\n' | b'\r')).is_some() {}
+        }
+        Self {
+            source,
+            syntax,
+            template_placeholder,
+            comments: collect_comments.then(|| ArenaVec::new_in(&allocator)),
+            state: TokenizerState {
+                chars,
+                current_indent: 0,
+                indents: if syntax == Syntax::Sass { vec![0] } else { vec![] },
+                paren_depth: 0,
+                line_comments: true,
+                sass_interpolation_depth: 0,
+                sass_interpolation_opener_pending: false,
+                line_comments_seen: 0,
+            },
+        }
+    }
+
+    #[inline]
+    pub fn comments(&self) -> &[Comment<'a>] {
+        match &self.comments {
+            Some(comments) => comments,
+            None => &[],
+        }
+    }
+
+    #[inline]
+    pub(crate) fn comments_count(&self) -> usize {
+        self.comments.as_ref().map_or(0, |comments| comments.len())
+    }
+
+    #[inline]
+    pub(crate) fn truncate_comments(&mut self, len: usize) {
+        if let Some(comments) = &mut self.comments {
+            comments.truncate(len);
+        }
+    }
+
+    /// Dedenting to a level between two known ones (`a,\n    b\n  c: d` — the
+    /// continuation sat at 4, the block at 2) pops past the new level, leaving
+    /// the current line deeper than the stack top with no `Indent` emitted.
+    /// When the parser is about to open a block there, it can re-open that
+    /// level so the block's closing `Dedent` is emitted later. Returns whether
+    /// a level was opened.
+    pub(crate) fn reopen_indent_level(&mut self) -> bool {
+        if self.syntax == Syntax::Sass
+            && self.state.paren_depth == 0
+            && self.state.indents.last().copied().unwrap_or_default() < self.state.current_indent
+        {
+            self.state.indents.push(self.state.current_indent);
+            true
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    pub fn bump(&mut self) -> PResult<TokenWithSpan<'a>> {
+        if let Some(indent) = self.skip_ws_or_comment() { Ok(indent) } else { self.next() }
+    }
+
+    #[inline]
+    pub fn bump_without_ws_or_comments(&mut self) -> PResult<TokenWithSpan<'a>> {
+        self.next()
+    }
+
+    pub fn current_offset(&mut self) -> usize {
+        if let Some((offset, _)) = self.state.chars.peek() { *offset } else { self.source.len() }
+    }
+
+    #[inline]
+    fn peek_two_bytes(&self) -> Option<(usize, u8, u8)> {
+        let mut iter = self.state.chars.clone();
+        iter.next().zip(iter.next()).map(|((start, first), (_, second))| (start, first, second))
+    }
+
+    #[cold]
+    fn build_eof_error(&mut self) -> Error {
+        let offset = self.current_offset();
+        Error { kind: ErrorKind::UnexpectedEof, span: Span { start: offset, end: offset } }
+    }
+
+    fn next(&mut self) -> PResult<TokenWithSpan<'a>> {
+        // detect frequent tokens here, but DO NOT add too many and don't forget to do profiling
+        match self.state.chars.peek() {
+            Some((_, c)) if is_start_of_ident(*c) && c != &b'-' => return self.scan_ident(),
+            Some((_, c)) if c.is_ascii_digit() => {
+                let (number, span) = self.scan_number()?;
+                return self.scan_dimension_or_percentage(number, span);
+            }
+            Some((start, b'{')) => {
+                // A string / url template scanner consumes the `#` of `#{`
+                // before returning its static head, so its interpolation opener
+                // arrives here as a bare `{`. Otherwise a `{` while already in
+                // an interpolation is a nested brace belonging to SassScript.
+                let resumes_sass_interpolation =
+                    std::mem::take(&mut self.state.sass_interpolation_opener_pending);
+                if resumes_sass_interpolation || self.state.sass_interpolation_depth > 0 {
+                    self.state.sass_interpolation_depth += 1;
+                }
+                // In the indented syntax pair an explicit `{` with the `}`
+                // decrement so bracket depth stays balanced.
+                if self.syntax == Syntax::Sass {
+                    self.state.paren_depth += 1;
+                }
+                let token = TokenWithSpan {
+                    token: Token::LBrace(LBrace {}),
+                    span: Span { start: *start, end: start + 1 },
+                };
+                self.state.chars.next();
+                return Ok(token);
+            }
+            _ => {}
+        }
+        let mut chars = self.state.chars.clone();
+        match (chars.next(), chars.next()) {
+            (Some((_, b'#')), Some((_, c)))
+                if c.is_ascii_alphanumeric()
+                    || c == b'-'
+                    || c == b'_'
+                    || !c.is_ascii()
+                    || c == b'\\' =>
+            {
+                self.scan_hash()
+            }
+            (Some((_, b'\'' | b'"')), ..) => self.scan_string_or_template(),
+            (Some((_, b'@')), Some((_, c))) if self.starts_var_name(c, &mut chars) => {
+                self.scan_at_keyword()
+            }
+            (Some((start, b'-')), Some((_, b'-'))) => {
+                if matches!(chars.peek(), Some((_, b'>'))) {
+                    self.scan_cdc(start)
+                } else {
+                    self.scan_ident()
+                }
+            }
+            (Some((_, b'-')), Some((_, c))) if is_start_of_ident(c) => self.scan_ident(),
+            (Some((_, b'.' | b'+' | b'-')), Some((_, c))) if c.is_ascii_digit() => {
+                let (number, span) = self.scan_number()?;
+                self.scan_dimension_or_percentage(number, span)
+            }
+            (Some((_, b'-' | b'+')), Some((_, b'.'))) if matches!(chars.peek(), Some((_, c)) if c.is_ascii_digit()) =>
+            {
+                let (number, span) = self.scan_number()?;
+                self.scan_dimension_or_percentage(number, span)
+            }
+            (Some((_, b'$')), Some((_, c))) if self.starts_var_name(c, &mut chars) => {
+                self.scan_dollar_var()
+            }
+            (Some((_, b'-')), Some((_, b'#')))
+                if matches!(self.syntax, Syntax::Scss | Syntax::Sass)
+                    && matches!(chars.peek(), Some((_, b'{'))) =>
+            {
+                self.scan_sass_single_hyphen_as_ident()
+            }
+            (Some((_, b'@' | b'$')), Some((_, b'{')))
+                if self.syntax == Syntax::Less
+                    && matches!(chars.peek(), Some((_, c)) if is_less_name_start(*c)) =>
+            {
+                self.scan_less_lbrace_var()
+            }
+            (Some((_, b'`')), _) if self.template_placeholder.is_some() => {
+                self.scan_template_placeholder()
+            }
+            (Some((_, b'`')), _) if self.syntax == Syntax::Less => self.scan_backtick_code(),
+            (Some(..), ..) => self.scan_punc(),
+            (None, ..) => {
+                let offset = self.current_offset();
+                Ok(TokenWithSpan {
+                    token: Token::Eof(Eof {}),
+                    span: Span { start: offset, end: offset },
+                })
+            }
+        }
+    }
+
+    fn skip_ws_or_comment(&mut self) -> Option<TokenWithSpan<'a>> {
+        // Indentation is significant only in the indented syntax, and not inside a
+        // `(...)` group — there newlines are ignored (multi-line param/arg lists),
+        // just like in SCSS.
+        let indent_sensitive = self.syntax == Syntax::Sass && self.state.paren_depth == 0;
+        // Sass can dedent more than one level at a time,
+        // so we need to produce a dedent token for each level.
+        if indent_sensitive
+            && self.state.indents.last().is_some_and(|last| *last > self.state.current_indent)
+            && let Some((i, _)) = self.state.chars.peek()
+        {
+            self.state.indents.pop();
+            return Some(TokenWithSpan {
+                token: Token::Dedent(Dedent {}),
+                span: Span { start: *i, end: *i },
+            });
+        }
+        let mut indent = None;
+        loop {
+            match self.state.chars.peek() {
+                Some((_, c)) if c.is_ascii_whitespace() => {
+                    if indent_sensitive {
+                        indent = self.scan_indent();
+                    } else {
+                        self.skip_ws();
+                    }
+                }
+                Some((_, b'/')) => {
+                    let mut chars = self.state.chars.clone();
+                    chars.next();
+                    match chars.next() {
+                        Some((_, b'*')) => self.scan_block_comment(),
+                        Some((_, b'/'))
+                            if self.syntax != Syntax::Css
+                                && (self.state.line_comments
+                                    || self.state.sass_interpolation_depth > 0) =>
+                        {
+                            self.scan_line_comment();
+                        }
+                        _ => break,
+                    }
+                }
+                _ => break,
+            }
+        }
+        indent
+    }
+
+    fn skip_ws(&mut self) {
+        while let Some((_, c)) = self.state.chars.peek() {
+            if c.is_ascii_whitespace() {
+                self.state.chars.next();
+            } else {
+                break;
+            }
+        }
+    }
+
+    // Sass indented-syntax layout tokens: Indent / Dedent / Linebreak (no CSS equivalent).
+    fn scan_indent(&mut self) -> Option<TokenWithSpan<'a>> {
+        debug_assert_eq!(self.syntax, Syntax::Sass);
+        let mut start = None;
+        while let Some((i, c)) = self.state.chars.peek() {
+            if c.is_ascii_whitespace() {
+                let (i, c) = self.state.chars.next()?;
+                // `\n`, a lone `\r` (old Mac), `\r\n`, and `\f` are all line
+                // boundaries, matching dart-sass.
+                if c == b'\n' || c == b'\r' || c == b'\x0C' {
+                    start = Some(i + 1);
+                }
+            } else {
+                return start.map(|start| {
+                    let end = *i;
+                    let len = (end - start) as u16;
+                    let span = Span { start, end };
+                    self.state.current_indent = len;
+                    match len.cmp(&self.state.indents.last().copied().unwrap_or_default()) {
+                        Ordering::Greater => {
+                            self.state.indents.push(len);
+                            TokenWithSpan { token: Token::Indent(Indent {}), span }
+                        }
+                        Ordering::Less => {
+                            self.state.indents.pop();
+                            TokenWithSpan { token: Token::Dedent(Dedent {}), span }
+                        }
+                        Ordering::Equal => {
+                            TokenWithSpan { token: Token::Linebreak(Linebreak {}), span }
+                        }
+                    }
+                });
+            }
+        }
+
+        let offset = self.current_offset();
+        Some(TokenWithSpan { token: Token::Eof(Eof {}), span: Span { start: offset, end: offset } })
+    }
+
+    // A comment: '/*' ... '*/'
+    // https://drafts.csswg.org/css-syntax-3/#consume-comment
+    fn scan_block_comment(&mut self) {
+        let (start, c) = self.state.chars.next().unwrap();
+        debug_assert_eq!(c, b'/');
+        self.state.chars.next();
+
+        let content_end;
+        let end;
+        loop {
+            match self.state.chars.next() {
+                Some((_, b'*')) => {
+                    if let Some((i, b'/')) = self.state.chars.peek() {
+                        content_end = i - 1;
+                        end = i + 1;
+                        self.state.chars.next();
+                        break;
+                    }
+                }
+                Some(..) => {}
+                None => {
+                    content_end = self.source.len();
+                    end = content_end;
+                    break;
+                }
+            }
+        }
+
+        if let Some(comments) = &mut self.comments {
+            let content = unsafe { self.source.get_unchecked(start + 2..content_end) };
+            comments.push(Comment { content, kind: CommentKind::Block, span: Span { start, end } });
+        }
+    }
+
+    // A '//' line comment (Sass/Less; not valid in plain CSS).
+    fn scan_line_comment(&mut self) {
+        let (start, c) = self.state.chars.next().unwrap();
+        debug_assert_eq!(c, b'/');
+        self.state.chars.next();
+        self.state.line_comments_seen += 1;
+
+        let end;
+        loop {
+            match self.state.chars.peek() {
+                Some((_, b'\r')) => {
+                    self.state.chars.next();
+                    if let Some((i, b'\n')) = self.state.chars.peek() {
+                        end = i - 1;
+                        if self.syntax != Syntax::Sass {
+                            self.state.chars.next();
+                        }
+                        break;
+                    }
+                }
+                Some((i, b'\n')) => {
+                    end = *i;
+                    if self.syntax != Syntax::Sass {
+                        self.state.chars.next();
+                    }
+                    break;
+                }
+                Some(..) => {
+                    self.state.chars.next();
+                }
+                None => {
+                    end = self.source.len();
+                    break;
+                }
+            }
+        }
+
+        // In the indented syntax, lines indented deeper than the line the
+        // comment started on continue the comment — but only for a comment
+        // that starts its line (a statement-level comment); one trailing
+        // after code is plain whitespace with no children.
+        let starts_line = || {
+            let bytes = self.source.as_bytes();
+            let mut i = start;
+            while i > 0 && matches!(bytes[i - 1], b' ' | b'\t') {
+                i -= 1;
+            }
+            i == 0 || matches!(bytes[i - 1], b'\n' | b'\r' | b'\x0C')
+        };
+        let end = if self.syntax == Syntax::Sass && self.state.paren_depth == 0 && starts_line() {
+            self.consume_sass_comment_continuation(end)
+        } else {
+            end
+        };
+
+        if let Some(comments) = &mut self.comments {
+            let content = unsafe { self.source.get_unchecked(start + 2..end) };
+            comments.push(Comment { content, kind: CommentKind::Line, span: Span { start, end } });
+        }
+    }
+
+    /// Consume indented-syntax comment continuation lines (any line indented
+    /// deeper than the line the comment started on), returning the new
+    /// comment end offset. The terminating newline is left unconsumed so the
+    /// usual indentation scanning still runs.
+    fn consume_sass_comment_continuation(&mut self, mut end: usize) -> usize {
+        let base = self.state.current_indent;
+        loop {
+            let mut probe = self.state.chars.clone();
+            // step over the line break(s) and measure the next line's indent
+            let mut saw_newline = false;
+            let mut indent: u16 = 0;
+            let mut content_start = None;
+            for (i, c) in probe.by_ref() {
+                match c {
+                    b'\n' | b'\r' | b'\x0C' => {
+                        saw_newline = true;
+                        indent = 0;
+                    }
+                    b' ' | b'\t' => indent += 1,
+                    _ => {
+                        content_start = Some(i);
+                        break;
+                    }
+                }
+            }
+            let Some(content_start) = content_start else { return end };
+            if !saw_newline || indent <= base {
+                return end;
+            }
+            // deeper content: the line belongs to the comment — consume it
+            while let Some((i, c)) = self.state.chars.peek() {
+                if matches!(c, b'\n' | b'\r' | b'\x0C') {
+                    if *i >= content_start {
+                        break;
+                    }
+                    self.state.chars.next();
+                } else {
+                    end = i + 1;
+                    self.state.chars.next();
+                }
+            }
+        }
+    }
+
+    // <ident-sequence> (a run of name code points / escapes).
+    // https://drafts.csswg.org/css-syntax-3/#consume-name
+    /// `less_name`: a less.js `[\w-]+` name instead (`@name`, `${name}`, `@{name}`, inside strings too),
+    /// which may also start with a digit (`@3`) or a bare hyphen (`@-`, `@-1`).
+    pub(crate) fn scan_ident_sequence(&mut self, less_name: bool) -> PResult<(Ident<'a>, Span)> {
+        let start;
+        let end;
+        let mut escaped = false;
+        match self.state.chars.peek() {
+            Some((i, c)) if c.is_ascii_alphabetic() || *c == b'_' || !c.is_ascii() => {
+                start = *i;
+                self.state.chars.next();
+            }
+            // Less variable names may start with a digit (`@3`, `@{3}`); CSS idents may not
+            Some((i, c)) if less_name && c.is_ascii_digit() => {
+                start = *i;
+                self.state.chars.next();
+            }
+            Some((i, b'-')) => {
+                start = *i;
+                self.state.chars.next();
+                match self.state.chars.peek() {
+                    // `-\31 x`: the escape after the hyphen is one too
+                    Some((_, b'\\')) => {
+                        escaped = true;
+                        self.scan_escape(/* backslash_consumed */ false)?;
+                    }
+                    Some((_, c)) if is_start_of_ident(*c) => {
+                        self.state.chars.next();
+                    }
+                    // `@-`, `@-1`, `@{-}`: a less.js name needs nothing behind the hyphen
+                    _ if less_name => {}
+                    Some(..) => unreachable!(),
+                    None => return Err(self.build_eof_error()),
+                }
+            }
+            Some((i, b'\\')) => {
+                escaped = true;
+                start = *i;
+                self.scan_escape(/* backslash_consumed */ false)?;
+            }
+            _ => unreachable!(),
+        }
+
+        loop {
+            match self.state.chars.peek() {
+                Some((_, c))
+                    if c.is_ascii_alphanumeric() || *c == b'-' || *c == b'_' || !c.is_ascii() =>
+                {
+                    self.state.chars.next();
+                }
+                Some((_, b'\\')) => {
+                    escaped = true;
+                    self.scan_escape(/* backslash_consumed */ false)?;
+                }
+                Some((i, _)) => {
+                    end = *i;
+                    break;
+                }
+                None => {
+                    end = self.source.len();
+                    break;
+                }
+            }
+        }
+
+        debug_assert!(start < end);
+        let raw = unsafe { self.source.get_unchecked(start..end) };
+        Ok((Ident { raw, escaped }, Span { start, end }))
+    }
+
+    // An escaped code point: '\' followed by a hex digits run or any character.
+    // https://drafts.csswg.org/css-syntax-3/#consume-escaped-code-point
+    fn scan_escape(&mut self, backslash_consumed: bool) -> PResult<usize> {
+        if !backslash_consumed {
+            self.state.chars.next(); // consume `\\`
+        }
+        match self.state.chars.next() {
+            Some((i, c)) if c.is_ascii_hexdigit() => {
+                let mut count: usize = 1;
+                let mut end = i + 1;
+                while let Some((i, c)) = self.state.chars.peek() {
+                    if c.is_ascii_hexdigit() && count < 6 {
+                        count += 1;
+                        self.state.chars.next();
+                    } else {
+                        // according to https://www.w3.org/TR/css-syntax-3/#hex-digit,
+                        // consume a whitespace
+                        if c.is_ascii_whitespace() {
+                            end = i + 1;
+                            self.state.chars.next();
+                        } else {
+                            end = *i;
+                        }
+                        break;
+                    }
+                }
+                Ok(end)
+            }
+            // A `\` before a multi-byte code point consumes only its leading
+            // byte here; the trailing continuation bytes (all `>= 0x80`) are
+            // consumed as name code points by the caller's scan loop, so the
+            // token boundary still lands correctly. The returned offset is
+            // unused by callers.
+            Some((i, _)) => Ok(i + 1),
+            None => Err(self.build_eof_error()),
+        }
+    }
+
+    // <number-token> = [ '+' | '-' ]? <digits> [ '.' <digits> ]? [ e [ '+' | '-' ]? <digits> ]?
+    // https://drafts.csswg.org/css-syntax-3/#consume-number
+    fn scan_number(&mut self) -> PResult<(Number<'a>, Span)> {
+        let mut end;
+
+        let (start, is_start_with_dot) = match self.state.chars.next() {
+            Some((i, c)) if c.is_ascii_digit() => (i, false),
+            Some((i, b'+' | b'-')) => (i, matches!(self.state.chars.next(), Some((_, b'.')))),
+            Some((i, b'.')) => (i, true),
+            _ => unreachable!(),
+        };
+
+        loop {
+            match self.state.chars.peek() {
+                Some((_, c)) if c.is_ascii_digit() => {
+                    self.state.chars.next();
+                }
+                Some((i, _)) => {
+                    end = *i;
+                    break;
+                }
+                None => {
+                    end = self.source.len();
+                    break;
+                }
+            }
+        }
+        if !is_start_with_dot && matches!(self.state.chars.peek(), Some((_, b'.'))) {
+            // Length of the dot run right after the digits decides who owns
+            // the first `.`:
+            // - 1 dot: a fraction (possibly empty: `50.` is one number)
+            // - 2-3 dots: leave them all (`..`; a `...` spread marker)
+            // - 4 dots: `50....` is `50.` + `...` — the number takes the
+            //   first dot (postcss lexes the word `50.`) and a spread marker
+            //   still follows, e.g. `rgba(50 50 50 50....)`
+            // (capped at 5: any longer run behaves like 2-3)
+            let dot_run = self.state.chars.clone().take(5).take_while(|(_, c)| *c == b'.').count();
+            if dot_run == 1 || dot_run == 4 {
+                // bump '.'
+                self.state.chars.next();
+                loop {
+                    match self.state.chars.peek() {
+                        Some((_, c)) if c.is_ascii_digit() => {
+                            self.state.chars.next();
+                        }
+                        Some((i, _)) => {
+                            end = *i;
+                            break;
+                        }
+                        None => {
+                            end = self.source.len();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some((_, b'e' | b'E', second)) = self.peek_two_bytes()
+            && (second == b'-' || second == b'+' || second.is_ascii_digit())
+        {
+            self.state.chars.next();
+
+            if let Some((_, b'-' | b'+')) = self.state.chars.peek() {
+                self.state.chars.next();
+            }
+
+            loop {
+                match self.state.chars.peek() {
+                    Some((_, c)) if c.is_ascii_digit() => {
+                        self.state.chars.next();
+                    }
+                    Some((i, _)) => {
+                        end = *i;
+                        break;
+                    }
+                    None => {
+                        end = self.source.len();
+                        break;
+                    }
+                }
+            }
+        }
+
+        debug_assert!(start < end);
+        let raw = unsafe { self.source.get_unchecked(start..end) };
+        Ok((Number { raw }, Span { start, end }))
+    }
+
+    // A number followed by a unit or '%': <dimension-token> | <percentage-token>.
+    fn scan_dimension_or_percentage(
+        &mut self,
+        number: Number<'a>,
+        span: Span,
+    ) -> PResult<TokenWithSpan<'a>> {
+        let mut chars = self.state.chars.clone();
+        match (chars.next(), chars.next()) {
+            (Some((_, b'-')), Some((_, c))) if is_start_of_ident(c) => {
+                self.scan_dimension(number, span)
+            }
+            (Some((_, c)), ..) if c != b'-' && is_start_of_ident(c) => {
+                self.scan_dimension(number, span)
+            }
+            (Some((_, b'%')), ..) => self.scan_percentage(number, span),
+            _ => Ok(TokenWithSpan { token: Token::Number(NumberMeta {}), span }),
+        }
+    }
+
+    // <dimension-token> = <number-token> <ident-sequence>
+    fn scan_dimension(
+        &mut self,
+        _value: Number<'a>,
+        value_span: Span,
+    ) -> PResult<TokenWithSpan<'a>> {
+        let (unit, unit_span) = self.scan_ident_sequence(false)?;
+        Ok(TokenWithSpan {
+            token: Token::Dimension(DimensionMeta {
+                number_end: compact_offset(value_span.end),
+                unit_escaped: unit.escaped,
+            }),
+            span: Span { start: value_span.start, end: unit_span.end },
+        })
+    }
+
+    // <percentage-token> = <number-token> '%'
+    fn scan_percentage(&mut self, _value: Number<'a>, span: Span) -> PResult<TokenWithSpan<'a>> {
+        self.state.chars.next();
+        Ok(TokenWithSpan {
+            token: Token::Percentage(PercentageMeta {}),
+            span: Span { start: span.start, end: span.end + 1 },
+        })
+    }
+
+    // <string-token> = '"' ... '"' | '\'' ... '\''
+    // https://drafts.csswg.org/css-syntax-3/#consume-string-token
+    pub(crate) fn scan_string_only(&mut self) -> PResult<(Str<'a>, Span)> {
+        let (start, quote) = match self.state.chars.next() {
+            Some((index, c @ b'\'' | c @ b'"')) => (index, c),
+            Some((index, _)) => {
+                return Err(Error {
+                    kind: ErrorKind::ExpectString,
+                    span: Span { start: index, end: index + 1 },
+                });
+            }
+            None => return Err(self.build_eof_error()),
+        };
+
+        let end;
+        let mut escaped = false;
+        loop {
+            match self.state.chars.next() {
+                Some((_, b'\\')) => {
+                    escaped = true;
+                    self.scan_escape(/* backslash_consumed */ true)?;
+                }
+                Some((i, c)) if c == quote => {
+                    end = i + 1;
+                    break;
+                }
+                Some((end, b'\n')) => {
+                    return Err(Error {
+                        kind: ErrorKind::UnterminatedString,
+                        span: Span { start, end },
+                    });
+                }
+                Some(..) => {}
+                None => {
+                    return Err(Error {
+                        kind: ErrorKind::UnterminatedString,
+                        span: Span { start, end: self.source.len() },
+                    });
+                }
+            }
+        }
+
+        debug_assert!(start + 1 < end);
+        let raw = unsafe { self.source.get_unchecked(start..end) };
+        Ok((Str { raw, escaped }, Span { start, end }))
+    }
+
+    // A <string-token>, or a dialect interpolated-string template (Sass/Less)
+    // when the string contains `#{…}` / `@{…}`.
+    fn scan_string_or_template(&mut self) -> PResult<TokenWithSpan<'a>> {
+        // '\'' or '"' is checked (but not consumed) before
+        let (start, quote) = self.state.chars.next().unwrap();
+
+        let end;
+        let mut escaped = false;
+        loop {
+            match self.state.chars.next() {
+                Some((_, b'\\')) => {
+                    escaped = true;
+                    self.scan_escape(/* backslash_consumed */ true)?;
+                }
+                Some((i, c)) if c == quote => {
+                    end = i + 1;
+                    break;
+                }
+                Some((end, c @ b'#' | c @ b'@' | c @ b'$'))
+                    if self.is_start_of_interpolation_in_str_template(c) =>
+                {
+                    let span = Span { start, end };
+                    return Ok(TokenWithSpan {
+                        token: Token::StrTemplate(StrTemplateMeta {
+                            escaped,
+                            head: true,
+                            tail: false,
+                        }),
+                        span,
+                    });
+                }
+                Some((end, b'\n')) => {
+                    // CSS Syntax: an unterminated string is a
+                    // `<bad-string-token>` (parse error, not a lexer failure);
+                    // the dialects' reference compilers reject it outright.
+                    if self.syntax == Syntax::Css {
+                        return Ok(TokenWithSpan {
+                            token: Token::BadStr(BadStrMeta {}),
+                            span: Span { start, end },
+                        });
+                    }
+                    return Err(Error {
+                        kind: ErrorKind::UnterminatedString,
+                        span: Span { start, end },
+                    });
+                }
+                Some(..) => {}
+                None => {
+                    let end = self.source.len();
+                    if self.syntax == Syntax::Css {
+                        return Ok(TokenWithSpan {
+                            token: Token::BadStr(BadStrMeta {}),
+                            span: Span { start, end },
+                        });
+                    }
+                    return Err(Error {
+                        kind: ErrorKind::UnterminatedString,
+                        span: Span { start, end },
+                    });
+                }
+            }
+        }
+
+        debug_assert!(start + 1 < end);
+        Ok(TokenWithSpan { token: Token::Str(StrMeta { escaped }), span: Span { start, end } })
+    }
+
+    // Resume a string template after an interpolation, yielding the next static
+    // piece up to the following `#{`/`@{` or the closing quote.
+    pub(crate) fn scan_string_template(&mut self, quote: u8) -> PResult<(StrTemplate<'a>, Span)> {
+        let start = self.current_offset();
+        let end;
+        let mut escaped = false;
+        loop {
+            match self.state.chars.next() {
+                Some((i, b'\n')) => {
+                    return Err(Error {
+                        kind: ErrorKind::UnexpectedLinebreak,
+                        span: Span { start: i, end: i + 1 },
+                    });
+                }
+                Some((_, b'\\')) => {
+                    escaped = true;
+                    self.scan_escape(/* backslash_consumed */ true)?;
+                }
+                Some((i, c)) if c == quote => {
+                    end = i + 1;
+                    debug_assert!(start < end);
+
+                    let raw = unsafe { self.source.get_unchecked(start..i + 1) };
+                    let span = Span { start, end };
+                    return Ok((StrTemplate { raw, escaped, head: false, tail: true }, span));
+                }
+                Some((end, c @ b'#' | c @ b'@' | c @ b'$'))
+                    if self.is_start_of_interpolation_in_str_template(c) =>
+                {
+                    let raw = unsafe { self.source.get_unchecked(start..end) };
+                    let span = Span { start, end };
+                    return Ok((StrTemplate { raw, escaped, head: false, tail: false }, span));
+                }
+                Some(..) => {}
+                None => return Err(self.build_eof_error()),
+            }
+        }
+    }
+
+    fn is_start_of_interpolation_in_str_template(&mut self, c: u8) -> bool {
+        match self.syntax {
+            Syntax::Css => false,
+            Syntax::Scss | Syntax::Sass => {
+                let is_start = c == b'#' && matches!(self.state.chars.peek(), Some((_, b'{')));
+                if is_start {
+                    self.state.sass_interpolation_opener_pending = true;
+                }
+                is_start
+            }
+            Syntax::Less => {
+                // less.js `Quoted` substitutes exactly `@{name}` / `${name}`;
+                // anything else (`"@{box"`, the outer `@{box-` of `"@{box-@{suffix}}"`) is text
+                (c == b'@' || c == b'$') && self.less_interpolation_ahead()
+            }
+        }
+    }
+
+    /// Whether a less.js variable / property name (`[\w-]+`) starts here (`is_less_name_start`)
+    pub(crate) fn is_start_of_less_name(&mut self) -> bool {
+        matches!(self.state.chars.peek(), Some((_, c)) if is_less_name_start(*c))
+    }
+
+    /// `{` <less name> `}` next (the `@` / `$` already consumed); nothing is consumed.
+    fn less_interpolation_ahead(&mut self) -> bool {
+        // `scan_ident_sequence` moves only the byte cursor, so that is all to restore
+        let saved = self.state.chars.clone();
+        let ahead = matches!(self.state.chars.next(), Some((_, b'{')))
+            && self.is_start_of_less_name()
+            && self.scan_ident_sequence(/* less_name */ true).is_ok()
+            && matches!(self.state.chars.next(), Some((_, b'}')));
+        self.state.chars = saved;
+        ahead
+    }
+
+    // An ident-like token: <ident-token>, <function-token> (`name(`), or <url-token>.
+    // https://drafts.csswg.org/css-syntax-3/#consume-ident-like-token
+    fn scan_ident(&mut self) -> PResult<TokenWithSpan<'a>> {
+        self.scan_ident_sequence(false).map(|(ident, span)| TokenWithSpan {
+            token: Token::Ident(IdentMeta { escaped: ident.escaped }),
+            span,
+        })
+    }
+
+    // The next static piece of an ident interleaved with interpolation (Sass/Less).
+    pub(crate) fn scan_ident_template(&mut self) -> PResult<Option<(Ident<'a>, Span)>> {
+        let start = self.current_offset();
+        let mut escaped = false;
+
+        let end;
+        loop {
+            match self.state.chars.peek() {
+                Some((_, c))
+                    if c.is_ascii_alphanumeric() || *c == b'-' || *c == b'_' || !c.is_ascii() =>
+                {
+                    self.state.chars.next();
+                }
+                Some((_, b'\\')) => {
+                    escaped = true;
+                    self.scan_escape(/* backslash_consumed */ false)?;
+                }
+                Some((i, _)) => {
+                    end = *i;
+                    break;
+                }
+                None => {
+                    end = self.source.len();
+                    break;
+                }
+            }
+        }
+        if end > start {
+            let raw = unsafe { self.source.get_unchecked(start..end) };
+            Ok(Some((Ident { escaped, raw }, Span { start, end })))
+        } else {
+            Ok(None)
+        }
+    }
+
+    // Sass: a lone '-' consumed as an <ident-token>.
+    fn scan_sass_single_hyphen_as_ident(&mut self) -> PResult<TokenWithSpan<'a>> {
+        debug_assert!(matches!(self.syntax, Syntax::Scss | Syntax::Sass));
+        match self.state.chars.next() {
+            Some((start, c)) => {
+                debug_assert_eq!(c, b'-');
+                Ok(TokenWithSpan {
+                    token: Token::Ident(IdentMeta { escaped: false }),
+                    span: Span { start, end: start + 1 },
+                })
+            }
+            None => Err(self.build_eof_error()),
+        }
+    }
+
+    // The unquoted body of a <url-token> (or an interpolated url template in Sass/Less).
+    // https://drafts.csswg.org/css-syntax-3/#consume-url-token
+    pub(crate) fn scan_url_raw_or_template(&mut self) -> PResult<TokenWithSpan<'a>> {
+        self.skip_ws();
+        let start = self.current_offset();
+        let end;
+        let mut escaped = false;
+        loop {
+            match self.state.chars.next() {
+                Some((_, b'\\')) => {
+                    escaped = true;
+                    self.scan_escape(/* backslash_consumed */ true)?;
+                }
+                Some((i, b')')) => {
+                    // the matching `(` was consumed as an LParen token
+                    self.state.paren_depth = self.state.paren_depth.saturating_sub(1);
+                    end = i;
+                    break;
+                }
+                Some((end, b'#')) if self.is_start_of_interpolation_in_url_template() => {
+                    let span = Span { start, end };
+                    return Ok(TokenWithSpan {
+                        token: Token::UrlTemplate(UrlTemplateMeta { escaped, tail: false }),
+                        span,
+                    });
+                }
+                Some((i, c)) if c.is_ascii_whitespace() => {
+                    if self.url_body_ws_run_ends()? {
+                        end = i;
+                        break;
+                    }
+                }
+                Some((i, b'(' | b'"' | b'\'')) => {
+                    return Err(Error {
+                        kind: ErrorKind::InvalidUrl,
+                        span: Span { start: i, end: i + 1 },
+                    });
+                }
+                Some(..) => {}
+                None => return Err(self.build_eof_error()),
+            }
+        }
+
+        debug_assert!(start <= end);
+        let span = Span { start, end };
+        Ok(TokenWithSpan { token: Token::UrlRaw(UrlRawMeta { escaped }), span })
+    }
+
+    /// A whitespace run inside an unquoted url() body: `true` when it ends the body at `)`.
+    /// CSS allows nothing else there; less.js (`[^()'"]+`) reads on, and the byte after
+    /// the run is left to the caller's loop.
+    fn url_body_ws_run_ends(&mut self) -> PResult<bool> {
+        self.skip_ws();
+        match self.state.chars.peek() {
+            Some((_, b')')) => {
+                self.state.chars.next();
+                self.state.paren_depth = self.state.paren_depth.saturating_sub(1);
+                Ok(true)
+            }
+            Some(..) if self.syntax == Syntax::Less => Ok(false),
+            Some((i, _)) => {
+                Err(Error { kind: ErrorKind::InvalidUrl, span: Span { start: *i, end: *i + 1 } })
+            }
+            None => Err(self.build_eof_error()),
+        }
+    }
+
+    // The next static piece of an unquoted url() body interleaved with interpolation.
+    pub(crate) fn scan_url_template(&mut self) -> PResult<(UrlTemplate<'a>, Span)> {
+        let start = self.current_offset();
+        let mut escaped = false;
+        loop {
+            match self.state.chars.next() {
+                Some((_, b'\\')) => {
+                    escaped = true;
+                    self.scan_escape(/* backslash_consumed */ true)?;
+                }
+                Some((end, b')')) => {
+                    debug_assert!(start <= end);
+
+                    self.state.paren_depth = self.state.paren_depth.saturating_sub(1);
+                    let raw = unsafe { self.source.get_unchecked(start..end) };
+                    let span = Span { start, end };
+                    return Ok((UrlTemplate { raw, escaped, tail: true }, span));
+                }
+                Some((end, b'#')) if self.is_start_of_interpolation_in_url_template() => {
+                    let raw = unsafe { self.source.get_unchecked(start..end) };
+                    let span = Span { start, end };
+                    return Ok((UrlTemplate { raw, escaped, tail: false }, span));
+                }
+                Some((end, c)) if c.is_ascii_whitespace() => {
+                    if self.url_body_ws_run_ends()? {
+                        return Ok((
+                            UrlTemplate {
+                                raw: unsafe { self.source.get_unchecked(start..end) },
+                                escaped,
+                                tail: true,
+                            },
+                            Span { start, end },
+                        ));
+                    }
+                }
+                Some((i, b'(' | b'"' | b'\'')) => {
+                    return Err(Error {
+                        kind: ErrorKind::InvalidUrl,
+                        span: Span { start: i, end: i + 1 },
+                    });
+                }
+                Some(..) => {}
+                None => return Err(self.build_eof_error()),
+            }
+        }
+    }
+
+    fn is_start_of_interpolation_in_url_template(&mut self) -> bool {
+        match self.syntax {
+            Syntax::Css | Syntax::Less => false,
+            Syntax::Scss | Syntax::Sass => {
+                let is_start = matches!(self.state.chars.peek(), Some((_, b'{')));
+                if is_start {
+                    self.state.sass_interpolation_opener_pending = true;
+                }
+                is_start
+            }
+        }
+    }
+
+    // <hash-token> = '#' <ident-sequence>
+    // https://drafts.csswg.org/css-syntax-3/#consume-token
+    fn scan_hash(&mut self) -> PResult<TokenWithSpan<'a>> {
+        let (start, c) = self.state.chars.next().unwrap();
+        debug_assert_eq!(c, b'#');
+
+        let end;
+        let mut escaped = false;
+        match self.state.chars.next() {
+            Some((_, c))
+                if c.is_ascii_alphanumeric() || c == b'-' || c == b'_' || !c.is_ascii() => {}
+            Some((_, b'\\')) => {
+                escaped = true;
+                self.scan_escape(/* backslash_consumed */ true)?;
+            }
+            Some((i, _)) => {
+                return Err(Error {
+                    kind: ErrorKind::InvalidHash,
+                    span: Span { start: i, end: i + 1 },
+                });
+            }
+            None => {
+                return Err(self.build_eof_error());
+            }
+        }
+        loop {
+            match self.state.chars.peek() {
+                Some((_, c))
+                    if c.is_ascii_alphanumeric() || *c == b'-' || *c == b'_' || !c.is_ascii() =>
+                {
+                    self.state.chars.next();
+                }
+                Some((_, b'\\')) => {
+                    escaped = true;
+                    self.scan_escape(/* backslash_consumed */ false)?;
+                }
+                Some((i, _)) => {
+                    end = *i;
+                    break;
+                }
+                None => {
+                    end = self.source.len();
+                    break;
+                }
+            }
+        }
+
+        debug_assert!(end > start + 1);
+        Ok(TokenWithSpan { token: Token::Hash(HashMeta { escaped }), span: Span { start, end } })
+    }
+
+    // A '$'-prefixed variable token: '$' <ident-sequence> (Sass var / Less property).
+    fn scan_dollar_var(&mut self) -> PResult<TokenWithSpan<'a>> {
+        let (start, c) = self.state.chars.next().expect("expect char `$`");
+        debug_assert_eq!(c, b'$');
+        let (ident, span) =
+            self.scan_ident_sequence(/* less_name */ self.syntax == Syntax::Less)?;
+        Ok(TokenWithSpan {
+            token: Token::DollarVar(IdentMeta { escaped: ident.escaped }),
+            span: Span { start, end: span.end },
+        })
+    }
+
+    // A Less interpolation opener: '@{' or '${' <ident-sequence> '}'
+    fn scan_less_lbrace_var(&mut self) -> PResult<TokenWithSpan<'a>> {
+        let (start, first_char) = self.state.chars.next().expect("expect char `@` or `$`");
+        debug_assert!(matches!(first_char, b'@' | b'$'));
+        let (_, c) = self.state.chars.next().expect("expect char `{`");
+        debug_assert_eq!(c, b'{');
+
+        let (ident, _) = self.scan_ident_sequence(/* less_name */ true)?;
+        match self.state.chars.next() {
+            Some((i, b'}')) => {
+                let span = Span { start, end: i + 1 };
+                if first_char == b'@' {
+                    Ok(TokenWithSpan {
+                        token: Token::AtLBraceVar(IdentMeta { escaped: ident.escaped }),
+                        span,
+                    })
+                } else {
+                    Ok(TokenWithSpan {
+                        token: Token::DollarLBraceVar(IdentMeta { escaped: ident.escaped }),
+                        span,
+                    })
+                }
+            }
+            Some((i, _)) => Err(Error {
+                kind: ErrorKind::ExpectRightBraceForLessVar,
+                span: Span { start: i, end: i + 1 },
+            }),
+            None => Err(self.build_eof_error()),
+        }
+    }
+
+    // <at-keyword-token> = '@' <ident-sequence>
+    // https://drafts.csswg.org/css-syntax-3/#consume-token
+    fn scan_at_keyword(&mut self) -> PResult<TokenWithSpan<'a>> {
+        let (start, c) = self.state.chars.next().expect("expect char `@`");
+        debug_assert_eq!(c, b'@');
+
+        let (ident, span) =
+            self.scan_ident_sequence(/* less_name */ self.syntax == Syntax::Less)?;
+        Ok(TokenWithSpan {
+            token: Token::AtKeyword(IdentMeta { escaped: ident.escaped }),
+            span: Span { start, end: span.end },
+        })
+    }
+
+    /// Scan a backtick-delimited template placeholder `` `<prefix><digits>` `` whose
+    /// opening backtick is at the current position. Emits a [`Token::Placeholder`].
+    /// A backtick that doesn't form a valid placeholder is invalid (backtick is
+    /// not valid SCSS) and errors like any unknown token.
+    fn scan_template_placeholder(&mut self) -> PResult<TokenWithSpan<'a>> {
+        let start = self.current_offset();
+        if let Some((placeholder, end)) = self.match_placeholder(start) {
+            // Affixes and digits are ASCII, so `end` lands on a char boundary.
+            while self.current_offset() < end {
+                self.state.chars.next();
+            }
+            Ok(TokenWithSpan { token: Token::Placeholder(placeholder), span: Span { start, end } })
+        } else {
+            self.state.chars.next(); // consume the stray backtick
+            Err(Error { kind: ErrorKind::UnknownToken, span: Span { start, end: start + 1 } })
+        }
+    }
+
+    /// Match the placeholder shape `` `<prefix><digits>` `` whose opening backtick
+    /// is at byte offset `at`. Returns the parsed token and its end offset (past
+    /// the closing backtick and any glued suffix), or `None` when the option is
+    /// unset or the shape doesn't match. An index that overflows `u32` doesn't
+    /// match (so the caller errors) instead of panicking. Does not advance.
+    fn match_placeholder(&self, at: usize) -> Option<(PlaceholderMeta, usize)> {
+        let source = self.source;
+        let ph = self.template_placeholder?;
+        // `at` is the opening backtick.
+        let after_open = source[at + 1..].strip_prefix(ph.prefix)?;
+        let digits_len = after_open.bytes().take_while(u8::is_ascii_digit).count();
+        if digits_len == 0 || !after_open[digits_len..].starts_with('`') {
+            return None;
+        }
+        let index = after_open[..digits_len].parse::<u32>().ok()?;
+        // Past the closing backtick (`+ 1`).
+        let close_end = at + 1 + ph.prefix.len() + digits_len + 1;
+        // A directly-glued ident-continuation run is the placeholder's literal
+        // suffix (`` `PLACEHOLDER-0`px `` -> index 0, suffix "px"), mirroring
+        // `#{$x}px` being a single identifier. A whitespace or delimiter ends it.
+        // Bytes >= 0x80 are non-ASCII ident chars (whole UTF-8 sequences), so the
+        // run always ends on a char boundary.
+        let suffix_len = source[close_end..]
+            .bytes()
+            .take_while(|&b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b >= 0x80)
+            .count();
+        let end = close_end + suffix_len;
+        Some((PlaceholderMeta { index, suffix_start: compact_offset(close_end) }, end))
+    }
+
+    /// If a placeholder begins exactly at the current position, scan and return
+    /// it (advancing past it); otherwise leave the tokenizer untouched and
+    /// return `None`. Used where a placeholder must be detected without first
+    /// skipping whitespace (e.g. a class selector name), so callers can't rely
+    /// on the main dispatch having already emitted the token.
+    pub(crate) fn scan_placeholder(&mut self) -> Option<TokenWithSpan<'a>> {
+        let start = self.current_offset();
+        if !self.source[start..].starts_with('`') {
+            return None;
+        }
+        let (placeholder, end) = self.match_placeholder(start)?;
+        while self.current_offset() < end {
+            self.state.chars.next();
+        }
+        Some(TokenWithSpan { token: Token::Placeholder(placeholder), span: Span { start, end } })
+    }
+
+    // A Less inline-JavaScript token: '`' ... '`' (deprecated).
+    fn scan_backtick_code(&mut self) -> PResult<TokenWithSpan<'a>> {
+        debug_assert!(self.syntax == Syntax::Less);
+
+        // '`' is checked (but not consumed) before
+        let (start, _) = self.state.chars.next().expect("expect char ```");
+
+        let end;
+        loop {
+            match self.state.chars.next() {
+                Some((i, b'`')) => {
+                    end = i + 1;
+                    break;
+                }
+                Some(..) => {}
+                None => {
+                    return Err(self.build_eof_error());
+                }
+            }
+        }
+
+        debug_assert!(start + 1 < end);
+        Ok(TokenWithSpan {
+            token: Token::BacktickCode(BacktickCodeMeta {}),
+            span: Span { start, end },
+        })
+    }
+
+    // Delimiter and punctuation tokens: '(' ')' '[' ']' '{' '}' ',' ':' ';' plus
+    // the multi-char operators (`<=`, `>=`, `||`, `~=`, `|=`, `^=`, `$=`, `*=`, …).
+    fn scan_punc(&mut self) -> PResult<TokenWithSpan<'a>> {
+        match self.state.chars.next() {
+            Some((start, b'.')) => {
+                if self.syntax != Syntax::Css
+                    && matches!(
+                        {
+                            let mut chars = self.state.chars.clone();
+                            (chars.next(), chars.next())
+                        },
+                        (Some((_, b'.')), Some((_, b'.')))
+                    )
+                {
+                    self.state.chars.next();
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::DotDotDot(DotDotDot {}),
+                        span: Span { start, end: start + 3 },
+                    })
+                } else {
+                    Ok(TokenWithSpan {
+                        token: Token::Dot(Dot {}),
+                        span: Span { start, end: start + 1 },
+                    })
+                }
+            }
+            Some((start, b':')) => match self.state.chars.peek() {
+                Some((_, b':')) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::ColonColon(ColonColon {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::Colon(Colon {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'}')) => {
+                self.state.sass_interpolation_depth =
+                    self.state.sass_interpolation_depth.saturating_sub(1);
+                // In the indented syntax `}` only ever closes `#{`; see the
+                // HashLBrace arm below.
+                if self.syntax == Syntax::Sass {
+                    self.state.paren_depth = self.state.paren_depth.saturating_sub(1);
+                }
+                Ok(TokenWithSpan {
+                    token: Token::RBrace(RBrace {}),
+                    span: Span { start, end: start + 1 },
+                })
+            }
+            Some((start, b'(')) => {
+                self.state.paren_depth += 1;
+                Ok(TokenWithSpan {
+                    token: Token::LParen(LParen {}),
+                    span: Span { start, end: start + 1 },
+                })
+            }
+            Some((start, b')')) => {
+                self.state.paren_depth = self.state.paren_depth.saturating_sub(1);
+                Ok(TokenWithSpan {
+                    token: Token::RParen(RParen {}),
+                    span: Span { start, end: start + 1 },
+                })
+            }
+            Some((start, b'[')) => {
+                // Like `(...)`: newlines inside `[...]` are insignificant in
+                // the indented syntax (multi-line attribute selectors and
+                // bracketed lists).
+                self.state.paren_depth += 1;
+                Ok(TokenWithSpan {
+                    token: Token::LBracket(LBracket {}),
+                    span: Span { start, end: start + 1 },
+                })
+            }
+            Some((start, b']')) => {
+                self.state.paren_depth = self.state.paren_depth.saturating_sub(1);
+                Ok(TokenWithSpan {
+                    token: Token::RBracket(RBracket {}),
+                    span: Span { start, end: start + 1 },
+                })
+            }
+            Some((start, b'/')) => Ok(TokenWithSpan {
+                token: Token::Solidus(Solidus {}),
+                span: Span { start, end: start + 1 },
+            }),
+            Some((start, b',')) => Ok(TokenWithSpan {
+                token: Token::Comma(Comma {}),
+                span: Span { start, end: start + 1 },
+            }),
+            Some((start, b';')) => Ok(TokenWithSpan {
+                token: Token::Semicolon(Semicolon {}),
+                span: Span { start, end: start + 1 },
+            }),
+            Some((start, b'>')) => match self.state.chars.peek() {
+                Some((_, b'=')) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::GreaterThanEqual(GreaterThanEqual {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::GreaterThan(GreaterThan {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'<')) => match self.state.chars.peek() {
+                Some((_, b'=')) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::LessThanEqual(LessThanEqual {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                Some((_, b'!')) => {
+                    let mut chars = self.state.chars.clone();
+                    if {
+                        chars.next();
+                        matches!((chars.next(), chars.peek()), (Some((_, b'-')), Some((_, b'-'))))
+                    } {
+                        self.state.chars.next();
+                        self.state.chars.next();
+                        self.state.chars.next();
+                        Ok(TokenWithSpan {
+                            token: Token::Cdo(Cdo {}),
+                            span: Span { start, end: start + 4 },
+                        })
+                    } else {
+                        Ok(TokenWithSpan {
+                            token: Token::LessThan(LessThan {}),
+                            span: Span { start, end: start + 1 },
+                        })
+                    }
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::LessThan(LessThan {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'+')) => match self.state.chars.peek() {
+                Some((_, b'_')) if self.syntax == Syntax::Less => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::PlusUnderscore(PlusUnderscore {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::Plus(Plus {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'=')) => match self.state.chars.peek() {
+                Some((_, b'=')) if matches!(self.syntax, Syntax::Scss | Syntax::Sass) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::EqualEqual(EqualEqual {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::Equal(Equal {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'-')) => Ok(TokenWithSpan {
+                token: Token::Minus(Minus {}),
+                span: Span { start, end: start + 1 },
+            }),
+            Some((start, b'~')) => match self.state.chars.peek() {
+                Some((_, b'=')) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::TildeEqual(TildeEqual {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::Tilde(Tilde {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'&')) => Ok(TokenWithSpan {
+                token: Token::Ampersand(Ampersand {}),
+                span: Span { start, end: start + 1 },
+            }),
+            Some((start, b'*')) => match self.state.chars.peek() {
+                Some((_, b'=')) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::AsteriskEqual(AsteriskEqual {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::Asterisk(Asterisk {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'|')) => match self.state.chars.peek() {
+                Some((_, b'=')) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::BarEqual(BarEqual {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                Some((_, b'|')) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::BarBar(BarBar {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::Bar(Bar {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'^')) => match self.state.chars.peek() {
+                Some((_, b'=')) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::CaretEqual(CaretEqual {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::Unknown(Unknown {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'$')) => match self.state.chars.peek() {
+                Some((_, b'=')) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::DollarEqual(DollarEqual {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::Unknown(Unknown {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'!')) => match self.state.chars.peek() {
+                Some((_, b'=')) if matches!(self.syntax, Syntax::Scss | Syntax::Sass) => {
+                    self.state.chars.next();
+                    Ok(TokenWithSpan {
+                        token: Token::ExclamationEqual(ExclamationEqual {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::Exclamation(Exclamation {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'?')) => Ok(TokenWithSpan {
+                token: Token::Question(Question {}),
+                span: Span { start, end: start + 1 },
+            }),
+            Some((start, b'#')) => match self.state.chars.peek() {
+                Some((_, b'{')) if matches!(self.syntax, Syntax::Scss | Syntax::Sass) => {
+                    self.state.chars.next();
+                    self.state.sass_interpolation_depth += 1;
+                    // Newlines inside `#{...}` are insignificant in the
+                    // indented syntax; the matching `}` closes it (see the
+                    // RBrace arm above).
+                    if self.syntax == Syntax::Sass {
+                        self.state.paren_depth += 1;
+                    }
+                    Ok(TokenWithSpan {
+                        token: Token::HashLBrace(HashLBrace {}),
+                        span: Span { start, end: start + 2 },
+                    })
+                }
+                _ => Ok(TokenWithSpan {
+                    token: Token::NumberSign(NumberSign {}),
+                    span: Span { start, end: start + 1 },
+                }),
+            },
+            Some((start, b'%')) => Ok(TokenWithSpan {
+                token: Token::Percent(Percent {}),
+                span: Span { start, end: start + 1 },
+            }),
+            Some((start, b'@')) => {
+                Ok(TokenWithSpan { token: Token::At(At {}), span: Span { start, end: start + 1 } })
+            }
+            Some((i, c)) if c.is_ascii_whitespace() => Err(Error {
+                kind: ErrorKind::UnexpectedWhitespace,
+                span: Span { start: i, end: i + 1 },
+            }),
+            // CSS Syntax: anything else is a <delim-token>, not a tokenizer
+            // error. Typed grammar rules reject it where it doesn't belong;
+            // raw component-value contexts preserve it.
+            Some((i, _)) => Ok(TokenWithSpan {
+                token: Token::Unknown(Unknown {}),
+                span: Span { start: i, end: i + 1 },
+            }),
+            None => {
+                let offset = self.current_offset();
+                Ok(TokenWithSpan {
+                    token: Token::Eof(Eof {}),
+                    span: Span { start: offset, end: offset },
+                })
+            }
+        }
+    }
+
+    #[cold]
+    fn scan_cdc(&mut self, start: usize) -> PResult<TokenWithSpan<'a>> {
+        self.state.chars.next();
+        self.state.chars.next();
+        self.state.chars.next();
+        Ok(TokenWithSpan { token: Token::Cdc(Cdc {}), span: Span { start, end: start + 3 } })
+    }
+
+    #[inline]
+    pub(crate) fn is_start_of_ident(&mut self) -> bool {
+        match self.state.chars.peek() {
+            Some((_, c)) if is_start_of_ident(*c) => true,
+            Some((_, b'-')) => {
+                let mut chars = self.state.chars.clone();
+                chars.next();
+                matches!(chars.peek(), Some((_, c)) if is_start_of_ident(*c))
+            }
+            _ => false,
+        }
+    }
+
+    /// Whether `c`, the byte after `@` / `$` (`chars` positioned after it), starts a variable name:
+    /// a CSS ident whose leading `-` needs an ident start behind it (`@-webkit-*`; a lone `@-` is a
+    /// delimiter), or in Less a `[\w-]+` name (`@3`, `$-`).
+    fn starts_var_name(&self, c: u8, chars: &mut Peekable<ByteIndices<'a>>) -> bool {
+        if self.syntax == Syntax::Less {
+            return is_less_name_start(c);
+        }
+        is_start_of_ident(c)
+            && (c != b'-' || matches!(chars.peek(), Some((_, c2)) if is_start_of_ident(*c2)))
+    }
+
+    pub(crate) fn is_start_of_url_string(&mut self) -> bool {
+        self.skip_ws();
+        matches!(self.state.chars.peek(), Some((_, b'"' | b'\'')))
+    }
+}
+
+/// The first byte of a less.js `[\w-]+` name: an ident start (`-` included) or a digit.
+#[inline]
+fn is_less_name_start(c: u8) -> bool {
+    is_start_of_ident(c) || c.is_ascii_digit()
+}
+
+fn is_start_of_ident(c: u8) -> bool {
+    c.is_ascii_alphabetic() || c == b'-' || c == b'_' || !c.is_ascii() || c == b'\\'
+}
+
+#[inline]
+fn compact_offset(offset: usize) -> u32 {
+    u32::try_from(offset).expect("source is too large for compact token offsets")
+}
+
+/// Whether an identifier starts at byte offset `at` of `source`, using the
+/// same dash lookahead as the tokenizer's dispatch (`-x` starts one, a lone
+/// `-` doesn't).
+pub(crate) fn ident_starts_at(source: &str, at: usize) -> bool {
+    let bytes = source.as_bytes();
+    match bytes.get(at) {
+        Some(b'-') => matches!(bytes.get(at + 1), Some(&c) if is_start_of_ident(c) && c != b'-'),
+        Some(&c) => is_start_of_ident(c),
+        None => false,
+    }
+}

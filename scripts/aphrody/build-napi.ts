@@ -7,7 +7,8 @@
 //
 // The package.json of <package-dir> declares `"napi": { "name": "...", "crate": "..." }`.
 
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { copyFile, mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "../..");
@@ -32,8 +33,10 @@ export const PLATFORMS: Platform[] = [
   { key: "linux-arm64-musl", triple: "aarch64-unknown-linux-musl", os: "linux", cpu: "arm64", libc: "musl" },
 ];
 
-export function hostTriple(): string {
-  const out = Bun.spawnSync(["rustc", "-vV"], { cwd: ROOT, stdout: "pipe" }).stdout.toString();
+export async function hostTriple(): Promise<string> {
+  await using child = Bun.spawn(["rustc", "-vV"], { cwd: ROOT, stdout: "pipe", stderr: "pipe", windowsHide: true });
+  const [out, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  if (code !== 0) throw new Error(`rustc -vV failed (exit ${code}): ${stderr.trim()}`);
   const host = /^host: (.+)$/m.exec(out)?.[1]?.trim();
   if (!host) throw new Error("rustc -vV printed no host triple");
   return host;
@@ -56,11 +59,77 @@ export async function napiConfig(dir: string): Promise<NapiConfig> {
   return pkg.napi;
 }
 
-function libraryFile(crate: string, triple: string): string {
-  const lib = crate.replace(/-/g, "_");
-  if (triple.includes("windows")) return `${lib}.dll`;
-  if (triple.includes("apple")) return `lib${lib}.dylib`;
-  return `lib${lib}.so`;
+/** Root workspace build; Cargo's JSON output owns the target directory and actual library name. */
+export function napiBuildPlan(
+  dir: string,
+  crate: string,
+  opts: { target?: string; debug?: boolean } = {},
+  platform = process.platform,
+  bun = process.execPath,
+) {
+  const profile = opts.debug ? "dev" : "release";
+  return {
+    cwd: ROOT,
+    manifest: join(resolve(dir), "crates/napi/Cargo.toml"),
+    argv: [
+      bun,
+      join(ROOT, "scripts/build/rust/cargo-serial.ts"),
+      ...(platform === "win32" ? ["--msvc"] : []),
+      "build",
+      "--manifest-path",
+      join(ROOT, "Cargo.toml"),
+      "--locked",
+      "-p",
+      crate,
+      "--lib",
+      "--jobs",
+      "1",
+      "--message-format=json-render-diagnostics",
+      "--config",
+      `profile.${profile}.panic="unwind"`,
+      ...(!opts.debug ? ["--release"] : []),
+      ...(opts.target ? ["--target", opts.target] : []),
+    ],
+  };
+}
+
+function cargoMessages(output: string): any[] {
+  return output
+    .split(/\r?\n/)
+    .filter(line => line.trim())
+    .map(line => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        throw new Error(`Cargo emitted non-JSON stdout: ${line.slice(0, 200)}`);
+      }
+    });
+}
+
+/** Select the exact addon's cdylib, including fresh artifacts, without inferring Cargo's output layout. */
+export function cargoNapiArtifact(output: string, manifest: string, triple: string): string {
+  const normalize = (path: string) => {
+    const normalized = resolve(path).replaceAll("\\", "/");
+    return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+  };
+  const extension = triple.includes("windows") ? ".dll" : triple.includes("apple") ? ".dylib" : ".so";
+  const artifacts = new Set<string>();
+  for (const message of cargoMessages(output)) {
+    if (
+      message?.reason !== "compiler-artifact" ||
+      typeof message.manifest_path !== "string" ||
+      normalize(message.manifest_path) !== normalize(manifest) ||
+      !Array.isArray(message.target?.crate_types) ||
+      !message.target.crate_types.includes("cdylib")
+    )
+      continue;
+    if (!Array.isArray(message.filenames)) throw new Error("Cargo cdylib artifact has no filenames");
+    for (const filename of message.filenames)
+      if (typeof filename === "string" && filename.endsWith(extension)) artifacts.add(filename);
+  }
+  if (artifacts.size !== 1)
+    throw new Error(`Cargo reported ${artifacts.size} addon cdylibs for ${manifest} (${triple})`);
+  return [...artifacts][0]!;
 }
 
 /** Builds the addon and returns the path of the copied `.node` file. */
@@ -70,20 +139,29 @@ export async function buildNapi(
 ): Promise<string> {
   const pkgDir = resolve(dir);
   const { name, crate } = await napiConfig(pkgDir);
-  const triple = opts.target ?? hostTriple();
-  const profile = opts.debug ? "debug" : "release";
-  const args = ["cargo", "build", "-p", crate];
-  if (!opts.debug) args.push("--release");
-  if (opts.target) args.push("--target", opts.target);
-  console.log(`$ ${args.join(" ")}  (${pkgDir})`);
-  const r = Bun.spawnSync(args, { cwd: pkgDir, stdio: ["inherit", "inherit", "inherit"] });
-  if (r.exitCode !== 0) throw new Error(`${args.join(" ")} failed (exit ${r.exitCode})`);
-  const built = join(pkgDir, "target", ...(opts.target ? [opts.target] : []), profile, libraryFile(crate, triple));
+  const triple = opts.target ?? (await hostTriple());
+  const platform = platformOf(triple);
+  const plan = napiBuildPlan(pkgDir, crate, opts);
+  if (!existsSync(plan.manifest)) throw new Error(`addon manifest missing: ${plan.manifest}`);
+  console.log(`$ ${plan.argv.join(" ")}  (${plan.cwd})`);
+  await using child = Bun.spawn(plan.argv, {
+    cwd: plan.cwd,
+    stdin: "inherit",
+    stdout: "pipe",
+    stderr: "inherit",
+    windowsHide: true,
+  });
+  const [stdout, code] = await Promise.all([child.stdout.text(), child.exited]);
+  for (const message of cargoMessages(stdout))
+    if (message?.reason === "compiler-message" && typeof message.message?.rendered === "string")
+      process.stderr.write(message.message.rendered);
+  if (code !== 0) throw new Error(`addon Cargo build failed (exit ${code})`);
+  const built = cargoNapiArtifact(stdout, plan.manifest, triple);
   if (!existsSync(built)) throw new Error(`cargo produced no ${built}`);
   const outDir = resolve(opts.out ?? pkgDir);
-  mkdirSync(outDir, { recursive: true });
-  const dest = join(outDir, `${name}.${platformOf(triple).key}.node`);
-  copyFileSync(built, dest);
+  await mkdir(outDir, { recursive: true });
+  const dest = join(outDir, `${name}.${platform.key}.node`);
+  await copyFile(built, dest);
   console.log(`wrote ${dest}`);
   return dest;
 }

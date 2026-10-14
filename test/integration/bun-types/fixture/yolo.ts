@@ -5,9 +5,11 @@ import Yolo, {
   decide,
   inspect,
   noul,
+  remote,
   score,
   selections,
   type Provider,
+  type RemoteOptions,
 } from "bun:yolo";
 import YoloAlias from "bun:Yolo";
 import { expectTypeOf } from "bun:test";
@@ -45,3 +47,26 @@ declare const client: {
 };
 const sdk: Provider = client;
 void [unknown, boxed, sdk];
+
+const transportOptions: RemoteOptions = { client: sdk, model: "application-model" };
+expectTypeOf(remote(transportOptions)).toEqualTypeOf<Provider>();
+expectTypeOf(Yolo.remote).toEqualTypeOf<typeof remote>();
+if (result.allowed) {
+  expectTypeOf(result.route).toEqualTypeOf<"docs" | "graph" | "none">();
+} else {
+  expectTypeOf(result.allowed).toEqualTypeOf<false>();
+}
+for (const allowed of [result.allowed, !result.allowed]) {
+  expectTypeOf(allowed).toEqualTypeOf<boolean>();
+}
+let remaining = 2;
+while (result.allowed && remaining > 0) remaining--;
+const chooseAsync = async () => (result.allowed ? result.route : "none");
+expectTypeOf(await chooseAsync()).toEqualTypeOf<"docs" | "graph" | "none">();
+expectTypeOf(Boolean(result.allowed) && result.route === "docs").toEqualTypeOf<boolean>();
+// @ts-expect-error provider transports must implement systemOne
+remote({ client: {} });
+// @ts-expect-error remote model identifiers are strings
+remote({ model: 7 });
+// @ts-expect-error Noul answers cannot be used as response objects
+result.allowed.noul;

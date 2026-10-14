@@ -54,16 +54,16 @@ jobs:
           # autofix step below to push back to the PR (it also fails the run
           # whenever it has something to push, so staleness stays a red check
           # where it can't push, e.g. the merge queue). Runs before the
-          # formatters start so prettier isn't rewriting a `.string-map.ts`
+          # formatters start so `bun fmt` isn't rewriting a `.string-map.ts`
           # while the generator imports it.
           echo "::group::String maps"
           bun run codegen:string-maps 2>&1 | sed 's/^/[string-maps] /'
           echo "::endgroup::"
 
-          # Start prettier in background with prefixed output
-          echo "::group::Prettier"
-          (bun run prettier 2>&1 | sed 's/^/[prettier] /') &
-          PRETTIER_PID=$!
+          # Use Bun's native formatter directly; no package-manager wrapper or external formatter.
+          echo "::group::Bun fmt"
+          (bun fmt --write --ignore-pattern '**/*fixture*.*' scripts packages src/js test 2>&1 | sed 's/^/[bun-fmt] /') &
+          BUN_FMT_PID=$!
 
           # Start clang-format installation and formatting in background with prefixed output
           echo "::group::Clang-format"
@@ -95,8 +95,8 @@ jobs:
           echo "Running formatters in parallel..."
           FAILED=0
 
-          if ! wait $PRETTIER_PID; then
-            echo "::error::Prettier failed"
+          if ! wait $BUN_FMT_PID; then
+            echo "::error::bun fmt failed"
             FAILED=1
           fi
           echo "::endgroup::"

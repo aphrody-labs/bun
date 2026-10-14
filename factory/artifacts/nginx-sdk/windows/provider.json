@@ -1,0 +1,234 @@
+{
+  "schema": 1,
+  "component": "nginx",
+  "version": "1.31.6",
+  "sourceRepository": "https://github.com/nginx/nginx",
+  "sourceRelease": "release-1.31.6",
+  "sourceRevision": "0a5db852e18d1c22c62a5ede1412ac3f416111a0",
+  "sourceTagObject": "45a318d05a0fd23f57ffe9579f7f0969c0fe402a",
+  "sourceTagSigned": false,
+  "sourceTagReference": "https://api.github.com/repos/nginx/nginx/git/tags/45a318d05a0fd23f57ffe9579f7f0969c0fe402a",
+  "provenance": "official signed Windows release; repository release tag pinned independently; binary reproducibility and native Bun controller are separate gates",
+  "upstreamRelease": "https://nginx.org/en/download.html",
+  "signature": {
+    "valid": true,
+    "fingerprint": "D6786CE303D9A9022998DC6CC8464D549AF75C0A",
+    "details": "2026-09-15 1789479753 0 4 0 1 8 00 D6786CE303D9A9022998DC6CC8464D549AF75C0A",
+    "publicKeys": "https://nginx.org/en/pgp_keys.html"
+  },
+  "assets": [
+    {
+      "url": "https://nginx.org/download/nginx-1.31.6.zip",
+      "bytes": 2797070,
+      "sha256": "bb65edcfc22a2214a4afaac59f038f560c02b98d4b49c5dca1206d3cc5d631c9"
+    },
+    {
+      "url": "https://nginx.org/download/nginx-1.31.6.zip.asc",
+      "bytes": 862,
+      "sha256": "342912b7087898b8a00cbcd37f6d074bb20b2557547da1f3a9837c47a09146c9"
+    },
+    {
+      "url": "https://nginx.org/keys/arut.key",
+      "bytes": 7201,
+      "sha256": "373eb96344f805f7c7c42733aaeca6adde289f00135ff2c167d301c43925b382"
+    },
+    {
+      "url": "https://nginx.org/keys/pluknet.key",
+      "bytes": 3992,
+      "sha256": "9a70c136946c1d18d5355c41516f1bdc95d4321938919e69065533e2aeb51e0e"
+    },
+    {
+      "url": "https://nginx.org/keys/sb.key",
+      "bytes": 2412,
+      "sha256": "2629c020c081e3453523761bc6ee52903b173ea42f5faca342d545b4fc368224"
+    },
+    {
+      "url": "https://nginx.org/keys/thresh.key",
+      "bytes": 9366,
+      "sha256": "5783ebb6b7d3a3d67abd1aa71ec961f0116a88149ea688ed08f898a218bf06d5"
+    }
+  ],
+  "executable": {
+    "path": "C:\\bun\\factory\\artifacts\\nginx-sdk\\windows\\prefix\\nginx-1.31.6\\nginx.exe",
+    "bytes": 6667264,
+    "sha256": "2429269c8ea20ce6c5040bb4eb5fd78a28003dfa272f66d146338320353c5f62",
+    "architecture": "x86",
+    "machine": 332
+  },
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "bunVersion": "1.4.4",
+    "bunRevision": "c62d01d81506a8b78b1d39b44d17edc81b4a6355"
+  },
+  "nativeVersion": "nginx version: nginx/1.31.6\r\nbuilt by cl 19.44.35211 for x86\r\nbuilt with OpenSSL 3.5.8 25 Aug 2026\r\nTLS SNI support enabled\r\nconfigure arguments: --with-cc=cl --builddir=objs.msvc8 --with-debug --prefix= --conf-path=conf/nginx.conf --pid-path=logs/nginx.pid --http-log-path=logs/access.log --error-log-path=logs/error.log --sbin-path=nginx.exe --http-client-body-temp-path=temp/client_body_temp --http-proxy-temp-path=temp/proxy_temp --http-fastcgi-temp-path=temp/fastcgi_temp --http-scgi-temp-path=temp/scgi_temp --http-uwsgi-temp-path=temp/uwsgi_temp --with-cc-opt=-DFD_SETSIZE=1024 --with-pcre=objs.msvc8/lib/pcre2-10.48 --with-zlib=objs.msvc8/lib/zlib-1.3.2 --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_sub_module --with-http_dav_module --with-http_stub_status_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_slice_module --with-mail --with-stream --with-stream_realip_module --with-stream_ssl_preread_module --with-openssl=objs.msvc8/lib/openssl-3.5.8 --with-openssl-opt='no-asm no-tests no-makedepend -D_WIN32_WINNT=0x0501' --with-http_ssl_module --with-mail_ssl_module --with-stream_ssl_module\r\n",
+  "files": [
+    {
+      "name": "nginx-1.31.6/nginx.exe",
+      "bytes": 6667264,
+      "sha256": "2429269c8ea20ce6c5040bb4eb5fd78a28003dfa272f66d146338320353c5f62"
+    },
+    {
+      "name": "nginx-1.31.6/html/index.html",
+      "bytes": 896,
+      "sha256": "201cd1bf3d32e7f5fd8aa22c6de5370852fe03fb654ee22d345dd82f16a246a0"
+    },
+    {
+      "name": "nginx-1.31.6/html/50x.html",
+      "bytes": 497,
+      "sha256": "876766b4e80133fd490603e073d3567425b88794828a9292104244c9e40875ed"
+    },
+    {
+      "name": "nginx-1.31.6/docs/CODE_OF_CONDUCT.md",
+      "bytes": 5215,
+      "sha256": "1bc34f3335a80fe6417123793f676ea7778800c24c8b71bada2173d1e0de5106"
+    },
+    {
+      "name": "nginx-1.31.6/docs/zlib.LICENSE",
+      "bytes": 983,
+      "sha256": "67e85660da6e78028b82d3e6843a0ad434fcd0a38c4ed1fa7ecce303f9df60eb"
+    },
+    {
+      "name": "nginx-1.31.6/docs/LICENSE",
+      "bytes": 1319,
+      "sha256": "08845fe39e06b51dad7685c28140ab49577a86e947523e16b536a46caf89ad5c"
+    },
+    {
+      "name": "nginx-1.31.6/docs/CHANGES",
+      "bytes": 351726,
+      "sha256": "c3ee881ac7f908035a3d2120fd1f33ff58224afb81a8fc4538bd952e1f12aaa5"
+    },
+    {
+      "name": "nginx-1.31.6/docs/CHANGES.ru",
+      "bytes": 539100,
+      "sha256": "15d119f1e2d1447b859660f91929d5a9b4fa50afb5924c885699bce495f33233"
+    },
+    {
+      "name": "nginx-1.31.6/docs/PCRE.LICENCE",
+      "bytes": 4011,
+      "sha256": "197d8a73ffee0d6b09adba2f9c677b5f5aede24edf89258a68e48248d010d811"
+    },
+    {
+      "name": "nginx-1.31.6/docs/README.md",
+      "bytes": 14571,
+      "sha256": "c20b11d05d64038c63fe78ed177b692ac48d686344be464f326bb48e7d2c224b"
+    },
+    {
+      "name": "nginx-1.31.6/docs/SUPPORT.md",
+      "bytes": 1720,
+      "sha256": "49a2fcc321e31458d6c93798c39c10ad250874d66784372bce832a7791f41abf"
+    },
+    {
+      "name": "nginx-1.31.6/docs/CONTRIBUTING.md",
+      "bytes": 4954,
+      "sha256": "d354db15589d10eb89c94c561e46b4b7ceb56ac5d072fd3260a63d9d9a864c61"
+    },
+    {
+      "name": "nginx-1.31.6/docs/OpenSSL.LICENSE",
+      "bytes": 10175,
+      "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a"
+    },
+    {
+      "name": "nginx-1.31.6/docs/SECURITY.md",
+      "bytes": 4331,
+      "sha256": "45f2c24c4c32f82578bd40ab2f348c2653c10ee0aa5bf2c35cfba24cf0cba515"
+    },
+    {
+      "name": "nginx-1.31.6/contrib/vim/indent/nginx.vim",
+      "bytes": 250,
+      "sha256": "983c89c6ebcd4b6f61dcba4424608890d0deae79a21c0830441917e1eb54b358"
+    },
+    {
+      "name": "nginx-1.31.6/contrib/vim/ftplugin/nginx.vim",
+      "bytes": 29,
+      "sha256": "ed7a438f9238b4054ed58a88a15625e5a3984fb07f6ed0395b062c04545adea8"
+    },
+    {
+      "name": "nginx-1.31.6/contrib/vim/ftdetect/nginx.vim",
+      "bytes": 198,
+      "sha256": "3ce32b22f5c741f95ec432aad87cce5ec02b6e41eecc0a5e1177018ca455a043"
+    },
+    {
+      "name": "nginx-1.31.6/contrib/vim/syntax/nginx.vim",
+      "bytes": 113553,
+      "sha256": "8bbbcddc95401f3b85cbd07f80fe37daff42599e4e71fed4be625cf77168c5f5"
+    },
+    {
+      "name": "nginx-1.31.6/contrib/README",
+      "bytes": 543,
+      "sha256": "0f4908c9fc73ea40c264da0ab23041c9926ddfa3c8c639f734900a4c203491a5"
+    },
+    {
+      "name": "nginx-1.31.6/contrib/geo2nginx.pl",
+      "bytes": 1272,
+      "sha256": "710cc6ea2fefe73c908addf6cb84c08f1da1310ddd9fba87f3bd8c87e3d4a350"
+    },
+    {
+      "name": "nginx-1.31.6/contrib/unicode2nginx/unicode-to-nginx.pl",
+      "bytes": 1090,
+      "sha256": "1cc5bfd4262ea8db2fc575459d1e3b3fd2a4a5a8b2697f1080d7514f5a4d7910"
+    },
+    {
+      "name": "nginx-1.31.6/contrib/unicode2nginx/koi-utf",
+      "bytes": 5991,
+      "sha256": "cbb9fbae8d0987b4a1547fa48135ed1c890f58e7789acee064026678dbef5cd6"
+    },
+    {
+      "name": "nginx-1.31.6/contrib/unicode2nginx/win-utf",
+      "bytes": 5339,
+      "sha256": "295ec71cb7b92198c02f4042727147b3ea069dc61d78693725783ce0ac74ec02"
+    },
+    {
+      "name": "nginx-1.31.6/conf/fastcgi_params",
+      "bytes": 1032,
+      "sha256": "f54d7964c3b70a624351aa6f5acc37ac09c080edc92f9938f80935dad4750c72"
+    },
+    {
+      "name": "nginx-1.31.6/conf/scgi_params",
+      "bytes": 653,
+      "sha256": "7f43a9485cacc217fd5c87e35b19954a0c62219acd41c0c95f52a291b7676cb6"
+    },
+    {
+      "name": "nginx-1.31.6/conf/fastcgi.conf",
+      "bytes": 1103,
+      "sha256": "553f426bb9dbf99e4e523420f24ae2def7b7a48da5690c7565ca8c1bfc6885d1"
+    },
+    {
+      "name": "nginx-1.31.6/conf/uwsgi_params",
+      "bytes": 681,
+      "sha256": "651718ed1d4b04459e3a5268531f3d74dc71ee67c5eb27f0d1a330be6776c51e"
+    },
+    {
+      "name": "nginx-1.31.6/conf/koi-win",
+      "bytes": 2326,
+      "sha256": "ec4d22f1ecb84d690f0fe1073646b3cda9072904a5e4d3922e9cbb6bf0bde38f"
+    },
+    {
+      "name": "nginx-1.31.6/conf/mime.types",
+      "bytes": 5448,
+      "sha256": "173da2ee9b08323bcfd77791e727c5f1df7f22072f65b4aa3a36d4dd9b1e2bd8"
+    },
+    {
+      "name": "nginx-1.31.6/conf/koi-utf",
+      "bytes": 2946,
+      "sha256": "69c68412fd6e2c3118ab896cb1a496c8dd7d0c9c2457a8e0a99edf1d606ce143"
+    },
+    {
+      "name": "nginx-1.31.6/conf/win-utf",
+      "bytes": 3737,
+      "sha256": "41b547c9dda75d3d692b27a36588f5e92d90788492f49840c63a445bd2d64c05"
+    },
+    {
+      "name": "nginx-1.31.6/conf/nginx.conf",
+      "bytes": 2745,
+      "sha256": "464f3cba1be0bb2155353c0a6d6829ec43d863396ac681282a9ab3e57873a5e8"
+    }
+  ],
+  "qualified": {
+    "releaseSignature": true,
+    "nativeVersion": true,
+    "http": false,
+    "nativeBunController": false
+  },
+  "createdAt": "2026-10-13T18:40:03.730Z"
+}

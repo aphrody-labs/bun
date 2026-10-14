@@ -51,9 +51,9 @@ describe("source Markdown and Rust comment selection", () => {
     expect(() => reviewedReplacement(source, comments[0]!, "// Reworded")).toThrow("Protected");
   });
 
-  test("records invalid vendored fixtures but rejects invalid product declarations", () => {
+  test.each(["vendor/example/crates/linter", "src/quality/linter"])("records invalid %s fixtures but rejects invalid product declarations", owner => {
     const invalid = '{"name":';
-    const fixture = "vendor/oxc/crates/oxc_linter/fixtures/import/broken/package.json";
+    const fixture = `${owner}/fixtures/import/broken/package.json`;
     const texts = new Map([
       ["package.json", '{"version":"1.4.4"}'],
       [fixture, invalid],
@@ -73,7 +73,7 @@ describe("source Markdown and Rust comment selection", () => {
     expect(inventory.unresolvedManifests[0]!.parseError).toContain("SyntaxError");
     expect(renderRootMarkdown(inventory).get("SOURCE-INDEX.md")).toContain(fixture);
     expect(texts.get(fixture)).toBe(invalid);
-    for (const path of ["packages/product/package.json", "vendor/product/package.json"]) {
+    for (const path of ["packages/product/package.json", "vendor/product/package.json", "src/product/package.json"]) {
       const bad = new Map([
         ["package.json", '{"version":"1.4.4"}'],
         [path, invalid],

@@ -10,11 +10,11 @@ needs a rewrite and what has no Bun equivalent, and it applies the safe rewrites
 | [json-schema.md](./json-schema.md)   | JSON output, schema v2                                                          |
 | [architecture.md](./architecture.md) | Crates, scan pipeline, migration side effects and the native addon              |
 
-The same analyzer ships three ways:
+The same `bun_migrate` owner powers:
 
-- the `aphrody-n2b` crate, which installs the `n2b` binary;
-- the npm package `@aphrody/bun-plugin-n2b`, whose CLI is `bunx @aphrody/bun-plugin-n2b`;
-- `aphrody n2b` and the `n2b` MCP tool of Aphrody, which link the published crates.
+- the built-in `bun n2b` and `bun migrate` commands;
+- the npm package `@aphrody/bun-plugin-n2b`, whose CLI is `bun n2b`;
+- the standalone development binary `n2b`. Canonical sources belong to `src/migrate`, an internal member of Bun's root Cargo workspace.
 
 Oxc, the parser behind the import analysis, is documented in
 [`packages/bun-oxc/docs`](../../bun-oxc/docs/README.md).

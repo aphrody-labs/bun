@@ -21,7 +21,7 @@ For any JS-visible change, run the debug binary with `-e` and observe stdout:
 bun bd -e '<repro>'   # builds, then runs; sets BUN_DEBUG_QUIET_LOGS for you
 ```
 
-For worker/subprocess-shaped changes, spawn a subprocess (still `-e`) so worker teardown / event-loop-idle paths are exercised. Cross-check against `node -e '<same repro>'` for Node-compat changes.
+Prefer in-process checks. Use a subprocess only when the changed behavior depends on a process boundary, CLI invocation, worker teardown or event-loop-idle path. Cross-check against Node only for Node-compat changes where the comparison is relevant.
 
 ## Gotchas
 

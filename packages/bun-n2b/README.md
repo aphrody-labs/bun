@@ -4,7 +4,7 @@ Node.js to Bun migration for Bun. It runs the n2b Rust analyzer in process throu
 
 - a Bun plugin that reports findings or rewrites sources while they load, at runtime or in `Bun.build`;
 - a typed API (`scan`, `transform`);
-- the `n2b` CLI: `bunx @aphrody/bun-plugin-n2b scan|fix|report|rules|prompt|audit …`.
+- the `n2b` CLI: `bun n2b scan|fix|report|rules|prompt|audit …`.
 
 ```sh
 bun add -d @aphrody/bun-plugin-n2b
@@ -13,21 +13,21 @@ bun add -d @aphrody/bun-plugin-n2b
 ## CLI
 
 ```sh
-bunx @aphrody/bun-plugin-n2b scan .          # report, exit 1 when findings remain
-bunx @aphrody/bun-plugin-n2b fix .           # apply the safe fixes
-bunx @aphrody/bun-plugin-n2b report .        # Markdown report
-bunx @aphrody/bun-plugin-n2b . --aggressive  # also migrate Node APIs to Bun APIs
-bunx @aphrody/bun-plugin-n2b rules --report=json
+bun n2b scan .          # report, exit 1 when findings remain
+bun n2b fix .           # apply the safe fixes
+bun n2b report .        # Markdown report
+bun n2b . --aggressive  # also migrate Node APIs to Bun APIs
+bun n2b rules --report=json
 ```
 
-It is the same CLI as the `n2b` binary of the `aphrody-n2b` crate and `aphrody n2b`. See [docs/cli.md](./docs/cli.md).
+It uses Bun's internal `bun_migrate` owner at `src/migrate`, shared with `bun n2b`, `bun migrate` and the standalone development binary `n2b`. See [docs/cli.md](./docs/cli.md).
 
 ## Migrating a monorepo
 
 ```sh
-bunx @aphrody/bun-plugin-n2b . --migrate --dry-run --report=json   # review the plan
-bunx @aphrody/bun-plugin-n2b . --migrate                           # apply it
-bunx @aphrody/bun-plugin-n2b . --since origin/main                 # CI: changed files only
+bun n2b . --migrate --dry-run --report=json   # review the plan
+bun n2b . --migrate                           # apply it
+bun n2b . --since origin/main                 # CI: changed files only
 ```
 
 `--migrate` moves `pnpm-workspace.yaml` and the `pnpm` field into `package.json` (`workspaces`,
@@ -92,6 +92,5 @@ bun scripts/aphrody/build-napi.ts packages/bun-n2b      # writes bun-plugin-n2b.
 bun test test/integration/bun-plugin-n2b
 ```
 
-The Rust crates (`aphrody-n2b-types`, `aphrody-n2b-registry`, `aphrody-n2b-core`, `aphrody-n2b`) are a
-separate Cargo workspace in this directory and are published to crates.io by
-`scripts/aphrody/publish-crates.ts`.
+The single internal Rust owner is `bun_migrate` under `src/migrate` in the root Bun workspace.
+This package's Cargo workspace contains only the Node-API adapter, which links that same owner.

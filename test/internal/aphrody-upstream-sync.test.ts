@@ -10,7 +10,7 @@ import {
 
 import { createHash } from "node:crypto";
 import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
-import { lstat, readlink, symlink } from "node:fs/promises";
+import { symlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { FactoryHostProfile } from "../../scripts/aphrody/build-host.ts";
 import { nativePlan } from "../../scripts/aphrody/delivery-native.ts";
@@ -34,7 +34,7 @@ import {
   type ExecutionReceipt,
   type Step,
 } from "../../scripts/aphrody/monorepo-delivery.ts";
-import { apply, rewrite } from "../../scripts/aphrody/scope.ts";
+import { apply, candidates, rewrite } from "../../scripts/aphrody/scope.ts";
 import {
   commentUpdateTimestamp,
   consumeRequestBudget,
@@ -50,7 +50,6 @@ import {
   writePublicCache,
 } from "../../scripts/aphrody/sync-public-upstream.ts";
 import { sync } from "../../scripts/aphrody/sync-upstream.ts";
-import { vendorApply, vendorPlan, verifyVendorReceipt } from "../../scripts/aphrody/vendor-oxc.ts";
 
 test("public snapshot reconstruction truncates stale trailing rows", async () => {
   using directory = tempDir("public-snapshot-rebuild", {});
@@ -322,19 +321,26 @@ test("delivery scheduler overlaps independent light commands and waits for DAG p
     reserveDiskMiB: 1024,
     observedAt: new Date().toISOString(),
   };
-  let requests = 0;
+  const requests = new Set<string>();
   let release!: () => void;
   const barrier = new Promise<void>(resolve => {
     release = resolve;
   });
   const server = Bun.serve({
     port: 0,
-    async fetch() {
-      if (++requests === 2) release();
+    hostname: "127.0.0.1",
+    async fetch(request) {
+      const id = new URL(request.url).pathname.slice(1);
+      if (!["first", "second"].includes(id) || requests.has(id)) return new Response("unexpected step", { status: 400 });
+      requests.add(id);
+      if (requests.size === 2) release();
       await barrier;
       return new Response("ready");
     },
   });
+  const controller = new AbortController();
+  const deadline = setTimeout(() => controller.abort(new Error("Scheduler fixture deadline exceeded")), 15000);
+  let execution: ReturnType<typeof executeDeliveryPlan> | undefined;
   try {
     const steps: Step[] = ["first", "second"].map(id => ({
       id,
@@ -344,7 +350,7 @@ test("delivery scheduler overlaps independent light commands and waits for DAG p
       command: [
         "bun",
         "-e",
-        `const r=await fetch(${JSON.stringify(server.url.href)});await Bun.write(${JSON.stringify(id)},await r.text())`,
+        `const r=await fetch(${JSON.stringify(new URL(id, server.url).href)});if(!r.ok)throw new Error(await r.text());await Bun.write(${JSON.stringify(id)},await r.text())`,
       ],
     }));
     steps.push({
@@ -358,20 +364,26 @@ test("delivery scheduler overlaps independent light commands and waits for DAG p
         "await Bun.write('joined',await Bun.file('first').text()+'-'+await Bun.file('second').text())",
       ],
     });
-    const receipt = await executeDeliveryPlan(root, source, steps, profile, {
+    execution = executeDeliveryPlan(root, source, steps, profile, {
       receiptPath: join(root, "receipt.json"),
       snapshotHash: "c".repeat(64),
+      signal: controller.signal,
     });
-    expect(requests).toBe(2);
+    const receipt = await execution;
+    expect([...requests].sort()).toEqual(["first", "second"]);
     expect(await Bun.file(join(root, "joined")).text()).toBe("ready-ready");
     expect(receipt.steps.map(step => step.id).sort()).toEqual(["first", "joined", "second"]);
     expect(
       receipt.steps.every(step => step.state === "completed" && step.exitCode === 0 && step.outputs.length === 1),
     ).toBe(true);
   } finally {
+    clearTimeout(deadline);
+    controller.abort();
+    release();
+    await execution?.catch(() => {});
     server.stop(true);
   }
-}, 10000);
+}, 20000);
 
 test("delivery budgets remain within the observed host and heavy shared lock", () => {
   const profile = {
@@ -500,96 +512,29 @@ test("registry existence does not qualify source provenance or a dry-run receipt
     ).toBe(false);
 });
 
-describe("immutable OXC vendoring", () => {
-  test("local tracked-source export preserves hashes and refuses drift or an unrelated target", async () => {
-    using source = tempDir("vendor-source", {
-      LICENSE: "MIT\n",
-      "Cargo.toml": "[workspace]\n",
-      "source.rs": "pub fn owner() {}\n",
-      "fixtures/node_modules/example/index.js": "export default 1;\n",
-      ".gitattributes": "source.rs text eol=crlf\n",
-      "ignored.cache": "not source",
-    });
-    using workspace = tempDir("vendor-workspace", {});
-    async function git(args: string[]) {
-      const proc = Bun.spawn(["git", "-C", String(source), ...args], {
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const [stdout, stderr, code] = await Promise.all([
-        Bun.readableStreamToText(proc.stdout),
-        Bun.readableStreamToText(proc.stderr),
-        proc.exited,
-      ]);
-      if (code !== 0) throw new Error(stderr);
-      expect(code).toBe(0);
-      return stdout.trim();
-    }
-    await git(["init", "--quiet"]);
-    await symlink("source.rs", join(String(source), "link.rs"), "file");
-    await git([
-      "add",
-      "LICENSE",
-      "Cargo.toml",
-      "source.rs",
-      "fixtures/node_modules/example/index.js",
-      ".gitattributes",
-      "link.rs",
-    ]);
-    await git([
-      "-c",
-      "user.name=aphrody-dev",
-      "-c",
-      "user.email=contact@aphrody.com",
-      "commit",
-      "--quiet",
-      "-m",
-      "source fixture",
-    ]);
-    const revision = await git(["rev-parse", "HEAD"]);
-    const options = {
-      workspace: String(workspace),
-      source: String(source),
-      target: join(String(workspace), "vendor/oxc"),
-      revision,
-    };
-    const plan = await vendorPlan(options);
-    expect(plan.trackedFiles).toBe(6);
-    expect(plan.symlinks).toBe(1);
-    expect(await Bun.file(join(options.target, "source.rs")).exists()).toBe(false);
-    await expect(vendorPlan({ ...options, target: join(String(workspace), "unrelated") })).rejects.toThrow(
-      "vendor/oxc",
-    );
-    const applied = await vendorApply(options);
-    expect(applied.archiveSha256).toMatch(/^[a-f0-9]{64}$/);
-    expect((await lstat(join(options.target, "link.rs"))).isSymbolicLink()).toBe(true);
-    expect(await readlink(join(options.target, "link.rs"))).toBe("source.rs");
-    expect(await Bun.file(join(options.target, "source.rs")).text()).toBe("pub fn owner() {}\n");
-    expect(await Bun.file(join(options.target, "ignored.cache")).exists()).toBe(false);
-    expect((await vendorApply(options)).unchanged).toBe(true);
-    expect((await verifyVendorReceipt(options.target, revision)).revision).toBe(revision);
-    expect(await Bun.file(join(options.target, ".ref")).exists()).toBe(false);
-    await expect(verifyVendorReceipt(options.target, "0".repeat(40))).rejects.toThrow("immutable source");
-    const receiptPath = join(options.target, ".bun-vendor.json");
-    const receiptText = await Bun.file(receiptPath).text();
-    const altered = JSON.parse(receiptText);
-    altered.files[0].sha256 = "0".repeat(64);
-    await Bun.write(receiptPath, JSON.stringify(altered));
-    await expect(verifyVendorReceipt(options.target, revision)).rejects.toThrow("hashes differ");
-    await Bun.write(receiptPath, receiptText);
-    await Bun.write(join(options.target, ".ref"), "qualified-stamp\n");
-    expect((await verifyVendorReceipt(options.target, revision)).files).toHaveLength(6);
-    expect(await Bun.file(join(options.target, "fixtures/node_modules/example/index.js")).text()).toBe(
-      "export default 1;\n",
-    );
-    await Bun.write(join(options.target, "source.rs"), "changed\n");
-    await expect(vendorApply(options)).rejects.toThrow("integrity differs");
-    await expect(verifyVendorReceipt(options.target, revision)).rejects.toThrow("integrity differs");
-    expect(await Bun.file(join(options.target, "source.rs")).text()).toBe("changed\n");
-  });
-});
-
 describe("scope rewrite", () => {
+  test("candidate selection matches managed files before reading artifact contents", () => {
+    using directory = tempDir("scope-candidates", {
+      packages: {
+        fixture: {
+          "package.json": '{"name":"bun-types"}',
+          "entry.ctsx": 'import "bun-types";',
+          "README.mdx": "bun-types",
+          "bunfig.toml": "# bun-types",
+          "dataset.json": '"bun-types"',
+          "archive.tar": "bun-types",
+          node_modules: { dependency: { "index.js": 'import "bun-types";' } },
+        },
+      },
+    });
+    expect(candidates(String(directory))).toEqual([
+      "packages/fixture/README.mdx",
+      "packages/fixture/bunfig.toml",
+      "packages/fixture/entry.ctsx",
+      "packages/fixture/package.json",
+    ]);
+  });
+
   test("compact manifests preserve whitespace and only rename root package fields", () => {
     const text =
       '{"metadata":{"name":"bun-plugin-yaml"},"name":"bun-plugin-yaml","dependencies":{"bun-types":"workspace:*"},"nested":{"dependencies":{"bun-types":"workspace:*"}}}\n';
@@ -698,10 +643,11 @@ const options = (root: string) => ({
 
 describe("monorepo delivery", () => {
   test("publication adapters cover explicitly registered Cargo workspace crates only", () => {
-    expect(cargoPublishAdapter("packages/bun-n2b/crates/core/Cargo.toml", "aphrody-n2b-core")).toBe("publish-crates");
+    expect(cargoPublishAdapter("src/migrate/Cargo.toml", "bun_migrate")).toBeNull();
+    expect(cargoPublishAdapter("src/transpiler/ecma_api/Cargo.toml", "bun_ecma_api")).toBeNull();
     expect(cargoPublishAdapter("src/browser/crates/ssrf/Cargo.toml", "bun_browser_ssrf")).toBe("publish-crates");
     expect(cargoPublishAdapter("vendor/uv/crates/uv/Cargo.toml", "uv")).toBeNull();
-    expect(cargoPublishAdapter("packages/bun-n2b/crates/core/Cargo.toml", "other-crate")).toBeNull();
+    expect(cargoPublishAdapter("src/migrate/Cargo.toml", "other-crate")).toBeNull();
   });
 
   test("native plans preserve dry-run semantics and reject source version drift", () => {

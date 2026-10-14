@@ -9,6 +9,7 @@ import {
   statSync,
   symlinkSync,
   unlinkSync,
+  utimesSync,
   writeFileSync,
 } from "fs";
 import { bunEnv, bunExe, isASAN, isWindows, tempDir } from "harness";
@@ -94,6 +95,16 @@ test("embedded plugin repairs an incomplete owned cache during concurrent invoca
   const installer = join(cache, "package/bin/bun-agent-plugin.ts");
   const original = readFileSync(installer, "utf8");
   unlinkSync(installer);
+  const metadata = join(cache, "package/package.json");
+  const metadataBytes = readFileSync(metadata);
+  const corrupted = Buffer.from(metadataBytes);
+  corrupted[0] ^= 1;
+  writeFileSync(metadata, corrupted);
+  const unchanged = join(cache, "package/README.md");
+  const unchangedBytes = readFileSync(unchanged);
+  const marker = new Date("2001-01-01T00:00:00Z");
+  utimesSync(unchanged, marker, marker);
+  const unchangedMtime = statSync(unchanged).mtimeMs;
   writeFileSync(join(cache, "unrelated.txt"), "preserve");
   const results = await Promise.all([run(command, { env }), run(command, { env })]);
   for (const result of results) {
@@ -102,6 +113,9 @@ test("embedded plugin repairs an incomplete owned cache during concurrent invoca
     expect(result.exitCode).toBe(0);
   }
   expect(readFileSync(installer, "utf8")).toBe(original);
+  expect(readFileSync(metadata)).toEqual(metadataBytes);
+  expect(readFileSync(unchanged)).toEqual(unchangedBytes);
+  expect(statSync(unchanged).mtimeMs).toBe(unchangedMtime);
   expect(readFileSync(join(cache, "unrelated.txt"), "utf8")).toBe("preserve");
   expect(readdirSync(base).filter(name => name.startsWith("."))).toEqual([]);
 });
@@ -293,7 +307,27 @@ describe("rewriteCommand", () => {
     ["yarn add -D typescript", "bun add --dev typescript"],
     ["pnpm add react", "bun add react"],
     ["npm run build -- --watch", "bun run build --watch"],
-    ["npx -y prettier --write .", "bunx prettier --write ."],
+    ["npx -y prettier --write .", "bun fmt --write ."],
+    ["oxlint --fix src", "bun lint --fix src"],
+    ["oxfmt --check src", "bun fmt --check src"],
+    ["tsgo --noEmit -p tsconfig.json", "bun check --noEmit -p tsconfig.json"],
+    ["tsc --noEmit", "bun check --noEmit"],
+    ["n2b --fix .", "bun n2b --fix ."],
+    ["bunx oxlint@1.87.0 --fix .", "bun lint --fix ."],
+    ["bun x oxfmt --check .", "bun fmt --check ."],
+    ["npx -p typescript tsc --noEmit", "bun check --noEmit"],
+    ["pnpm dlx @typescript/native-preview@latest --noEmit", "bun check --noEmit"],
+    ["yarn dlx @aphrody/bun-plugin-n2b --report=json", "bun n2b --report=json"],
+    ["npm run lint -- --fix", "bun lint --fix"],
+    ["bun run fmt --check .", "bun fmt --check ."],
+    ["bun check -p packages/app", "bun bd check -p packages/app", { bunCheckout: true }],
+    ["bunx --bun oxfmt src", "bun bd fmt src", { bunCheckout: true }],
+    ["./node_modules/.bin/oxlint src", "bun lint src"],
+    ["oxlint 'two words.ts' && bun test a.test.ts", "bun bd lint 'two words.ts' && bun bd test a.test.ts", { bunCheckout: true }],
+    ["bun bd lint src", undefined, { bunCheckout: true }],
+    ["bun run build", undefined, { bunCheckout: true }],
+    ["bun just build", undefined, { bunCheckout: true }],
+    ["bunx vite build", undefined, { bunCheckout: true }],
     ["node script.js arg", "bun script.js arg"],
     ["cd app && npm test", "cd app && bun run test"],
     ["pip install requests", "bun uv pip install requests", { aphrody: true }],
@@ -370,7 +404,7 @@ describe("hooks", () => {
           }),
         }),
       ]);
-      expect(JSON.parse(codex.stdout).hookSpecificOutput.permissionDecisionReason).toContain("Run instead: bunx tsc");
+      expect(JSON.parse(codex.stdout).hookSpecificOutput.permissionDecisionReason).toContain("Run instead: bun check");
       expect(JSON.parse(agy.stdout)).toMatchObject({
         decision: "ask",
         overwrite: { CommandLine: "bun x.js" },

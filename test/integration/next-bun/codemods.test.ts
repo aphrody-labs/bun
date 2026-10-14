@@ -319,7 +319,7 @@ describe("revalidate-tag, legacy-image, package.json", () => {
     expect(pkg.dependencies.react).toBe("^19.2.0");
     expect(pkg.devDependencies["@types/react"]).toBe("^19.0.0");
     expect(pkg.devDependencies.typescript).toBe("^5");
-    expect(pkg.scripts).toEqual({ dev: "next dev", build: "next build", lint: "oxlint ." });
+    expect(pkg.scripts).toEqual({ dev: "next dev", build: "next build", lint: "bun lint ." });
     expect(out.code.endsWith("\n")).toBe(true);
     expect(out.warnings[0]).toContain("next lint");
   });
@@ -591,7 +591,7 @@ describe("runner and CLI", () => {
     const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
     expect(pkg.dependencies.next).toBe("^16.0.0");
     expect(pkg.devDependencies).toEqual({ tailwindcss: "^4.1.0", "@tailwindcss/postcss": "^4.1.0" });
-    expect(pkg.scripts.lint).toBe("oxlint .");
+    expect(pkg.scripts.lint).toBe("bun lint .");
     // The class renames are not idempotent (v3 `shadow` and v4 `shadow-sm` are the same utility): a project on v4 is skipped.
     const again = await runCodemods({ dir, ids: ["all"] });
     expect(again.filter(r => r.changes.length > 0)).toEqual([]);

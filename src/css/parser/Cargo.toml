@@ -1,0 +1,57 @@
+[package]
+edition = "2024"
+rust-version = "1.95.0"
+name = "bun_css_parser"
+version = "0.0.16"
+authors = []
+build = false
+exclude = ["/tests"]
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "Parser for CSS, SCSS, Sass, and Less."
+readme = "README.md"
+license = "MIT"
+repository.workspace = true
+publish = false
+
+homepage.workspace = true
+[features]
+codspeed = ["criterion2/codspeed"]
+config_serde = ["serde"]
+default = []
+serialize = ["serde", "oxc_allocator/serialize"]
+
+[lib]
+name = "oxc_css_parser"
+path = "src/lib.rs"
+
+[dependencies.oxc_allocator]
+version = "=0.153.0"
+package = "bun_arena"
+path = "../../collections/arena"
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
+optional = true
+
+[dev-dependencies.codespan-reporting]
+version = "0.13"
+
+[dev-dependencies.criterion2]
+version = "3"
+default-features = false
+
+[dev-dependencies.insta]
+version = "1.47"
+features = ["glob", "ron"]
+
+[dev-dependencies.serde_json]
+version = "1.0"
+
+[package.metadata.bun.upstream]
+package = "oxc-css-parser"
+repository = "https://github.com/oxc-project/oxc-css-parser"

@@ -47,7 +47,7 @@ For snapshot exports read `docs/runtime/graph.mdx` and exporter help:
 profile. Native Aphrody home graphs and Bun SQLite snapshots are distinct stores;
 an Aphrody report is not a Bun immutable snapshot. Verify manifest hashes and
 coverage before claiming an export is current. Changed-runtime tests use `bun bd
-test`; declaration-only qualification follows the repository bun-types gate.
+test`; declaration-only qualification follows the repository `packages/bun-types` gate.
 
 ## Shared project knowledge
 
@@ -58,4 +58,4 @@ the record. Retrieve through `aphrody memory recall --agent-id bun-shared --quer
 <domain> --label <source>`) is an explicit separate operation. Neither operation
 synchronizes private provider memories or trains local models.
 
-Related: `bun-core-crate-map`, `bun-fork-aphrody`, `bun-rust-first`.
+Related: `bun-core-crate-map`, `bun-os-runtime`, `bun-rust-first`.

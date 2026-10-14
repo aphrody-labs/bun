@@ -18,7 +18,6 @@ import {
   version,
   type LintOptions,
 } from "./index";
-import { runOxlint } from "./oxlint";
 
 const USAGE = `bun-oxc <command> [options]
 
@@ -36,7 +35,6 @@ const USAGE = `bun-oxc <command> [options]
   parse <file>            ESTree JSON
   analyze <file>          imports and exports JSON
   rules                   oxlint rules   --plugin <name> --json
-  oxlint [args...]        run the oxlint CLI (jsPlugins, type-aware rules)
   version`;
 
 const [command, ...rest] = process.argv.slice(2);
@@ -88,13 +86,6 @@ async function main(): Promise<number> {
     console.log(version());
     return 0;
   }
-  if (command === "oxlint") {
-    const out = await runOxlint(rest);
-    process.stdout.write(out.stdout);
-    process.stderr.write(out.stderr);
-    return out.exitCode;
-  }
-
   const { values: v, positionals: files } = parseArgs({ args: rest, options, allowPositionals: true });
   const read = (file: string) => Bun.file(file).text();
 

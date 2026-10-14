@@ -51,7 +51,6 @@ bench/**/* linguist-documentation
 
 vendor/*.c linguist-vendored
 vendor/brotli/** linguist-vendored
-packages/bun-oxc/vendor/** linguist-vendored
 
 test/js/node/test/fixtures linguist-vendored
 test/js/node/test/common linguist-vendored
@@ -66,5 +65,80 @@ src/cli/init/tsconfig.default.json linguist-language=JSON-with-Comments
 # Every byte of these files is part of a CI image's name (scripts/build/ci-images/spec.ts).
 scripts/build/ci-images/** text eol=lf
 
-# Preserve immutable vendor blobs instead of applying Bun's source normalization.
-vendor/oxc/** -text -eol -filter linguist-vendored
+# Preserve byte-sensitive ECMA assets outside the corpus rules below.
+"src/transpiler/minifier/src/is_terminated.rs" -text -whitespace
+"src/transpiler/minifier/src/peephole/minimize_sequences.rs" -text -whitespace
+"src/transpiler/browserslist/src/generated/baseline.bin.deflate" -text -whitespace
+"src/transpiler/browserslist/src/generated/caniuse_browsers.bin.deflate" -text -whitespace
+"src/transpiler/browserslist/src/generated/caniuse_feature_keys.bin.deflate" -text -whitespace
+"src/transpiler/browserslist/src/generated/caniuse_feature_matching.bin.deflate" -text -whitespace
+"src/transpiler/browserslist/src/generated/caniuse_region_keys.bin.deflate" -text -whitespace
+"src/transpiler/browserslist/src/generated/caniuse_region_pair_indices.bin.deflate" -text -whitespace
+"src/transpiler/browserslist/src/generated/caniuse_region_pairs.bin.deflate" -text -whitespace
+"src/transpiler/browserslist/src/generated/caniuse_region_percentages.bin.deflate" -text -whitespace
+"src/transpiler/browserslist/src/generated/caniuse_version_table.bin.deflate" -text -whitespace
+"src/transpiler/browserslist/src/generated/electron.bin.deflate" -text -whitespace
+"src/transpiler/browserslist/src/generated/node.bin.deflate" -text -whitespace
+
+# Parser/formatter corpora intentionally contain malformed syntax and whitespace.
+src/codegen/ecma_coverage/misc/** -text -whitespace
+src/codegen/ecma_coverage/snapshots/** -text -whitespace
+src/codegen/ecma_js/test/** -text -whitespace
+src/codegen/ecma_rulegen/src/snapshots/** -text -whitespace
+src/codegen/ecma_transform_conformance/overrides/babel-plugin-transform-class-properties/test/** -text -whitespace
+src/codegen/ecma_transform_conformance/overrides/babel-plugin-transform-logical-assignment-operators/test/** -text -whitespace
+src/codegen/ecma_transform_conformance/overrides/babel-plugin-transform-object-rest-spread/test/** -text -whitespace
+src/codegen/ecma_transform_conformance/overrides/babel-plugin-transform-optional-chaining/test/** -text -whitespace
+src/codegen/ecma_transform_conformance/overrides/babel-plugin-transform-private-methods/test/** -text -whitespace
+src/codegen/ecma_transform_conformance/overrides/babel-plugin-transform-private-property-in-object/test/** -text -whitespace
+src/codegen/ecma_transform_conformance/overrides/babel-plugin-transform-react-jsx/test/** -text -whitespace
+src/codegen/ecma_transform_conformance/overrides/babel-plugin-transform-typescript/test/** -text -whitespace
+src/codegen/ecma_transform_conformance/snapshots/** -text -whitespace
+src/codegen/ecma_transform_conformance/tests/** -text -whitespace
+src/codegen/ecma_website_formatter/src/snapshots/** -text -whitespace
+src/codegen/ecma_website_linter/src/rules/snapshots/** -text -whitespace
+src/codegen/ecma_website_linter/src/snapshots/** -text -whitespace
+src/collections/arena/tests/** -text -whitespace
+src/js_parser/lexer/tests/** -text -whitespace
+src/js_parser/regexp/tests/** -text -whitespace
+src/js_printer/ecma/tests/** -text -whitespace
+src/lsp/quality/fixtures/** -text -whitespace
+src/parsers/json_schema/tests/** -text -whitespace
+src/quality/adapters/minify/test/** -text -whitespace
+src/quality/adapters/parser/test/** -text -whitespace
+src/quality/adapters/react/test/** -text -whitespace
+src/quality/adapters/relay/test/** -text -whitespace
+src/quality/adapters/transform/test/** -text -whitespace
+src/quality/format_cli/conformance/fixtures/** -text -whitespace
+src/quality/format_cli/conformance/snapshots/** -text -whitespace
+src/quality/format_cli/test/** -text -whitespace
+src/quality/format_css/tests/** -text -whitespace
+src/quality/format_graphql/tests/** -text -whitespace
+src/quality/format_js/tests/** -text -whitespace
+src/quality/format_json/tests/** -text -whitespace
+src/quality/format_markdown/tests/** -text -whitespace
+src/quality/format_yaml/tests/** -text -whitespace
+src/quality/lint_cli/conformance/snapshots/** -text -whitespace
+src/quality/lint_cli/fixtures/** -text -whitespace
+src/quality/lint_cli/src/lsp/snapshots/** -text -whitespace
+src/quality/lint_cli/src/snapshots/** -text -whitespace
+src/quality/lint_cli/test/** -text -whitespace
+src/quality/linter/fixtures/** -text -whitespace
+src/quality/linter/src/config/snapshots/** -text -whitespace
+src/quality/linter/src/rules/eslint/no_unused_vars/tests/** -text -whitespace
+src/quality/linter/src/snapshots/** -text -whitespace
+src/quality/linter/tests/** -text -whitespace
+src/quality/shared/test/** -text -whitespace
+src/react_compiler/ecma/fixtures/** -text -whitespace
+src/react_compiler/ecma/tests/** -text -whitespace
+src/resolver/ecma/fixtures/** -text -whitespace
+src/sema/cfg/tests/** -text -whitespace
+src/sema/ecma/tests/** -text -whitespace
+src/transpiler/declarations/tests/** -text -whitespace
+src/transpiler/ecma/tests/** -text -whitespace
+src/transpiler/minifier/tests/** -text -whitespace
+src/transpiler/plugins/tests/** -text -whitespace
+src/transpiler/relay/tests/** -text -whitespace
+test/integration/ecma_pipeline/** -text -whitespace
+"src/codegen/ecma_minsize/minsize.snap" -text -whitespace
+"src/codegen/ecma_track_linter_timings/linter_timings.snap" -text -whitespace

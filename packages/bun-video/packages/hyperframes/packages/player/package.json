@@ -29,7 +29,7 @@
   },
   "scripts": {
     "build": "tsup && bun scripts/verify-runtime-pin.mjs",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tests/perf/tsconfig.json",
+    "typecheck": "bun check --noEmit && bun check --noEmit -p tests/perf/tsconfig.json",
     "test": "vitest run",
     "test:browser-security": "bun run tests/browser/sandbox-origin.ts",
     "test:browser-raster": "bun run tests/browser/preview-raster-size.ts",
@@ -43,7 +43,6 @@
     "gsap": "^3.12.5",
     "puppeteer-core": "^25.2.1",
     "tsup": "^8.0.0",
-    "typescript": "^5.0.0",
     "vitest": "^4.1.11"
   },
   "engines": {

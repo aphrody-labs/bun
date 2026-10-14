@@ -57,7 +57,7 @@ GN/depot_tools and `bun obscura` CDP retain their existing CLI owners and help.
 `test/sdk.test.ts` checks identity and routing. Actual implementation and types
 remain in root `src/js/bun/chromium.ts` and `packages/bun-types/chromium.d.ts`.
 
-Run strict TypeScript, oxlint, oxfmt and `bun bd -j1 test ./packages/bun-chromium/test/sdk.test.ts`
+Run `bun check`, `bun lint`, `bun fmt` and `bun bd -j1 test ./packages/bun-chromium/test/sdk.test.ts`
 from the root. Tests launch no browser and access no live CDP or personal profile.
 SDK, runtime and engine artifacts qualify separately; see
 [publication boundary](../../docs/project/google-browser-publication.md).

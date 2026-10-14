@@ -1,0 +1,246 @@
+[package]
+edition = "2021"
+rust-version = "1.60"
+name = "bun_json_schema"
+version = "0.9.1"
+authors = ["Graham Esau <gesau@hotmail.co.uk>"]
+build = "build.rs"
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "Generate JSON Schemas from Rust code"
+readme = "README.md"
+keywords = ["rust", "json-schema", "serde"]
+categories = ["encoding"]
+license = "MIT"
+repository.workspace = true
+publish = false
+
+homepage.workspace = true
+[features]
+default = ["derive"]
+derive = ["dep:schemars_derive"]
+
+[lib]
+name = "schemars"
+path = "src/lib.rs"
+
+[[example]]
+name = "custom_serialization"
+path = "examples/custom_serialization.rs"
+
+[[example]]
+name = "custom_settings"
+path = "examples/custom_settings.rs"
+
+[[example]]
+name = "doc_comments"
+path = "examples/doc_comments.rs"
+
+[[example]]
+name = "enum_repr"
+path = "examples/enum_repr.rs"
+
+[[example]]
+name = "from_value"
+path = "examples/from_value.rs"
+
+[[example]]
+name = "main"
+path = "examples/main.rs"
+
+[[example]]
+name = "remote_derive"
+path = "examples/remote_derive.rs"
+
+[[example]]
+name = "schemars_attrs"
+path = "examples/schemars_attrs.rs"
+
+[[example]]
+name = "serde_attrs"
+path = "examples/serde_attrs.rs"
+
+[[example]]
+name = "validate"
+path = "examples/validate.rs"
+
+[[test]]
+name = "bound"
+path = "tests/bound.rs"
+
+[[test]]
+name = "crate_alias"
+path = "tests/crate_alias.rs"
+
+[[test]]
+name = "default"
+path = "tests/default.rs"
+
+[[test]]
+name = "deprecated"
+path = "tests/deprecated.rs"
+
+[[test]]
+name = "dereference"
+path = "tests/dereference.rs"
+
+[[test]]
+name = "docs"
+path = "tests/docs.rs"
+
+[[test]]
+name = "enum"
+path = "tests/enum.rs"
+
+[[test]]
+name = "enum_deny_unknown_fields"
+path = "tests/enum_deny_unknown_fields.rs"
+
+[[test]]
+name = "enum_repr"
+path = "tests/enum_repr.rs"
+
+[[test]]
+name = "examples"
+path = "tests/examples.rs"
+
+[[test]]
+name = "ffi"
+path = "tests/ffi.rs"
+
+[[test]]
+name = "flatten"
+path = "tests/flatten.rs"
+
+[[test]]
+name = "from_value"
+path = "tests/from_value.rs"
+
+[[test]]
+name = "indexmap2"
+path = "tests/indexmap2.rs"
+required-features = ["indexmap2"]
+
+[[test]]
+name = "inline_subschemas"
+path = "tests/inline_subschemas.rs"
+
+[[test]]
+name = "macro"
+path = "tests/macro.rs"
+
+[[test]]
+name = "nonzero_ints"
+path = "tests/nonzero_ints.rs"
+
+[[test]]
+name = "property_name"
+path = "tests/property_name.rs"
+
+[[test]]
+name = "range"
+path = "tests/range.rs"
+
+[[test]]
+name = "regex"
+path = "tests/regex.rs"
+required-features = ["regex"]
+
+[[test]]
+name = "remote_derive"
+path = "tests/remote_derive.rs"
+
+[[test]]
+name = "remote_derive_generic"
+path = "tests/remote_derive_generic.rs"
+
+[[test]]
+name = "result"
+path = "tests/result.rs"
+
+[[test]]
+name = "same_name"
+path = "tests/same_name.rs"
+
+[[test]]
+name = "schema_name"
+path = "tests/schema_name.rs"
+
+[[test]]
+name = "schema_settings"
+path = "tests/schema_settings.rs"
+
+[[test]]
+name = "schema_with_enum"
+path = "tests/schema_with_enum.rs"
+
+[[test]]
+name = "schema_with_struct"
+path = "tests/schema_with_struct.rs"
+
+[[test]]
+name = "skip"
+path = "tests/skip.rs"
+
+[[test]]
+name = "struct"
+path = "tests/struct.rs"
+
+[[test]]
+name = "struct_additional_properties"
+path = "tests/struct_additional_properties.rs"
+
+[[test]]
+name = "time"
+path = "tests/time.rs"
+
+[[test]]
+name = "transparent"
+path = "tests/transparent.rs"
+
+[[test]]
+name = "validate"
+path = "tests/validate.rs"
+
+[[test]]
+name = "validate_inner"
+path = "tests/validate_inner.rs"
+
+[dependencies.dyn-clone]
+version = "1.0"
+
+[dependencies.indexmap2]
+version = "2.0"
+features = ["serde"]
+optional = true
+package = "indexmap"
+
+[dependencies.regex]
+version = "1.12"
+optional = true
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1.0.25"
+
+[dependencies.schemars_derive]
+version = "=0.8.26"
+optional = true
+package = "bun_json_schema_macros"
+path = "../json_schema_macros"
+
+[dev-dependencies.pretty_assertions]
+version = "1.2.1"
+
+[dev-dependencies.trybuild]
+version = "1.0"
+
+[package.metadata.bun.upstream]
+package = "oxc-schemars"
+repository = "https://github.com/oxc-project/schemars"

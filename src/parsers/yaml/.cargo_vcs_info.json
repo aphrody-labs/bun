@@ -1,0 +1,6 @@
+{
+  "git": {
+    "sha1": "67bcc9d0bdabf22b0226f1a81e6485d909e5f6ca"
+  },
+  "path_in_vcs": "crates/oxc_yaml_parser"
+}

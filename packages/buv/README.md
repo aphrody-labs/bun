@@ -15,7 +15,7 @@ Forge defaults to core qualification, assembly and smoke. Qualification executes
 
 Artifacts contain identical `bin/buv` and `bin/pyjs` core binaries, with `.exe` on Windows. UV consumers invoke `buv uv <command>`. No upstream `bun` or `uv` executable is installed into the artifact's `bin`. Each immutable artifact records the core, component pins, target, file hashes and symlinks in `share/buv/manifest.json`.
 
-The inherited CPython prefix can be included only for its pinned Linux target. A mismatched target is refused. Ruff may be included as a separately packaged component from the supplied release directory; this does not qualify Ruff as embedded in the core. Packaging and a passed graph/UV gate do not qualify the shared PyJS interpreter ABI, extension imports, wheels, or unported legacy commands. Those require the core's own native integration tests. `buv.json` retains `sharedHostReady: false` until that gate passes.
+The inherited CPython prefix can be included only for its pinned Linux target. A mismatched target is refused. Ruff remains development tooling outside this runtime artifact. Packaging and a passed graph/UV gate do not qualify the shared PyJS interpreter ABI, extension imports or wheels; those require the core's own native integration tests. `buv.json` records whether that gate passed.
 
 ## Installation and tests
 
@@ -40,7 +40,7 @@ compiler cache disabled and all 37 integer results checked.
 
 `bun scripts/install.ts --from <artifact>` computes the install plan. `--apply` verifies the native core before activation and installs under `$BUV_HOME/runtime/<target>/`, default `~/.buv`. `current` activation and `previous` rollback are atomic; existing immutable artifacts are verified before reuse. `--rollback --apply` selects the previous artifact. Receipts use `$BUV_RECEIPT_DIR`, default `~/.buv/receipts`; forging does not activate a runtime.
 
-Use the coordinator's single final gate pass for package tests. Set `BUV_TEST_EXECUTABLE` to the owner-built executable to enable the native graph/UV qualification test. Artifact-dependent legacy parity tests require their explicitly configured fixtures and do not establish core qualification when skipped. `scripts/bench.ts` invokes embedded UV asynchronously through `buv uv`, records the actual executables, and accepts explicit baseline `--before-python` / `--before-uv` paths.
+Use the coordinator's single final gate pass for package tests. Set `BUV_TEST_EXECUTABLE` to the owner-built executable to enable the native graph/UV qualification test. Artifact-dependent tests require their explicitly configured fixtures and do not establish core qualification when skipped. `scripts/bench.ts` invokes embedded UV asynchronously through `buv uv`, records the actual executables, and accepts explicit baseline `--before-python` / `--before-uv` paths.
 
 ## Native Python compiler qualification
 
@@ -53,8 +53,6 @@ Windows core passed all 43 Python CLI tests (151 assertions), including both
 compiler backends, extension imports, executable runs, SQLite artifact records
 and PyCUDA compute. Linux, macOS, Nuitka onefile and WASI remain separate gates.
 
-## Preserved predecessor sources
+## Source ownership
 
-The complete former `packages/bun-vu` tree now lives here, including standalone parity source crates `crates/buv` and `crates/buv-runtime`, Python compile/Hugging Face helpers, installer, manifests and benchmarks. These crates preserve functionality for porting; they are outside Bun's default workspace and are not the canonical core built by forge.
-
-`provenance.json` preserves the original source revision `6ea52f1aada7269d81470dd9d93144555610868e`, old path/hash maps, notices, acceptance evidence and historical UV 0.12.23 pin. Its separate `migration` inventory hashes current Buv files. `TRANSFER-RECEIPT.md` is a dated historical receipt, not evidence for the new binary. The Apache license and original notices are retained. Current UV provenance points to `vendor/uv` at upstream revision `f3e56e16e0302e26ea456cb51b676b35958572a0`; predecessor Ruff, PyO3 and python-build-standalone pins remain unchanged.
+UV is compiled once from the repository's canonical `vendor/uv` tree at revision `f3e56e16e0302e26ea456cb51b676b35958572a0`. `packages/buv` has no Rust workspace, source clone step, or project-local vendor directory. The native CLI owns Python compilation in `src/runtime/cli/python_compile.py`; the shared CPython ABI belongs to `packages/bun-python-native`.

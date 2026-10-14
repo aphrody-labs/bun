@@ -13,11 +13,11 @@
 		"test": "bun test src/test",
 		"testvisual": "vitest src/visual-test/effects-visual.test.ts",
 		"testeffectsvisual": "vitest src/visual-test/effects-visual.test.ts --browser --run",
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
-		"watch": "tsgo -w",
-		"make": "tsgo && bun --env-file=../.env.bundle bundle.ts"
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
+		"watch": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -w",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts && bun --env-file=../.env.bundle bundle.ts"
 	},
 	"author": "Jonny Burger <jonny@remotion.dev>",
 	"contributors": [],
@@ -629,8 +629,8 @@
 		"@remotion/eslint-config-internal": "workspace:*",
 		"@vitest/browser-playwright": "catalog:",
 		"eslint": "catalog:",
-		"vitest": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"vitest": "catalog:"
+
 	},
 	"keywords": [
 		"remotion",

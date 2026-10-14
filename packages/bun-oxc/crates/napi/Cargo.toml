@@ -1,29 +1,53 @@
 [package]
 name = "bun-plugin-oxc-napi"
 description = "Node-API addon and native onBeforeParse plugin behind @aphrody/bun-plugin-oxc."
-version.workspace = true
-# The #[bun] macro emits a bare #[no_mangle], which edition 2024 rejects.
 edition = "2021"
-rust-version.workspace = true
-license.workspace = true
-repository.workspace = true
 publish = false
+
+[package.version]
+workspace = true
+
+[package.rust-version]
+workspace = true
+
+[package.license]
+workspace = true
+
+[package.repository]
+workspace = true
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-aphrody-oxc-bridge.workspace = true
-aphrody-oxc-tools.workspace = true
-bun-native-plugin = { path = "../../../bun-native-plugin-rs" }
-napi = { version = "3", default-features = false, features = ["napi4", "serde-json"] }
 napi-derive = "3"
-# The official oxc-parser / oxc-transform / oxc-minify bindings, linked as libraries: their
-# #[napi] exports register in this addon under their npm names.
-oxc_parser_napi = { workspace = true }
-oxc_transform_napi = { workspace = true }
-oxc_minify_napi = { workspace = true }
-serde_json = { workspace = true }
+
+[dependencies.bun_ecma_api]
+workspace = true
+
+[dependencies.bun_quality]
+workspace = true
+
+[dependencies.bun-native-plugin]
+path = "../../../bun-native-plugin-rs"
+
+[dependencies.napi]
+version = "3"
+default-features = false
+features = ["napi4", "serde-json"]
+
+[dependencies.oxc_parser_napi]
+workspace = true
+features = ["tokens"]
+
+[dependencies.oxc_transform_napi]
+workspace = true
+
+[dependencies.oxc_minify_napi]
+workspace = true
+
+[dependencies.serde_json]
+version = "1.0.151"
 
 [build-dependencies]
 napi-build = "2"

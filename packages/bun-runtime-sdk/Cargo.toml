@@ -29,11 +29,11 @@ ignore = "0.4"
 libc = "0.2.189"
 notify = "8"
 notify-debouncer-full = "0.6"
-oxc_allocator = "0.153.0"
-oxc_ast = "0.153.0"
-oxc_ast_visit = "0.153.0"
-oxc_parser = "0.153.0"
-oxc_span = "0.153.0"
+oxc_allocator = { package = "bun_arena", path = "../../src/collections/arena", version = "0.153.0" }
+oxc_ast = { package = "bun_ecma_ast", path = "../../src/ast/ecma", version = "0.153.0" }
+oxc_ast_visit = { package = "bun_ecma_ast_visit", path = "../../src/ast/visit", version = "0.153.0" }
+oxc_parser = { package = "bun_ecma_parser", path = "../../src/js_parser/ecma", version = "0.153.0" }
+oxc_span = { package = "bun_ecma_span", path = "../../src/ast/span", version = "0.153.0" }
 parking_lot = "0.12.5"
 pyo3 = "0.29"
 rayon = "1.12.0"

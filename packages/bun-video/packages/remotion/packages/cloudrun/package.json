@@ -7,9 +7,9 @@
 	"description": "Render Remotion videos on Google Cloud Run",
 	"main": "dist/index.js",
 	"scripts": {
-		"make": "tsgo -d && cp src/shared/sa-permissions.json dist/shared/sa-permissions.json",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && cp src/shared/sa-permissions.json dist/shared/sa-permissions.json",
 		"makeruntime": "bun build.ts",
-		"lint": "eslint src",
+		"lint": "bun lint src",
 		"test": "bun test src",
 		"publish": "bun build.ts && cd container && ARTIFACT_REGISTRY_ENV=production node submit.mjs"
 	},
@@ -32,8 +32,8 @@
 		"@types/minimist": "1.2.2",
 		"@remotion/eslint-config-internal": "workspace:*",
 		"eslint": "catalog:",
-		"@types/node": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"@types/node": "catalog:"
+
 	},
 	"exports": {
 		"./package.json": "./package.json",

@@ -42,7 +42,7 @@
   },
   "scripts": {
     "typecheck": "bun check --noEmit",
-    "lint": "oxlint",
+    "lint": "bun lint",
     "test": "bun test test/"
   },
   "dependencies": {

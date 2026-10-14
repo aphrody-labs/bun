@@ -211,6 +211,10 @@ export function emitRustUnits(n: Ninja, ctx: ManifestContext, inputs: RustEdgeIn
             unit.manifestPath,
             ...buildScriptRunDeps,
             ...packageInputs,
+            ...(manifest.script.nativeWebP?.inputs ?? []),
+            ...(manifest.script.staticLibrary !== undefined
+              ? [resolve(manifest.script.staticLibrary.directory, `lib${manifest.script.staticLibrary.name}.a`)]
+              : []),
           ],
           orderOnlyInputs: orderOnly,
           vars,

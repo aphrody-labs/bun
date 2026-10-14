@@ -9,10 +9,10 @@
 	"types": "dist/cjs/index.d.ts",
 	"module": "dist/esm/index.mjs",
 	"scripts": {
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
-		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts"
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && bun --env-file=../.env.bundle bundle.ts"
 	},
 	"author": "Jonny Burger <jonny@remotion.dev>, William Candillon <wcandillon@gmail.com>",
 	"contributors": [],
@@ -37,8 +37,8 @@
 		"react-dom": "catalog:",
 		"remotion": "workspace:*",
 		"@remotion/eslint-config-internal": "workspace:*",
-		"eslint": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"eslint": "catalog:"
+
 	},
 	"keywords": [
 		"remotion",

@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "sourceRepository": "https://github.com/aphrody-labs/bun",
+  "sourceCheckout": "/home/ubuntu/build/bun-os-obscura-4634063",
+  "sourceCommit": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+  "dirty": true,
+  "releaseEligible": false,
+  "qualification": "native-behavior-only",
+  "preservedLocalPaths": [
+    ".claude/skills/cpp-bun/SKILL.md"
+  ],
+  "preservedDocLine": "34 files match `src/**/*.classes.ts`, in `src/jsc` (1), `src/runtime/api` (21), `src/runtime/crypto` (1), `src/runtime/ffi` (1), `src/runtime/image` (1), `src/runtime/node` (1), `src/runtime/node/quic` (1), `src/runtime/server` (1), `src/runtime/socket` (1), `src/runtime/test_runner` (1), `src/runtime/valkey_jsc` (1), `src/runtime/webcore` (3).",
+  "upstreamDocLine": "38 files match `src/**/*.classes.ts`, in `src/jsc` (1), `src/runtime/api` (22), `src/runtime/crawl` (1), `src/runtime/crypto` (1), `src/runtime/curl` (1), `src/runtime/ffi` (1), `src/runtime/image` (1), `src/runtime/node` (1), `src/runtime/node/quic` (1), `src/runtime/server` (1), `src/runtime/socket` (1), `src/runtime/test_runner` (1), `src/runtime/valkey_jsc` (1), `src/runtime/video` (1), `src/runtime/webcore` (3).",
+  "docSHA256": "3ba3782a70e1ce6ee420d7ca16067683b8c08d952d6dc49d116beb7761d3a1ba",
+  "preservedPatchSHA256": "e18b91e97dea545c1311603fbfa2ce72764ac636c1af6313931f05d722c8691a",
+  "createdAt": "2026-10-13T16:07:54.215Z",
+  "previousSourceCommit": "11e5dd5cb0f31a3a1e5e65987fd81cd92644d3b4",
+  "sourceUpdatedAt": "2026-10-13T16:42:19.755Z"
+}

@@ -339,16 +339,6 @@
       "visibility": "PUBLIC"
     },
     {
-      "repo": "aphrody-labs/oxc",
-      "kind": "cargo-git",
-      "ref": "b25696441c80fd580c35d671797f1940c642a624",
-      "usedBy": [
-        "packages/bun-oxc/Cargo.toml"
-      ],
-      "internal": true,
-      "visibility": "PUBLIC"
-    },
-    {
       "repo": "aphrody-labs/aphrody",
       "kind": "cargo-git",
       "ref": "c58e93d6dc1b4b2d420c3c929a40c67dd071d2f4",

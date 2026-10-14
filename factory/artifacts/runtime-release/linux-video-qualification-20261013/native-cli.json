@@ -1,0 +1,191 @@
+{
+  "sourceCommit": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+  "commands": [
+    {
+      "command": "info",
+      "arguments": [],
+      "exitCode": 0,
+      "result": {
+        "version": "1.4.4",
+        "revision": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+        "platform": "linux",
+        "arch": "x64",
+        "available": true,
+        "decoder": "filmcraft",
+        "imageBackend": "bun"
+      }
+    },
+    {
+      "command": "metadata",
+      "arguments": [
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/h264-aac-synthetic.mp4"
+      ],
+      "exitCode": 0,
+      "result": {
+        "width": 64,
+        "height": 48,
+        "duration": 3,
+        "codec": "H.264 (Baseline)",
+        "fpsNumerator": 24,
+        "fpsDenominator": 1,
+        "container": "MPEG-4",
+        "fileBytes": 34623,
+        "frameCount": 72,
+        "audioStreams": [
+          {
+            "sampleRate": 48000,
+            "channels": 1,
+            "codec": "AAC"
+          }
+        ]
+      }
+    },
+    {
+      "command": "frame",
+      "arguments": [
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/h264-aac-synthetic.mp4",
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/cli-frame.png",
+        "--time",
+        "1",
+        "--width",
+        "32",
+        "--height",
+        "24"
+      ],
+      "exitCode": 0,
+      "result": {
+        "output": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/cli-frame.png",
+        "bytes": 1690,
+        "time": 1,
+        "format": "png"
+      }
+    },
+    {
+      "command": "frames",
+      "arguments": [
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/h264-aac-synthetic.mp4",
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/cli-frames",
+        "--start",
+        "1",
+        "--end",
+        "1.1",
+        "--step",
+        "0.05",
+        "--max-frames",
+        "3"
+      ],
+      "exitCode": 0,
+      "result": {
+        "output": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/cli-frames",
+        "frames": [
+          {
+            "time": 1,
+            "file": "000000.png",
+            "bytes": 5276
+          },
+          {
+            "time": 1.0416666666666667,
+            "file": "000001.png",
+            "bytes": 5225
+          }
+        ]
+      }
+    },
+    {
+      "command": "audio",
+      "arguments": [
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/h264-aac-synthetic.mp4",
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/cli-audio.wav",
+        "--start",
+        "1",
+        "--duration",
+        "0.1",
+        "--sample-rate",
+        "16000"
+      ],
+      "exitCode": 0,
+      "result": {
+        "output": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/cli-audio.wav",
+        "bytes": 3244,
+        "start": 1,
+        "duration": 0.1,
+        "format": "pcm16-wav"
+      }
+    },
+    {
+      "command": "gif",
+      "arguments": [
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/h264-aac-synthetic.mp4",
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/cli-preview.gif",
+        "--start",
+        "1",
+        "--duration",
+        "0.2",
+        "--fps",
+        "10",
+        "--width",
+        "32"
+      ],
+      "exitCode": 0,
+      "result": {
+        "output": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/cli-preview.gif",
+        "bytes": 2424,
+        "start": 1,
+        "duration": 0.2,
+        "fps": 10,
+        "width": 32,
+        "format": "palette-gif"
+      }
+    },
+    {
+      "command": "remux",
+      "arguments": [
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/h264-video-only.mp4",
+        "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/cli-remux.mp4"
+      ],
+      "exitCode": 0,
+      "result": {
+        "output": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013/cli-remux.mp4",
+        "bytes": 8357,
+        "format": "mp4"
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "cli-frame.png",
+      "bytes": 1690,
+      "sha256": "4eae58818eae0e19170715af1c3832397ad167e5df535c2884b8e5231e4f60be"
+    },
+    {
+      "name": "cli-audio.wav",
+      "bytes": 3244,
+      "sha256": "17c04a28528084a9bbdd201c1753d351573fcc29d53938d192aa39fd1dfb3dae"
+    },
+    {
+      "name": "cli-preview.gif",
+      "bytes": 2424,
+      "sha256": "7c039ddd0d6e472c93374010b1b14e7692f365d1907aff9859a67ad4eb734308"
+    },
+    {
+      "name": "cli-remux.mp4",
+      "bytes": 8357,
+      "sha256": "ddc19a93f63f61484a06bd9458ea2251fc5bc9a171bdeee6fc6e4477979c58dd"
+    },
+    {
+      "name": "cli-frames/000000.png",
+      "bytes": 5276,
+      "sha256": "a40419826b31095d807ee673304eb8c8581fa6bae3522b18e2850443a4276b74"
+    },
+    {
+      "name": "cli-frames/000001.png",
+      "bytes": 5225,
+      "sha256": "992697e46824c3df3caf18aa3ae5d75fefd0307276332da7a23e33a12c2ee426"
+    },
+    {
+      "name": "cli-frames/frames.json",
+      "bytes": 156,
+      "sha256": "9dc53d1ac28b93c5e4326c163e5d1e03d2a911a5085723b0351f93cfce27575a"
+    }
+  ]
+}

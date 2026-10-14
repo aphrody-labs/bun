@@ -73,6 +73,19 @@ console.log(stderr); // Buffer(0) []
 
 ---
 
+## Command strings with `bun exec`
+
+`bun exec [--nounset] <script> [argv0 [args...]]` runs a command string with Bun Shell. The first argument after the script sets `$0`; the remaining arguments set `$1`, `$2`, and so on. Without `argv0`, `$0` is `bun`. `--nounset` fails when an unset variable or missing positional argument is expanded; variables and arguments set to an empty string remain valid.
+
+```sh
+bun exec 'printf "%s|%s\n" "$0" "$1"' recipe argument
+# recipe|argument
+```
+
+Bun stops parsing options after the script. Flags in the trailing arguments, such as `--help`, are passed to the shell script.
+
+---
+
 ## Error handling
 
 By default, a non-zero exit code throws an error. The `ShellError` contains information about the command that ran.

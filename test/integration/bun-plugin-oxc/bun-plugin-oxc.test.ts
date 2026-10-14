@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { bunEnv, bunExe, tempDir } from "harness";
+import { bunEnv, bunExe, isDebug, tempDir } from "harness";
 import * as oxc from "../../../packages/bun-oxc/src/index";
 import { platformKeys } from "../../../packages/bun-oxc/src/native";
 import { buildNapi } from "../../../scripts/aphrody/build-napi";
@@ -18,15 +18,15 @@ beforeAll(async () => {
 
 describe("API", () => {
   test("version", () => {
-    expect(oxc.version()).toBe("0.3.0");
-  });
+    expect(oxc.version()).toBe("1.4.4");
+  }, isDebug ? 20_000 : 5_000);
 
   test("transform strips TypeScript", () => {
     const out = oxc.transform("enum E { A = 1 }\nexport const f = (a: number): number => a + E.A;", "a.ts");
     expect(out.code).not.toContain(": number");
     expect(out.code).toContain("export const f");
     expect(out.map).toBeUndefined();
-  });
+  }, isDebug ? 20_000 : 5_000);
 
   test("transform JSX runtimes", () => {
     const src = 'export const a = <div id="x">hi</div>;';
@@ -102,12 +102,13 @@ describe("API", () => {
     const report = oxc.lint("debugger;\nexport const x = 1;\n", "a.js", { config: debuggerIsError });
     expect(report.errorCount).toBe(1);
     expect(report.diagnostics[0].code).toContain("no-debugger");
-    expect(report.diagnostics[0].fixable).toBe("fix");
-    const fixed = oxc.lint("debugger;\nexport const x = 1;\n", "a.js", { config: debuggerIsError, fix: true });
+    expect(report.diagnostics[0].fixable).toBe("suggestions");
+    const fixed = oxc.lint("debugger;\nexport const x = 1;\n", "a.js", { config: debuggerIsError, fix: "suggestions" });
     expect(fixed.fixed).not.toContain("debugger");
     expect(fixed.errorCount).toBe(0);
-    expect(oxc.lintFix("debugger;\n", "a.js", { config: debuggerIsError })).not.toContain("debugger");
-  });
+    expect(oxc.lint("debugger;\n", "a.js", { config: debuggerIsError, fix: "safe" }).fixed).toBeUndefined();
+    expect(oxc.lintFix("debugger;\n", "a.js", { config: debuggerIsError, fix: "suggestions" })).not.toContain("debugger");
+  }, isDebug ? 20_000 : 5_000);
 
   test("lint discovers .oxlintrc.json", () => {
     using dir = tempDir("oxc-lint-config", { ".oxlintrc.json": JSON.stringify(debuggerIsError) });
@@ -155,6 +156,25 @@ describe("oxc-parser / oxc-transform / oxc-minify drop-ins", () => {
     expect(oxc.parseSync("a.js", "let b").program.body.length).toBe(1);
   });
 
+  test("experimental tokens follow the raw transfer capability", async () => {
+    const parser = await import("../../../packages/bun-oxc/src/parser");
+    const source = "const value = 42;";
+    const options = { sourceType: "module" as const, experimentalRawTransfer: true, experimentalTokens: true };
+    if (!parser.rawTransferSupported()) {
+      expect(() => parser.parseSync("tokens.js", source, options)).toThrow();
+      await expect(parser.parse("tokens.js", source, options)).rejects.toThrow();
+      return;
+    }
+    for (const result of [
+      parser.parseSync("tokens.js", source, options),
+      await parser.parse("tokens.js", source, options),
+    ]) {
+      const { tokens } = result as typeof result & { tokens: { value: string; start: number; end: number }[] };
+      expect(tokens.map(token => token.value)).toEqual(["const", "value", "=", "42", ";"]);
+      expect(tokens.map(token => source.slice(token.start, token.end))).toEqual(tokens.map(token => token.value));
+    }
+  });
+
   test("transformSync, isolatedDeclarationSync, minifySync", async () => {
     const transform = await import("../../../packages/bun-oxc/src/transform");
     const out = transform.transformSync("a.ts", "export const v: number = 1;");
@@ -165,7 +185,7 @@ describe("oxc-parser / oxc-transform / oxc-minify drop-ins", () => {
       "export declare const v: number;",
     );
     const minify = await import("../../../packages/bun-oxc/src/minify");
-    expect(minify.minifySync("a.js", "const longName = 1; console.log(longName);").code).not.toContain("longName");
+    expect(minify.minifySync("a.js", "const longName = 1; console.log(longName);", { toplevel: true }).code).not.toContain("longName");
   });
 });
 
@@ -412,7 +432,7 @@ describe("bun-oxc CLI", () => {
     const linted = await cli(["lint", "l.js"], cwd);
     expect(linted.stdout).toContain("no-debugger");
     expect(linted.exitCode).toBe(1);
-    expect((await cli(["lint", "--fix", "l.js"], cwd)).exitCode).toBe(0);
+    expect((await cli(["lint", "--fix-suggestions", "l.js"], cwd)).exitCode).toBe(0);
     expect(await Bun.file(join(cwd, "l.js")).text()).not.toContain("debugger");
   });
 
@@ -424,7 +444,7 @@ describe("bun-oxc CLI", () => {
     expect(list.every(rule => rule.plugin === "eslint")).toBe(true);
     expect(rules.exitCode).toBe(0);
     const version = await cli(["version"], String(dir));
-    expect(version.stdout.trim()).toBe("0.3.0");
+    expect(version.stdout.trim()).toBe("1.4.4");
     expect(version.exitCode).toBe(0);
   });
 });

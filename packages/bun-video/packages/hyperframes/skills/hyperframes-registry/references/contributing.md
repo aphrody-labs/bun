@@ -140,7 +140,7 @@ npx hyperframes publish
 git checkout -b feat/registry-{name}
 
 # 2. Format HTML
-npx oxfmt registry/{kind}/{name}/*.html
+bun fmt registry/{kind}/{name}/*.html
 
 # 3. Regenerate registry/registry.json from the item directories.
 #    Do not hand-edit it: an entry added by hand survives until the next
@@ -172,7 +172,7 @@ gh pr create --title "feat(registry): {name}" --body "preview: {hyperframes.dev-
 
 - [ ] `hyperframes lint` → 0 errors
 - [ ] `hyperframes check` → 0 console errors
-- [ ] `npx oxfmt --check` passes
+- [ ] `bun fmt --check` passes
 - [ ] `registry/registry.json` updated with new entry
 - [ ] `scripts/generate-catalog-pages.ts` run (docs page generated)
 - [ ] `npx hyperframes publish` run (claim your project URL)

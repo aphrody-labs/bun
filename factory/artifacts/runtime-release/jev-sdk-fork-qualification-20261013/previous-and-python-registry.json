@@ -1,0 +1,16 @@
+{
+  "verifiedAt": "2026-10-13T20:37:15.367Z",
+  "results": [
+    {
+      "target": "previousNpm",
+      "url": "https://registry.npmjs.org/%40aphrody%2Ftypesafe-sdk/0.6.1",
+      "status": 200,
+      "version": "0.6.1"
+    },
+    {
+      "target": "python",
+      "url": "https://pypi.org/pypi/aphrody-typesafe-sdk/0.7.5/json",
+      "status": 404
+    }
+  ]
+}

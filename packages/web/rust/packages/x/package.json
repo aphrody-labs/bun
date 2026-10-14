@@ -39,9 +39,9 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "bun ../../../../../scripts/aphrody/emit-typescript.ts",
     "typecheck": "bun check --noEmit",
-    "lint": "oxlint",
+    "lint": "bun lint",
     "test": "bun test",
     "catalog:sync": "bun ../../../scripts/tools/web/x-catalog-sync.ts",
     "coverage": "bun ../../../scripts/tools/web/x-coverage.ts"

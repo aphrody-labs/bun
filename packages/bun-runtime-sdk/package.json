@@ -49,7 +49,7 @@
     "test": "bun test test",
     "test:rust": "cargo test",
     "test:dotnet": "dotnet test dotnet/YoloRuntime.slnx",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "bun check -p tsconfig.json --noEmit",
     "stage": "bun scripts/stage.ts",
     "test:python": "YOLO_RUNTIME_HOME=target/artifact uv run --no-project --with pytest pytest python/ctypes"
   },

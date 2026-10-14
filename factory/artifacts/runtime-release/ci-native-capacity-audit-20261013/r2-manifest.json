@@ -1,0 +1,23 @@
+{
+  "url": "https://dist.aphrody.app/bun/manifest.json",
+  "status": 200,
+  "body": {
+    "product": "bun",
+    "version": "1.4.3-aphrody.4",
+    "platform": "windows-x64",
+    "path": "aphrody-v1.4.3-aphrody.4",
+    "archive": "bun-windows-x64.zip",
+    "binary": "bun-windows-x64/bun.exe",
+    "aliases": [
+      "bun",
+      "bunx",
+      "node",
+      "npm",
+      "npx",
+      "uv",
+      "uvx"
+    ],
+    "updated": "2026-10-09T17:23:58Z",
+    "sha256": "aa447512bf871a5344105684cd57e7c1ace9c12688b0f29a770b56a8ca5a4732"
+  }
+}

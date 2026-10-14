@@ -114,6 +114,8 @@ struct Host {
     initialized: bool,
     /// True when this crate called `Py_InitializeEx` (and so may finalise).
     owned: bool,
+    /// Matched init/finalize leases across JSC VMs and native consumers.
+    clients: usize,
     /// Thread state saved after initialisation so any thread can attach with the GIL state API.
     saved: *mut c_void,
     buffers: HashMap<u64, Box<buffers::PyBuffer>>,
@@ -445,6 +447,7 @@ fn load_inner(path: Option<&str>) -> i32 {
                 api,
                 initialized: false,
                 owned: false,
+                clients: 0,
                 saved: std::ptr::null_mut(),
                 buffers: HashMap::new(),
                 next_buffer: 1,
@@ -497,12 +500,18 @@ pub extern "C" fn aphrody_py_init() -> i32 {
             return APHRODY_PY_ERR_STATE;
         };
         if h.initialized {
+            let Some(clients) = h.clients.checked_add(1) else {
+                set_error("Python client lease count exhausted");
+                return APHRODY_PY_ERR_STATE;
+            };
+            h.clients = clients;
             return 0;
         }
         // SAFETY: bound CPython entry points, called on the initialising thread.
         unsafe {
             if (h.api.is_initialized)() != 0 {
                 h.initialized = true;
+                h.clients = 1;
                 return 0;
             }
             #[cfg(windows)]
@@ -516,6 +525,7 @@ pub extern "C" fn aphrody_py_init() -> i32 {
         }
         h.initialized = true;
         h.owned = true;
+        h.clients = 1;
         1
     })
 }
@@ -776,7 +786,7 @@ pub unsafe extern "C" fn aphrody_py_version(out: *mut *mut c_char) -> i32 {
     })
 }
 
-/// Finalises the interpreter when this crate started it; a no-op (0) when it only attached.
+/// Releases one client lease and finalises an owned interpreter after the last client closes.
 #[unsafe(no_mangle)]
 pub extern "C" fn aphrody_py_finalize() -> i32 {
     guard(APHRODY_PY_ERR_PANIC, || {
@@ -798,7 +808,11 @@ pub extern "C" fn aphrody_py_finalize() -> i32 {
             set_error("cannot finalize while Python calls or shared buffer leases are active");
             return APHRODY_PY_ERR_STATE;
         }
-        if !h.owned || !h.initialized {
+        if !h.initialized || h.clients == 0 {
+            return APHRODY_PY_OK;
+        }
+        h.clients -= 1;
+        if h.clients != 0 || !h.owned {
             return APHRODY_PY_OK;
         }
         CLI_ACTIVE.store(true, Ordering::Release);
@@ -1296,6 +1310,14 @@ mod tests {
                 bun_py_buffer_acquire(c"memoryview(shared_bytes)[::2]".as_ptr(), 1, &mut view),
                 APHRODY_PY_ERR_PYTHON
             );
+        }
+        assert_eq!(aphrody_py_finalize(), APHRODY_PY_OK);
+        let mut output = std::ptr::null_mut();
+        // The first close releases the attached client; the owner remains live.
+        unsafe {
+            assert_eq!(aphrody_py_eval(c"40 + 2".as_ptr(), &mut output), 0);
+            assert_eq!(CStr::from_ptr(output).to_bytes(), b"42");
+            aphrody_py_string_free(output);
         }
         assert_eq!(aphrody_py_finalize(), APHRODY_PY_OK);
     }

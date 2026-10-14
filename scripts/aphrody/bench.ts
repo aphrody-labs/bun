@@ -42,7 +42,6 @@ const pythonOption = option("--python");
 if (pythonOption === undefined) throw new Error("--python requires a qualified CPython executable");
 const python = resolve(pythonOption);
 const uv = option("--uv", Bun.which("uv") ?? undefined);
-const oxc = option("--oxc", Bun.which("oxlint") ?? undefined);
 const ruff = option("--ruff", Bun.which("ruff") ?? undefined);
 const native = option("--native");
 const dotnet = args.includes("--no-dotnet") ? undefined : option("--dotnet", Bun.which("dotnet") ?? undefined);
@@ -316,7 +315,7 @@ try {
     await run(right);
     cases.push({ name: "warm dependency-free install", left, right });
   }
-  if (oxc && ruff) {
+  if (ruff) {
     const lintRoot = join(tmpdir(), "aphrody-runtime-bench", Bun.hash(out).toString(16));
     const jsTree = join(lintRoot, "lint-js"),
       pyTree = join(lintRoot, "lint-py");
@@ -333,8 +332,8 @@ try {
     cases.push({
       name: "lint 100 files / 10000 functions",
       left: {
-        name: "OXC / JavaScript",
-        argv: [oxc, "--no-ignore", jsTree],
+        name: "Bun lint / JavaScript",
+        argv: [bun, "lint", jsTree],
         cwd: jsTree,
       },
       right: { name: "Ruff / Python", argv: [ruff, "check", "--isolated", "--no-cache", pyTree], cwd: pyTree },

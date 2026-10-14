@@ -25,7 +25,7 @@ The studio is embedded in the `hyperframes preview` command. To develop the stud
 cd packages/studio
 bun run dev        # Start Vite dev server
 bun run build      # Build for production
-bun run typecheck  # Type-check
+bun check  # Type-check
 ```
 
 ## Tech stack

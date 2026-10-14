@@ -12,7 +12,6 @@
 //
 // Pass --v8 to also refresh src/protocol/v8 from the Chrome DevTools protocol
 // repository (requires network access).
-import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -247,7 +246,11 @@ if (includeV8) {
   write("v8/index.d.ts", "// GENERATED - DO NOT EDIT\n" + formatProtocol(v8, baseNoComments));
 }
 
-const { status } = spawnSync("bunx", ["prettier", "--write", ...written], { cwd: repoRoot, stdio: "inherit" });
-if (status !== 0) {
-  process.exit(status ?? 1);
+const formatted = Bun.spawnSync([process.execPath, "fmt", "--write", ...written], {
+  cwd: repoRoot,
+  stdout: "inherit",
+  stderr: "inherit",
+});
+if (formatted.exitCode !== 0) {
+  process.exit(formatted.exitCode);
 }

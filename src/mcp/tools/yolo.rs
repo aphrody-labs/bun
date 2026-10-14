@@ -1,4 +1,4 @@
-//! Jev decisions through the shared Rust owner; aliases share routing and budgets.
+//! Bun typed decisions through the shared Rust owner and process budget.
 
 use std::{
     io::Read,
@@ -17,7 +17,7 @@ const MAX_WINDOW_TOKENS: usize = MAX_INPUT_TOKENS * 2;
 const MAX_CALLS: usize = 20;
 const MAX_JUDGMENTS: usize = 64;
 const WINDOW: Duration = Duration::from_secs(60);
-const AUTH_ERROR: &str = "Jev authentication or configuration is unavailable";
+const AUTH_ERROR: &str = "Yolo authentication or configuration is unavailable";
 
 struct Budget {
     since: Instant,
@@ -43,7 +43,7 @@ impl Budget {
     fn reserve(&mut self, judgments: usize, tokens: usize, now: Instant) -> Result<(), ToolError> {
         if self.active {
             return Err(ToolError::Failed(
-                "A Jev judgment is already running".into(),
+                "A Yolo judgment is already running".into(),
             ));
         }
         if now.saturating_duration_since(self.since) >= WINDOW {
@@ -57,7 +57,7 @@ impl Budget {
             || tokens > MAX_WINDOW_TOKENS.saturating_sub(self.tokens)
         {
             return Err(ToolError::Failed(
-                "Jev judgment budget exhausted for this minute".into(),
+                "Yolo judgment budget exhausted for this minute".into(),
             ));
         }
         self.calls += 1;
@@ -140,22 +140,22 @@ fn configured_router(
 
 fn provider_error(error: JevError) -> ToolError {
     match error {
-        JevError::InvalidRequest(_) => ToolError::InvalidArgs("Invalid Jev request".into()),
+        JevError::InvalidRequest(_) => ToolError::InvalidArgs("Invalid Yolo request".into()),
         JevError::NoBackend
         | JevError::Config(_)
         | JevError::Rejected {
             status: 401 | 403, ..
         } => ToolError::Failed(AUTH_ERROR.into()),
         JevError::Rejected { status, .. } => {
-            ToolError::Failed(format!("Jev backend rejected the request (HTTP {status})"))
+            ToolError::Failed(format!("Yolo backend rejected the request (HTTP {status})"))
         }
         JevError::TooLarge { .. } => {
-            ToolError::InvalidArgs("Jev request exceeds the backend context limit".into())
+            ToolError::InvalidArgs("Yolo request exceeds the backend context limit".into())
         }
         JevError::Format(_) => {
-            ToolError::Failed("Jev backend returned a nonconforming response".into())
+            ToolError::Failed("Yolo backend returned a nonconforming response".into())
         }
-        JevError::Unavailable(_) => ToolError::Failed("Jev backend is unavailable".into()),
+        JevError::Unavailable(_) => ToolError::Failed("Yolo backend is unavailable".into()),
     }
 }
 
@@ -175,15 +175,15 @@ fn arguments(args: &Args<'_>) -> Result<(Request, Option<f64>), ToolError> {
         aphrody_jev::validate_confidence_threshold(threshold).map_err(provider_error)?;
     }
     let encoded = serde_json::to_vec(&fields)
-        .map_err(|_| ToolError::InvalidArgs("Invalid Jev request".into()))?;
+        .map_err(|_| ToolError::InvalidArgs("Invalid Yolo request".into()))?;
     let value = protocol::parse(&encoded)
-        .map_err(|_| ToolError::InvalidArgs("Invalid or oversized Jev request".into()))?;
-    protocol::request(&value).map_err(|_| ToolError::InvalidArgs("Invalid Jev request".into()))?;
+        .map_err(|_| ToolError::InvalidArgs("Invalid or oversized Yolo request".into()))?;
+    protocol::request(&value).map_err(|_| ToolError::InvalidArgs("Invalid Yolo request".into()))?;
     let request: Request = serde_json::from_value(value)
-        .map_err(|_| ToolError::InvalidArgs("Invalid Jev request".into()))?;
+        .map_err(|_| ToolError::InvalidArgs("Invalid Yolo request".into()))?;
     if request.estimated_tokens() > MAX_INPUT_TOKENS {
         return Err(ToolError::InvalidArgs(
-            "Jev request exceeds 32000 estimated input tokens".into(),
+            "Yolo request exceeds 32000 estimated input tokens".into(),
         ));
     }
     Ok((request, minimum_confidence))
@@ -230,12 +230,13 @@ fn decide_with(
                 .map_err(|_| ())
         })
         .as_ref()
-        .map_err(|()| ToolError::Failed("Jev executor is unavailable".into()))?;
+        .map_err(|()| ToolError::Failed("Yolo executor is unavailable".into()))?;
     let decision = runtime
         .block_on(router.decide(&request))
         .map_err(provider_error)?;
-    let output =
+    let mut output =
         decision_output(&request, &decision, minimum_confidence).map_err(provider_error)?;
+    output["model"] = serde_json::Value::String("yolo".into());
     Ok(Output::text(output.to_string()))
 }
 
@@ -252,7 +253,7 @@ fn decide(ctx: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
     })
 }
 
-const SCHEMA: &str = r#"{"type":"object","properties":{"state":{"type":["string","object","array","null"]},"model":{"type":"string","minLength":1,"maxLength":256,"default":"jev-latest"},"questions":{"type":"object","minProperties":1,"maxProperties":64,"propertyNames":{"minLength":1,"maxLength":128},"additionalProperties":{"type":"object","properties":{"type":{"enum":["noul","choice","score"]},"instructions":{"type":["string","object","array","null"]},"criteria":{"type":["object","array","null"]}},"required":["type"],"additionalProperties":false}},"minimum_confidence":{"type":["number","null"],"minimum":0,"maximum":1}},"required":["state","questions"],"additionalProperties":false}"#;
+const SCHEMA: &str = r#"{"type":"object","properties":{"state":{"type":["string","object","array","null"]},"model":{"type":"string","minLength":1,"maxLength":256},"questions":{"type":"object","minProperties":1,"maxProperties":64,"propertyNames":{"minLength":1,"maxLength":128},"additionalProperties":{"type":"object","properties":{"type":{"enum":["noul","choice","score"]},"instructions":{"type":["string","object","array","null"]},"criteria":{"type":["object","array","null"]}},"required":["type"],"additionalProperties":false}},"minimum_confidence":{"type":["number","null"],"minimum":0,"maximum":1}},"required":["state","questions"],"additionalProperties":false}"#;
 const ANNOTATIONS: Annotations = Annotations {
     read_only: true,
     destructive: false,
@@ -260,24 +261,14 @@ const ANNOTATIONS: Annotations = Annotations {
     open_world: true,
 };
 
-pub(crate) const TOOLS: &[Tool] = &[
-    Tool {
-        name: "yolo_decide",
-        title: "Jev System One decision",
-        description: "Judge supplied state with Jev Noul, Choice or Score through Bun's shared Rust owner. Optional minimum_confidence adds candidate selections with null abstention; raw answers/distributions remain. Does not execute or authorize actions. Uses server-configured TYPESAFE_API_KEY or an explicit protected TYPESAFE_API_KEY_FILE; no credential arguments. At most 64 questions, 32000 estimated input tokens; shared process budget of 20 calls, 64 judgments and 64000 estimated tokens per minute, one call at a time.",
-        input_schema: SCHEMA,
-        annotations: ANNOTATIONS,
-        call: decide,
-    },
-    Tool {
-        name: "jev_decide",
-        title: "Jev System One decision (alias)",
-        description: "Alias of yolo_decide with identical shared validation, routing, abstention and process budgets. Produces decision evidence only; does not execute or authorize actions.",
-        input_schema: SCHEMA,
-        annotations: ANNOTATIONS,
-        call: decide,
-    },
-];
+pub(crate) const TOOLS: &[Tool] = &[Tool {
+    name: "yolo_decide",
+    title: "Bun typed decision",
+    description: "Judge supplied state through Bun's typed decision capability: Noul booleans, Choice keys or Score values. Optional minimum_confidence adds candidate selections with null abstention; raw answers and distributions remain. A judgment does not execute or authorize an action. The server owns backend configuration and credentials; no credential arguments. At most 64 questions, 32000 estimated input tokens; shared process budget of 20 calls, 64 judgments and 64000 estimated tokens per minute, one call at a time.",
+    input_schema: SCHEMA,
+    annotations: ANNOTATIONS,
+    call: decide,
+}];
 
 #[cfg(test)]
 mod tests {
@@ -341,9 +332,12 @@ mod tests {
     }
 
     #[test]
-    fn aliases_share_one_callback_and_expose_bounded_arguments() {
-        assert!(std::ptr::fn_addr_eq(TOOLS[0].call, TOOLS[1].call));
-        assert_eq!(TOOLS[0].input_schema, TOOLS[1].input_schema);
+    fn bun_decisions_expose_one_public_tool_with_bounded_arguments() {
+        assert_eq!(TOOLS.len(), 1);
+        assert_eq!(TOOLS[0].name, "yolo_decide");
+        assert_eq!(TOOLS[0].title, "Bun typed decision");
+        assert!(!SCHEMA.contains("jev"));
+        assert!(!TOOLS[0].description.contains("Jev"));
         let schema: Value = serde_json::from_str(SCHEMA).unwrap();
         assert_eq!(schema["properties"]["questions"]["maxProperties"], 64);
         assert_eq!(schema["properties"]["minimum_confidence"]["maximum"], 1);
@@ -462,6 +456,7 @@ mod tests {
         let state = JevState::default();
         let output = decide_with(&state, &Args(&args()), || Ok(router)).unwrap();
         let value: Value = serde_json::from_str(&output.text).unwrap();
+        assert_eq!(value["model"], "yolo");
         assert_eq!(value["selections"]["tool"], Value::Null);
         assert_eq!(value["answers"]["tool"]["choice"], "read");
         assert_eq!(

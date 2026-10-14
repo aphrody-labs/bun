@@ -53,7 +53,7 @@ function base256(value: bigint, width: number): Uint8Array {
   return out;
 }
 
-function buildTarball(entries: Array<{ name: string | Buffer; data: Buffer | string }>): Uint8Array {
+function buildTarball(entries: Array<{ name: string | Buffer; data: Buffer | string }>): Uint8Array<ArrayBuffer> {
   const parts = entries.map(e => ustarEntry(e.name, typeof e.data === "string" ? Buffer.from(e.data) : e.data));
   parts.push(Buffer.alloc(1024));
   return new Uint8Array(Buffer.concat(parts));
@@ -80,7 +80,7 @@ function paxEntry(name: string, data: Buffer | string, index: number): Buffer {
   ]);
 }
 
-function buildPaxTarball(entries: Array<{ name: string; data: Buffer | string }>): Uint8Array {
+function buildPaxTarball(entries: Array<{ name: string; data: Buffer | string }>): Uint8Array<ArrayBuffer> {
   const parts = entries.map((e, i) => paxEntry(e.name, e.data, i));
   parts.push(Buffer.alloc(1024));
   return new Uint8Array(Buffer.concat(parts));
@@ -90,7 +90,7 @@ describe("Bun.Archive", () => {
   describe("file-backed sources", () => {
     for (const options of [{ mtime: 0 }, { format: "zip", mtime: 0 }, { compress: "gzip", mtime: 0 }] as const) {
       test(`preserves sliced file bytes across all operations ${JSON.stringify(options)}`, async () => {
-        using dir = tempDir("archive-file-window");
+        using dir = tempDir("archive-file-window", {});
         const bytes = await new Bun.Archive({ "entry.txt": "file-backed content" }, options).bytes();
         const framed = new Uint8Array(bytes.length + 11);
         framed.set(bytes, 7);
@@ -118,7 +118,7 @@ describe("Bun.Archive", () => {
     }
 
     test("packs direct and descriptor file entries with their slice boundaries", async () => {
-      using dir = tempDir("archive-file-entries");
+      using dir = tempDir("archive-file-entries", {});
       const path = join(String(dir), "source.txt");
       await Bun.write(path, "prefix-content-suffix");
       const input = Bun.file(path).slice(7, 14);
@@ -134,7 +134,7 @@ describe("Bun.Archive", () => {
     });
 
     test("retains a supplied descriptor without consuming its file position", async () => {
-      using dir = tempDir("archive-file-descriptor");
+      using dir = tempDir("archive-file-descriptor", {});
       const path = join(String(dir), "input.tar");
       const bytes = buildTarball([{ name: "entry.txt", data: "retained descriptor" }]);
       await Bun.write(path, bytes);
@@ -149,7 +149,7 @@ describe("Bun.Archive", () => {
     });
 
     test("rejects missing files asynchronously and bounds synchronous file entry reads", async () => {
-      using dir = tempDir("archive-file-errors");
+      using dir = tempDir("archive-file-errors", {});
       const archive = new Bun.Archive(Bun.file(join(String(dir), "missing")));
       await expect(archive.bytes()).rejects.toMatchObject({ code: "ENOENT" });
       await expect(archive.blob()).rejects.toMatchObject({ code: "ENOENT" });

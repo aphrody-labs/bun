@@ -19,7 +19,7 @@ export const VERSION = '${version}';
 await Bun.write(path.resolve(process.cwd(), 'src/version.ts'), src);
 
 cp.execSync('bun run make');
-cp.execSync('bun x tsgo -d');
+cp.execSync('bun ../../../../../../scripts/aphrody/emit-typescript.ts -d');
 
 const distFile = await Bun.file('dist/esm/version.mjs').text();
 

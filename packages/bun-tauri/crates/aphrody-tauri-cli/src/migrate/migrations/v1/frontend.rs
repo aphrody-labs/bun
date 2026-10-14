@@ -162,7 +162,7 @@ fn migrate_imports<'a>(
   for (source_type, js_source, script_start) in sources {
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, js_source, source_type).parse();
-    if !ret.errors.is_empty() {
+    if !ret.diagnostics.is_empty() {
       crate::error::bail!(
         "failed to parse {} as valid Javascript/Typescript file",
         path.display()
@@ -384,9 +384,9 @@ mod tests {
       let allocator = Allocator::default();
       let ret = Parser::new(&allocator, &script_source, source_type).parse();
       assert!(
-        ret.errors.is_empty(),
+        ret.diagnostics.is_empty(),
         "migrated output did not parse: {:?}",
-        ret.errors
+        ret.diagnostics
       );
     }
   }

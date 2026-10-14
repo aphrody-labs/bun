@@ -127,7 +127,7 @@ test("the dataset of this checkout is deterministic, unique and versioned", () =
   expect(serve.source).toMatch(/:\d+$/);
 });
 
-test.skipIf(!Bun.which("tsc"))("every curated pair typechecks against packages/bun-types", () => {
+test("every curated pair typechecks against packages/bun-types", () => {
   const { entries } = finalize(fromPairs(), "1.4.4", "0".repeat(40));
   expect(typecheck(root, entries)).toBe(true);
   expect(entries.filter(e => !e.checks.types).map(e => e.source)).toEqual([]);

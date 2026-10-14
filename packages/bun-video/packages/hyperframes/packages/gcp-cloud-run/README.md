@@ -142,7 +142,7 @@ yourself to pre-upload once and reuse the `siteHandle` across many renders
 
 ```bash
 bun test          # unit tests over an in-memory GCS double — no network
-bun run typecheck
+bun check
 ```
 
 The live end-to-end smoke (build image → terraform apply → render a fixture

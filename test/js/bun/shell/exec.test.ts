@@ -9,6 +9,41 @@ const BUN = bunExe();
 
 $.nothrow();
 describe("bun exec", () => {
+  test.concurrent.each([
+    ["custom argv0", ["recipe", "argument"], "recipe|argument||"],
+    ["default argv0", [], "bun|||"],
+    ["empty argv0", ["", "argument"], "|argument||"],
+    ["flags as arguments", ["recipe", "--help", "--", "-n"], "recipe|--help|--|-n"],
+    ["flag as argv0", ["--help", "argument"], "--help|argument||"],
+    ["delimiter as argv0", ["--", "argument"], "--|argument||"],
+    [
+      "literal arguments",
+      ["récipe with spaces", "", '$(echo injected); & "literal"', "🦀"],
+      'récipe with spaces||$(echo injected); & "literal"|🦀',
+    ],
+  ])("exec source [argv0 [args...]] preserves %s", async (_name, args, expected) => {
+    await using proc = Bun.spawn([BUN, "exec", 'printf "%s|%s|%s|%s" "$0" "$1" "$2" "$3"', ...args], {
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ stdout, stderr, exitCode }).toEqual({ stdout: expected, stderr: "", exitCode: 0 });
+  });
+
+  test.each([
+    ['"$BUN_EXEC_EMPTY"', "|tail"],
+    ["$BUN_EXEC_EMPTY", "tail|"],
+  ])("preserves empty expansion according to quoting: %s", async (value, expected) => {
+    await using proc = Bun.spawn([BUN, "exec", `printf '%s|%s' ${value} tail`], {
+      env: { ...bunEnv, BUN_EXEC_EMPTY: "" },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ stdout, stderr, exitCode }).toEqual({ stdout: expected, stderr: "", exitCode: 0 });
+  });
+
   TestBuilder.command`${BUN} exec ${"echo hi!"}`.env(bunEnv).stdout("hi!\n").runAsTest("it works");
   TestBuilder.command`${BUN} exec sldkfjslkdjflksdjflj`
     .env(bunEnv)
@@ -19,7 +54,7 @@ describe("bun exec", () => {
   TestBuilder.command`${BUN} exec`
     .env(bunEnv)
     .stdout(
-      'Usage: bun exec <script>\n\nExecute a shell script directly from Bun.\n\nNote: If executing this from a shell, make sure to escape the string!\n\nExamples:\n  bun exec "echo hi"\n  bun exec "echo \\"hey friends\\"!"\n',
+      'Usage: bun exec [--nounset] <script> [argv0 [args...]]\n\nExecute a shell script directly from Bun.\n\n--nounset fails when a script expands an unset variable or positional argument.\n\nThe first argument after the script sets $0; remaining arguments set $1, $2, ... (default $0: bun).\n\nNote: If executing this from a shell, make sure to escape the string!\n\nExamples:\n  bun exec "echo hi"\n  bun exec "echo \\"hey friends\\"!"\n',
     )
     .runAsTest("no args prints help text");
 

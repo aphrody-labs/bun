@@ -17,7 +17,7 @@ export const UUTILS_SOURCE = {
   repo: "aphrody-labs/uutils-coreutils",
   commit: UUTILS_COMMIT,
 } as const;
-export const UUTILS_PATCHES = ["patches/uutils/lazy-startup.patch"];
+export const UUTILS_PATCHES = ["patches/uutils/lazy-startup.patch", "patches/uutils/linux-kernel-timer.patch"];
 
 export const uutils: Dependency = {
   name: "uutils",

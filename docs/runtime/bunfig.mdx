@@ -165,23 +165,13 @@ port = 3000
 
 ## Lint and format
 
-The `[lint]` section configures [`bun lint`](/runtime/lint) and the `[fmt]` section configures [`bun fmt`](/runtime/fmt). Flags on the command line override them.
+[`bun lint`](/runtime/lint) and [`bun fmt`](/runtime/fmt) run their linked native engines. They do not use `[lint]` or `[fmt]` sections to select executables, versions or downloads.
 
-```toml title="bunfig.toml" icon="settings"
-[lint]
-config = ".oxlintrc.json"   # oxlint configuration file
-paths = ["src", "test"]     # paths linted when none are given
-ignore = ["dist/**"]        # glob patterns to skip
-n2b = true                  # run the Node.js-to-Bun rules
-args = ["--deny-warnings"]  # more oxlint arguments
-version = "1.87.0"          # oxlint version to download
+Use `.oxlintrc.json` or `.oxlintrc.jsonc` for lint rules, and `.oxfmtrc.json` or `.oxfmtrc.jsonc` for formatting options. Pass `--config` for an explicit configuration, filesystem operands for scope and `--ignore-pattern` for exclusions.
 
-[fmt]
-config = ".oxfmtrc.json"
-paths = ["src", "test"]
-ignore = ["dist/**"]
-args = []
-version = "0.72.0"
+```sh
+bun lint --config .oxlintrc.json src
+bun fmt --config .oxfmtrc.json --check src
 ```
 
 ## Test runner

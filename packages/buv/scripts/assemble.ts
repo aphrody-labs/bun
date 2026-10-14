@@ -6,7 +6,7 @@ import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, renameSync } fr
 import { join, resolve } from "node:path";
 import { selectCore, validateCore, type NativeCore } from "./core.ts";
 import { hostTarget } from "./install.ts";
-import { minorOf, readVendor, ROOT, run, sha256File, workspaceVersion } from "./lib.ts";
+import { minorOf, packageVersion, readVendor, ROOT, run, sha256File } from "./lib.ts";
 import { buildManifest, MANIFEST_PATH, type Manifest } from "./manifest.ts";
 
 export interface AssembleOptions {
@@ -21,20 +21,18 @@ export interface AssembleOptions {
   core?: NativeCore;
 }
 
-/** Licence files copied from the fork checkouts and the repository into share/buv/licenses. */
+/** Licence files copied from the one canonical UV checkout and the repository. */
 const LICENSES: Record<string, string[]> = {
   uv: ["vendor/uv/LICENSE-APACHE", "vendor/uv/LICENSE-MIT"],
-  ruff: ["vendor/ruff/LICENSE"],
-  pyo3: ["vendor/pyo3/LICENSE-APACHE", "vendor/pyo3/LICENSE-MIT"],
   buv: ["LICENSE", "NOTICE"],
   bun: ["../../LICENSE"],
   webkit: ["../../vendor/WebKit/Source/JavaScriptCore/COPYING", "../../vendor/WebKit/Source/WTF/COPYING.LIB"],
 };
 
 export async function assemble(options: AssembleOptions): Promise<{ artifact: string; manifest: Manifest }> {
-  const { root, targetDir, out, revision, toolchain } = options;
+  const { root, out, revision, toolchain } = options;
   const vendor = await readVendor(root);
-  const version = await workspaceVersion(root);
+  const version = await packageVersion(root);
   const target = options.target ?? hostTarget();
   const uv = vendor.sources.find(source => source.name === "uv");
   if (!uv?.embedded) throw new Error("UV must be embedded in the native core");
@@ -72,12 +70,6 @@ export async function assemble(options: AssembleOptions): Promise<{ artifact: st
     copyFileSync(core.executable, destination);
     chmodSync(destination, 0o755);
   }
-  const ruff = join(targetDir, "release", `ruff${extension}`);
-  const hasRuff = existsSync(ruff);
-  if (hasRuff) {
-    copyFileSync(ruff, join(staging, "bin", `ruff${extension}`));
-    chmodSync(join(staging, "bin", `ruff${extension}`), 0o755);
-  }
   for (const [part, files] of Object.entries(LICENSES)) {
     const destination = join(staging, "share", "buv", "licenses", part);
     mkdirSync(destination, { recursive: true });
@@ -109,7 +101,7 @@ export async function assemble(options: AssembleOptions): Promise<{ artifact: st
     revision,
     pins,
     compatibility: { cliMajor: Number(version.split(".")[0]) },
-    capabilities: ["javascript", "uv", ...(hasRuff ? ["ruff"] : []), ...(hasPython ? ["python-prefix"] : [])],
+    capabilities: ["javascript", "uv", ...(hasPython ? ["python-prefix"] : [])],
     nativeCore: core,
   });
   for (const binary of ["buv", "pyjs"]) {

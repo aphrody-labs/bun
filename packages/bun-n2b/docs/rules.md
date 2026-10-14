@@ -1,9 +1,9 @@
 # Rule registry
 
-The `aphrody-n2b-registry` crate holds the data-driven rules. Five TOML files under
-`crates/n2b-registry/registry/` are embedded with `include_str!`, then parsed and validated on first
+The `bun_migrate::registry` module holds the data-driven rules. Five TOML files under
+`src/migrate/registry/data/` are embedded with `include_str!`, then parsed and validated on first
 access. Scanners for configuration files (`tsconfig`, `bunfig.toml`, `.npmrc`, Dockerfiles, CI
-workflows, …) add rules written in code in `crates/n2b-core/src/scanners/`.
+workflows, …) add rules written in code in `src/migrate/engine/scanners/`.
 
 `n2b rules --report json` prints every rule ID, category and docs link.
 
@@ -43,7 +43,7 @@ When a module entry has no `severity`, n2b derives it from `compat`: `full` give
 
 ## Import-aware matching
 
-`crates/n2b-core/src/rules/imports_ast.rs` parses each JavaScript or TypeScript file with Oxc and
+`src/migrate/engine/rules/imports_ast.rs` parses each JavaScript or TypeScript file with Oxc and
 builds an `ImportGraph`. A rule with `import_from` matches a symbol only when the file imports it
 from that module (default, named, namespace or `require` binding). A local variable named `fs` or
 `process` does not trigger the rule.
@@ -57,9 +57,9 @@ from that module (default, named, namespace or `require` binding). A local varia
 | `cli/*`                                                                                                                                                                             | `cli.toml`                                                    |
 | `globals/*`                                                                                                                                                                         | `globals.toml`                                                |
 | `next/*`                                                                                                                                                                            | `packages.toml` entries for Next.js                           |
-| `tsconfig/*`, `bunfig/*`, `npmrc/*`, `env/*`, `shebang/*`, `docker/*`, `docker-compose/*`, `lock/*`, `pkg/*`, `husky/*`, `turbo/*`, `tauri/*`, `ci/*`, `js-config/*`, `workspace/*` | Scanners in `crates/n2b-core/src/scanners/`                   |
+| `tsconfig/*`, `bunfig/*`, `npmrc/*`, `env/*`, `shebang/*`, `docker/*`, `docker-compose/*`, `lock/*`, `pkg/*`, `husky/*`, `turbo/*`, `tauri/*`, `ci/*`, `js-config/*`, `workspace/*` | Scanners in `src/migrate/engine/scanners/`                   |
 
-`test/*` comes from `crates/n2b-core/src/rules/test_apis.rs`.
+`test/*` comes from `src/migrate/engine/rules/test_apis.rs`.
 
 ## Monorepo and test-runner rules
 
@@ -97,5 +97,5 @@ a page.
 
 1. Add the entry to the matching TOML file with a new `id`.
 2. Add a fixture or unit test that produces the finding, and one that must not.
-3. Run `cargo test -p aphrody-n2b-registry -p aphrody-n2b-core` from `packages/bun-n2b`.
-4. If the rule changes reported output, regenerate the baselines under `crates/n2b/tests/baselines/`.
+3. Run `cargo test -p bun_migrate` from the repository root.
+4. If the rule changes reported output, regenerate the baselines under `src/migrate/tests/baselines/`.

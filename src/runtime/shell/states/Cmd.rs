@@ -637,6 +637,7 @@ impl Cmd {
             &mut spawn_args.stdio,
             &mut spawn_args.redirect_stdout,
             &mut spawn_args.redirect_stderr,
+            &mut shellio,
         ) {
             Ok(None) => {}
             Ok(Some(y)) => {
@@ -775,6 +776,7 @@ impl Cmd {
         stdio: &mut [Stdio; 3],
         redirect_stdout: &mut Option<crate::jsc::PinnedArrayBuffer>,
         redirect_stderr: &mut Option<crate::jsc::PinnedArrayBuffer>,
+        _shellio: &mut ShellIO,
     ) -> crate::jsc::JsResult<Option<Yield>> {
         const STDIN_NO: usize = 0;
         const STDOUT_NO: usize = 1;
@@ -936,6 +938,29 @@ impl Cmd {
                         )));
                     }
                 };
+                #[cfg(windows)]
+                if flags.contains(ast::RedirectFlags::APPEND) && !flags.stdin() {
+                    // libuv's append-only file handles cannot be written by MSYS
+                    // children. Drain a child pipe through the existing append writer.
+                    let writer = crate::shell::io_writer::IOWriter::init(
+                        redirfd,
+                        crate::shell::io_writer::Flags {
+                            pollable: true,
+                            ..Default::default()
+                        },
+                        interp.event_loop,
+                    );
+                    writer.set_interp(interp.as_ctx_ptr());
+                    if flags.stdout() || flags.duplicate_out() {
+                        stdio[STDOUT_NO] = Stdio::Capture(crate::api::bun_spawn::stdio::Capture {});
+                        _shellio.stdout = Some(std::sync::Arc::clone(&writer));
+                    }
+                    if flags.stderr() || flags.duplicate_out() {
+                        stdio[STDERR_NO] = Stdio::Capture(crate::api::bun_spawn::stdio::Capture {});
+                        _shellio.stderr = Some(std::sync::Arc::clone(&writer));
+                    }
+                    return Ok(None);
+                }
                 interp.as_cmd_mut(this).redirection_fd = Some(CowFd::init(redirfd));
                 set_stdio_from_redirect(stdio, flags, redirfd);
             }

@@ -47,18 +47,13 @@ export function writeGeneratedFile(outPath: string, contents: string): boolean {
 }
 
 /**
- * Runs the generated source through oxfmt's stdin so it is published already
- * formatted. Formatting the file after publishing it would rewrite it in place and
- * reopen the very window the atomic rename closes. Best effort: an environment
- * without oxfmt still gets a valid, if unformatted, artifact.
+ * Runs the generated source through Bun's native formatter before publication.
+ * Formatting the file after publishing it would rewrite it in place and
+ * reopen the very window the atomic rename closes.
  */
 export function formatGeneratedSource(source: string, outPath: string): string {
-  try {
-    return execFileSync("bun", ["x", "oxfmt", `--stdin-filepath=${outPath}`], {
-      input: source,
-      encoding: "utf8",
-    });
-  } catch {
-    return source;
-  }
+  return execFileSync(process.execPath, ["fmt", `--stdin-filepath=${outPath}`], {
+    input: source,
+    encoding: "utf8",
+  });
 }

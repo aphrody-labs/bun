@@ -60,8 +60,8 @@ To simplify this command, update the `"dev"` script in `package.json` to the fol
   "scripts": {
     "dev": "vite", // [!code --]
     "dev": "bunx --bun vite", // [!code ++]
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
+    "build": "bun check -b && vite build",
+    "lint": "bun lint .",
     "preview": "vite preview"
   },
   // ...

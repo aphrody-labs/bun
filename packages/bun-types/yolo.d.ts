@@ -63,12 +63,12 @@ declare module "bun:yolo" {
     readonly timeout: number;
     readonly retry: { readonly maxRetries: number };
   }
-  /** Structurally accepts the official TypeSafe SDK's systemOne client. */
+  /** Application-owned structured decision transport. */
   export interface Provider {
     systemOne(request: Request, options?: ProviderOptions): PromiseLike<unknown>;
   }
   export interface Options {
-    /** Default: native Jev HTTP provider. No model or weights are downloaded. */
+    /** Default: native remote HTTP provider. No model or weights are downloaded. */
     provider?: Provider;
     signal?: AbortSignal;
     /** Total operation deadline, including retries. Integer 1..120000; default 10000 ms. */
@@ -101,14 +101,14 @@ declare module "bun:yolo" {
   ): Promise<{ readonly [K in keyof Q]: ValueFor<Q[K]> }>;
   export function ask<const Q extends Question>(state: Entry, question: Q, options?: Options): Promise<ValueFor<Q>>;
   export function value<const Q extends Question>(answer: AnswerFor<Q>, question: Q, threshold?: number): ValueFor<Q>;
-  export interface JevOptions {
+  export interface RemoteOptions {
     /** Native HTTP when omitted. The SDK owns transport/retries when supplied. */
     client?: Provider;
     /** HTTPS endpoint root; HTTP is accepted only for loopback tests or local servers. */
     baseURL?: string;
     model?: string;
   }
-  export function jev(options?: JevOptions): Provider;
+  export function remote(options?: RemoteOptions): Provider;
   /** Deterministic code uses the same native answer validation as model providers. */
   export function code(
     evaluate: (request: Request, options: ProviderOptions) => unknown | PromiseLike<unknown>,
@@ -126,7 +126,7 @@ declare module "bun:yolo" {
     /** Generated token bound, integer 1..4096; default 1024. */
     maxTokens?: number;
   }
-  /** Strict JSON output, validated by Rust. Local probabilities are model outputs, not calibrated Jev scores. */
+  /** Strict JSON output, validated by Rust. Local probabilities are model outputs, not calibrated remote scores. */
   export function local(options: LocalOptions): Provider;
   export const Yolo: typeof ask & {
     readonly decide: typeof decide;
@@ -136,7 +136,7 @@ declare module "bun:yolo" {
     readonly choice: typeof choice;
     readonly score: typeof score;
     readonly value: typeof value;
-    readonly jev: typeof jev;
+    readonly remote: typeof remote;
     readonly code: typeof code;
     readonly local: typeof local;
     readonly confidenceThreshold: typeof confidenceThreshold;

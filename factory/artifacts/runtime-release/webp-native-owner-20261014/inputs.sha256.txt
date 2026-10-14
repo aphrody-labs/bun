@@ -1,0 +1,12 @@
+a718df851ba262ed147a2e8ed4311ac49122a493d341a7207a2435eac7a6bd81  /home/ubuntu/build/tmp/webp-owner-preflight.sh
+4e24544abab8221dd9728918feaba6197a3d7e591e33adb8bc3989da394a22f8  /home/ubuntu/build/tmp/webp-owner-abi-probe.c
+15a6d06d127e2df13e601e23e61cb8a2c4ca80dce72f996c692c4f68339dc145  /home/ubuntu/build/tmp/webp-owner-abi-probe.rs
+2d61293ca8eb96dc44a2958d3cd88129a96ca900cbd8d245f98f99dcfa810a05  /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libwebp-sys-0.9.6/build.rs
+79ce417a17c483dcb1b0d63376518f5a33c97a2c30b15c4c10b1b2e0beb43d2a  /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libwebp-sys-0.9.6/src/lib.rs
+f56c4bb8473f8f1ac7bfa9a26ede4991666809d671e40fc11292b1467139bc38  /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libwebp-sys-0.9.6/src/ffi.rs
+14a37a20d0f203fb005a503b548d9ccc0462dc85e61a707149f0e5cb9998269e  /home/ubuntu/build/bun-os-obscura-4634063/build/release/deps/libwebp/liblibwebp.a
+0e9e6433b6be488cfcb39fb4c8d7138f9896e850eb98ab5319bcf6cc2bfad136  /home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/explicit-bzero-owner-20261014/compat.o
+928e8d3ed502baa0f47ed10913ee018ed6172afcd4f308e0ea005a126b83f27e  /home/ubuntu/build/bun-os-obscura-4634063/vendor/libwebp/src/webp/encode.h
+e554551d085f234e930f36b5879a77ef58bfea34c48ebfd620426e63b224025c  /home/ubuntu/build/bun-os-obscura-4634063/vendor/libwebp/src/webp/decode.h
+c72cf593f8194c671efcade33f1678294380120d45a337511d612a3acb643f35  /home/ubuntu/build/bun-os-obscura-4634063/vendor/libwebp/src/webp/mux.h
+9b0d10c0fa1ac2dc750c4d687b038e40a685bb9240cb045759f5b9546017361d  /home/ubuntu/build/bun-os-obscura-4634063/vendor/libwebp/src/webp/demux.h

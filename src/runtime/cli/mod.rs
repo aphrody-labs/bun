@@ -213,10 +213,12 @@ pub(crate) mod add_completions;
 pub(crate) mod colon_list_type;
 #[path = "discord_command.rs"]
 pub(crate) mod discord_command;
-#[path = "video_command.rs"]
-pub(crate) mod video_command;
+#[path = "just_command.rs"]
+pub(crate) mod just_command;
 #[path = "shell_completions.rs"]
 pub(crate) mod shell_completions;
+#[path = "video_command.rs"]
+pub(crate) mod video_command;
 #[path = "which_npm_client.rs"]
 pub(crate) mod which_npm_client;
 
@@ -335,10 +337,10 @@ pub(crate) mod run_command;
 #[path = "ssh_command.rs"]
 pub(crate) mod ssh_command;
 pub(crate) mod tools_command;
-#[path = "vpn_command.rs"]
-pub(crate) mod vpn_command;
 #[path = "uv_command.rs"]
 pub(crate) mod uv_command;
+#[path = "vpn_command.rs"]
+pub(crate) mod vpn_command;
 #[path = "winmd_command.rs"]
 pub(crate) mod winmd_command;
 
@@ -687,12 +689,13 @@ pub(crate) mod help_command {
             <d>lint<r>                 Run a package.json script
   <b><magenta>test<r>                           Run unit tests with Bun
   <b><magenta>check<r>                          Type check a TypeScript project
-  <b><magenta>lint<r>                           Lint with oxlint and the Node-to-Bun rules
-  <b><magenta>fmt<r>                            Format with oxfmt
+  <b><magenta>lint<r>                           Lint with Bun's native quality engine
+  <b><magenta>fmt<r>                            Format with Bun's native formatter
   <b><magenta>rename<r>    <d>--from a --to b<r>      Rename identifiers and paths across a git repository
   <b><magenta>docs<r>      <d>[query]<r>              Search the Bun documentation
   <b><magenta>video<r>     <d>metadata | frame<r>     Native video metadata, frames, audio, GIF and remux
   <b><magenta>n2b<r>       <d>scan | fix | migrate<r> Migrate a Node.js project to Bun
+  <b><magenta>just<r>      <d>[recipe]<r> Run justfile recipes
   <b><magenta>x<r>         <d>{:<16}<r>     Execute a package binary (CLI), installing if needed <d>(bunx)<r>
   <b><magenta>repl<r>                           Start a REPL session with Bun
   <b><magenta>exec<r>                           Run a shell script directly with Bun
@@ -1152,10 +1155,10 @@ pub(crate) mod command {
                 false => Tag::ToolchainCommand,
             };
         }
-        if x == RootCommandMatcher::case(b"n2b")
-            || x == RootCommandMatcher::case(b"migrate")
-            || x == RootCommandMatcher::case(b"wasm")
-        {
+        if x == RootCommandMatcher::case(b"n2b") || x == RootCommandMatcher::case(b"migrate") {
+            return Tag::ToolchainCommand;
+        }
+        if x == RootCommandMatcher::case(b"just") || x == RootCommandMatcher::case(b"wasm") {
             return match super::toolchain_command::is_package_script(first_arg_name) {
                 true => Tag::AutoCommand,
                 false => Tag::ToolchainCommand,
@@ -2445,9 +2448,13 @@ Releases come from <magenta>https://github.com/aphrody-labs/bun/releases<r> (ove
             Tag::ExecCommand => {
                 pretty!(
                     "\
-<b>Usage: bun exec <r><cyan>\\<script\\><r>
+<b>Usage: bun exec <r><cyan>[--nounset] \\<script\\> [argv0 [args...]]<r>
 
 Execute a shell script directly from Bun.
+
+--nounset fails when a script expands an unset variable or positional argument.
+
+The first argument after the script sets $0; remaining arguments set $1, $2, ... (default $0: bun).
 
 <b><red>Note<r>: If executing this from a shell, make sure to escape the string!
 

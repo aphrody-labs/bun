@@ -1,9 +1,9 @@
 // Drop-in for `oxc-transform`: same functions, options and results, backed by the addon of this package.
 
-import type * as Transform from "../vendor/oxc-transform/index";
+import type * as Transform from "./transform-core/index";
 import { native } from "./native";
 
-export type * from "../vendor/oxc-transform/index";
+export type * from "./transform-core/index";
 
 export const transformSync: typeof Transform.transformSync = (filename, sourceText, options) =>
   native().transformSync(filename, sourceText, options);

@@ -44,9 +44,10 @@ CI jobs running these: `bun-build-ci`. Build integration of Rust: `bun-build-sys
 
 ## JS/TS/C++ lint & format
 
-- oxlint 1.70.0: `oxlint.json` (categories correctness=error; jsPlugins `scripts/oxlint-plugins/bun.js`, tested by `test/internal/oxlint-plugin-bun.test.ts`; ignores vendor, build, bench, verbatim Node ports like src/js/node/repl.js, readline*). `bun run lint` = `oxlint --config=oxlint.json --format=github src/js`. User preference: run via `bun $(which oxlint)`.
-- Prettier 3.6.2 + prettier-plugin-organize-imports: `.prettierrc` (printWidth 120, arrowParens avoid, trailingComma all, quoteProps preserve; md printWidth 80). `bun run prettier` formats scripts packages src docs + test/**/_.test._.
+- Lint: native `bun lint --config oxlint.json`; qualify checkout changes with `bun bd lint --config oxlint.json`. Keep repository configuration and byte-exact corpus exclusions.
+- Format: native `bun fmt` with `.oxfmtrc.json`; qualify checkout changes with `bun bd fmt`.
 - clang-format: `scripts/run-clang-format.sh format|check|diff` requires `clang-format-23` (`LLVM_VERSION_MAJOR` override); file list from `bun scripts/glob-sources.ts cxx` + headers, excludes napi, libuv, sqlite, ffi headers, vendor.
-- TypeScript 6.0.2: `bun run typecheck`; src/js typecheck needs `bun run build:types` first.
+- Types: native `bun check`; qualify checkout changes with `bun bd check`. Generate required declarations with `bun run build:types` first.
+- Migration: native `bun n2b`; qualify checkout changes with `bun bd n2b`. These four commands must not use subprocess backends, standalone Oxc, tsgo/tsc or external n2b; fix the native owner instead of selecting a fallback. Package scripts may expose them directly but must not replace them with wrappers; `bunx` is for unrelated packages.
 - Source lints: `bun test test/internal/source-lints/` (≈38 tests: byte-search, workspace-lints, ci-image-pins, host-export-callers, no-std-stdio, comment-cop, port-era-markers, webkit-prebuilt-url, windows-cross-config, …; README/CLAUDE.md inside). Runs with system bun (no native build needed).
 - jsc exception-scope lint: `scripts/jsc-exception-lint/` (run.ts, clang tool cpp, nothrow.txt, rust-externs.ts); runtime check `BUN_JSC_validateExceptionChecks=1 BUN_JSC_dumpSimulatedThrows=1 bun bd …`.

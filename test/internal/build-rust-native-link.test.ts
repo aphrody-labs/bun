@@ -42,6 +42,17 @@ test("native directories and dylibs reach the Linux final link in dependency ord
   ]);
 });
 
+test.each(["linux", "windows"] as const)("the final %s link shares Bun's static SQLite owner", platform => {
+  const script = output("cargo:rustc-link-lib=sqlite3\ncargo:rustc-link-lib=dylib=other\n");
+  expect(nativeLinkArguments([script], platform, true)).toEqual([platform === "windows" ? "other.lib" : "-lother"]);
+  expect(nativeLinkArguments([script], platform)).toEqual(
+    platform === "windows" ? ["sqlite3.lib", "other.lib"] : ["-lsqlite3", "-lother"],
+  );
+  expect(() =>
+    nativeLinkArguments([output("cargo:rustc-link-lib=static:-bundle,+whole-archive=sqlite3\n")], platform, true),
+  ).toThrow("Unsupported native SQLite owner modifiers");
+});
+
 test("relative native search paths belong to their package, not the final link directory", () => {
   expect(nativeLinkArguments([output("cargo:rustc-link-search=native=../lib\n", "/package/sys")])).toEqual([
     `-L${resolve("/package/lib")}`,
@@ -114,6 +125,44 @@ function fixture(dir: string, linux = true) {
 }
 
 describe("Ninja native response edge", () => {
+  test.each([false, true])("depends on the canonical SQLite link input with archiveDeps=%s", archiveDeps => {
+    using dir = tempDir("rust-native-link-sqlite", {});
+    const { graph, cfg } = fixture(String(dir));
+    Object.assign(cfg, { staticSqlite: true, archiveDeps, libPrefix: "lib", libSuffix: ".a", objSuffix: ".o" });
+    const n = new Ninja({ buildDir: String(dir) });
+    emitRustNativeLink(n, cfg, graph);
+    const ninja = n.toString().replace(/ \$\n +/g, " ");
+    expect(ninja).toContain(" linux static-sqlite");
+    const response = ninja
+      .split("\n")
+      .find(line => line.startsWith("build native-link.rsp"))!
+      .replaceAll("\\", "/");
+    expect(response).toContain(archiveDeps ? "deps/sqlite3/libsqlite3.a" : "obj/src/jsc/bindings/sqlite/sqlite3.c.o");
+    expect(ninja).not.toContain("whole-archive");
+  });
+
+  test("the MSVC response depends on the same SQLite archive without adding another library", () => {
+    using dir = tempDir("rust-native-link-sqlite-msvc", {});
+    const { graph, cfg } = fixture(String(dir));
+    Object.assign(cfg, {
+      windows: true,
+      linux: false,
+      staticSqlite: true,
+      archiveDeps: true,
+      libPrefix: "",
+      libSuffix: ".lib",
+    });
+    const n = new Ninja({ buildDir: String(dir) });
+    emitRustNativeLink(n, cfg, graph);
+    const ninja = n
+      .toString()
+      .replace(/ \$\n +/g, " ")
+      .replaceAll("\\", "/");
+    expect(ninja).toContain(" windows static-sqlite");
+    expect(ninja).toContain("deps/sqlite3/sqlite3.lib");
+    expect(ninja).not.toContain("WHOLEARCHIVE");
+  });
+
   test("is a final-link dependency and excludes host-only and unselected panic build scripts", () => {
     using dir = tempDir("rust-native-link", {});
     const { script, graph, cfg } = fixture(String(dir));
@@ -186,6 +235,55 @@ test("quotes clang response arguments without shell expansion", () => {
 });
 
 const clang = Bun.which("clang++-23") ?? Bun.which("clang++");
+const archiver = Bun.which("llvm-ar") ?? Bun.which("ar");
+const readelf = Bun.which("llvm-readelf") ?? Bun.which("readelf");
+test.skipIf(!isLinux || clang === null || archiver === null || readelf === null)(
+  "the real Linux link uses the provided SQLite archive without loading another SQLite",
+  () => {
+    using dir = tempDir("rust-native-link-sqlite-real", {});
+    const root = String(dir);
+    const native = join(root, "host-libraries");
+    mkdirSync(native);
+    const owner = join(root, "owner.cpp");
+    const foreign = join(root, "foreign.cpp");
+    const consumer = join(root, "consumer.cpp");
+    const object = join(root, "owner.o");
+    const archive = join(root, "libsqlite3.a");
+    writeFileSync(owner, 'extern "C" int sqlite3_libversion_number() { return 3450000; }\n');
+    writeFileSync(foreign, 'extern "C" int sqlite3_libversion_number() { return 1; }\n');
+    writeFileSync(
+      consumer,
+      'extern "C" int sqlite3_libversion_number(); int main() { return sqlite3_libversion_number() == 3450000 ? 0 : 1; }\n',
+    );
+    const run = (argv: string[]) => {
+      const result = Bun.spawnSync(argv, { stdout: "pipe", stderr: "pipe" });
+      expect(result.stderr.toString()).toBe("");
+      expect(result.exitCode).toBe(0);
+      return result;
+    };
+    run([clang!, "-c", owner, "-o", object]);
+    run([archiver!, "rcs", archive, object]);
+    run([clang!, "-fPIC", "-shared", foreign, "-o", join(native, "libsqlite3.so")]);
+    const rsp = join(root, "native.rsp");
+    writeFileSync(
+      rsp,
+      nativeLinkResponse(
+        nativeLinkArguments(
+          [output(`cargo:rustc-link-search=native=${native}\ncargo:rustc-link-lib=sqlite3\ncargo:rustc-link-lib=m\n`)],
+          "linux",
+          true,
+        ),
+      ),
+    );
+    const exe = join(root, "consumer");
+    run([clang!, consumer, archive, "-Wl,--no-as-needed", `@${rsp}`, "-o", exe]);
+    const imports = run([readelf!, "--dynamic-table", exe]).stdout.toString();
+    expect(imports).toContain("NEEDED");
+    expect(imports).not.toContain("libsqlite3.so");
+    run([exe]);
+  },
+);
+
 test.skipIf(!isLinux || clang === null)(
   "the installed Clang driver accepts the response without compiling or linking",
   () => {

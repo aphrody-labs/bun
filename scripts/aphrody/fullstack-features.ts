@@ -9,7 +9,10 @@ for (const source of FULLSTACK_SOURCES) {
   const manifests = [];
   for (const entry of receipt.files) {
     if (entry.path !== "Cargo.toml" && !entry.path.endsWith("/Cargo.toml")) continue;
-    const manifest = Bun.TOML.parse(await Bun.file(join(root, "vendor", source.name, entry.path)).text());
+    const manifest = Bun.TOML.parse(await Bun.file(join(root, "vendor", source.name, entry.path)).text()) as Record<
+      string,
+      unknown
+    >;
     manifests.push({
       path: entry.path,
       sha256: entry.sha256,

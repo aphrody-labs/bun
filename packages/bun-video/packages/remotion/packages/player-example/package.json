@@ -25,12 +25,11 @@
 	},
 	"devDependencies": {
 		"eslint": "catalog:",
-		"prettier": "catalog:",
 		"@types/node": "catalog:"
 	},
 	"scripts": {
-		"formatting": "prettier src pages next.config.mjs --check",
-		"lint": "eslint src pages next.config.mjs",
+		"formatting": "bun fmt src pages next.config.mjs --check",
+		"lint": "bun lint src pages next.config.mjs",
 		"dev": "next dev",
 		"build-site": "next build",
 		"testnextjs": "next build"

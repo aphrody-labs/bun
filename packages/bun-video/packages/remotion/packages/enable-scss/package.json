@@ -9,10 +9,10 @@
 	"types": "dist/cjs/index.d.ts",
 	"module": "dist/esm/index.mjs",
 	"scripts": {
-		"lint": "eslint src",
-		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts",
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src"
+		"lint": "bun lint src",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && bun --env-file=../.env.bundle bundle.ts",
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src"
 	},
 	"author": "Jonny Burger <jonny@remotion.dev>",
 	"contributors": [],
@@ -31,8 +31,8 @@
 	"devDependencies": {
 		"@remotion/bundler": "workspace:*",
 		"@remotion/eslint-config-internal": "workspace:*",
-		"eslint": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"eslint": "catalog:"
+
 	},
 	"keywords": [
 		"remotion",

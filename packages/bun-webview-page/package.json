@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "test": "bun test",
-    "check:types": "tsc --noEmit"
+    "check:types": "bun check --noEmit"
   },
   "devDependencies": {
     "@types/bun": "../bun-types",

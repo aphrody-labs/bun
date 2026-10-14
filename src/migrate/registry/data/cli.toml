@@ -1,0 +1,424 @@
+# registry/data/cli.toml — commandes npm/pnpm/yarn → bun.
+#
+# Phase 1 : transcription mécanique des 47 mappings historiques de
+#   src/migrate/engine/rules/cli_commands.rs::MAPPINGS
+# Ordre identique à la source — cli_commands.rs applique les règles en
+# séquence et l'ordre influence le résultat (ex. `npm install --save-dev`
+# avant `npm install`).
+
+# --- Native quality and migration owners ---
+# Match executable positions, before generic package runners. ESLint/Prettier
+# configurations and emitting/watching TypeScript commands need a manual migration.
+
+[[cli]]
+id      = "cli/native-check-no-emit"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)(?:(?:npx|bunx|npm[ \t]+exec|pnpm(?:[ \t]+(?:exec|dlx))?|yarn(?:[ \t]+(?:exec|dlx))?)[ \t]+(?:(?:--bun|--no-install|--yes|-y)[ \t]+)*(?:--[ \t]+)?)?(?:tsc|tsgo|typescript|@typescript/native-preview)(?:@[A-Za-z0-9^~][A-Za-z0-9.+^~_-]*)?([ \t](?:[^\r\n;&|)]*?[ \t])?)(--noEmit|--no-emit)([ \t][^\r\n;&|)]*|[;&|)]|\r?$)'
+replace = "${1}bun check${2}${3}${4}"
+unless  = '(?:^|[ \t])(?:--watch|-w|--build|-b|--declaration|-d|--emitDeclarationOnly|--outDir|--outFile|--declarationDir)(?:[ \t=;&|)]|$)|--(?:noEmit|no-emit)[= \t]+false(?:[ \t;&|)]|$)'
+message = "vérification TypeScript sans émission → bun check ; aucun compilateur externe"
+
+[[cli]]
+id      = "cli/native-check-manual"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)(?:(?:npx|bunx|npm[ \t]+exec|pnpm(?:[ \t]+(?:exec|dlx))?|yarn(?:[ \t]+(?:exec|dlx))?)[ \t]+(?:(?:--bun|--no-install|--yes|-y)[ \t]+)*(?:--[ \t]+)?)?(?:tsc|tsgo|typescript|@typescript/native-preview)(?:@[A-Za-z0-9^~][A-Za-z0-9.+^~_-]*)?([ \t][^\r\n;&|)]*|[;&|)]|\r?$)'
+replace = "$0"
+manual  = true
+docs    = "https://www.typescriptlang.org/docs/handbook/using-the-compiler-api.html"
+message = "commande TypeScript conservée : bun check ne remplace ni émission, ni déclarations, ni watch ; séparer bun check pour les types et conserver la production des artefacts via le SDK TypeScript createProgram/emit"
+
+[[cli]]
+id      = "cli/native-lint"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)(?:(?:npx|bunx|npm[ \t]+exec|pnpm(?:[ \t]+(?:exec|dlx))?|yarn(?:[ \t]+(?:exec|dlx))?)[ \t]+(?:(?:--bun|--no-install|--yes|-y)[ \t]+)*(?:--[ \t]+)?)?oxlint(?:@[A-Za-z0-9^~][A-Za-z0-9.+^~_-]*)?([ \t][^\r\n;&|)]*|[;&|)]|\r?$)'
+replace = "${1}bun lint${2}"
+message = "oxlint → bun lint natif ; options non prises en charge refusées explicitement"
+
+[[cli]]
+id      = "cli/native-lint-manual"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)(?:(?:npx|bunx|npm[ \t]+exec|pnpm(?:[ \t]+(?:exec|dlx))?|yarn(?:[ \t]+(?:exec|dlx))?)[ \t]+(?:(?:--bun|--no-install|--yes|-y)[ \t]+)*(?:--[ \t]+)?)?eslint(?:@[A-Za-z0-9^~][A-Za-z0-9.+^~_-]*)?([ \t][^\r\n;&|)]*|[;&|)]|\r?$)'
+replace = "$0"
+manual  = true
+message = "ESLint conservé : migrer configuration et plugins vers bun lint avant de changer la commande"
+
+[[cli]]
+id      = "cli/native-fmt"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)(?:(?:npx|bunx|npm[ \t]+exec|pnpm(?:[ \t]+(?:exec|dlx))?|yarn(?:[ \t]+(?:exec|dlx))?)[ \t]+(?:(?:--bun|--no-install|--yes|-y)[ \t]+)*(?:--[ \t]+)?)?oxfmt(?:@[A-Za-z0-9^~][A-Za-z0-9.+^~_-]*)?([ \t][^\r\n;&|)]*|[;&|)]|\r?$)'
+replace = "${1}bun fmt${2}"
+message = "oxfmt → bun fmt natif ; options non prises en charge refusées explicitement"
+
+[[cli]]
+id      = "cli/native-fmt-manual"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)(?:(?:npx|bunx|npm[ \t]+exec|pnpm(?:[ \t]+(?:exec|dlx))?|yarn(?:[ \t]+(?:exec|dlx))?)[ \t]+(?:(?:--bun|--no-install|--yes|-y)[ \t]+)*(?:--[ \t]+)?)?prettier(?:@[A-Za-z0-9^~][A-Za-z0-9.+^~_-]*)?([ \t][^\r\n;&|)]*|[;&|)]|\r?$)'
+replace = "$0"
+manual  = true
+message = "Prettier conservé : migrer configuration et plugins vers bun fmt avant de changer la commande"
+
+[[cli]]
+id      = "cli/native-n2b"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)(?:(?:npx|bunx|npm[ \t]+exec|pnpm(?:[ \t]+(?:exec|dlx))?|yarn(?:[ \t]+(?:exec|dlx))?)[ \t]+(?:(?:--bun|--no-install|--yes|-y)[ \t]+)*(?:--[ \t]+)?)?(?:n2b|@aphrody/bun-plugin-n2b)(?:@[A-Za-z0-9^~][A-Za-z0-9.+^~_-]*)?([ \t][^\r\n;&|)]*|[;&|)]|\r?$)'
+replace = "${1}bun n2b${2}"
+message = "n2b → bun n2b natif ; aucun backend de migration externe"
+
+# --- test runners, TS runners, pnpm monorepo filters ---
+# Appliquées avant les règles génériques npx/pnpm exec : elles consomment le
+# préfixe (`npx vitest`, `pnpm exec jest`, …). `(^|[\s;&|(])` remplace une
+# assertion arrière (absente du crate regex) : `@vitest/ui`, `vitest-x` et
+# `vitest.config.ts` ne correspondent pas.
+
+[[cli]]
+id         = "cli/vitest-watch"
+pattern    = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+(?:--bun\s+)?)?vitest\s+(?:watch|dev)\b'
+replace    = "${1}bun test --watch"
+message    = "vitest watch → bun test --watch (bun:test : options et API vi.* partiellement compatibles)"
+aggressive = true
+docs       = "https://bun.com/docs/test/writing-tests"
+
+[[cli]]
+id         = "cli/vitest-run"
+pattern    = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+(?:--bun\s+)?)?vitest\s+run\b'
+replace    = "${1}bun test"
+message    = "vitest run → bun test (bun:test : options et API vi.* partiellement compatibles)"
+aggressive = true
+docs       = "https://bun.com/docs/test/writing-tests"
+
+[[cli]]
+id         = "cli/vitest"
+pattern    = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+(?:--bun\s+)?)?vitest(\s|$|[;&|)"])'
+replace    = "${1}bun test${2}"
+message    = "vitest → bun test (vitest sans sous-commande ne surveille qu'en TTY ; ajouter --watch si voulu)"
+aggressive = true
+docs       = "https://bun.com/docs/test/writing-tests"
+
+[[cli]]
+id         = "cli/jest"
+pattern    = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+(?:--bun\s+)?)?jest(\s|$|[;&|)"])'
+replace    = "${1}bun test${2}"
+message    = "jest → bun test (vérifier les options : --watchAll, --runInBand… n'existent pas dans bun test)"
+aggressive = true
+docs       = "https://bun.com/docs/test/writing-tests"
+
+[[cli]]
+id      = "cli/node-ts-loader"
+pattern = '(?m)(^|[\s;&|(])node\s+(?:--loader|--import|--require|-r)[\s=](?:ts-node(?:/esm|/register(?:/transpile-only)?)?|tsx(?:/esm|/cjs)?)\s+'
+replace = "${1}bun "
+message = "node --loader/--import/-r ts-node|tsx → bun (Bun exécute TypeScript nativement)"
+docs    = "https://bun.com/docs/runtime/typescript"
+
+[[cli]]
+id      = "cli/tsx-watch"
+pattern = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+)?tsx\s+watch\s+([^\s;&|-][^\s;&|]*\.[cm]?[jt]sx?)\b'
+replace = "${1}bun --watch ${2}"
+message = "tsx watch <fichier> → bun --watch <fichier> (Bun exécute TypeScript nativement)"
+docs    = "https://bun.com/docs/runtime/watch-mode"
+
+[[cli]]
+id      = "cli/ts-node"
+pattern = '(?m)(^|[\s;&|(])(?:(?:npx|bunx|npm\s+exec|pnpm(?:\s+(?:exec|dlx))?|yarn(?:\s+(?:exec|dlx))?)\s+)?(?:ts-node(?:-esm)?|tsx)\s+([^\s;&|-][^\s;&|]*\.[cm]?[jt]sx?)\b'
+replace = "${1}bun ${2}"
+message = "ts-node/tsx <fichier> → bun <fichier> (Bun exécute TypeScript nativement)"
+docs    = "https://bun.com/docs/runtime/typescript"
+
+[[cli]]
+id      = "cli/pnpm-recursive"
+pattern = '(?m)(^|[\s;&|(])pnpm\s+(?:-r|--recursive)\s+(?:run\s+)?([\w:.][\w:.-]*)'
+replace = "${1}bun run --filter '*' ${2}"
+message = "pnpm -r [run] <script> → bun run --filter '*' <script>"
+unless  = '\s(?:exec|install|i|add|remove|rm|update|up|publish|list|ls|why|outdated|link|unlink|rebuild|dlx|deploy|prune|audit)$'
+docs    = "https://bun.com/docs/pm/filter"
+
+[[cli]]
+id      = "cli/pnpm-filter"
+pattern = '(?m)(^|[\s;&|(])pnpm\s+(?:--filter|-F)[\s=]+([^\s;&|]+)\s+(?:run\s+)?([\w:.][\w:.-]*)'
+replace = "${1}bun run --filter ${2} ${3}"
+message = "pnpm --filter <pkg> [run] <script> → bun run --filter <pkg> <script>"
+unless  = '(?:\.\.\.|\[|\{|\^)|\s(?:exec|install|i|add|remove|rm|update|up|publish|list|ls|why|outdated|link|unlink|rebuild|dlx|deploy|prune|audit)$'
+docs    = "https://bun.com/docs/pm/filter"
+
+# --- npm ---
+
+[[cli]]
+id      = "cli/npm-install-dev"
+pattern = '\bnpm\s+install\s+--save-dev\b'
+replace = "bun add --dev"
+message = "npm install --save-dev → bun add --dev"
+
+[[cli]]
+id      = "cli/npm-install-D"
+pattern = '\bnpm\s+install\s+-D\b'
+replace = "bun add --dev"
+message = "npm install -D → bun add --dev"
+
+[[cli]]
+id      = "cli/npm-install-save"
+pattern = '\bnpm\s+install\s+--save\b'
+replace = "bun add"
+message = "npm install --save → bun add"
+
+[[cli]]
+id      = "cli/npm-i-dev"
+pattern = '\bnpm\s+i\s+--save-dev\b'
+replace = "bun add --dev"
+message = "npm i --save-dev → bun add --dev"
+
+[[cli]]
+id      = "cli/npm-i-D"
+pattern = '\bnpm\s+i\s+-D\b'
+replace = "bun add --dev"
+message = "npm i -D → bun add --dev"
+
+[[cli]]
+id      = "cli/npm-install"
+pattern = '\bnpm\s+install\b(?:\s+-g)?'
+replace = "bun install"
+message = "npm install → bun install"
+
+[[cli]]
+id      = "cli/npm-i"
+pattern = '\bnpm\s+i\b'
+replace = "bun install"
+message = "npm i → bun install"
+
+[[cli]]
+id      = "cli/npm-ci"
+pattern = '\bnpm\s+ci\b'
+replace = "bun install --frozen-lockfile"
+message = "npm ci → bun install --frozen-lockfile"
+
+[[cli]]
+id      = "cli/npm-run"
+pattern = '\bnpm\s+run\s+'
+replace = "bun run "
+message = "npm run → bun run"
+
+[[cli]]
+id      = "cli/npm-test"
+pattern = '\bnpm\s+test\b'
+replace = "bun test"
+message = "npm test → bun test"
+
+[[cli]]
+id      = "cli/npm-start"
+pattern = '\bnpm\s+start\b'
+replace = "bun start"
+message = "npm start → bun start"
+
+[[cli]]
+id      = "cli/npm-uninstall"
+pattern = '\bnpm\s+uninstall\b'
+replace = "bun remove"
+message = "npm uninstall → bun remove"
+
+[[cli]]
+id      = "cli/npm-rm"
+pattern = '\bnpm\s+rm\b'
+replace = "bun remove"
+message = "npm rm → bun remove"
+
+[[cli]]
+id      = "cli/npm-update"
+pattern = '\bnpm\s+update\b'
+replace = "bun update"
+message = "npm update → bun update"
+
+[[cli]]
+id      = "cli/npm-outdated"
+pattern = '\bnpm\s+outdated\b'
+replace = "bun outdated"
+message = "npm outdated → bun outdated"
+
+[[cli]]
+id      = "cli/npm-pack"
+pattern = '\bnpm\s+pack\b'
+replace = "bun pm pack"
+message = "npm pack → bun pm pack"
+
+[[cli]]
+id      = "cli/npm-publish"
+pattern = '\bnpm\s+publish\b'
+replace = "bun publish"
+message = "npm publish → bun publish"
+
+[[cli]]
+id      = "cli/npm-link"
+pattern = '\bnpm\s+link\b(\s+[^\s;&|)]+)?'
+replace = "bun link${1}"
+message = "npm link → bun link"
+# `bun link` takes a registered package name, not a folder (`npm link <dir>`).
+unless  = "^npm\\s+link\\s+(?:[\"'$.~/\\\\]|[A-Za-z]:)"
+
+[[cli]]
+id      = "cli/npm-init-y"
+pattern = '\bnpm\s+init\s+-y\b'
+replace = "bun init -y"
+message = "npm init -y → bun init -y"
+
+[[cli]]
+id      = "cli/npm-init"
+pattern = '\bnpm\s+init\b'
+replace = "bun init"
+message = "npm init → bun init"
+
+[[cli]]
+id      = "cli/npm-exec"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)npm[ \t]+exec[ \t]+'
+replace = "${1}bunx "
+message = "npm exec → bunx"
+
+[[cli]]
+id      = "cli/npx"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)npx[ \t]+'
+replace = "${1}bunx "
+message = "npx → bunx"
+
+# --- pnpm ---
+
+[[cli]]
+id      = "cli/pnpm-install-dev"
+pattern = '\bpnpm\s+install\s+--save-dev\b'
+replace = "bun add --dev"
+message = "pnpm install --save-dev → bun add --dev"
+
+[[cli]]
+id      = "cli/pnpm-add-dev"
+pattern = '\bpnpm\s+add\s+--save-dev\b'
+replace = "bun add --dev"
+message = "pnpm add --save-dev → bun add --dev"
+
+[[cli]]
+id      = "cli/pnpm-add-D"
+pattern = '\bpnpm\s+add\s+-D\b'
+replace = "bun add --dev"
+message = "pnpm add -D → bun add --dev"
+
+[[cli]]
+id      = "cli/pnpm-install"
+pattern = '\bpnpm\s+install\b'
+replace = "bun install"
+message = "pnpm install → bun install"
+
+[[cli]]
+id      = "cli/pnpm-i"
+pattern = '\bpnpm\s+i\b'
+replace = "bun install"
+message = "pnpm i → bun install"
+
+[[cli]]
+id      = "cli/pnpm-add"
+pattern = '\bpnpm\s+add\b'
+replace = "bun add"
+message = "pnpm add → bun add"
+
+[[cli]]
+id      = "cli/pnpm-remove"
+pattern = '\bpnpm\s+remove\b'
+replace = "bun remove"
+message = "pnpm remove → bun remove"
+
+[[cli]]
+id      = "cli/pnpm-rm"
+pattern = '\bpnpm\s+rm\b'
+replace = "bun remove"
+message = "pnpm rm → bun remove"
+
+[[cli]]
+id      = "cli/pnpm-run"
+pattern = '\bpnpm\s+run\s+'
+replace = "bun run "
+message = "pnpm run → bun run"
+
+[[cli]]
+id      = "cli/pnpm-test"
+pattern = '\bpnpm\s+test\b'
+replace = "bun test"
+message = "pnpm test → bun test"
+
+[[cli]]
+id      = "cli/pnpm-start"
+pattern = '\bpnpm\s+start\b'
+replace = "bun start"
+message = "pnpm start → bun start"
+
+[[cli]]
+id      = "cli/pnpm-update"
+pattern = '\bpnpm\s+update\b'
+replace = "bun update"
+message = "pnpm update → bun update"
+
+[[cli]]
+id      = "cli/pnpm-dlx"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)pnpm[ \t]+dlx[ \t]+'
+replace = "${1}bunx "
+message = "pnpm dlx → bunx"
+
+[[cli]]
+id      = "cli/pnpm-exec"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)pnpm[ \t]+exec[ \t]+'
+replace = "${1}bunx "
+message = "pnpm exec → bunx"
+
+# --- yarn ---
+
+[[cli]]
+id      = "cli/yarn-install-frozen"
+pattern = '\byarn\s+install\s+--frozen-lockfile\b'
+replace = "bun install --frozen-lockfile"
+message = "yarn install --frozen-lockfile → bun install --frozen-lockfile"
+
+[[cli]]
+id      = "cli/yarn-add-dev"
+pattern = '\byarn\s+add\s+--dev\b'
+replace = "bun add --dev"
+message = "yarn add --dev → bun add --dev"
+
+[[cli]]
+id      = "cli/yarn-add-D"
+pattern = '\byarn\s+add\s+-D\b'
+replace = "bun add --dev"
+message = "yarn add -D → bun add --dev"
+
+[[cli]]
+id      = "cli/yarn-add"
+pattern = '\byarn\s+add\b'
+replace = "bun add"
+message = "yarn add → bun add"
+
+[[cli]]
+id      = "cli/yarn-remove"
+pattern = '\byarn\s+remove\b'
+replace = "bun remove"
+message = "yarn remove → bun remove"
+
+[[cli]]
+id      = "cli/yarn-install"
+pattern = '\byarn\s+install\b'
+replace = "bun install"
+message = "yarn install → bun install"
+
+[[cli]]
+id      = "cli/yarn-run"
+pattern = '\byarn\s+run\s+'
+replace = "bun run "
+message = "yarn run → bun run"
+
+[[cli]]
+id      = "cli/yarn-test"
+pattern = '\byarn\s+test\b'
+replace = "bun test"
+message = "yarn test → bun test"
+
+[[cli]]
+id      = "cli/yarn-start"
+pattern = '\byarn\s+start\b'
+replace = "bun start"
+message = "yarn start → bun start"
+
+[[cli]]
+id      = "cli/yarn-dlx"
+pattern = '(?m)(^[ \t]*(?:(?i:RUN)[ \t]+|(?:-[ \t]+)?run:[ \t]+)?|[;&|(][ \t]*)yarn[ \t]+(?:exec|dlx)[ \t]+'
+replace = "${1}bunx "
+message = "yarn exec/dlx → bunx"
+
+# bare yarn at start of line → bun install (preserve leading ws)
+[[cli]]
+id      = "cli/yarn-bare"
+pattern = '(?m)^(\s*)yarn(\s|$)'
+replace = "${1}bun install${2}"
+message = "bare `yarn` → bun install"

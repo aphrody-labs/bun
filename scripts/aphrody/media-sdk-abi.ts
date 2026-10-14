@@ -107,8 +107,17 @@ function compareVersions(left: string, right: string): number {
   return 0;
 }
 
+export interface MediaELFQualification {
+  schema: number;
+  target: MediaSDKTarget;
+  libc: string;
+  releaseGLIBCFloor: string | null;
+  maximumGLIBC: string | null;
+  files: { file: string; sha256: string; minimumGLIBC: string | null; needed: string[]; rpath: string | null }[];
+}
+
 /** Reject an unresolved closure even when its root library meets the ABI floor. */
-export function qualifyMediaELFs(target: MediaSDKTarget, inputs: MediaELF[]) {
+export function qualifyMediaELFs(target: MediaSDKTarget, inputs: MediaELF[]): MediaELFQualification {
   if (!/^linux-(?:x64|arm64)(?:-musl)?$/.test(target))
     throw new TypeError("ELF qualification requires a supported Linux SDK target");
   if (!inputs.length || inputs.length > 1024) throw new Error("SDK ELF inventory is empty or exceeds its bound");

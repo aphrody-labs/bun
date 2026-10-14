@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "package": "@aphrody/typesafe-sdk",
+  "version": "0.6.2",
+  "tag": "latest",
+  "tarballURL": "https://registry.npmjs.org/@aphrody/typesafe-sdk/-/typesafe-sdk-0.6.2.tgz",
+  "bytes": 50641,
+  "integrity": "sha512-Pnj7gUKWCcTjztzmMBVLX7FNGJVlJKfrwuE3pLDnjGABlZHW7/wb6SakGllIAz65Qjx7+oYd+MYxWbxEpGyVRw==",
+  "publisher": "yohan971",
+  "repository": "git+https://github.com/aphrody-labs/typesafe-sdk-js.git",
+  "sourceCommit": "82d82d5134737fbefd6ae0889e24dcdf4fee6bfe",
+  "registryGitHead": null,
+  "verifiedAt": "2026-10-13T20:35:47.710Z",
+  "provenanceOIDC": "not-requested-no-OIDC-available"
+}

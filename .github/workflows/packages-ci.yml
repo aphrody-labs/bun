@@ -9,8 +9,7 @@ on:
       - main
     paths:
       - "packages/**"
-      - .prettierrc
-      - .prettierignore
+      - .oxfmtrc.json
       - tsconfig.json
       - oxlint.json
       - "!**/*.md"
@@ -19,8 +18,7 @@ on:
       - main
     paths:
       - "packages/**"
-      - .prettierrc
-      - .prettierignore
+      - .oxfmtrc.json
       - tsconfig.json
       - oxlint.json
       - "!**/*.md"
@@ -47,12 +45,12 @@ jobs:
 
       - name: Lint
         run: |
-          bunx oxlint@0.15 --format github --deny-warnings
-          bunx prettier --config ../../.prettierrc --check .
+          bun lint --format github --deny-warnings .
+          bun fmt --config ../../.oxfmtrc.json --check .
         working-directory: ./packages/bun-plugin-svelte
 
       - name: Check types
-        run: bun check:types
+        run: bun check --noEmit
         working-directory: ./packages/bun-plugin-svelte
 
       - name: Test

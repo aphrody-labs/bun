@@ -2,7 +2,7 @@
 
 export const PLUGIN = "bun";
 export const MARKETPLACE = "aphrody-bun";
-export const DISPLAY_NAME = "Bun (Aphrody runtime)";
+export const DISPLAY_NAME = "Bun OS";
 export const REPOSITORY = "https://github.com/aphrody-labs/bun";
 export const AUTHOR = { name: "aphrody-labs", url: "https://github.com/aphrody-labs" };
 

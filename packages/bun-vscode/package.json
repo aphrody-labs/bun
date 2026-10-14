@@ -15,8 +15,8 @@
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "@vscode/vsce": "^2.20.1",
-    "esbuild": "^0.19.2",
-    "typescript": "^6.0.0"
+    "esbuild": "^0.19.2"
+
   },
   "activationEvents": [
     "onStartupFinished"
@@ -365,12 +365,12 @@
   "license": "MIT",
   "publisher": "oven",
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "bun scripts/build.mjs",
     "pretest": "bun run build",
     "test": "node scripts/test.mjs",
     "dev": "vscode-test --config scripts/dev.mjs",
     "prepublish": "npm version patch && bun run build",
-    "publish": "cd extension && bunx vsce publish"
+    "publish": "cd extension && bun ../node_modules/@vscode/vsce/vsce publish"
   },
   "workspaceTrust": {
     "request": "never"

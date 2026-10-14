@@ -373,6 +373,10 @@ export interface BuildScriptRunManifest extends ManifestCommon {
      * behaviour, minus builds that bypass configure and invoke ninja directly.
      */
     trackedEnv: Record<string, string>;
+    /** Pinned bindings use the native dependency's headers and link inputs without compiling a second codec. */
+    nativeWebP?: NativeWebPProvider & { buildScriptSHA256: string };
+    /** These sys crates select one existing static archive, avoiding pkg-config's transitive rebundling. */
+    staticLibrary?: { name: "mnl" | "nftnl"; directory: string; minimumVersion: string };
   };
 }
 
@@ -412,6 +416,16 @@ export interface ManifestContext {
   binDestination?: string;
   cargo: string;
   rustdoc: string;
+  nativeWebP?: NativeWebPProvider;
+}
+
+export interface NativeWebPProvider {
+  sourceCommit: string;
+  includes: string[];
+  /** Native build products: explicit Ninja dependencies, including direct-object configurations. */
+  inputs: string[];
+  /** The exact archive/object inputs already linked by Bun's native owner. */
+  linkInputs: string[];
 }
 
 export function unitManifest(ctx: ManifestContext, unit: RustUnit): UnitManifest {
@@ -631,6 +645,59 @@ function buildScriptRunManifest(ctx: ManifestContext, unit: RustUnit): BuildScri
     // What the library will be compiled with (target units only get rustflags); RUSTFLAGS itself is removed by cargo.
     CARGO_ENCODED_RUSTFLAGS: isHost ? "" : plan.plannedWith.rustflags.join("\x1f"),
   };
+  const nativeRuntime = !isHost && graph.root.kind === "lib" && graph.root.pkg.name === "bun_runtime";
+  let nativeWebP: BuildScriptRunManifest["script"]["nativeWebP"];
+  let staticLibrary: BuildScriptRunManifest["script"]["staticLibrary"];
+  if (nativeRuntime && unit.pkg.name === "libwebp-sys") {
+    assert(unit.pkg.version === "0.9.6", "Bun's WebP provider requires reviewed libwebp-sys 0.9.6 bindings");
+    assert(
+      unit.features.every(feature => ["default", "std", "parallel", "neon", "sse41", "avx2"].includes(feature)),
+      `Bun's WebP provider does not support libwebp-sys features: ${unit.features.join(", ")}`,
+    );
+    const provider = ctx.nativeWebP;
+    assert(
+      provider !== undefined && provider.inputs.length > 0 && provider.linkInputs.length > 0,
+      "libwebp-sys requires Bun's resolved native WebP link inputs",
+    );
+    assert(
+      provider.sourceCommit === "b7e29b9d75bd31422b00c2a446d49d7af06c328d",
+      "Bun's WebP provider requires reviewed libwebp 1.6.0",
+    );
+    nativeWebP = { ...provider, buildScriptSHA256: "2d61293ca8eb96dc44a2958d3cd88129a96ca900cbd8d245f98f99dcfa810a05" };
+  }
+  if (nativeRuntime && info.triple.includes("-linux-") && ctx.cfg.sysroot !== undefined) {
+    const directory = join(ctx.cfg.sysroot, "usr", "lib");
+    if (unit.pkg.name === "mnl-sys") {
+      assert(unit.pkg.version === "0.2.2", "Bun's static libmnl owner requires mnl-sys 0.2.2");
+      env.LIBMNL_LIB_DIR = directory;
+      staticLibrary = {
+        name: "mnl",
+        directory,
+        minimumVersion: unit.features.includes("mnl-1-0-4") ? "1.0.4" : "1.0.3",
+      };
+    } else if (unit.pkg.name === "nftnl-sys") {
+      assert(unit.pkg.version === "0.6.4", "Bun's static libnftnl owner requires nftnl-sys 0.6.4");
+      assert(
+        graph.units.some(
+          binding =>
+            binding.pkg.id === unit.pkg.id &&
+            binding.kind === "lib" &&
+            binding.deps.some(dep => dep.unit.pkg.name === "mnl-sys" && dep.unit.pkg.version === "0.2.2"),
+        ),
+        "libnftnl requires its unique libmnl dependency",
+      );
+      env.LIBNFTNL_LIB_DIR = directory;
+      const versions = unit.features
+        .filter(feature => /^nftnl-\d+-\d+-\d+$/.test(feature))
+        .map(feature => feature.slice(6).replaceAll("-", "."));
+      const compare = (a: string, b: string) => {
+        const x = a.split(".").map(Number);
+        const y = b.split(".").map(Number);
+        return x[0]! - y[0]! || x[1]! - y[1]! || x[2]! - y[2]!;
+      };
+      staticLibrary = { name: "nftnl", directory, minimumVersion: versions.sort(compare).at(-1) ?? "1.0.6" };
+    }
+  }
   if (!isHost && info.triple === "x86_64-pc-windows-msvc" && unit.pkg.name === "libsqlite3-sys") {
     env.SQLITE3_INCLUDE_DIR = join(dirname(unit.pkg.manifest_path), "sqlite3");
     env.SQLITE3_LIB_DIR = join(ctx.cfg.buildDir, "deps", "sqlite3");
@@ -718,6 +785,8 @@ function buildScriptRunManifest(ctx: ManifestContext, unit: RustUnit): BuildScri
       manifestDir: dirname(unit.pkg.manifest_path),
       local: unit.isLocal,
       trackedEnv,
+      ...(nativeWebP !== undefined ? { nativeWebP } : {}),
+      ...(staticLibrary !== undefined ? { staticLibrary } : {}),
     },
   };
 }

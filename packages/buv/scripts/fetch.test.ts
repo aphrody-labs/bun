@@ -33,8 +33,8 @@ describe("fetch", () => {
   });
 
   test("arguments are parsed with defaults", () => {
-    const options = parseArgs(["--python", "3.14.8", "--skip-sources"]);
-    expect(options).toMatchObject({ python: "3.14.8", skipSources: true, skipPython: false });
+    const options = parseArgs(["--python", "3.14.8"]);
+    expect(options).toMatchObject({ python: "3.14.8", skipPython: false });
     expect(options.root).toBe(ROOT);
   });
 
@@ -44,26 +44,17 @@ describe("fetch", () => {
 });
 
 describe("pins", () => {
-  test("source pins distinguish embedded UV from retained predecessor components", async () => {
+  test("the only source tree is the embedded canonical UV checkout", async () => {
     const identity = await readIdentity();
     expect(identity.name).toBe("buv");
-    for (const source of vendor.sources) {
-      expect(source.ref).toMatch(/^[0-9a-f]{40}$/);
-      expect(source.forkBranch).toBe(
-        source.embedded ? "claude/bun-uv" : `vu-pin-${source.upstreamTag.replace(/^v/, "")}`,
-      );
-      expect(source.url).toBe(`https://github.com/aphrody-labs/${source.name}.git`);
-    }
-  });
-
-  test("the embedding crate, the manifest and the pin name the same PyO3", async () => {
-    const pyo3 = vendor.sources.find(source => source.name === "pyo3");
-    const version = pyo3?.upstreamTag.replace(/^v/, "");
-    expect(version).toBeDefined();
-    const manifest = await Bun.file(join(ROOT, "Cargo.toml")).text();
-    expect(manifest).toContain(`version = "=${version}"`);
-    const runtime = await Bun.file(join(ROOT, "crates/buv-runtime/src/lib.rs")).text();
-    expect(runtime).toContain(`pub const PYO3_VERSION: &str = "${version}";`);
+    expect(vendor.sources).toHaveLength(1);
+    expect(vendor.sources[0]).toMatchObject({
+      name: "uv",
+      path: "../../vendor/uv",
+      embedded: true,
+      forkBranch: "claude/bun-uv",
+    });
+    expect(vendor.sources[0]?.ref).toMatch(/^[0-9a-f]{40}$/);
   });
 
   test("the default interpreter is pinned for both runtime and link inputs", () => {

@@ -154,36 +154,40 @@ fn parent_dir(root: &Path, rooted: &Dir, path: &str) -> Result<(Dir, String), St
     Err("invalid plugin archive path".into())
 }
 
+fn complete_file(root: &Path, rooted: &Dir, path: &str, bytes: &[u8]) -> bool {
+    let Ok(link_stat) = bun_sys::lstat(&ZBox::from_vec(
+        root.join(path).as_os_str().as_encoded_bytes().to_vec(),
+    )) else {
+        return false;
+    };
+    if !bun_sys::is_regular_file(link_stat.st_mode as _) {
+        return false;
+    }
+    let Ok((parent, name)) = parent_dir(root, rooted, path) else {
+        return false;
+    };
+    let Ok(file) = parent.open_file(name.as_bytes(), O::RDONLY | O::NOFOLLOW | O::CLOEXEC, 0)
+    else {
+        return false;
+    };
+    let Ok(stat) = bun_sys::fstat(file.fd()) else {
+        return false;
+    };
+    if !bun_sys::is_regular_file(stat.st_mode as _) || stat.st_size as usize != bytes.len() {
+        return false;
+    }
+    let mut contents = vec![0; bytes.len()];
+    let mut extra = [0; 1];
+    file.read_all(&mut contents)
+        .is_ok_and(|length| length == bytes.len())
+        && contents == bytes
+        && file.read(&mut extra).is_ok_and(|length| length == 0)
+}
+
 fn complete(root: &Path, rooted: &Dir, files: &[(&str, &[u8])]) -> bool {
-    files.iter().all(|(path, bytes)| {
-        let Ok((parent, name)) = parent_dir(root, rooted, path) else {
-            return false;
-        };
-        let Ok(link_stat) = bun_sys::lstat(&ZBox::from_vec(
-            root.join(path).as_os_str().as_encoded_bytes().to_vec(),
-        )) else {
-            return false;
-        };
-        if !bun_sys::is_regular_file(link_stat.st_mode as _) {
-            return false;
-        }
-        let Ok(file) = parent.open_file(name.as_bytes(), O::RDONLY | O::NOFOLLOW | O::CLOEXEC, 0)
-        else {
-            return false;
-        };
-        let Ok(stat) = bun_sys::fstat(file.fd()) else {
-            return false;
-        };
-        if !bun_sys::is_regular_file(stat.st_mode as _) || stat.st_size as usize != bytes.len() {
-            return false;
-        }
-        let mut contents = vec![0; bytes.len()];
-        let mut extra = [0; 1];
-        file.read_all(&mut contents)
-            .is_ok_and(|length| length == bytes.len())
-            && contents == *bytes
-            && file.read(&mut extra).is_ok_and(|length| length == 0)
-    })
+    files
+        .iter()
+        .all(|(path, bytes)| complete_file(root, rooted, path, bytes))
 }
 
 /// Only archive-owned files are atomically published; the installer is published last.
@@ -200,7 +204,12 @@ fn extract(bytes: &[u8]) -> Result<PathBuf, String> {
     let base_handle = child_dir(&temp_handle, "bun-agent-plugin", &base)?;
     let dir = base.join(format!("{:016x}", hasher.finish()));
     let cache_handle = child_dir(&base_handle, &format!("{:016x}", hasher.finish()), &dir)?;
-    if complete(&dir, &cache_handle, &files) {
+    let repairs: Vec<_> = files
+        .iter()
+        .copied()
+        .filter(|(path, bytes)| !complete_file(&dir, &cache_handle, path, bytes))
+        .collect();
+    if repairs.is_empty() {
         return Ok(dir);
     }
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -229,7 +238,7 @@ fn extract(bytes: &[u8]) -> Result<PathBuf, String> {
         &staging,
     )?;
     let result = (|| {
-        for (path, data) in &files {
+        for (path, data) in &repairs {
             let (parent, name) = parent_dir(&staging, &staging_handle, path)?;
             parent
                 .open_file(
@@ -240,14 +249,20 @@ fn extract(bytes: &[u8]) -> Result<PathBuf, String> {
                 .and_then(|file| file.write_all(data))
                 .map_err(|e| format!("{path}: {e}"))?;
         }
-        if complete(&dir, &cache_handle, &files) {
+        if repairs
+            .iter()
+            .all(|(path, data)| complete_file(&dir, &cache_handle, path, data))
+        {
             return Ok(dir.clone());
         }
-        for (path, _) in files
+        for (path, data) in repairs
             .iter()
             .filter(|(path, _)| *path != INSTALLER)
-            .chain(files.iter().filter(|(path, _)| *path == INSTALLER))
+            .chain(repairs.iter().filter(|(path, _)| *path == INSTALLER))
         {
+            if complete_file(&dir, &cache_handle, path, data) {
+                continue;
+            }
             let (source, source_name) = parent_dir(&staging, &staging_handle, path)?;
             let (target, target_name) = parent_dir(&dir, &cache_handle, path)?;
             if let Err(error) = bun_sys::renameat(
@@ -256,8 +271,8 @@ fn extract(bytes: &[u8]) -> Result<PathBuf, String> {
                 target.fd(),
                 &ZBox::from_vec(target_name.into_bytes()),
             ) {
-                if complete(&dir, &cache_handle, &files) {
-                    return Ok(dir.clone());
+                if complete_file(&dir, &cache_handle, path, data) {
+                    continue;
                 }
                 return Err(format!("could not repair plugin cache {path}: {error}"));
             }

@@ -1,24 +1,29 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { LOLHTML_SOURCE } from "../build/deps/lolhtml.ts";
-import { OXC_SOURCE } from "../build/deps/oxc.ts";
-import { verifyVendorReceipt } from "./vendor-oxc.ts";
 import { RUST_ARGON2_PATCHES, RUST_ARGON2_SOURCE } from "../build/deps/rust-argon2.ts";
 import { UUTILS_PATCHES, UUTILS_SOURCE } from "../build/deps/uutils.ts";
 import { computeSourceIdentity } from "../build/fetch-cli.ts";
 
-export type Gate = { id: string; command: string[]; env?: { CLIPPY_CONF_DIR: string } };
+export type Gate = {
+  id: string;
+  command: string[];
+  env?: { CLIPPY_CONF_DIR: string };
+  nativeShell?: boolean;
+  allowedSkippedTests?: string[];
+};
+const cargo = ["bun", "scripts/build/rust/cargo-serial.ts", ...(process.platform === "win32" ? ["--msvc"] : [])];
 export const gates: Gate[] = [
   ...["check", "test", "clippy"].map(action => ({
     id: `rust-google-${action}`,
     ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/bun-google/aphrody" } } : {}),
     command: [
-      "bash",
-      "../aphrody/scripts/build/rust/cargo-serial.sh",
+      ...cargo,
       action,
       "--config",
       "packages/bun-google/aphrody/.cargo/config.toml",
@@ -32,12 +37,32 @@ export const gates: Gate[] = [
   })),
   { id: "install", command: ["bun", "install", "--frozen-lockfile", "--ignore-scripts"] },
   { id: "rust-dependencies", command: ["bun", "scripts/aphrody/native-ci.ts", "dependencies"] },
+  {
+    id: "rust-toolchain-test",
+    nativeShell: true,
+    command: [
+      ...cargo,
+      "test",
+      "-p",
+      "bun_ecma_api",
+      "-p",
+      "bun_quality",
+      "-p",
+      "bun_migrate",
+      "-p",
+      "bun_just",
+      "--lib",
+      "--tests",
+      "--locked",
+      "--jobs",
+      "1",
+    ],
+  },
   ...["check", "clippy"].map(action => ({
     id: `rust-install-${action}`,
     ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "." } } : {}),
     command: [
-      "bash",
-      "../aphrody/scripts/build/rust/cargo-serial.sh",
+      ...cargo,
       action,
       "-p",
       "bun_install",
@@ -50,8 +75,7 @@ export const gates: Gate[] = [
     id: `rust-web-${action}`,
     ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/web/rust" } } : {}),
     command: [
-      "bash",
-      "../aphrody/scripts/build/rust/cargo-serial.sh",
+      ...cargo,
       action,
       "--manifest-path",
       "packages/web/rust/Cargo.toml",
@@ -61,6 +85,32 @@ export const gates: Gate[] = [
       ...(action === "clippy" ? ["--no-deps", "--", "-D", "warnings"] : []),
     ],
   })),
+  {
+    id: "native-toolchain-test",
+    nativeShell: true,
+    allowedSkippedTests:
+      process.platform === "win32"
+        ? []
+        : [
+            "embedded just > windows-shell takes precedence over shell",
+            "embedded just > Bun shebang recipes execute without a Unix interpreter",
+          ],
+    command: [
+      "bun",
+      "bd",
+      "--ci=on",
+      "-j1",
+      "test",
+      "test/cli/lint/toolchain.test.ts",
+      "test/cli/just/just.test.ts",
+      "test/cli/just/compat.test.ts",
+      "test/cli/run/exec-nounset.test.ts",
+      "test/js/bun/shell/exec.test.ts",
+      // The bunsh/APK suite belongs to its separate shell compatibility work.
+      "--test-name-pattern=^(?!bunsh\\b)",
+      "--max-concurrency=1",
+    ],
+  },
   {
     id: "google-chromium",
     command: [
@@ -90,7 +140,7 @@ export const gates: Gate[] = [
   { id: "docs", command: ["bun", "scripts/aphrody/verify-fusion.ts", "--docs-only"] },
   {
     id: "provenance",
-    command: ["bun", "bd", "-j1", "test", "scripts/aphrody/fusion-sources.test.ts"],
+    command: ["bun", "bd", "-j1", "test", "./scripts/aphrody/fusion-sources.test.ts"],
   },
 ];
 export function gateEnvironment(
@@ -98,7 +148,34 @@ export function gateEnvironment(
   checkout: string,
   inherited: Record<string, string | undefined>,
 ): Record<string, string | undefined> {
-  return gate.env ? { ...inherited, CLIPPY_CONF_DIR: resolve(checkout, gate.env.CLIPPY_CONF_DIR) } : { ...inherited };
+  const environment: Record<string, string | undefined> = gate.env
+    ? { ...inherited, CLIPPY_CONF_DIR: resolve(checkout, gate.env.CLIPPY_CONF_DIR) }
+    : { ...inherited };
+  if (gate.nativeShell && process.platform === "win32") {
+    const gitBin = join(inherited.ProgramFiles ?? inherited.PROGRAMFILES ?? "C:\\Program Files", "Git", "usr", "bin");
+    if (!existsSync(join(gitBin, "bash.exe")) || !existsSync(join(gitBin, "sh.exe")))
+      throw Error("Toolchain tests require native Git for Windows Bash and sh");
+    const pathKey = Object.keys(environment).find(key => key.toLowerCase() === "path");
+    const inheritedPath = pathKey ? environment[pathKey] : undefined;
+    for (const key of Object.keys(environment)) {
+      if (key.toLowerCase() === "path") delete environment[key];
+    }
+    environment.PATH = [gitBin, inheritedPath].filter(Boolean).join(delimiter);
+  }
+  return environment;
+}
+export function testOutputQualified(gate: Gate, log: string): boolean {
+  const plain = Bun.stripANSI(log);
+  if (!/\b[1-9]\d* pass\b/.test(plain) || /\b[1-9]\d* (?:todo|fail)\b/.test(plain)) return false;
+  if (/^\((?:todo|fail)\) /m.test(plain)) return false;
+  if (!gate.allowedSkippedTests) return !/\b[1-9]\d* skip\b/.test(plain);
+  const skipped = Array.from(plain.matchAll(/^\(skip\) (.+)$/gm), match => match[1]!);
+  const count = Number(plain.match(/^\s*(\d+) skip\s*$/m)?.[1] ?? 0);
+  return (
+    skipped.length === count &&
+    new Set(skipped).size === skipped.length &&
+    skipped.every(name => gate.allowedSkippedTests!.includes(name))
+  );
 }
 export async function cargoPathManifests(checkout: string) {
   const paths = new Map<string, string>();
@@ -163,13 +240,6 @@ export async function rustDependencyPlan(checkout: string) {
         patches: [] as string[],
       },
       {
-        name: "oxc",
-        manifest: "crates/oxc_allocator/Cargo.toml",
-        package: "oxc_allocator",
-        source: OXC_SOURCE,
-        patches: [] as string[],
-      },
-      {
         name: "rust-argon2",
         manifest: "Cargo.toml",
         package: "rust-argon2",
@@ -197,16 +267,11 @@ export async function rustDependencyPlan(checkout: string) {
       if (state) {
         if (state.isSymbolicLink() || !state.isDirectory() || (await realpath(destination)) !== destination)
           throw Error(`Dependency ${dependency.name} destination must remain canonical`);
-        const gitExport = dependency.name === "oxc" && await Bun.file(join(destination, ".bun-vendor.json")).exists();
-        if (gitExport) await verifyVendorReceipt(destination, dependency.source.commit);
-        const stamp = await lstat(join(destination, ".ref")).catch(error => {
-          if (gitExport && error.code === "ENOENT") return undefined;
-          throw error;
-        });
+        const stamp = await lstat(join(destination, ".ref"));
         if (
-          stamp && (!stamp.isFile() ||
+          !stamp.isFile() ||
           stamp.isSymbolicLink() ||
-          (await readFile(join(destination, ".ref"), "utf8")).trim() !== identity)
+          (await readFile(join(destination, ".ref"), "utf8")).trim() !== identity
         )
           throw Error(`Dependency ${dependency.name} source identity differs; preserved`);
         await verifyCargoManifest(join(destination, dependency.manifest), dependency.package);
@@ -499,11 +564,7 @@ async function worker(revision: string, id: string): Promise<number> {
         child.exited,
       ]);
       const log = stdout + stderr;
-      if (
-        gate.command.includes("test") &&
-        gate.command.includes("bd") &&
-        (!/\b[1-9]\d* pass\b/.test(log) || /\b[1-9]\d* (?:skip|todo|fail)\b/.test(log))
-      ) {
+      if (gate.command.includes("test") && gate.command.includes("bd") && !testOutputQualified(gate, log)) {
         await Bun.write(join(directory, gate.id + ".log"), log);
         results.push({ id: gate.id, exitCode: exitCode || 1, logSha256: hash(log) });
         await receipt("failed");

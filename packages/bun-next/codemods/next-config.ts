@@ -113,7 +113,7 @@ export function nextConfigTo16(source: string): CodemodResult {
   if (eslintOpen !== -1) {
     const keyAt = code.lastIndexOf("eslint", eslintOpen);
     code = removeRange(code, keyAt, matching(code, eslintOpen) + 1);
-    changes.push("removed the eslint key (Next 16 has no `next lint`; run eslint or oxlint directly)");
+    changes.push("removed the eslint key (Next 16 has no `next lint`; run bun lint directly)");
   }
 
   // images.domains -> images.remotePatterns.

@@ -316,3 +316,13 @@ describe("Linux ThinLTO cache", () => {
     expect(await Bun.file(join(String(dir), "unused")).exists()).toBe(false);
   });
 });
+
+test("GNU explicit zeroing uses the canonical compatibility owner for both libc entry points", () => {
+  using dir = tempDir("build-bzero", {});
+  const cfg = linuxConfig({ buildType: "Release" }, String(dir));
+  const gnu = computeFlags(cfg).ldflags;
+  for (const name of ["explicit_bzero", "__explicit_bzero_chk"]) {
+    expect(gnu.filter(flag => flag === `-Wl,--wrap=${name}`)).toHaveLength(1);
+    expect(computeFlags({ ...cfg, abi: "musl" }).ldflags).not.toContain(`-Wl,--wrap=${name}`);
+  }
+});

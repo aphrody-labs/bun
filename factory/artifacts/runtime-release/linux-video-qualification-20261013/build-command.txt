@@ -1,0 +1,1 @@
+bun scripts/build.ts --profile=release --canary=off --coreutils=on --video-native=on --link-threads=2 -j2 --target=bun-profile

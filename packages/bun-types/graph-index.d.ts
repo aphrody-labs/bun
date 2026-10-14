@@ -1,6 +1,23 @@
 declare module "bun:graph-index" {
   import type { BunPython } from "bun:graph";
+  export interface GitSourceFile {
+    path: string;
+    mode: "100644" | "100755" | "120000" | "160000";
+    bytes: number;
+    gitBlob: string;
+    sha256?: string | null;
+  }
+  export interface GitIndexInput {
+    kind: "git";
+    repository: "oven-sh/bun" | "aphrody-labs/bun";
+    revision: string;
+    files: AsyncIterable<GitSourceFile>;
+    /** Bounded immutable blob bytes; the frontend verifies the Git object identity and size. */
+    readFile(file: GitSourceFile, signal?: AbortSignal): Promise<Uint8Array>;
+  }
   export interface IndexOptions {
+    /** Pinned Git input ignores the mutable working tree and defaults to all tracked paths. */
+    input?: GitIndexInput;
     profile: "bun";
     /** Namespaces source IDs and repository IDs so several owners can share one registry. */
     namespace?: string;
@@ -61,6 +78,14 @@ declare module "bun:graph-index" {
     dirty: boolean | null;
     producerSHA256: string;
     domains: DomainResult[];
+    input?: {
+      kind: "git";
+      repository: string;
+      revision: string;
+      files: number;
+      selectedFiles: number;
+      fileCoverageComplete: boolean;
+    };
   }
   /** Indexes explicit Bun source domains with native Rust extraction and immutable per-file facts. */
   export function indexCodebase(registry: BunPython, root: string, options: IndexOptions): Promise<IndexResult>;

@@ -1,5 +1,7 @@
 # verify-baseline-static — triage guide
 
+Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.
+
 Static ISA scanner. Disassembles every instruction in `.text` of a baseline
 Bun binary and flags anything the baseline CPU can't decode. Catches `-march`
 leaks at compile time, before they SIGILL on a user's machine.

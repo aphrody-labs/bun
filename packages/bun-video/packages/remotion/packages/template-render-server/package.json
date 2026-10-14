@@ -6,7 +6,7 @@
 		"build": "remotion bundle",
 		"dev": "tsx watch server",
 		"start": "tsx server",
-		"lint": "eslint . && tsc",
+		"lint": "bun lint . && bun check",
 		"remotion:upgrade": "remotion upgrade",
 		"remotion:studio": "remotion studio"
 	},
@@ -30,9 +30,8 @@
 		"@types/react": "19.2.7",
 		"@types/web": "0.0.166",
 		"eslint": "9.39.5",
-		"prettier": "3.8.1",
-		"tsx": "4.19.3",
-		"typescript": "5.9.3"
+		"tsx": "4.19.3"
+
 	},
 	"private": true
 }

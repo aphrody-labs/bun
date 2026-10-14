@@ -17,7 +17,7 @@ afterEach(() => {
 async function fixture(): Promise<{ root: string; targetDir: string; out: string; core: NativeCore; target: string }> {
   const dir = mkdtempSync(join(tmpdir(), "buv-assemble-"));
   directories.push(dir);
-  for (const file of ["vendor.json", "buv.json", "Cargo.toml", "LICENSE"]) {
+  for (const file of ["vendor.json", "buv.json", "package.json", "LICENSE"]) {
     await Bun.write(join(dir, file), Bun.file(join(ROOT, file)));
   }
   const prefix = join(dir, "build", "python");
@@ -29,7 +29,7 @@ async function fixture(): Promise<{ root: string; targetDir: string; out: string
   writeFileSync(join(prefix, "lib", "python3.12", "os.py"), "# os\n");
   const targetDir = join(dir, "target");
   mkdirSync(join(targetDir, "release"), { recursive: true });
-  for (const binary of ["buv", "uv", "ruff"]) {
+  for (const binary of ["buv", "uv"]) {
     writeFileSync(join(targetDir, "release", binary), `#!${binary}\n`);
     chmodSync(join(targetDir, "release", binary), 0o644);
   }
@@ -67,9 +67,9 @@ describe("assemble", () => {
       target: "x86_64-unknown-linux-gnu",
       core,
     });
-    expect(artifact).toBe(join(out, `0.1.0-${revision.slice(0, 8)}`));
+    expect(artifact).toBe(join(out, `1.4.4-${revision.slice(0, 8)}`));
     expect(existsSync(`${artifact}.partial`)).toBe(false);
-    for (const binary of ["buv", "pyjs", "ruff"]) {
+    for (const binary of ["buv", "pyjs"]) {
       const mode = lstatSync(join(artifact, "bin", binary)).mode & 0o777;
       expect(manifest.files[`bin/${binary}`]?.mode).toBe(mode);
       if (process.platform !== "win32") expect(mode & 0o111).not.toBe(0);
@@ -81,10 +81,10 @@ describe("assemble", () => {
     expect(manifest).toMatchObject({
       schema: 1,
       name: "buv-runtime",
-      version: "0.1.0",
+      version: "1.4.4",
       revision,
       toolchain: "rustc 1.98.1",
-      capabilities: ["javascript", "uv", "ruff", "python-prefix"],
+      capabilities: ["javascript", "uv", "python-prefix"],
     });
     expect(manifest.pins["uv"]).toMatchObject({
       upstreamTag: "0.12.24",
@@ -122,6 +122,6 @@ describe("assemble", () => {
     };
     const first = await assemble(options);
     await expect(assemble(options)).rejects.toThrow("artifact is immutable and already exists");
-    expect(first.artifact).toBe(join(out, "0.1.0-abcdef01"));
+    expect(first.artifact).toBe(join(out, "1.4.4-abcdef01"));
   });
 });

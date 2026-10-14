@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import type { Protocol, Type } from "../src/protocol/schema";
 
@@ -6,11 +5,15 @@ run().catch(console.error);
 
 async function run() {
   const cwd = new URL("../src/protocol/", import.meta.url);
-  const runner = "Bun" in globalThis ? "bunx" : "npx";
   const write = (name: string, data: string) => {
     const path = new URL(name, cwd);
     writeFileSync(path, data);
-    spawnSync(runner, ["prettier", "--write", path.pathname], { cwd, stdio: "ignore" });
+    const result = Bun.spawnSync([process.execPath, "fmt", "--write", Bun.fileURLToPath(path)], {
+      cwd: Bun.fileURLToPath(cwd),
+      stdout: "ignore",
+      stderr: "pipe",
+    });
+    if (result.exitCode) throw new Error(result.stderr.toString());
   };
   const schema: Protocol = await download(
     "https://microsoft.github.io/debug-adapter-protocol/debugAdapterProtocol.json",

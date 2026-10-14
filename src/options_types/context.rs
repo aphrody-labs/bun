@@ -563,6 +563,7 @@ pub struct DebuggerEnable {
 
 pub struct RuntimeOptions {
     pub smol: bool,
+    pub shell_nounset: bool,
     /// `--check`: type check what is about to be run, and do not run it if there are errors.
     pub check: bool,
     pub debugger: Debugger,
@@ -636,6 +637,7 @@ impl Default for RuntimeOptions {
     fn default() -> Self {
         Self {
             smol: false,
+            shell_nounset: false,
             check: false,
             debugger: Debugger::Unspecified,
             if_present: false,

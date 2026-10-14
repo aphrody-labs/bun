@@ -13,10 +13,10 @@
 	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
-		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts",
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && bun --env-file=../.env.bundle bundle.ts",
 		"test": "bun test src"
 	},
 	"dependencies": {
@@ -32,8 +32,8 @@
 	},
 	"devDependencies": {
 		"@remotion/eslint-config-internal": "workspace:*",
-		"eslint": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"eslint": "catalog:"
+
 	},
 	"exports": {
 		"./package.json": "./package.json",

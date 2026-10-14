@@ -7,12 +7,12 @@
 	"description": "Render Remotion videos on AWS Lambda",
 	"main": "dist/index.js",
 	"scripts": {
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
 		"testlambda": "exit 0",
 		"test": "bun test src/test/unit",
-		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && bun --env-file=../.env.bundle bundle.ts",
 		"makeruntime": "bun build.ts",
 		"prepublishOnly": "bun build.ts && bun ensure-version-match.js"
 	},
@@ -50,8 +50,8 @@
 		"eslint": "catalog:",
 		"next": "catalog:",
 		"pureimage": "0.4.13",
-		"@types/node": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"@types/node": "catalog:"
+
 	},
 	"peerDependencies": {
 		"@remotion/bundler": "workspace:*"

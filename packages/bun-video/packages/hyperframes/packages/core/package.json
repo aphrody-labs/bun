@@ -868,14 +868,14 @@
     "types": "./dist/index.d.ts"
   },
   "scripts": {
-    "build": "bun run build:fonts && bun run build:svg-selector-aliases && bun run build:hyperframes-runtime && bun run build:position-edits-render && bun run build:audio-fx-runtime && tsc && bun scripts/rewrite-esm-extensions.ts",
+    "build": "bun run build:fonts && bun run build:svg-selector-aliases && bun run build:hyperframes-runtime && bun run build:position-edits-render && bun run build:audio-fx-runtime && bun ../../../../../../scripts/aphrody/emit-typescript.ts && bun scripts/rewrite-esm-extensions.ts",
     "build:fonts": "bun scripts/build-fonts.mjs",
     "test": "bun run check:position-edits-render && bun run check:svg-selector-aliases && bun run build:audio-fx-runtime && vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:runtime-coverage": "vitest run --coverage src/runtime",
-    "typecheck": "tsc --noEmit && bun run typecheck:runtime",
-    "typecheck:runtime": "tsc --noEmit -p tsconfig.runtime.json",
+    "typecheck": "bun check --noEmit && bun run typecheck:runtime",
+    "typecheck:runtime": "bun check --noEmit -p tsconfig.runtime.json",
     "lint:runtime-preview-guards": "bun scripts/lint-runtime-preview-guards.ts",
     "build:audio-fx-runtime": "bun scripts/build-audio-fx-runtime.ts",
     "build:hyperframes-runtime": "bun scripts/build-hyperframes-runtime-artifact.ts",
@@ -933,7 +933,6 @@
     "gsap": "^3.15.0",
     "jsdom": "^29.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.0.0",
     "vitest": "^4.1.11"
   },
   "optionalDependencies": {

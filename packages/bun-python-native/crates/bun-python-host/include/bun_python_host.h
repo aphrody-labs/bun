@@ -30,6 +30,8 @@ void bun_py_buffer_deallocator(void *bytes, void *deallocatorContext);
  * replaced. Library stays loaded. */
 int32_t bun_py_main(int32_t argc, const char *const *argv, int32_t *exit_code);
 int32_t aphrody_py_load(const char *library);
+/* Each successful init acquires one client lease. Each client must call
+ * finalize; an interpreter started by this host stops after the last lease. */
 int32_t aphrody_py_init(void);
 int32_t aphrody_py_run(const char *code);
 int32_t aphrody_py_eval(const char *expression, char **result);

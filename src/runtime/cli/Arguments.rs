@@ -672,6 +672,13 @@ const TEST_PARAMS: &[ParamType] = concat_params!(
 const BASE_RUNTIME_TRANSPILER_PARAMS: &[ParamType] =
     concat_params!(BASE_PARAMS_, RUNTIME_PARAMS_, TRANSPILER_PARAMS_);
 
+const EXEC_PARAMS: &[ParamType] = concat_params!(
+    BASE_RUNTIME_TRANSPILER_PARAMS,
+    &[parse_param!(
+        "--nounset                         Fail when expanding an unset shell variable"
+    )]
+);
+
 // ─── pre-converted tables (rodata) ───────────────────────────────────────────
 // `comptime_table!` converts `*_PARAMS` → `[Param<usize>; N]` + category counts
 // + short-index entirely at const-eval, so `parse_with_table` does zero runtime
@@ -706,6 +713,7 @@ pub(crate) static BUILD_TABLE: &clap::ConvertedTable = clap::comptime_table!(BUI
 pub(crate) static TEST_TABLE: &clap::ConvertedTable = clap::comptime_table!(TEST_PARAMS, cold);
 static BASE_RUNTIME_TRANSPILER_TABLE: &clap::ConvertedTable =
     clap::comptime_table!(BASE_RUNTIME_TRANSPILER_PARAMS, cold);
+static EXEC_TABLE: &clap::ConvertedTable = clap::comptime_table!(EXEC_PARAMS, cold);
 
 /// Per-tag pre-converted clap table (rodata, built at compile time via
 /// `comptime_table!`). This is what `parse` consumes so the startup path never
@@ -718,6 +726,7 @@ fn tag_table(cmd: CommandTag) -> &'static clap::ConvertedTable {
         CommandTag::BuildCommand => BUILD_TABLE,
         CommandTag::TestCommand => TEST_TABLE,
         CommandTag::BunxCommand => RUN_TABLE,
+        CommandTag::ExecCommand => EXEC_TABLE,
         _ => BASE_RUNTIME_TRANSPILER_TABLE,
     }
 }
@@ -827,6 +836,22 @@ pub(crate) fn disallow_code_generation_from_strings_as_compiled(embedded: &[&bun
     }
 }
 
+/// Arguments following the parsed command or script, preserving an initial literal delimiter.
+pub(crate) fn command_arguments(ctx: &command::ContextData) -> Vec<&[u8]> {
+    let mut args: Vec<&[u8]> = ctx.passthrough.iter().map(|arg| &**arg).collect();
+    let argv = bun_core::argv().into_iter().collect::<Vec<_>>();
+    // The root parser consumes exactly one leading `--` when it stops at a positional.
+    if argv
+        .len()
+        .checked_sub(args.len() + 1)
+        .and_then(|index| argv.get(index))
+        .is_some_and(|arg| *arg == b"--")
+    {
+        args.insert(0, b"--");
+    }
+    args
+}
+
 /// Parse `argv` into `api::TransformOptions` for the given subcommand.
 ///
 /// `command::tag_params(cmd)` does a runtime lookup of the per-subcommand
@@ -841,7 +866,7 @@ pub(crate) fn parse(cmd: CommandTag, ctx: Context<'_>) -> crate::Result<api::Tra
         clap::ParseOptions {
             diagnostic: Some(&mut diag),
             stop_after_positional_at: match cmd {
-                CommandTag::RunCommand => 2,
+                CommandTag::RunCommand | CommandTag::ExecCommand => 2,
                 // `bun lint --fix`: what follows the subcommand is for eval/toolchain.ts.
                 CommandTag::AutoCommand
                 | CommandTag::RunAsNodeCommand
@@ -1034,6 +1059,10 @@ pub(crate) fn parse(cmd: CommandTag, ctx: Context<'_>) -> crate::Result<api::Tra
     // opts.inject = args.options(b"--inject");
     opts.env_files = slice_to_owned(args.options(b"--env-file"));
     opts.extension_order = slice_to_owned(args.options(b"--extension-order"));
+
+    if cmd == CommandTag::ExecCommand {
+        ctx.runtime_options.shell_nounset = args.flag(b"--nounset");
+    }
 
     if args.flag(b"--no-env-file") {
         opts.disable_default_env_files = true;

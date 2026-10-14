@@ -1,0 +1,144 @@
+use super::Parser;
+use crate::{
+    Syntax,
+    ast::*,
+    error::{Error, ErrorKind, PResult},
+    pos::Span,
+    tokenizer::{Token, TokenWithSpan},
+};
+
+impl<'a> Parser<'a> {
+    // The raw `( <any-value> )` body of a <general-enclosed>: balanced tokens up
+    // to the matching `)`. https://www.w3.org/TR/mediaqueries-4/#typedef-general-enclosed
+    pub(super) fn parse_tokens_in_parens(&mut self) -> PResult<TokenSeq<'a>> {
+        let start = self.cursor.tokenizer.current_offset();
+        let mut tokens = self.vec_with_capacity(1);
+        let mut pairs = Vec::with_capacity(1);
+        loop {
+            match &self.cursor.peek()?.token {
+                // A stray delimiter is a plain token in CSS, but the
+                // preprocessor dialects give it real syntax (`$var`, Less
+                // `^`), and their reference compilers reject it here.
+                Token::Unknown(..) if self.syntax != Syntax::Css => {
+                    let span = self.cursor.peek()?.span;
+                    return Err(Error { kind: ErrorKind::UnknownToken, span });
+                }
+                // An interpolated string (`("min-width:#{$foo}")`) must be
+                // consumed structurally — the tokenizer resumes the string
+                // after each `#{...}` — but its pieces are still plain tokens.
+                Token::StrTemplate(..) => {
+                    self.consume_str_template_tokens_into(&mut tokens)?;
+                    continue;
+                }
+                Token::Eof(..) => break,
+                token => {
+                    if !crate::util::track_paired_token(token, &mut pairs) {
+                        break;
+                    }
+                }
+            }
+            tokens.push(self.cursor.bump()?);
+        }
+        let span = Span {
+            start: tokens.first().map(|token| token.span.start).unwrap_or(start),
+            end: if let Some(last) = tokens.last() {
+                last.span.end
+            } else {
+                self.cursor.peek()?.span.start
+            },
+        };
+        Ok(TokenSeq { tokens, span })
+    }
+
+    /// A raw statement prelude:
+    /// everything up to the body's `{` (or the end of the statement),
+    /// balancing pairs so interpolations and parens pass through.
+    /// Stops (without consuming) at a top-level `{`,
+    /// a statement boundary (`;`, EOF, indentation), or an unmatched closer;
+    /// the caller decides whether the stop token is acceptable.
+    pub(super) fn parse_raw_prelude_tokens(&mut self) -> PResult<TokenSeq<'a>> {
+        let start = self.cursor.tokenizer.current_offset();
+        let mut tokens = self.vec_with_capacity(4);
+        let mut pairs: Vec<crate::util::PairedToken> = Vec::with_capacity(1);
+        loop {
+            match &self.cursor.peek()?.token {
+                Token::Semicolon(..) | Token::LBrace(..) if pairs.is_empty() => break,
+                Token::Dedent(..) | Token::Linebreak(..) | Token::Indent(..) | Token::Eof(..) => {
+                    break;
+                }
+                // Interpolated strings must be consumed structurally
+                // (the tokenizer resumes the string after each `#{...}`),
+                // but their pieces are still plain tokens.
+                Token::StrTemplate(..) => {
+                    self.consume_str_template_tokens_into(&mut tokens)?;
+                    continue;
+                }
+                token => {
+                    if !crate::util::track_paired_token(token, &mut pairs) {
+                        break;
+                    }
+                }
+            }
+            tokens.push(self.cursor.bump()?);
+        }
+        let span = Span {
+            start: tokens.first().map_or(start, |token| token.span.start),
+            end: tokens.last().map_or(start, |token| token.span.end),
+        };
+        Ok(TokenSeq { tokens, span })
+    }
+
+    /// Consume a whole interpolated string (`"a#{expr}b"`) into `tokens` as
+    /// its raw pieces. The tokenizer must be driven part-by-part — after each
+    /// `#{...}` it resumes the string with `scan_string_template` — but every
+    /// piece is still a plain token, so raw token sequences can hold it.
+    pub(super) fn consume_str_template_tokens_into(
+        &mut self,
+        tokens: &mut oxc_allocator::Vec<'a, TokenWithSpan<'a>>,
+    ) -> PResult<()> {
+        let head = self.cursor.bump()?;
+        let quote = head.span.start;
+        let quote = self.source.as_bytes().get(quote).copied().unwrap_or(b'"');
+        let mut tail = matches!(&head.token, Token::StrTemplate(template) if template.tail);
+        tokens.push(head);
+        while !tail {
+            // Each non-tail part ends at `#{` with the `#` consumed, so the
+            // interpolation opens with a bare `{` (like `SassInterpolatedStr`).
+            let lbrace = self.cursor.bump()?;
+            debug_assert!(matches!(lbrace.token, Token::LBrace(..)));
+            tokens.push(lbrace);
+            // the expression's tokens, balanced to the interpolation's `}`
+            let mut depth = 0u32;
+            loop {
+                match &self.cursor.peek()?.token {
+                    Token::Eof(..) => return Ok(()),
+                    Token::StrTemplate(..) => {
+                        self.consume_str_template_tokens_into(tokens)?;
+                        continue;
+                    }
+                    Token::LBrace(..) | Token::HashLBrace(..) => depth += 1,
+                    Token::RBrace(..) => {
+                        if depth == 0 {
+                            tokens.push(self.cursor.bump()?);
+                            break;
+                        }
+                        depth -= 1;
+                    }
+                    _ => {}
+                }
+                tokens.push(self.cursor.bump()?);
+            }
+            let (template, span) = self.cursor.tokenizer.scan_string_template(quote)?;
+            tail = template.tail;
+            tokens.push(TokenWithSpan {
+                token: Token::StrTemplate(crate::token::StrTemplateMeta {
+                    escaped: template.escaped,
+                    head: template.head,
+                    tail: template.tail,
+                }),
+                span,
+            });
+        }
+        Ok(())
+    }
+}

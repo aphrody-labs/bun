@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "sourceCommit": "165df62bc02539eaa74e29126355a860e0738405",
+  "adapterProbesPassed": true,
+  "SDKBuildsWithELFAndCPUProof": [
+    "linux-x64"
+  ],
+  "finalSDKBundleQualification": "GNU-x64-ELF-closure-functional-PNG-MPV-pass",
+  "completeSDKBuildsPending": [
+    "linux-arm64",
+    "linux-x64-musl",
+    "linux-arm64-musl"
+  ],
+  "hostLibcChanged": false,
+  "results": [
+    {
+      "target": "x64-gnu",
+      "execution": "native-host",
+      "output": "ABI_FUNCTIONAL_PASS math=10 fcntl=noarg,int,64bit-lock glob=offsets,two-paths",
+      "sha256": "468efe43d94f3cfe48165ee28e827fdcba845ceb238fd0445027c8a60a354fe8",
+      "requiredGLIBC": [
+        "GLIBC_2.2.5"
+      ]
+    },
+    {
+      "target": "arm64-gnu",
+      "execution": "qemu-aarch64-sysroot",
+      "output": "ABI_FUNCTIONAL_PASS math=10 fcntl=noarg,int,64bit-lock glob=offsets,two-paths",
+      "sha256": "8458785a752c7d862139fef2e8131fb2f64df9172f027f14670e526e4cdfc57b",
+      "requiredGLIBC": [
+        "GLIBC_2.17"
+      ]
+    },
+    {
+      "target": "x64-musl",
+      "execution": "sysroot-musl-loader",
+      "output": "ABI_FUNCTIONAL_PASS math=10 fcntl=noarg,int,64bit-lock glob=offsets,two-paths",
+      "sha256": "5b9c10fd8b3f92c42468c85c8a28c9781af9e08da175e210534b66ac386a37f7",
+      "requiredGLIBC": []
+    },
+    {
+      "target": "arm64-musl",
+      "execution": "qemu-aarch64-sysroot",
+      "output": "ABI_FUNCTIONAL_PASS math=10 fcntl=noarg,int,64bit-lock glob=offsets,two-paths",
+      "sha256": "b18860c6696ac996aa30a79b037f7135103ff342c5a08153c2b228392ba3ba4e",
+      "requiredGLIBC": []
+    }
+  ]
+}

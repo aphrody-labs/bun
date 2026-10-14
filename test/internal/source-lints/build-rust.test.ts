@@ -185,7 +185,9 @@ test.each(["x64", "aarch64"] as const)("Linux %s C build scripts and pkg-config 
   expect(unitEnv[`CFLAGS_${triple}`]).toBe(`--target=${cfg.crossTarget} --sysroot='${cfg.sysroot}'`);
   expect(unitEnv[`CXXFLAGS_${triple}`]).toBe(unitEnv[`CFLAGS_${triple}`]);
   expect(unitEnv.CC_SHELL_ESCAPED_FLAGS).toBe("1");
-  expect(unitEnv[`PKG_CONFIG_SYSROOT_DIR_${triple}`]).toBe(cfg.sysroot);
+  const sysroot = cfg.sysroot;
+  if (sysroot === undefined) throw new Error("Linux fixture must resolve its explicit sysroot");
+  expect(unitEnv[`PKG_CONFIG_SYSROOT_DIR_${triple}`]).toBe(sysroot);
   expect(unitEnv[`PKG_CONFIG_LIBDIR_${triple}`]).toContain(
     join(cfg.sysroot!, "usr", "lib", cfg.crossTarget!, "pkgconfig"),
   );

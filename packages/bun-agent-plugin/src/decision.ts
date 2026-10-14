@@ -33,7 +33,6 @@ const MAX_TASK_BYTES = 8192;
 const MAX_REQUEST_BYTES = 32768;
 const DEFAULT_CANDIDATES = 12;
 export const CONTEXT_DECISION = {
-  model: "jev-1.13.0",
   minimumConfidence: 0.8,
   timeout: 10000,
   maxRetries: 0,
@@ -169,7 +168,7 @@ export function createContextSelector(catalog: ContextCatalog) {
           "No listed candidate directly fits the task, or the task lacks the evidence needed to select one.";
         questions[kind] = choice(CONTEXT_DECISION[kind], criteria);
       }
-      return { state: { task: options.task }, model: CONTEXT_DECISION.model, questions };
+      return { state: { task: options.task }, questions };
     };
     let request = requestFor();
     let requestBytes = Buffer.byteLength(JSON.stringify(request));

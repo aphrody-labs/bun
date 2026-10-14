@@ -19,7 +19,7 @@ Main build: `bun-build-commands`, `bun-build-system-internals`. CI wiring of the
 
 ## bench/ (own package.json + bun.lock; root install does not cover it)
 
-`cd bench && bun install && bun run <name>` (ffi, log, gzip, async, sqlite…). Override the binary with `BUN=path/to/bun` or `.env`. Uses mitata 1.0.20, benchmark, esbuild, @swc/core, fastify, react 19… Dirs per area: async, bundle, crypto, deepEqual, fetch, ffi, fs-cp, glob, grpc-server, gzip, http2, image, install, json5, module-loader, postgres, quic, snippets, sqlite, stress, websocket-server, xml, yaml, etc. `runner.mjs` is the shared runner. oxlint ignores bench/.
+`cd bench && bun install && bun run <name>` (ffi, log, gzip, async, sqlite…). Override the binary with `BUN=path/to/bun` or `.env`. Uses mitata 1.0.20, benchmark, esbuild, @swc/core, fastify, react 19… Dirs per area: async, bundle, crypto, deepEqual, fetch, ffi, fs-cp, glob, grpc-server, gzip, http2, image, install, json5, module-loader, postgres, quic, snippets, sqlite, stress, websocket-server, xml, yaml, etc. `runner.mjs` is the shared runner. Native `bun lint --config oxlint.json` applies the configured benchmark exclusions.
 Rust micro-benches: `scripts/bench-json-rust.sh [--xml|--test]` = criterion `src/parsers/benches/{json,xml}_parse.rs`. It needs vendor/ populated, so run `bun bd` once first.
 
 ## packages/

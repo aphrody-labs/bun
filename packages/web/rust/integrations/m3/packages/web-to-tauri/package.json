@@ -45,8 +45,8 @@
   },
   "devDependencies": {
     "@aphrody/m3-config": "workspace:*",
-    "@types/bun": "npm:@aphrody/bun-types@1.4.4",
-    "typescript": "7.0.2"
+    "@types/bun": "npm:@aphrody/bun-types@1.4.4"
+
   },
   "peerDependencies": {
     "@aphrody/scaffold": "1.4.4"

@@ -135,11 +135,16 @@ export function rewrite(path: string, text: string): string {
     .join("\n");
 }
 
-// ripgrep lists candidates: it honours .gitignore and only returns files that
-// mention one of the names, so JS never reads the whole tree.
+// Apply the managed file selection before searching contents, so archives,
+// datasets and native artifacts never enter the scan.
 export function candidates(root: string): string[] {
   const pattern = ["@types/bun", ...RENAMED].map(escape).join("|");
-  const proc = Bun.spawnSync(["rg", "--files-with-matches", "--no-messages", "-e", pattern, "packages"], {
+  const proc = Bun.spawnSync([
+    "rg", "--files-with-matches", "--no-messages", "--threads", "2",
+    "--glob", "*.{js,jsx,ts,tsx,cjs,cjsx,cts,ctsx,mjs,mjsx,mts,mtsx,md,mdx,svelte,html}",
+    "--glob", "package.json", "--glob", "bunfig.toml", "--glob", "!**/node_modules/**",
+    "-e", pattern, "packages",
+  ], {
     cwd: root,
     stdout: "pipe",
     stderr: "pipe",

@@ -7,10 +7,10 @@
 	"description": "Babel loader for Remotion",
 	"main": "dist/index.js",
 	"scripts": {
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
-		"make": "tsgo -d"
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d"
 	},
 	"files": [
 		"dist"
@@ -34,8 +34,8 @@
 		"@remotion/bundler": "workspace:*",
 		"remotion": "workspace:*",
 		"@remotion/eslint-config-internal": "workspace:*",
-		"eslint": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"eslint": "catalog:"
+
 	},
 	"peerDependencies": {
 		"@remotion/bundler": "workspace:*"

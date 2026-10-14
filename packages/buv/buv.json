@@ -18,14 +18,9 @@
     "homeDirectory": "~/.{name}",
     "artifact": "{name}-runtime-{version}-{sha8}-{target}.tar.zst",
     "pythonModule": "pyjs",
-    "standaloneCommands": ["uv", "ruff", "pyjs"],
+    "standaloneCommands": ["uv", "pyjs"],
     "sharedHost": "bun-python-native",
     "sharedHostReady": false,
     "nativeExecutable": "buv"
-  },
-  "predecessor": {
-    "repository": "aphrody-labs/vu",
-    "revision": "6ea52f1aada7269d81470dd9d93144555610868e",
-    "package": "packages/bun-vu"
   }
 }

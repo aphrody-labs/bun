@@ -14,8 +14,8 @@
 		"remotion-mcp": "./dist/esm/index.mjs"
 	},
 	"scripts": {
-		"lint": "eslint src",
-		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts"
+		"lint": "bun lint src",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && bun --env-file=../.env.bundle bundle.ts"
 	},
 	"files": [
 		"dist"
@@ -30,8 +30,8 @@
 	"devDependencies": {
 		"@remotion/eslint-config-internal": "workspace:*",
 		"eslint": "catalog:",
-		"@types/command-line-args": "5.2.3",
-		"@typescript/native-preview": "catalog:"
+		"@types/command-line-args": "5.2.3"
+
 	},
 	"keywords": [
 		"remotion",

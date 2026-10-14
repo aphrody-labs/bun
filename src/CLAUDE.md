@@ -1,5 +1,7 @@
 ## Rust
 
+Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.
+
 `src/` is a Cargo workspace (rooted at the repo's top-level `Cargo.toml`, ~200
 member crates). Each crate is one rustc invocation producing an rlib,
 planned by cargo and run by ninja (`scripts/build/rust.ts`, `scripts/build/rust/`). Key crates:

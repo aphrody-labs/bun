@@ -7,7 +7,7 @@ rust-version = "1.97"
 authors = ["aphrody-code"]
 repository = "https://github.com/aphrody-labs/bun"
 license = "Apache-2.0 AND MIT"
-description = "Shared Jev System One protocol, validation and optional endpoint clients"
+description = "Bun typed decision protocol, validation and optional endpoint clients"
 
 [features]
 default = []

@@ -31,7 +31,7 @@ import { writeIfChanged } from "../fs.ts";
 import type { Phase } from "../timings.ts";
 import { type BuildScriptOutput, envify } from "./cargo-env.ts";
 import { withoutMissingRustWrappers } from "./environment.ts";
-import type { RustcUnitManifest, UnitManifest } from "./units.ts";
+import type { BuildScriptRunManifest, RustcUnitManifest, UnitManifest } from "./units.ts";
 
 // Guarded so the tests can import the pieces below without running a unit.
 if (process.argv[1] === import.meta.filename) {
@@ -332,6 +332,66 @@ function snapshotDir(dir: string): Map<string, [string, Date]> {
   return out;
 }
 
+/** The binding crate has no external-provider switch; the native Bun graph supplies its codec instead. */
+export function nativeWebPBuildScriptOutput(unit: BuildScriptRunManifest): string | undefined {
+  const provider = unit.script.nativeWebP;
+  if (provider === undefined) return undefined;
+  const source = unit.script.manifestDir;
+  const buildScript = readFileSync(join(source, "build.rs"));
+  if (createHash("sha256").update(buildScript).digest("hex") !== provider.buildScriptSHA256)
+    throw new BuildError("libwebp-sys's reviewed build script changed");
+  const ffi = readFileSync(join(source, "src", "ffi.rs"), "utf8");
+  const root = provider.includes.find(path => existsSync(join(path, "webp", "encode.h")));
+  if (root === undefined) throw new BuildError("Bun's native WebP headers are missing");
+  if (
+    provider.linkInputs.length === 0 ||
+    provider.inputs.length === 0 ||
+    provider.inputs.some(path => !existsSync(path))
+  )
+    throw new BuildError("Bun's native WebP link inputs are missing");
+  const abi = [
+    ["encode", "ENCODER", 0x020f, 0x0210],
+    ["decode", "DECODER", 0x0209, 0x0210],
+    ["mux", "MUX", 0x0108, 0x0109],
+    ["demux", "DEMUX", 0x0107, 0x0107],
+  ] as const;
+  const headers: string[] = [];
+  for (const [file, name, bindingVersion, nativeVersion] of abi) {
+    const header = join(root, "webp", `${file}.h`);
+    const contents = readFileSync(header, "utf8");
+    const current = new RegExp(`^#define WEBP_${name}_ABI_VERSION\\s+(0x[0-9a-fA-F]+|[0-9]+)\\b`, "m").exec(contents);
+    const binding = new RegExp(`pub const WEBP_${name}_ABI_VERSION: u32 = ([0-9]+);`).exec(ffi);
+    if (
+      current === null ||
+      binding === null ||
+      Number(current[1]) !== nativeVersion ||
+      Number(binding[1]) !== bindingVersion
+    )
+      throw new BuildError(`WebP ${name.toLowerCase()} ABI differs from the reviewed native/binding pair`);
+    headers.push(header);
+  }
+  return [...headers, join(source, "build.rs"), join(source, "src", "ffi.rs"), ...provider.inputs]
+    .map(path => `cargo:rerun-if-changed=${path}\n`)
+    .join("");
+}
+
+export function bindStaticBuildScriptOutput(unit: BuildScriptRunManifest, out: BuildScriptOutput): void {
+  const provider = unit.script.staticLibrary;
+  if (provider === undefined) return;
+  const archive = join(provider.directory, `lib${provider.name}.a`);
+  const packageFile = join(provider.directory, "pkgconfig", `lib${provider.name}.pc`);
+  if (!existsSync(archive) || !existsSync(packageFile))
+    throw new BuildError(`Static lib${provider.name} archive/version metadata are missing in the selected sysroot`);
+  const version = /^Version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$/m.exec(readFileSync(packageFile, "utf8"))?.[1];
+  const compare = (value: string) => value.split(".").reduce((n, part) => n * 1000 + Number(part), 0);
+  if (version === undefined || compare(version) < compare(provider.minimumVersion))
+    throw new BuildError(`Static lib${provider.name} is older than bindings require (${provider.minimumVersion})`);
+  if (out.linkLibs.length !== 1 || out.linkLibs[0] !== provider.name)
+    throw new BuildError(`lib${provider.name} build script must select exactly its canonical archive`);
+  out.linkLibs = [`static=${provider.name}`];
+  out.rerunIfChanged.push(archive, packageFile);
+}
+
 function runBuildScript(unit: Extract<UnitManifest, { kind: "build-script-run" }>): never {
   const { script } = unit;
   mkdirSync(script.outDir, { recursive: true });
@@ -344,14 +404,18 @@ function runBuildScript(unit: Extract<UnitManifest, { kind: "build-script-run" }
   for (const dep of script.linksDeps) {
     for (const [k, v] of readScriptOutput(dep.output).metadata) env[`DEP_${envify(dep.links)}_${envify(k)}`] = v;
   }
-  const r = spawnSync(script.program, [], {
-    cwd: unit.cwd,
-    env,
-    stdio: ["ignore", "pipe", "pipe"],
-    encoding: "utf8",
-    maxBuffer: 1 << 28,
-    windowsHide: true,
-  });
+  const nativeOutput = nativeWebPBuildScriptOutput(unit);
+  const r =
+    nativeOutput === undefined
+      ? spawnSync(script.program, [], {
+          cwd: unit.cwd,
+          env,
+          stdio: ["ignore", "pipe", "pipe"],
+          encoding: "utf8",
+          maxBuffer: 1 << 28,
+          windowsHide: true,
+        })
+      : { stdout: nativeOutput, stderr: "", status: 0, signal: null, error: undefined };
   if (r.error) throw r.error;
   const out = parseBuildScriptOutput(r.stdout);
   if (script.local) for (const w of out.warnings) emit(2, `warning: ${unit.env.CARGO_PKG_NAME} build script: ${w}\n`);
@@ -363,6 +427,7 @@ function runBuildScript(unit: Extract<UnitManifest, { kind: "build-script-run" }
       emit(2, `error: build script for ${unit.env.CARGO_PKG_NAME} exited with ${r.status ?? r.signal}\n`);
     process.exit(1);
   }
+  bindStaticBuildScriptOutput(unit, out);
   // Files the script regenerated with the same bytes keep their old mtime (crates `include!` them; a fresh mtime on
   // identical content would recompile the package and everything downstream one build later, when ninja next stats).
   const after = snapshotDir(script.outDir);

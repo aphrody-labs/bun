@@ -28,7 +28,7 @@
   "scripts": {
     "typecheck": "bun check --noEmit",
     "test": "bun test test/",
-    "lint": "oxlint"
+    "lint": "bun lint"
   },
   "dependencies": {},
   "peerDependencies": {

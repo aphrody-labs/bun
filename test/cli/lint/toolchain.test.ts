@@ -1,8 +1,8 @@
 // `bun lint`, `bun fmt`, `bun n2b`, `bun migrate`, `bun wasm` and `bun build --target=wasm`
-// (src/runtime/cli/toolchain_command.rs + src/js/eval/toolchain.ts). oxlint, oxfmt and n2b are
-// replaced by local scripts through BUN_OXLINT / BUN_OXFMT / BUN_N2B, so nothing is downloaded.
+// Native quality and migration dispatch directly; wasm and templates use the JS entry script.
 import { describe, expect, test } from "bun:test";
-import { bunEnv, bunExe, normalizeBunSnapshot, tempDir } from "harness";
+import { bunEnv, bunExe, tempDir } from "harness";
+import { symlinkSync } from "node:fs";
 import { join } from "node:path";
 
 const env = {
@@ -15,9 +15,6 @@ const env = {
 };
 
 async function run(args: string[], cwd?: string, extraEnv: Record<string, string | undefined> = {}) {
-  if ((extraEnv.BUN_OXLINT || extraEnv.BUN_OXFMT) && (args[0] === "lint" || args[0] === "fmt")) {
-    args = [args[0], "--external-backend", ...args.slice(1)];
-  }
   await using proc = Bun.spawn({
     cmd: [bunExe(), ...args],
     env: { ...env, ...extraEnv },
@@ -30,6 +27,161 @@ async function run(args: string[], cwd?: string, extraEnv: Record<string, string
 }
 
 describe("embedded quality backend", () => {
+  test("fmt reports an invalid file and still writes subsequent valid sources", async () => {
+    using dir = tempDir("native-fmt-aggregate-errors", {
+      "a-invalid.ts": "export const = ;",
+      "z-valid.ts": "export const value={a:1};",
+    });
+    const result = await run(["fmt", "--write", "."], String(dir));
+    expect(result).toMatchObject({ exitCode: 2, stderr: "" });
+    expect(await Bun.file(join(String(dir), "a-invalid.ts")).text()).toBe("export const = ;");
+    expect(await Bun.file(join(String(dir), "z-valid.ts")).text()).toBe("export const value = { a: 1 };\n");
+    expect(result.stdout).toMatch(/^a-invalid\.ts: error: .+/m);
+  });
+
+  test.each(["fmt", "lint"])("%s prunes generated Python caches before reading or rewriting files", async command => {
+    const invalid = "let = invalid";
+    const unformatted = "export const cached={value:1};";
+    const paths = [".pytest_cache", ".mypy_cache", ".ruff_cache", "__pycache__", ".venv"].flatMap(path => [
+      path,
+      `nested/${path}`,
+    ]);
+    using dir = tempDir("native-quality-python-caches", {
+      "active.ts": "export const active = 1;\n",
+      ...Object.fromEntries(
+        paths.flatMap(path => [
+          [`${path}/invalid.ts`, invalid],
+          [`${path}/unformatted.ts`, unformatted],
+        ]),
+      ),
+    });
+    const flags = command === "fmt" ? ["--write"] : ["--fix"];
+    expect(await run([command, ...flags, "."], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    for (const path of paths) {
+      expect(await Bun.file(join(String(dir), path, "invalid.ts")).text()).toBe(invalid);
+      expect(await Bun.file(join(String(dir), path, "unformatted.ts")).text()).toBe(unformatted);
+    }
+    expect(await Bun.file(join(String(dir), "active.ts")).text()).toBe("export const active = 1;\n");
+  });
+
+  test("recursive formatting prunes Gitignored trees and protected stores before reading source", async () => {
+    const ignored = "let = invalid";
+    using dir = tempDir("native-fmt-pruned-trees", {
+      ".gitignore": "generated/\n",
+      "active.ts": "export const value={a:1};",
+      "generated/secrets/fixture.ts": ignored,
+      "generated/invalid.ts": ignored,
+      "secrets/fixture.ts": ignored,
+      ".codex/fixture.ts": ignored,
+      ".claude/fixture.ts": ignored,
+      ".aphrody/fixture.ts": ignored,
+      "cookies/fixture.ts": ignored,
+      "sessions/fixture.ts": ignored,
+      "credentials/fixture.ts": ignored,
+      "node_modules/fixture.ts": ignored,
+      "target/fixture.ts": ignored,
+    });
+    expect(await run(["fmt", "--write", "."], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    expect(await Bun.file(join(String(dir), "active.ts")).text()).toBe("export const value = { a: 1 };\n");
+    for (const path of [
+      "generated/secrets",
+      "generated",
+      "secrets",
+      ".codex",
+      ".claude",
+      ".aphrody",
+      "cookies",
+      "sessions",
+      "credentials",
+      "node_modules",
+      "target",
+    ]) {
+      const filename = path === "generated" ? "invalid.ts" : "fixture.ts";
+      expect(await Bun.file(join(String(dir), path, filename)).text()).toBe(ignored);
+    }
+    expect(await run(["fmt", "--write", "generated"], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+  });
+
+  test("recursive formatting preserves nested Gitignore negation", async () => {
+    using dir = tempDir("native-fmt-nested-gitignore", {
+      ".gitignore": "*.ts\n!active.ts\n",
+      "active.ts": "export const active=1;",
+      "nested/.gitignore": "!kept.ts\n",
+      "nested/kept.ts": "export const kept=2;",
+      "nested/ignored.ts": "let = invalid",
+    });
+    expect(await run(["fmt", "--write", "."], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    expect(await Bun.file(join(String(dir), "active.ts")).text()).toBe("export const active = 1;\n");
+    expect(await Bun.file(join(String(dir), "nested/kept.ts")).text()).toBe("export const kept = 2;\n");
+    expect(await Bun.file(join(String(dir), "nested/ignored.ts")).text()).toBe("let = invalid");
+  });
+
+  test.each(["fmt", "lint"])("%s applies config and CLI ignores before reading ignored sources", async command => {
+    const config = command === "fmt" ? ".oxfmtrc.json" : ".oxlintrc.json";
+    using dir = tempDir("native-quality-config-ignores", {
+      [config]: JSON.stringify({ ignorePatterns: ["generated/**"] }),
+      "active.ts": "export const active = 1;\n",
+      "generated/invalid.ts": "let = invalid",
+      "cli-ignored/invalid.ts": "let = invalid",
+    });
+    for (const root of [".", "./"]) {
+      expect(await run([command, "--ignore-pattern", "cli-ignored/**", root], String(dir))).toEqual({
+        stdout: "",
+        stderr: "",
+        exitCode: 0,
+      });
+    }
+    expect(await Bun.file(join(String(dir), "generated/invalid.ts")).text()).toBe("let = invalid");
+    expect(await Bun.file(join(String(dir), "cli-ignored/invalid.ts")).text()).toBe("let = invalid");
+    expect(await run([command, "generated/invalid.ts"], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    expect(await run([command, "--ignore-pattern", "cli-ignored/**", "cli-ignored"], String(dir))).toEqual({
+      stdout: "",
+      stderr: "",
+      exitCode: 0,
+    });
+  });
+
+  test("fmt does not follow a symbolic link passed as an explicit root", async () => {
+    using dir = tempDir("native-fmt-root-symlink", { "real/active.ts": "export const value={a:1};" });
+    symlinkSync(join(String(dir), "real"), join(String(dir), "linked"), "junction");
+    expect(await run(["fmt", "--write", "linked"], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    expect(await Bun.file(join(String(dir), "real/active.ts")).text()).toBe("export const value={a:1};");
+  });
+
+  test.each(["--help", "-h"])("fmt treats %s after -- as a literal directory", async path => {
+    using dir = tempDir("native-fmt-literal-help", { [`${path}/active.ts`]: "export const value={a:1};" });
+    const result = await run(["fmt", "--check", "--", path], String(dir));
+    expect(result.stdout).toContain("formatting differs");
+    expect(result.stdout).not.toContain("Usage:");
+    expect(result.stderr).toBe("");
+    expect(result.exitCode).toBe(1);
+  });
+
+  test.concurrent("global option values named fmt cannot narrow the native formatting scope", async () => {
+    const source = "export const value={a:1};";
+    using dir = tempDir("native-fmt-global-command-value", { fmt: "FMT_TEST_FIXTURE=1\n", "a.ts": source });
+    const result = await run(["--env-file", "fmt", "fmt", "--check"], String(dir));
+    expect(result.stdout).toContain("a.ts");
+    expect(result.stdout).toContain("formatting differs");
+    expect(result.stderr).toBe("");
+    expect(result.exitCode).toBe(1);
+    expect(await Bun.file(join(String(dir), "a.ts")).text()).toBe(source);
+  });
+
+  test.concurrent("global option values named lint cannot narrow the native diagnostic scope", async () => {
+    using dir = tempDir("native-lint-global-command-value", {
+      lint: "LINT_TEST_FIXTURE=1\n",
+      "a.ts": "debugger;\n",
+      "lint.json": JSON.stringify({ rules: { "no-debugger": "error" } }),
+    });
+    const result = await run(["--env-file", "lint", "lint", "--config", "lint.json", "--format=json"], String(dir));
+    expect(JSON.parse(result.stdout).diagnostics).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "eslint(no-debugger)" })]),
+    );
+    expect(result.stderr).toBe("");
+    expect(result.exitCode).toBe(1);
+  });
+
   test("stdin formatting shares the native core without opening a virtual file", async () => {
     using dir = tempDir("native-fmt-stdin", {
       "virtual.ts": "This file must remain untouched.\n",
@@ -140,7 +292,7 @@ describe("embedded quality backend", () => {
     expect(findings[0].message).toContain("`obj.x` is read");
     expect(checked.exitCode).toBe(1);
   });
-  test("lint uses native configuration and never invokes an external override by default", async () => {
+  test("lint uses native configuration and never invokes an external override", async () => {
     using dir = tempDir("native-lint", {
       "a.ts": "debugger;\n",
       "lint.json": JSON.stringify({ rules: { "no-debugger": "error" } }),
@@ -191,45 +343,75 @@ describe("embedded quality backend", () => {
   });
 });
 
-// Prints its arguments in the shape oxlint uses for --format=json.
-const fakeOxlint = `
-const args = process.argv.slice(2);
-if (args.includes("--format=json")) console.log(JSON.stringify({ diagnostics: [], args }));
-else console.log("oxlint " + JSON.stringify(args));
-process.exit(args.includes("--deny-warnings") ? 1 : 0);
-`;
-const fakeOxfmt = `console.log("oxfmt " + JSON.stringify(process.argv.slice(2)));`;
-const fakeN2b = `
-const args = process.argv.slice(2);
-if (!args.includes("--report=json")) {
-  console.log("n2b " + JSON.stringify(args));
-  process.exit(0);
-}
-console.log(JSON.stringify({
-  schema_version: 2, tool: "n2b", version: "0.0.0", mode: "scan", root: ".", files_scanned: 1, findings_total: 1,
-  files: [{ path: "a.ts", changed: false, findings: [{
-    rule_id: "node-fs-readfile", category: "fs", severity: "warn", confidence: 1, message: "Use Bun.file().text()",
-    line: 1, col: 1, start_byte: 0, end_byte: 11, original: "readFileSync", replacement: "Bun.file", autofix: true,
-    docs_url: "https://bun.com/docs/api/file-io", context: { before: [], line: "", after: [] },
-  }] }],
-}));
-`;
-
-function tools(dir: string) {
-  return {
-    BUN_OXLINT: join(dir, "tools", "oxlint.ts"),
-    BUN_OXFMT: join(dir, "tools", "oxfmt.ts"),
-    BUN_N2B: join(dir, "tools", "n2b.ts"),
-  };
-}
-
-const toolFiles = {
-  "tools/oxlint.ts": fakeOxlint,
-  "tools/oxfmt.ts": fakeOxfmt,
-  "tools/n2b.ts": fakeN2b,
-};
-
 describe("routing", () => {
+  test.concurrent.each(["check", "lint", "fmt", "n2b", "migrate"])(
+    "%s rejects --external-backend as an unknown option",
+    async command => {
+      using dir = tempDir("native-toolchain-reject-external", { "app.ts": "export const value = 1;\n" });
+      const result = await run([command, "--external-backend"], String(dir));
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("--external-backend");
+      expect(result.exitCode).not.toBe(0);
+    },
+  );
+
+  test.concurrent.each(["lint", "fmt"])("%s ignores external backend environment overrides", async command => {
+    using dir = tempDir("native-toolchain-ignore-overrides", {
+      "app.ts": "export const value = 1;\n",
+      "external.ts": "await Bun.write(import.meta.dir + '/invoked', 'wrong'); process.exit(43);",
+    });
+    const args = command === "lint" ? ["lint", "--format=json", "app.ts"] : ["fmt", "--check", "app.ts"];
+    const result = await run(args, String(dir), {
+      BUN_OXLINT: join(String(dir), "external.ts"),
+      BUN_OXFMT: join(String(dir), "external.ts"),
+      BUN_N2B: join(String(dir), "external.ts"),
+    });
+    if (command === "lint") expect(JSON.parse(result.stdout).diagnostics).toEqual([]);
+    else expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("");
+    expect(await Bun.file(join(String(dir), "invoked")).exists()).toBe(false);
+    expect(result.exitCode).toBe(0);
+  });
+
+  test.concurrent.each(["lint", "fmt"])("wasm crate named %s keeps the wasm dispatcher", async crate => {
+    const result = await run(["wasm", "build", crate, "--help"]);
+    expect(result.stdout).toContain("Usage: bun wasm <command>");
+    expect(result.stderr).toBe("");
+    expect(result.exitCode).toBe(0);
+  });
+
+  test.concurrent.each(["lint", "fmt"])("%s treats --external-backend after -- as a path", async command => {
+    using dir = tempDir("quality-literal-external-path", {
+      "--external-backend/app.ts": "export const value = 1;\n",
+      "external.ts": "throw new Error('external backend was invoked');",
+    });
+    const args = command === "lint" ? ["lint", "--format=json"] : ["fmt", "--check"];
+    const result = await run([...args, "--", "--external-backend"], String(dir), {
+      BUN_OXLINT: join(String(dir), "external.ts"),
+      BUN_OXFMT: join(String(dir), "external.ts"),
+    });
+    if (command === "lint") expect(JSON.parse(result.stdout).diagnostics).toEqual([]);
+    else expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("");
+    expect(result.exitCode).toBe(0);
+  });
+
+  test.concurrent("check analyzes --external-backend after -- as a literal source path", async () => {
+    using dir = tempDir("native-check-literal-backend-path", {
+      "--external-backend/app.ts": "export const value: number = 'wrong';\n",
+      "tsconfig.json": JSON.stringify({ compilerOptions: { strict: true, noEmit: true, lib: ["esnext"], types: [] } }),
+    });
+    const result = await run(["check", "--", "--external-backend/app.ts"], String(dir), {
+      AGENT: "0",
+      CLAUDECODE: undefined,
+      GITHUB_ACTIONS: undefined,
+    });
+    expect(result.stdout).toContain("TS2322");
+    expect(result.stdout.replaceAll("\\", "/")).toContain("--external-backend/app.ts");
+    expect(result.stderr).toMatch(/^Found 1 error in 1 file, checked 1 file \[/);
+    expect(result.exitCode).toBe(1);
+  });
+
   test.concurrent("native commands reserve their names; explicit run executes package scripts", async () => {
     using dir = tempDir("toolchain-script", {
       "package.json": JSON.stringify({
@@ -262,6 +444,7 @@ describe("routing", () => {
   test.concurrent.each([
     ["lint", "Usage: bun lint"],
     ["fmt", "Usage: bun fmt"],
+    ["n2b", "--report"],
     ["migrate", "Usage: bun migrate"],
     ["wasm", "Usage: bun wasm <command>"],
   ])("bun %s --help", async (command, usage) => {
@@ -289,95 +472,144 @@ describe("routing", () => {
   });
 });
 
-describe("bun lint", () => {
-  test.concurrent("passes bunfig [lint] and unknown flags to oxlint, then prints n2b findings", async () => {
-    using dir = tempDir("toolchain-lint", {
-      ...toolFiles,
-      "a.ts": `readFileSync("x");\n`,
-      "bunfig.toml": `[lint]\nconfig = "lint.json"\nignore = ["dist/**"]\nargs = ["-D", "correctness"]\n`,
-    });
-    const { stdout, exitCode } = await run(["lint", "-A", "no-console", "src"], String(dir), tools(String(dir)));
-    expect(normalizeBunSnapshot(stdout, dir)).toMatchInlineSnapshot(`
-      "oxlint ["--config","lint.json","--ignore-pattern","dist/**","-D","correctness","-A","no-console","src"]
-      a.ts:1:1 warning n2b(node-fs-readfile) Use Bun.file().text()
-        help: Use \`Bun.file\` (bun lint --fix)
-        https://bun.com/docs/api/file-io
-
-      n2b: 0 error(s), 1 warning(s)"
-    `);
-    expect(exitCode).toBe(0);
-  });
-
-  test.concurrent("--format=json merges the n2b findings into oxlint's diagnostics", async () => {
-    using dir = tempDir("toolchain-lint-json", { ...toolFiles, "a.ts": `readFileSync("x");\n` });
-    const { stdout, exitCode } = await run(["lint", "--format=json", "--fix"], String(dir), tools(String(dir)));
-    const out = JSON.parse(stdout);
-    expect(out.args).toEqual(["--fix", "--format=json"]);
-    expect(out.diagnostics).toEqual([
-      expect.objectContaining({
-        code: "n2b(node-fs-readfile)",
-        severity: "warning",
-        filename: "a.ts",
-        labels: [{ span: { offset: 0, length: 11, line: 1, column: 1 } }],
-      }),
-    ]);
-    expect(exitCode).toBe(0);
-  });
-
-  test.concurrent("--format=sarif adds an n2b run", async () => {
-    using dir = tempDir("toolchain-lint-sarif", { ...toolFiles, "a.ts": `readFileSync("x");\n` });
-    const { stdout, exitCode } = await run(["lint", "--format=sarif", "--n2b-only"], String(dir), tools(String(dir)));
-    const out = JSON.parse(stdout);
-    expect(out.version).toBe("2.1.0");
-    expect(out.runs.map((r: any) => r.tool.driver.name)).toEqual(["n2b"]);
-    expect(out.runs[0].results[0].ruleId).toBe("n2b(node-fs-readfile)");
-    expect(exitCode).toBe(0);
-  });
-
-  test.concurrent("--deny-warnings fails on n2b warnings", async () => {
-    using dir = tempDir("toolchain-lint-deny", { ...toolFiles, "a.ts": `readFileSync("x");\n` });
-    const { stdout, exitCode } = await run(["lint", "--deny-warnings", "--n2b-only"], String(dir), tools(String(dir)));
-    expect(stdout).toContain("n2b: 0 error(s), 1 warning(s)");
-    expect(exitCode).toBe(1);
-  });
-
-  test.concurrent("--workspaces lints each workspace package", async () => {
-    using dir = tempDir("toolchain-lint-ws", {
-      ...toolFiles,
-      "package.json": JSON.stringify({ workspaces: ["packages/*"] }),
-      "packages/a/package.json": JSON.stringify({ name: "a" }),
-      "packages/b/package.json": JSON.stringify({ name: "b" }),
-    });
-    const all = await run(["lint", "--workspaces", "--no-n2b"], String(dir), tools(String(dir)));
-    const one = await run(["lint", "--filter", "b", "--no-n2b"], String(dir), tools(String(dir)));
-    expect(all.stdout.trim()).toBe(`oxlint ["packages/a","packages/b"]`);
-    expect(one.stdout.trim()).toBe(`oxlint ["packages/b"]`);
-    expect(all.exitCode).toBe(0);
-    expect(one.exitCode).toBe(0);
-  });
-});
-
-describe("bun fmt", () => {
-  test.concurrent("passes --check, bunfig [fmt] and ignores to oxfmt", async () => {
-    using dir = tempDir("toolchain-fmt", {
-      ...toolFiles,
-      "bunfig.toml": `[fmt]\nconfig = "fmt.json"\npaths = ["src"]\nignore = ["dist/**"]\n`,
-    });
-    const { stdout, exitCode } = await run(["fmt", "--check"], String(dir), tools(String(dir)));
-    expect(stdout.trim()).toBe(`oxfmt ["--config","fmt.json","--check","src","!dist/**"]`);
-    expect(exitCode).toBe(0);
-  });
-});
-
 describe("bun n2b / bun migrate", () => {
-  test.concurrent("migrate is the --migrate mode of n2b", async () => {
-    using dir = tempDir("toolchain-migrate", toolFiles);
-    const migrate = await run(["migrate", "--dry-run"], String(dir), tools(String(dir)));
-    const n2b = await run(["n2b", "migrate", "--dry-run", "."], String(dir), tools(String(dir)));
-    expect(migrate.stdout.trim()).toBe(`n2b ["--migrate","--dry-run"]`);
-    expect(n2b.stdout.trim()).toBe(`n2b ["--migrate","--dry-run","."]`);
-    expect(migrate.exitCode).toBe(0);
-    expect(n2b.exitCode).toBe(0);
+  const dryRunLog = "[migrate] dry-run : aucun effet de bord exécuté\n[migrate]   [run] — bun install\n";
+
+  test.concurrent("reserves native migration commands and runs package scripts only through bun run", async () => {
+    using dir = tempDir("native-n2b-package-script", {
+      "package.json": JSON.stringify({ scripts: { n2b: "echo package n2b", migrate: "echo package migrate" } }),
+    });
+    const nativeN2b = await run(["n2b", "--help"], String(dir));
+    const nativeMigrate = await run(["migrate", "--help"], String(dir));
+    expect(nativeN2b.stdout).toContain("--report");
+    expect(nativeMigrate.stdout).toContain("Usage: bun migrate");
+    expect(nativeN2b.stderr).toBe("");
+    expect(nativeMigrate.stderr).toBe("");
+    expect([nativeN2b.exitCode, nativeMigrate.exitCode]).toEqual([0, 0]);
+    const n2b = await run(["run", "n2b"], String(dir));
+    const migrate = await run(["run", "migrate"], String(dir));
+    expect(n2b.stdout.trim()).toBe("package n2b");
+    expect(migrate.stdout.trim()).toBe("package migrate");
+    expect([n2b.exitCode, migrate.exitCode]).toEqual([0, 0]);
+  });
+
+  test.concurrent("lists linked rules without consulting an external override", async () => {
+    using dir = tempDir("native-n2b-rules", {
+      "external.ts": "throw new Error('external n2b backend was invoked');",
+    });
+    const result = await run(["n2b", "rules", "--report=json"], String(dir), {
+      BUN_N2B: join(String(dir), "external.ts"),
+    });
+    const rules = JSON.parse(result.stdout);
+    expect(rules).toEqual(expect.arrayContaining([expect.objectContaining({ id: "api/fs-readFileSync" })]));
+    expect(result.stderr).toBe("");
+    expect(result.exitCode).toBe(0);
+  });
+
+  test.concurrent.each(["--cwd", "--cwd="])("scans local sources as JSON and honors global %s", async cwdFlag => {
+    const source = "#!/usr/bin/env node\nconsole.log('hello');\n";
+    using dir = tempDir("native-n2b-scan", { "app.js": source });
+    const cwdArgs = cwdFlag === "--cwd" ? [cwdFlag, String(dir)] : [`${cwdFlag}${dir}`];
+    const result = await run([...cwdArgs, "n2b", "--report=json", "--agent"]);
+    const report = JSON.parse(result.stdout);
+    expect(report.schema_version).toBe(2);
+    expect(report.tool).toBe("node2bun");
+    expect(report.files.find((file: any) => file.path === "app.js").findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ rule_id: "shebang/node" })]),
+    );
+    expect(await Bun.file(join(String(dir), "app.js")).text()).toBe(source);
+    expect(result.stderr).toBe("");
+    expect(result.exitCode).toBe(1);
+  });
+
+  test.concurrent("rejects --cwd after the command instead of silently scanning another directory", async () => {
+    using dir = tempDir("native-n2b-cwd-after", { "nested/app.js": "console.log('hello');\n" });
+    const result = await run(["n2b", "--cwd", "nested", "--report=json"], String(dir));
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("--cwd");
+    expect(result.exitCode).toBe(2);
+  });
+
+  test.concurrent("migrate aliases plan the same changes without writing or installing", async () => {
+    const manifest = JSON.stringify({ name: "fixture", private: true, scripts: { start: "node app.js" } });
+    using dir = tempDir("native-n2b-migrate", { "package.json": manifest, "app.js": "console.log('hello');\n" });
+    const migrate = await run(["migrate", "--dry-run", "--report=json", "--agent"], String(dir));
+    const n2b = await run(["n2b", "--agent", "--report", "json", "migrate", "--dry-run", "."], String(dir));
+    const direct = await run(["n2b", "--migrate", "--dry-run", "--report=json", "--agent"], String(dir));
+    const report = JSON.parse(migrate.stdout);
+    expect(report.migration_plan.dry_run).toBe(true);
+    expect(report.migration_plan.steps).toEqual(
+      expect.arrayContaining([expect.objectContaining({ action: "run", detail: "bun install" })]),
+    );
+    const expected = {
+      ...report,
+      report_card: { ...report.report_card, timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) },
+    };
+    expect(JSON.parse(n2b.stdout)).toEqual(expected);
+    expect(JSON.parse(direct.stdout)).toEqual(expected);
+    expect([migrate.stderr, n2b.stderr, direct.stderr]).toEqual([dryRunLog, dryRunLog, dryRunLog]);
+    expect([migrate.exitCode, n2b.exitCode, direct.exitCode]).toEqual([0, 0, 0]);
+    expect(await Bun.file(join(String(dir), "package.json")).text()).toBe(manifest);
+    expect(await Bun.file(join(String(dir), "bun.lock")).exists()).toBe(false);
+    expect(await Bun.file(join(String(dir), ".n2b/state.json")).exists()).toBe(false);
+  });
+
+  test.concurrent("keeps option values and paths after -- out of migration alias parsing", async () => {
+    using dir = tempDir("native-n2b-literal-migrate", {
+      "migrate/app.js": "#!/usr/bin/env node\n",
+      "--external-backend/app.js": "#!/usr/bin/env node\n",
+    });
+    const result = await run(["n2b", "--report", "json", "--agent", "--ignore", "migrate", "."], String(dir));
+    expect(JSON.parse(result.stdout).mode).toBe("check");
+    const literal = await run(["n2b", "--report=json", "--agent", "--", "migrate"], String(dir));
+    const report = JSON.parse(literal.stdout);
+    expect(report.mode).toBe("check");
+    expect(report.root.replaceAll("\\", "/")).toEndWith("/migrate");
+    expect(report.files.find((file: any) => file.path === "app.js").findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ rule_id: "shebang/node" })]),
+    );
+    expect(literal.stderr).toBe("");
+    expect(literal.exitCode).toBe(1);
+    const backendPath = await run(["n2b", "--report=json", "--agent", "--", "--external-backend"], String(dir));
+    const backendReport = JSON.parse(backendPath.stdout);
+    expect(backendReport.root.replaceAll("\\", "/")).toEndWith("/--external-backend");
+    expect(backendReport.files.find((file: any) => file.path === "app.js").findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ rule_id: "shebang/node" })]),
+    );
+    expect(backendPath.stderr).toBe("");
+    expect(backendPath.exitCode).toBe(1);
+    // A leading delimiter also makes --dry-run an operand; losing it would select migration.
+    const leading = await run(["n2b", "--", "migrate", "--dry-run"], String(dir));
+    expect(leading.stdout).toBe("");
+    expect(leading.stderr).toContain("--dry-run");
+    expect(leading.exitCode).toBe(2);
+  });
+
+  test.concurrent("global option values named n2b cannot replace the parsed command", async () => {
+    using dir = tempDir("n2b-global-command-value", {
+      "n2b": "N2B_TEST_FIXTURE=1\n",
+      "app.js": "#!/usr/bin/env node\n",
+    });
+    const result = await run(["--env-file", "n2b", "n2b", "--report=json", "--agent"], String(dir));
+    const report = JSON.parse(result.stdout);
+    expect(report.files.find((file: any) => file.path === "app.js").findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ rule_id: "shebang/node" })]),
+    );
+    expect(result.stderr).toBe("");
+    expect(result.exitCode).toBe(1);
+  });
+
+  test.concurrent.each(["--help", "--external-backend"])("migrate treats %s after -- as a path", async root => {
+    const manifest = JSON.stringify({ name: "literal-help", private: true });
+    using dir = tempDir("native-migrate-help-path", { [`${root}/package.json`]: manifest });
+    const result = await run(["migrate", "--dry-run", "--report=json", "--agent", "--", root], String(dir));
+    const report = JSON.parse(result.stdout);
+    expect(report.root.replaceAll("\\", "/")).toEndWith(`/${root}`);
+    expect(report.migration_plan.dry_run).toBe(true);
+    expect(result.stderr).toBe(dryRunLog);
+    expect(result.exitCode).toBe(0);
+    expect(await Bun.file(join(String(dir), root, "package.json")).text()).toBe(manifest);
+    expect(await Bun.file(join(String(dir), root, "bun.lock")).exists()).toBe(false);
   });
 });
 

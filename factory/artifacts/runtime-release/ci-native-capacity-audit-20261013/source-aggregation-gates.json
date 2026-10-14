@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "kind": "source-publication-guard-qualification",
+  "source": "4b8dee0bc69d2c290111001f2249e63e1dc95b70",
+  "runtimeRevision": "7416b3a1c88dd4d429b93a0c4ed98866c9329735",
+  "sourceDirty": true,
+  "nativeReleaseQualified": false,
+  "ciDispatched": false,
+  "published": false,
+  "gates": {
+    "tests": {
+      "passed": true,
+      "tests": 69,
+      "assertions": 724
+    },
+    "types": {
+      "passed": true,
+      "files": 14,
+      "strict": true,
+      "threads": 1,
+      "lib": [
+        "ESNext",
+        "DOM"
+      ]
+    },
+    "lint": {
+      "passed": true,
+      "denyWarnings": true
+    },
+    "format": {
+      "passed": true
+    },
+    "publicMissingReceiptRejection": {
+      "passed": true,
+      "tag": "aphrody-v1.4.3-aphrody.2",
+      "missing": "bun-linux-x64-full.zip"
+    }
+  },
+  "remainingCompleteSDKTargets": [
+    "linux-aarch64",
+    "linux-x64-musl",
+    "linux-aarch64-musl",
+    "darwin-x64",
+    "darwin-aarch64",
+    "windows-aarch64"
+  ],
+  "files": {
+    "scripts/aphrody/release-aggregation.ts": {
+      "sha256": "89a02b625323fb37844e82b5fd9b3e7a46704a5f4e04f4658dfe9daea86c5706",
+      "bytes": 14700
+    },
+    "scripts/aphrody/release-aggregation.test.ts": {
+      "sha256": "1606e4d83e4ff4cb85438e58266693334dca6a5f30ebe04cdab6ecdb7a650b75",
+      "bytes": 8184
+    },
+    "scripts/aphrody/release-workflows.test.ts": {
+      "sha256": "ac626561c0e7e14f8fd69da503d52022ab96297719c4699be626f52948c1511f",
+      "bytes": 3650
+    },
+    "scripts/aphrody/release-bootstraps.json": {
+      "sha256": "2e632d1136a8ad8c0f317b5ce380a743aff061d516fc628246073395652ecb18",
+      "bytes": 3051
+    },
+    "scripts/aphrody/release-matrix.ts": {
+      "sha256": "ea9303cd441bb7c748e666d2cff3eb9b0fd2193d50e270b956ad433e491e1327",
+      "bytes": 12043
+    },
+    "scripts/aphrody/release-matrix.test.ts": {
+      "sha256": "6a3064f6fb825244f555ecf03e2001bdee3ca6ef44e672cfe5c20c13d4b38f0e",
+      "bytes": 5414
+    },
+    ".github/workflows/aphrody-release.yml": {
+      "sha256": "6fd75799f515ecb84c62369aee56376433229b701cc83edbf725953bd74e5a8e",
+      "bytes": 8331
+    },
+    ".github/workflows/aphrody-publish-npm.yml": {
+      "sha256": "8b611fcc267e310f07ccc6d6144c45ce0559e72db2270153fd074b3fb7b557a0",
+      "bytes": 2678
+    },
+    ".github/workflows/aphrody-publish-crates.yml": {
+      "sha256": "73e27857f74dc0733ad87cc37b89a974817ef6a746a36076db30db0ba3fa9117",
+      "bytes": 2466
+    },
+    ".github/workflows/aphrody-publish-native.yml": {
+      "sha256": "c0fe5d035f5f2e3946f26f382fcbafec7572623e15abad154369e7bd90a56889",
+      "bytes": 7559
+    },
+    ".github/workflows/aphrody-publish-mdx-rs.yml": {
+      "sha256": "b3d146f11013d5b17cb35e5dbd014aeeded8b0613113472e020d75d2ae20d88e",
+      "bytes": 7797
+    },
+    ".github/workflows/aphrody-publish-web-inspector.yml": {
+      "sha256": "212d7983c7099719f208bb1669ae47673a4cf8ffae9b5b295d92e3c8b3798b82",
+      "bytes": 2185
+    },
+    ".github/workflows/bun-video-release.yml": {
+      "sha256": "cef0e36242ce946bd565c6e9af8eac3b8b2f87413f93e0e038fc7fd3de604784",
+      "bytes": 4064
+    },
+    "scripts/aphrody/release-factory.test.ts": {
+      "sha256": "22f84c7b8c843af974527c3697f27fb3fafce2162538b3e3abaaa8ec2946c58d",
+      "bytes": 15974
+    },
+    "scripts/aphrody/media-stage.ts": {
+      "sha256": "f38246909f7cdcdc0cd2af19298cae7fa4db2ae10dd344e06b128dcad8b338c6",
+      "bytes": 20075
+    },
+    "packages/bun-video/src/sdk.ts": {
+      "sha256": "83f6bcdd8552e367bc0adcbb7311cfa5508cd2e905c6b71896613283e3158526",
+      "bytes": 12803
+    },
+    "packages/bun-video/src/sdk-platform.ts": {
+      "sha256": "c1e819117cbdef5a17952fc66891f8705c050b206f0213a0ff43e5c06695c5bf",
+      "bytes": 1449
+    },
+    "docs/project/bun-media-release.md": {
+      "sha256": "291d9454272d35f410f0543f0f1f1e73df7e4de4733fde2909681668ef608069",
+      "bytes": 11271
+    }
+  }
+}

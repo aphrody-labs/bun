@@ -37,16 +37,17 @@ Architecture: `bun-build-system-internals`. Codegen: `bun-build-codegen`. Window
 | `rust:clippy`                                                                       | `cargo clippy --workspace --no-deps --keep-going`                                            |
 | `rust:mordant[:baseline]`, `rust:miri`                                              | see `bun-build-lint-format`                                                                  |
 | `watch` / `watch-windows`                                                           | `cargo watch -x 'check --workspace ...'` (windows: `--target x86_64-pc-windows-msvc`)        |
-| `fmt` (=prettier), `fmt:cpp` (=clang-format), `fmt:rust` (`cargo fmt --all`)        | formatting                                                                                   |
-| `lint` / `lint:fix`                                                                 | oxlint on `src/js` with `oxlint.json`                                                        |
-| `typecheck`                                                                         | `tsc --noEmit && cd test && bun run typecheck`                                               |
+| `bun fmt`, `fmt:cpp` (=clang-format), `fmt:rust` (`cargo fmt --all`)              | native JS/TS formatting; separate C++ and Rust formatters                                    |
+| `bun lint` / `bun lint --fix`                                                     | native lint with `--config oxlint.json`                                                      |
+| `bun check`                                                                         | native type checking                                                                         |
+| `bun n2b`                                                                           | native migration                                                                             |
 | `codegen:string-maps` / `codegen:verify`                                            | regenerate/check in-tree `*.generated.rs`                                                    |
 | `clean`                                                                             | `bun scripts/build/clean.ts [preset] [--dry-run]`                                            |
 | `ci:*`, `pr:comments`                                                               | see `bun-build-ci`                                                                           |
 | `node:test`, `node:test:cp`                                                         | Node's own test suite runner / fetch node test                                               |
 | `orderfile`, `uv-posix-stubs`, `sync-webkit-source`, `run:linux` (docker dev image) | misc                                                                                         |
 
-NOTE: `scripts/build/rust/cargo-serial.sh` (mentioned in the user's global CLAUDE.md) does NOT exist in this repo; scripts/build/rust/ holds cargo-env.ts, emit.ts, native-link.ts, plan.ts, run.ts, toml.ts, units.ts. Rust is built per-crate by ninja, not by `cargo build`.
+Qualify the four native commands against checkout changes through `bun bd check`, `bun bd lint`, `bun bd fmt` and `bun bd n2b`. No subprocess backend, standalone Oxc, tsgo/tsc or external n2b fallback is permitted. Package scripts may expose the native commands but must not replace them with wrappers; `bunx` is reserved for unrelated packages. Native Windows Cargo operations use `bun scripts/build/rust/cargo-serial.ts --msvc`; the Bun build schedules Rust crates through ninja.
 
 ## Arg routing (`parseArgs` in scripts/build.ts)
 

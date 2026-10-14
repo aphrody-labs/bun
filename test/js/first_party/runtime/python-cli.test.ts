@@ -101,6 +101,15 @@ test.concurrent("buv dispatches its embedded UV command", async () => {
   expect(result.code).toBe(0);
 });
 
+for (const command of ["uv", "uvx"]) {
+  test.concurrent(`${command} argv0 dispatches inside the same native executable`, async () => {
+    const result = await run(["--version"], undefined, environment, command);
+    expect(result.out).toMatch(new RegExp(`^${command} 0\\.12\\.24(?: .*)?$`));
+    expect(result.err).toBe("");
+    expect(result.code).toBe(0);
+  });
+}
+
 test.concurrent("pyjs executes JavaScript through the native engine", async () => {
   success(await run(["-e", "console.log('PYJS_JS_OK')"], undefined, environment, "pyjs"), "PYJS_JS_OK");
 });
@@ -150,6 +159,46 @@ nativeTest.concurrent("pyjs embeds CPython in the JavaScript process through its
   );
 });
 
+nativeTest.concurrent("bun:python shares writable CPython buffers with JSC and keeps failed close recoverable", async () => {
+  success(
+    await run([
+      "-e",
+      `
+    import { Python, PythonError, PyStatus } from "bun:python";
+    const py = Python.open();
+    const peer = Python.open();
+    if (!py.started || peer.started) throw new Error("Python client ownership mismatch");
+    py.exec\`shared = bytearray(b"abc")\`;
+    function exercise() {
+      const shared = py.buffer("shared");
+      const bytes = new Uint8Array(shared);
+      bytes[0] = 122;
+      if (py.eval("shared[0]") !== "122") throw new Error("JavaScript write was not visible to CPython");
+      py.exec\`shared[1] = 121\`;
+      if (bytes[1] !== 121) throw new Error("CPython write was not visible to JavaScript");
+      const batch = py.evalBatch(["shared[0]", "shared[1]", "len(shared)"]);
+      if (JSON.stringify(batch) !== '["122","121","3"]') throw new Error("batched evaluation mismatch");
+      try {
+        py.close();
+        throw new Error("close accepted a live Python buffer lease");
+      } catch (error) {
+        if (!(error instanceof PythonError) || error.status !== PyStatus.State) throw error;
+      }
+      if (py.eval("len(shared)") !== "3") throw new Error("failed close poisoned the Python handle");
+    }
+    exercise();
+    Bun.gc(true);
+    py.run("pass");
+    py.close();
+    if (peer.eval("bytes(shared)") !== "b'zyc'") throw new Error("owner close stopped an attached client");
+    peer.close();
+    console.log("PYTHON_BUFFER_OK");
+  `,
+    ]),
+    "PYTHON_BUFFER_OK",
+  );
+});
+
 nativeTest.concurrent("async Python runs in a worker in the same process and serializes dependent calls", async () => {
   success(
     await run([
@@ -158,12 +207,12 @@ nativeTest.concurrent("async Python runs in a worker in the same process and ser
     import { Python } from "pyjs:python";
     await using py = await Python.async();
     await py.exec\`import os; value = 40\`;
-    const [first, second, pid] = await Promise.all([py.eval("value + 2"), py.eval("value + 3"), py.evalJSON("os.getpid()")]);
+    const [first, second, batch, pid] = await Promise.all([py.eval("value + 2"), py.eval("value + 3"), py.evalBatch(["value + 4", "value + 5"]), py.evalJSON("os.getpid()")]);
     if (pid !== process.pid) throw new Error("Python worker process mismatch");
-    console.log(JSON.stringify([first, second]));
+    console.log(JSON.stringify([first, second, batch]));
   `,
     ]),
-    '["42","43"]',
+    '["42","43",["44","45"]]',
   );
 });
 

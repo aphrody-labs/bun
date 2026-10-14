@@ -245,7 +245,7 @@ async function main() {
       report({ output, frames: inventory }, flags.json);
     } catch (error) {
       for (const name of owned) await unlink(join(output!, name));
-      await rmdir(output!).catch(() => {});
+      await rmdir(output!, undefined).catch(() => {});
       throw error;
     }
   } else if (command === "audio") {

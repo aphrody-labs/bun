@@ -1,0 +1,553 @@
+{
+  "schema": 1,
+  "target": "linux-x64",
+  "libc": "gnu",
+  "releaseGLIBCFloor": "2.17",
+  "maximumGLIBC": "2.17",
+  "files": [
+    {
+      "file": "lib/libswresample.so.7.1.102",
+      "sha256": "529742ce7b42764e224d5345826428c31c2204433ebc72b22679fd615a02f846",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libswscale.so.10.1.102",
+      "sha256": "3141a4d66e26cb4305b8bb01ca0eef616b89fd3925547f0a5f114d84780e1818",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libmpv.so.2.5.0",
+      "sha256": "9384b67f5af142d5d0134861d4712661672fd569a107d6f81188ca359ce3bce4",
+      "minimumGLIBC": "2.17",
+      "needed": [
+        "libm.so.6",
+        "libass.so.9",
+        "libavcodec.so.63",
+        "libavfilter.so.12",
+        "libavformat.so.63",
+        "libavutil.so.61",
+        "libplacebo.so.375",
+        "libswresample.so.7",
+        "libswscale.so.10",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libplacebo.so.375",
+      "sha256": "430da1e30d0fe472680fcc5aa07c1e2d6aa96e217dc368520c80b4732c77ac36",
+      "minimumGLIBC": "2.17",
+      "needed": [
+        "libm.so.6",
+        "libpthread.so.0",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libharfbuzz-subset.so.0.61232.0",
+      "sha256": "1bafe5ed5fa7cc90d57550bdcbc500c849224c0b0720e515b49a591c9a803c29",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libharfbuzz.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavfilter.so.12.1.102",
+      "sha256": "156aa72b7fc5b362ea2c600e3ba29122f7331162e62e82ceb58ac20b28a61233",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libswscale.so.10",
+        "libavformat.so.63",
+        "libavcodec.so.63",
+        "libswresample.so.7",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libharfbuzz.so.0.61232.0",
+      "sha256": "c20c62ea95d833efb90ef1a434e51aea96303d6134899aa5aa70562bc206e486",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libfreetype.so.6",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavdevice.so.63.1.102",
+      "sha256": "ed32f5f09a20b25ac6405b826d0f97731fe0a46011b8bfb2e7cc55f65d616095",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavfilter.so.12",
+        "libavformat.so.63",
+        "libavcodec.so.63",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavcodec.so.63.1.102",
+      "sha256": "0b39fb5b840595d0b28a8851871a5a8a0fa54a043190fc980031718e7c065966",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libswresample.so.7",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavutil.so.61.1.102",
+      "sha256": "a0cd5224085c8e253d33472411cd0fdbccfa7cff376fa43e954047a877d3e61b",
+      "minimumGLIBC": "2.17",
+      "needed": [
+        "libm.so.6",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libass.so.9.4.1",
+      "sha256": "39eda63b05a2fb6b57955a9cb9d073e97d03bf70b35d956f2109e27022946e77",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libfreetype.so.6",
+        "libfribidi.so.0",
+        "libharfbuzz.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libfreetype.so.6.20.5",
+      "sha256": "f9da7896667f8bef5e96cb58f3c2c6f6313e4fa8c5e82eeaa557e33526b8e166",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libfribidi.so.0.4.0",
+      "sha256": "d42aef88945a03dca914e49c750dabb66aba62948aa7f788e15724f33cedc7bc",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavformat.so.63.1.102",
+      "sha256": "f56756280896aacee8072ba6dd063d42882e5bc12d03af92bc93ad0cd36a032b",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavcodec.so.63",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libfribidi.so",
+      "sha256": "d42aef88945a03dca914e49c750dabb66aba62948aa7f788e15724f33cedc7bc",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libswresample.so.7",
+      "sha256": "529742ce7b42764e224d5345826428c31c2204433ebc72b22679fd615a02f846",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libass.so",
+      "sha256": "39eda63b05a2fb6b57955a9cb9d073e97d03bf70b35d956f2109e27022946e77",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libfreetype.so.6",
+        "libfribidi.so.0",
+        "libharfbuzz.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavformat.so.63",
+      "sha256": "f56756280896aacee8072ba6dd063d42882e5bc12d03af92bc93ad0cd36a032b",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavcodec.so.63",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libharfbuzz.so",
+      "sha256": "c20c62ea95d833efb90ef1a434e51aea96303d6134899aa5aa70562bc206e486",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libfreetype.so.6",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavfilter.so",
+      "sha256": "156aa72b7fc5b362ea2c600e3ba29122f7331162e62e82ceb58ac20b28a61233",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libswscale.so.10",
+        "libavformat.so.63",
+        "libavcodec.so.63",
+        "libswresample.so.7",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libharfbuzz-subset.so",
+      "sha256": "1bafe5ed5fa7cc90d57550bdcbc500c849224c0b0720e515b49a591c9a803c29",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libharfbuzz.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavdevice.so",
+      "sha256": "ed32f5f09a20b25ac6405b826d0f97731fe0a46011b8bfb2e7cc55f65d616095",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavfilter.so.12",
+        "libavformat.so.63",
+        "libavcodec.so.63",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libmpv.so",
+      "sha256": "9384b67f5af142d5d0134861d4712661672fd569a107d6f81188ca359ce3bce4",
+      "minimumGLIBC": "2.17",
+      "needed": [
+        "libm.so.6",
+        "libass.so.9",
+        "libavcodec.so.63",
+        "libavfilter.so.12",
+        "libavformat.so.63",
+        "libavutil.so.61",
+        "libplacebo.so.375",
+        "libswresample.so.7",
+        "libswscale.so.10",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libswresample.so",
+      "sha256": "529742ce7b42764e224d5345826428c31c2204433ebc72b22679fd615a02f846",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavformat.so",
+      "sha256": "f56756280896aacee8072ba6dd063d42882e5bc12d03af92bc93ad0cd36a032b",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavcodec.so.63",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libswscale.so.10",
+      "sha256": "3141a4d66e26cb4305b8bb01ca0eef616b89fd3925547f0a5f114d84780e1818",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavfilter.so.12",
+      "sha256": "156aa72b7fc5b362ea2c600e3ba29122f7331162e62e82ceb58ac20b28a61233",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libswscale.so.10",
+        "libavformat.so.63",
+        "libavcodec.so.63",
+        "libswresample.so.7",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libfreetype.so.6",
+      "sha256": "f9da7896667f8bef5e96cb58f3c2c6f6313e4fa8c5e82eeaa557e33526b8e166",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libfribidi.so.0",
+      "sha256": "d42aef88945a03dca914e49c750dabb66aba62948aa7f788e15724f33cedc7bc",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libharfbuzz.so.0",
+      "sha256": "c20c62ea95d833efb90ef1a434e51aea96303d6134899aa5aa70562bc206e486",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libfreetype.so.6",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libplacebo.so",
+      "sha256": "430da1e30d0fe472680fcc5aa07c1e2d6aa96e217dc368520c80b4732c77ac36",
+      "minimumGLIBC": "2.17",
+      "needed": [
+        "libm.so.6",
+        "libpthread.so.0",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavutil.so",
+      "sha256": "a0cd5224085c8e253d33472411cd0fdbccfa7cff376fa43e954047a877d3e61b",
+      "minimumGLIBC": "2.17",
+      "needed": [
+        "libm.so.6",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavcodec.so",
+      "sha256": "0b39fb5b840595d0b28a8851871a5a8a0fa54a043190fc980031718e7c065966",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libswresample.so.7",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavdevice.so.63",
+      "sha256": "ed32f5f09a20b25ac6405b826d0f97731fe0a46011b8bfb2e7cc55f65d616095",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavfilter.so.12",
+        "libavformat.so.63",
+        "libavcodec.so.63",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libharfbuzz-subset.so.0",
+      "sha256": "1bafe5ed5fa7cc90d57550bdcbc500c849224c0b0720e515b49a591c9a803c29",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libharfbuzz.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libass.so.9",
+      "sha256": "39eda63b05a2fb6b57955a9cb9d073e97d03bf70b35d956f2109e27022946e77",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libfreetype.so.6",
+        "libfribidi.so.0",
+        "libharfbuzz.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libswscale.so",
+      "sha256": "3141a4d66e26cb4305b8bb01ca0eef616b89fd3925547f0a5f114d84780e1818",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libmpv.so.2",
+      "sha256": "9384b67f5af142d5d0134861d4712661672fd569a107d6f81188ca359ce3bce4",
+      "minimumGLIBC": "2.17",
+      "needed": [
+        "libm.so.6",
+        "libass.so.9",
+        "libavcodec.so.63",
+        "libavfilter.so.12",
+        "libavformat.so.63",
+        "libavutil.so.61",
+        "libplacebo.so.375",
+        "libswresample.so.7",
+        "libswscale.so.10",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libfreetype.so",
+      "sha256": "f9da7896667f8bef5e96cb58f3c2c6f6313e4fa8c5e82eeaa557e33526b8e166",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavutil.so.61",
+      "sha256": "a0cd5224085c8e253d33472411cd0fdbccfa7cff376fa43e954047a877d3e61b",
+      "minimumGLIBC": "2.17",
+      "needed": [
+        "libm.so.6",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "lib/libavcodec.so.63",
+      "sha256": "0b39fb5b840595d0b28a8851871a5a8a0fa54a043190fc980031718e7c065966",
+      "minimumGLIBC": "2.14",
+      "needed": [
+        "libm.so.6",
+        "libswresample.so.7",
+        "libavutil.so.61",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN"
+    },
+    {
+      "file": "bin/mpv",
+      "sha256": "c3ac88185c6489ab6b3fdd058a6597b1a8028ed4e037ed616c6a0d2921886f8c",
+      "minimumGLIBC": "2.17",
+      "needed": [
+        "libm.so.6",
+        "libass.so.9",
+        "libavcodec.so.63",
+        "libavfilter.so.12",
+        "libavformat.so.63",
+        "libavutil.so.61",
+        "libplacebo.so.375",
+        "libswresample.so.7",
+        "libswscale.so.10",
+        "libpthread.so.0",
+        "libc.so.6"
+      ],
+      "rpath": "$ORIGIN/../lib"
+    }
+  ]
+}

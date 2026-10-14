@@ -1,0 +1,115 @@
+use super::Parser;
+use crate::{
+    Parse,
+    ast::*,
+    error::{Error, ErrorKind, PResult},
+    parser::state::ParserState,
+    pos::Span,
+    tokenizer::Token,
+    util,
+};
+
+// https://drafts.csswg.org/css-animations/#keyframes
+//
+// <keyframe-block> = <keyframe-selector># { <declaration-list> }
+impl<'a> Parse<'a> for KeyframeBlock<'a> {
+    fn parse(input: &mut Parser<'a>) -> PResult<Self> {
+        let first_selector = input.parse::<KeyframeSelector>()?;
+        let start = first_selector.span().start;
+
+        let mut selectors = input.vec_with_capacity(2);
+        selectors.push(first_selector);
+        let mut comma_spans = input.vec();
+        while let Some((_, comma_span)) = input.cursor.eat_comma()? {
+            comma_spans.push(comma_span);
+            selectors.push(input.parse()?);
+        }
+        debug_assert_eq!(comma_spans.len() + 1, selectors.len());
+
+        let block = input
+            .with_state(ParserState { in_keyframes_at_rule: false, ..input.state.clone() })
+            .parse::<SimpleBlock>()?;
+
+        let span = Span { start, end: block.span.end };
+        Ok(KeyframeBlock { selectors, comma_spans, block, span })
+    }
+}
+
+// https://drafts.csswg.org/scroll-animations-1/#named-ranges
+fn is_timeline_range_name(name: &str) -> bool {
+    name.eq_ignore_ascii_case("cover")
+        || name.eq_ignore_ascii_case("contain")
+        || name.eq_ignore_ascii_case("entry")
+        || name.eq_ignore_ascii_case("exit")
+        || name.eq_ignore_ascii_case("entry-crossing")
+        || name.eq_ignore_ascii_case("exit-crossing")
+}
+
+// <keyframe-selector> = from | to | <percentage [0,100]>
+//                     | <timeline-range-name> <percentage [0,100]>
+impl<'a> Parse<'a> for KeyframeSelector<'a> {
+    fn parse(input: &mut Parser<'a>) -> PResult<Self> {
+        match &input.cursor.peek()?.token {
+            Token::Percentage(..) => Ok(KeyframeSelector::Percentage(input.parse()?)),
+            _ => {
+                let ident = input.parse::<InterpolableIdent>()?;
+                // Scroll-driven animations attach keyframes to a named
+                // timeline range: `entry 0%`, `exit-crossing 100%`.
+                if let Token::Percentage(..) = &input.cursor.peek()?.token {
+                    if let InterpolableIdent::Literal(ident) = &ident
+                        && !is_timeline_range_name(ident.name)
+                    {
+                        input.recoverable_errors.push(Error {
+                            kind: ErrorKind::UnknownKeyframeSelectorIdent,
+                            span: ident.span,
+                        });
+                    }
+                    let percentage = input.parse::<Percentage>()?;
+                    let span = Span { start: ident.span().start, end: percentage.span.end };
+                    return Ok(KeyframeSelector::TimelineRange(KeyframeTimelineRange {
+                        name: ident,
+                        percentage,
+                        span,
+                    }));
+                }
+                if let InterpolableIdent::Literal(ident) = &ident
+                    && !ident.name.eq_ignore_ascii_case("from")
+                    && !ident.name.eq_ignore_ascii_case("to")
+                {
+                    input.recoverable_errors.push(Error {
+                        kind: ErrorKind::UnknownKeyframeSelectorIdent,
+                        span: ident.span,
+                    });
+                }
+                Ok(KeyframeSelector::Ident(ident))
+            }
+        }
+    }
+}
+
+// https://drafts.csswg.org/css-animations/#keyframes
+//
+// @keyframes <keyframes-name> { <rule-list> }
+// <keyframes-name> = <custom-ident> | <string>   (not a CSS-wide keyword)
+impl<'a> Parse<'a> for KeyframesName<'a> {
+    fn parse(input: &mut Parser<'a>) -> PResult<Self> {
+        match &input.cursor.peek()?.token {
+            Token::Ident(..) | Token::HashLBrace(..) | Token::AtLBraceVar(..) => {
+                let ident = input.parse()?;
+                if let InterpolableIdent::Literal(ident) = &ident
+                    && (util::is_css_wide_keyword(ident.name)
+                        || ident.name.eq_ignore_ascii_case("default"))
+                {
+                    input.recoverable_errors.push(Error {
+                        kind: ErrorKind::CSSWideKeywordDisallowed,
+                        span: ident.span,
+                    });
+                }
+                Ok(KeyframesName::Ident(ident))
+            }
+            Token::AtKeyword(..) => input.parse().map(KeyframesName::LessVariable),
+            Token::Tilde(..) => input.parse().map(KeyframesName::LessEscapedStr),
+            _ => input.parse().map(KeyframesName::Str),
+        }
+    }
+}

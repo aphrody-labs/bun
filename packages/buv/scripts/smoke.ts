@@ -16,7 +16,6 @@ export interface Check {
 export interface SmokeOptions {
   wheel?: string;
   expectUv: string;
-  expectRuff: string;
   expectPython: string;
 }
 export const OLDEST_HOST_GLIBC = "2.39";
@@ -72,31 +71,6 @@ export function smokePlan(
         };
       },
     },
-    ...(existsSync(bin("ruff"))
-      ? [
-          {
-            name: "packaged Ruff",
-            run: async () => {
-              const sample = join(scratch, "sample.py");
-              await Bun.write(sample, "import os\n");
-              const [version, result] = await Promise.all([
-                run([bin("ruff"), "--version"], { env }),
-                run([bin("ruff"), "check", "--no-cache", sample], { env }),
-              ]);
-              return {
-                ok:
-                  version.code === 0 &&
-                  new RegExp(`^ruff ${options.expectRuff.replaceAll(".", "\\.")}(?:\\s|$)`).test(
-                    version.stdout.trim(),
-                  ) &&
-                  result.code === 1 &&
-                  result.stdout.includes("F401"),
-                detail: `${version.stdout.trim()}; F401 exit ${result.code}; separate packaged component`,
-              };
-            },
-          },
-        ]
-      : []),
     ...(existsSync(bin("python3"))
       ? [
           {
@@ -154,7 +128,6 @@ if (import.meta.main) {
   if (!argv[0]) throw new Error("usage: smoke.ts <Buv artifact>");
   const result = await smoke(resolve(argv[0]), {
     expectUv: value("--expect-uv") ?? "0.12.24",
-    expectRuff: value("--expect-ruff") ?? "0.16.10",
     expectPython: value("--expect-python") ?? "3.12.15",
     wheel: value("--wheel"),
   });

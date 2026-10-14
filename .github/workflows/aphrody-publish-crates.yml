@@ -2,8 +2,8 @@ name: Aphrody publish crates
 
 # Publishes to crates.io with scripts/aphrody/publish-crates.ts: the native
 # plugin SDK as aphrody-bun-macro and aphrody-bun-native-plugin, and the
-# fork-only workspaces packages/bun-n2b (aphrody-n2b-types, -registry, -core,
-# aphrody-n2b) and packages/bun-oxc (aphrody-oxc-bridge). Versions already on
+# registered browser and Google SDK crates. Internal Oxc, quality and N2B
+# owners are not published. Versions already on
 # crates.io are skipped, so re-running is a no-op.
 
 permissions:
@@ -17,7 +17,7 @@ on:
         type: boolean
         default: false
       only:
-        description: "Comma-separated subset: sdk, packages/bun-n2b, packages/bun-oxc (empty: all)"
+        description: "Comma-separated subset: sdk, src/browser/crates/ssrf, packages/bun-google/crates/boq (empty: all)"
         type: string
         default: ""
       qualification-tag:

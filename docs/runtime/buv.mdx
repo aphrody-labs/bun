@@ -27,7 +27,7 @@ The root commands `uv:check`, `uv:test`, `uv:lint`, `uv:fmt`, `uv:metadata`, and
 Set `BUN_UV_CARGO_COMMAND` to a JSON array of command arguments to use a host's configured Cargo factory.
 The root GitHub workflow checks the UV crates on Linux, Windows, and macOS and runs the embedded CLI tests through the native build factory.
 
-`packages/buv` supplies immutable artifact assembly, native core qualification, installation, rollback and preserved predecessor source. Its forge accepts an owner-built core and records the executable hash, Bun/JSC revisions and embedded UV version. It does not build an external UV launcher. A pinned CPython prefix and optional Ruff binary have separate provenance and target gates.
+`packages/buv` supplies immutable artifact assembly, native core qualification and installation. Its forge accepts an owner-built core and records the executable hash, Bun/JSC revisions and embedded UV version. It does not build an external UV launcher or clone project-local Python vendors. A pinned CPython prefix has a separate target gate; the shared host comes from `packages/bun-python-native`.
 
 PyJS combines the JavaScript and Python surface; `.pyjs`, `.pyts` and `.pytsx` use the core's JavaScript, TypeScript and TSX loaders respectively. Embedded Python code remains an explicit native Python API call. The shared Python ABI and extension imports require their own native integration checks; a successful graph or UV version check alone does not establish them.
 

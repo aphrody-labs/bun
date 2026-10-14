@@ -163,7 +163,7 @@ test("Google rejects redirects and redacts transport, provider and HTTP errors",
     port: 0,
     fetch(request) {
       return new URL(request.url).pathname === "/redirect"
-        ? Response.redirect(target.url)
+        ? Response.redirect(target.url.href)
         : new Response("secret response", { status: 403 });
     },
   });

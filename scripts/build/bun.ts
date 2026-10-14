@@ -21,8 +21,8 @@ import { bunExeName, shouldStrip, type Config } from "./config.ts";
 import { generateDepVersionsHeader } from "./depVersionsHeader.ts";
 import { dotnetHostRustSources } from "./deps/dotnet-host.ts";
 import { allDeps } from "./deps/index.ts";
+import { libwebp, LIBWEBP_COMMIT } from "./deps/libwebp.ts";
 import { lolhtml } from "./deps/lolhtml.ts";
-import { oxc } from "./deps/oxc.ts";
 import { rustArgon2 } from "./deps/rust-argon2.ts";
 import { uutils } from "./deps/uutils.ts";
 import { uv, uvRustSources } from "./deps/uv.ts";
@@ -200,10 +200,16 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   const uvDep = resolveDep(n, cfg, uv, depsByName);
   assert(uvDep !== null, "uv resolveDep returned null — should never be skipped");
   depsByName.set(uv.name, uvDep);
-  const oxcDep = resolveDep(n, cfg, oxc, depsByName);
-  assert(oxcDep !== null, "oxc resolveDep returned null — should never be skipped");
-  depsByName.set(oxc.name, oxcDep);
+  const webpDep = resolveDep(n, cfg, libwebp, depsByName);
+  assert(webpDep !== null, "libwebp's native provider is required by Bun.Image and Rust bindings");
+  depsByName.set(libwebp.name, webpDep);
   const rust = emitRust(n, cfg, {
+    nativeWebP: {
+      sourceCommit: LIBWEBP_COMMIT,
+      includes: webpDep.includes,
+      inputs: webpDep.outputs,
+      linkInputs: [...webpDep.libs, ...webpDep.objects],
+    },
     codegenOrderOnly: codegen.rustInputs,
     rustSources: [
       ...sources.rust,
@@ -216,7 +222,6 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
       ...rustArgon2Dep.outputs,
       ...uutilsDep.outputs,
       ...uvDep.outputs,
-      ...oxcDep.outputs,
     ],
     shimValidations: emitShimVerify(n, cfg),
   });

@@ -1,0 +1,21 @@
+WebPConfig 116 4
+WebPPicture 256 8
+WebPDecBuffer 120 8
+WebPDecoderConfig 240 8
+WebPData 16 8
+WebPIterator 80 8
+WebPChunkIterator 56 8
+WebPAnimEncoderOptions 44 4
+WebPAnimDecoderOptions 36 4
+WebPAnimInfo 36 4
+WebPConfig.quality 4
+WebPConfig.method 8
+WebPPicture.width 8
+WebPPicture.height 12
+WebPPicture.argb 72
+WebPPicture.argb_stride 80
+WebPDecBuffer.width 4
+WebPDecBuffer.height 8
+WebPDecBuffer.u 16
+versions 67072 67072
+lossless-rgba-roundtrip 2 2 16

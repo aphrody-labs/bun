@@ -72,7 +72,7 @@ export async function generateBindings(target: string, headers: string) {
   ) {
     throw new Error("CEF binding generation requires the matching owner source header receipt");
   }
-  const headerInputs = [];
+  const headerInputs: { path: string; sha256: string }[] = [];
   for (const path of new Bun.Glob("include/**/*.h").scanSync({ cwd: headers })) {
     headerInputs.push({ path: path.replaceAll("\\", "/"), sha256: hash(await Bun.file(join(headers, path)).bytes()) });
   }
@@ -87,7 +87,7 @@ export async function generateBindings(target: string, headers: string) {
   });
   const code = await process.exited;
   if (code !== 0) throw new Error(`Owner CEF binding generation failed (${code})`);
-  const files = [];
+  const files: { path: string; sha256: string }[] = [];
   for (const path of plan.outputs) files.push({ path, sha256: hash(await Bun.file(join(source, path)).bytes()) });
   const raw = await Bun.file(join(source, plan.outputs[0]!)).text();
   const constant = (name: string) => Number(new RegExp(`^pub const ${name}: i32 = (\\d+);$`, "m").exec(raw)?.[1]);

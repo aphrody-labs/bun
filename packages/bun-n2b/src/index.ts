@@ -3,7 +3,7 @@
 //
 //   import { scan, transform } from "@aphrody/bun-plugin-n2b";
 //   import { n2bPlugin } from "@aphrody/bun-plugin-n2b/plugin";
-//   bunx @aphrody/bun-plugin-n2b scan|fix|report|rules|prompt|audit … (the `n2b` CLI)
+//   bun n2b <root> [--fix] [--report=json] (the native CLI)
 
 import { resolve } from "node:path";
 import { native, type NativeScanOptions, type NativeTransformResult } from "./native";

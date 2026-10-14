@@ -14,5 +14,5 @@ export {
   parseSync,
   rawTransferSupported,
   visitorKeys,
-} from "../vendor/oxc-parser/index.js";
-export type * from "../vendor/oxc-parser/index";
+} from "./parser-core/index.js";
+export type * from "./parser-core/index";

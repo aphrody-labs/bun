@@ -16,8 +16,8 @@ extern crate oxc_transform_napi as _;
 
 use std::path::PathBuf;
 
-use aphrody_oxc_bridge as oxc;
-use aphrody_oxc_tools as tools;
+use bun_ecma_api as oxc;
+use bun_quality as tools;
 use bun_native_plugin::{BunLoader, OnBeforeParse, Result, bun, define_bun_plugin};
 use napi::{Status, bindgen_prelude::External};
 use napi_derive::napi;

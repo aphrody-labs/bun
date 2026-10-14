@@ -87,7 +87,7 @@
     "bump-major": "npm version major --no-git-tag-version --workspaces --include-workspace-root",
     "bump-minor": "npm version minor --no-git-tag-version --workspaces --include-workspace-root",
     "bump-patch": "npm version patch --no-git-tag-version --workspaces --include-workspace-root",
-    "check": "tsc -p src --noEmit && tsc -p packages/mp3-encoder/src --noEmit && tsc -p scripts --noEmit && tsc -p tsconfig.vite.json --noEmit && rm tsconfig.vite.tsbuildinfo",
+    "check": "bun check -p src --noEmit && bun check -p packages/mp3-encoder/src --noEmit && bun check -p scripts --noEmit && bun check -p tsconfig.vite.json --noEmit",
     "check-docblocks": "tsx scripts/check-docblocks.ts dist/mediabunny.d.ts",
     "dev": "vite",
     "docs:build": "vitepress build docs && bun run examples:build",
@@ -95,7 +95,7 @@
     "docs:preview": "vitepress preview docs",
     "examples:build": "vite build",
     "fix-build-import-paths": "tsx scripts/add-import-extensions.ts",
-    "lint": "eslint .",
+    "lint": "bun lint .",
     "watch": "tsx scripts/bundle.ts --watch"
   },
   "sideEffects": false,

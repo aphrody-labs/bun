@@ -1,0 +1,32 @@
+{
+  "url": "https://dist.aphrody.app/bun/latest.json",
+  "status": 200,
+  "body": {
+    "tag": "aphrody-v1.4.3-aphrody.4",
+    "version": "1.4.3-aphrody.4",
+    "published": "2026-10-09T17:23:58Z",
+    "base": "https://dist.aphrody.app/bun/aphrody-v1.4.3-aphrody.4",
+    "assets": [
+      {
+        "name": "aphrody-bun-windows-service.zip",
+        "sha256": "4aba088e554b660710080e85a6822f08f68dfc4c884be555fcc35e28c2599f0b",
+        "size": 67921082
+      },
+      {
+        "name": "bun-linux-x64-musl.zip",
+        "sha256": "952e62574ad9bfdd016011613d083306255224f2b843ffa66976a86b00d25ea4",
+        "size": 59701473
+      },
+      {
+        "name": "bun-linux-x64.zip",
+        "sha256": "0661b5b6dfbd4535c2bdda639c4c1ee1f063c6eee3cbce65c42c1e99b244a9a6",
+        "size": 60764326
+      },
+      {
+        "name": "bun-windows-x64.zip",
+        "sha256": "aa447512bf871a5344105684cd57e7c1ace9c12688b0f29a770b56a8ca5a4732",
+        "size": 67790727
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "kind": "release-binary-expectations",
+  "sourceCommit": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+  "passed": false,
+  "failedChecks": 1,
+  "unexpectedSharedLibraries": [
+    "libdbus-1.so.3",
+    "libmnl.so.0",
+    "libnftnl.so.11"
+  ],
+  "reportedMaximumGLIBC": "2.43",
+  "scope": "Release CI expectations: local native build warns without failing",
+  "sourceReceipt": "build.log"
+}

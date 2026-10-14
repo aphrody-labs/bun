@@ -24,7 +24,7 @@ bun install        # Install all dependencies
 bun run dev        # Run the studio (composition editor)
 bun run build      # Build all packages
 bun run --filter '*' typecheck   # Type-check all packages
-bun run lint       # Lint all packages
+bun lint       # Lint all packages
 bun run format:check   # Check formatting
 ```
 
@@ -39,9 +39,9 @@ bun run --filter @hyperframes/core test:hyperframe-runtime-ci  # Runtime contrac
 ### Linting & Formatting
 
 ```bash
-bun run lint            # Run oxlint
+bun lint            # Run oxlint
 bun run lint:fix        # Run oxlint with auto-fix
-bun run format          # Format all files with oxfmt
+bun fmt          # Format all files with oxfmt
 bun run format:check    # Check formatting without writing
 ```
 

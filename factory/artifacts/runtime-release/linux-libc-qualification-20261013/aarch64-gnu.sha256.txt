@@ -1,0 +1,3 @@
+865808367f6b62a097a376b1165dc7bc02f2004e3ad1ed701e704855dc1ecdb0  /opt/linux-sysroot-glibc-arm64/usr/lib/libmnl.a
+3b4e5122cdc9f50a32c41ec820ec8d2e5592bf8e1771e83321990d1a20c4a9aa  /opt/linux-sysroot-glibc-arm64/usr/lib/libnftnl.a
+96d8ef1f0cce3cc713667c7c3549777386d1d8e13888b60ba0ccdfd88f2a2a0f  /home/ubuntu/build/tmp/linux-sysroot-qualification-20261013/netfilter-aarch64-gnu

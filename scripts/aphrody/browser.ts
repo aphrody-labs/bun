@@ -162,7 +162,7 @@ export async function buildPWA(options: Options): Promise<void> {
     const bytes = await icon.bytes();
     if (bytes.length < 8 || ![137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte))
       throw new Error("PWA icon must be an actual PNG");
-    const icons = [];
+    const icons: { size: number; data: Uint8Array }[] = [];
     for (const size of [192, 512]) {
       const data = await new Bun.Image(bytes).resize(size, size, { fit: "fill" }).png().bytes();
       icons.push({ size, data });
@@ -223,7 +223,7 @@ export async function buildPWA(options: Options): Promise<void> {
     for (const { size, data } of icons) await writeOwned(`icon-${size}.png`, data);
     const cached = [...assets].sort();
     const hasher = new Bun.CryptoHasher("sha256");
-    const files = [];
+    const files: { path: string; sha256: string }[] = [];
     for (const asset of cached) {
       const data = await Bun.file(join(output, asset)).bytes();
       const sha256 = new Bun.CryptoHasher("sha256").update(data).digest("hex");

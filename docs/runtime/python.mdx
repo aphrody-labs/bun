@@ -54,8 +54,12 @@ console.log(py.version()); // Py_GetVersion()
 
 py.exec`import math; value = {"text": "café🐍", "n": 42}`;
 console.log(py.evalJSON("value")); // { text: "café🐍", n: 42 }
+console.log(py.evalBatch(["value['n']", "math.sqrt(2)"])); // ["42", "1.4142135623730951"]
 console.log(py.eval("math.sqrt(2)")); // "1.4142135623730951" (str() of the result)
 console.log(py.call("platform", "system")); // module.function(), returns str()
+py.exec`shared = bytearray(b"abc")`;
+const shared = new Uint8Array(py.buffer("shared"));
+shared[0] = 122; // Python now sees bytearray(b"zbc") without a copy
 
 try {
   py.eval("1 / 0");
@@ -70,14 +74,18 @@ try {
 | `run(code)`, ``exec`code` `` | Runs statements in `__main__`. The tagged template takes raw source and refuses interpolation.                      |
 | `eval(expression)`           | Evaluates an expression and returns `str(result)`.                                                                   |
 | `evalJSON(expression)`       | Evaluates an expression, serialises it with Python's `json` module and parses it in JavaScript.                     |
+| `evalBatch(expressions)`     | Evaluates up to 1024 expressions in one GIL/FFI crossing and returns their string forms.                          |
 | `call(module, fn, arg?)`     | Calls `module.fn(arg)` (without an argument when `arg` is omitted) and returns `str(result)`.                       |
+| `buffer(expression)`         | Pins a contiguous writable Python buffer and returns a zero-copy `ArrayBuffer`; its GC releases the native lease. |
 | `version()`                  | `Py_GetVersion()`.                                                                                                   |
-| `close()` / `using`          | Finalises the interpreter if this handle started it, then closes the host library.                                  |
+| `close()` / `using`          | Releases this client lease; the last client finalises an interpreter started by the host, then closes its library handle. |
 
 `Python.open()` options:
 
 - `libraryPath`: a host library to load instead of `BUV_PYTHON_HOST_LIBRARY` / `BUN_PYTHON_HOST_LIBRARY` or a host embedded in a compiled executable.
 - `libpython`: the CPython library, or `null` to use one already loaded. By default it comes from `BUV_PYTHON_LIBPYTHON`, `BUN_PYTHON_LIBPYTHON` or `APHRODY_LIBPYTHON`, then from the active buv artifact (`BUV_RUNTIME`, or `$BUV_HOME/runtime/<target>/current`, default `~/.buv`).
+
+`buffer()` accepts writable contiguous exporters such as `bytearray` and writable contiguous `memoryview` objects. Keep the `Python` handle open while any returned buffer is reachable. `close()` refuses to unload the host while a lease is active, and remains usable after that refusal.
 
 The helpers `pythonHostLibraryPath()`, `buvLibpython()` and `libpythonIn(directory)` expose this resolution.
 

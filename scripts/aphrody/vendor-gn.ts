@@ -54,7 +54,7 @@ if (import.meta.main) {
     const archive = await git(source, ["archive", "--format=tar", GN_REVISION]);
     if (archive.length > 100 * 1024 * 1024) throw new Error("GN archive exceeds budget");
     const files = await new Bun.Archive(archive).files();
-    const receiptFiles = [];
+    const receiptFiles: { path: string; mode: string; blob: string; size: number; sha256: string }[] = [];
     for (const entry of entries) {
       const file = files.get(entry.path);
       if (!file) throw new Error(`Missing archive entry: ${entry.path}`);

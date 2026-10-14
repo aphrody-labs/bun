@@ -65,6 +65,11 @@
     // checked inside the installed fixture (React 19, react-server-dom-parcel), see next-bun-app.test.ts
     "integration/next-bun-app/app",
     "integration/next-bun-app/suite",
-    "integration/next-bun-app/proxy.ts"
+    "integration/next-bun-app/proxy.ts",
+    "integration/ecma_pipeline",
+    // Executed by jsx-production.test.ts with their local react-jsx/react-jsxdev configurations.
+    "bundler/transpiler/jsx-production.tsx",
+    "bundler/transpiler/jsx-production-entry.ts",
+    "bundler/transpiler/jsx-dev/jsx-dev.tsx"
   ]
 }

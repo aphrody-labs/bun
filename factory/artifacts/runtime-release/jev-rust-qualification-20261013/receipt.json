@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "cb64a09ae6dd618efc300c39b9b03ccfa861cac2",
+  "componentCommit": "cb64a09ae6dd618efc300c39b9b03ccfa861cac2",
+  "platform": "windows-x64-msvc",
+  "verifiedAt": "2026-10-13T19:22:51.044Z",
+  "jobs": 1,
+  "coreDependencies": {
+    "serde": "1.0.228",
+    "serde_json": "1.0.151",
+    "thiserror": "2.0.21"
+  },
+  "sourceProvenanceSHA256": "1ab2700bb2a050ad19a50dadd87ed5c4331d6f2dca5640a42b44518894c077cb",
+  "gates": {
+    "core": {
+      "command": "bun scripts/build/rust/cargo-serial.ts --msvc test -p aphrody-jev --no-default-features --locked -- --test-threads=1",
+      "passed": 9,
+      "failed": 0
+    },
+    "clientServer": {
+      "command": "bun scripts/build/rust/cargo-serial.ts --msvc test -p aphrody-jev --features server --locked -- --test-threads=1",
+      "passed": 43,
+      "failed": 0
+    },
+    "mcpStandalone": {
+      "command": "bun scripts/build/rust/cargo-serial.ts --msvc test -p bun_mcp --lib tools::yolo::tests --locked -- --test-threads=1",
+      "compiled": true,
+      "executed": false,
+      "exitCode": 1,
+      "limitation": "LNK1120: 512 native Bun/WTF/highway/simdutf externs absent from standalone test link"
+    },
+    "clippy": {
+      "passed": false,
+      "finalRunAfterFixes": false,
+      "limitation": "Portable imported std boundaries and style diagnostics corrected; no final all-targets pass claimed"
+    },
+    "formatLintDiff": {
+      "passed": true
+    },
+    "changedBinaryMCP": {
+      "executed": false,
+      "command": "bun bd --profile=release test test/cli/mcp/mcp.test.ts -t \"native MCP Jev\"",
+      "testsPrepared": 3
+    }
+  },
+  "qualification": {
+    "sourceCommitted": true,
+    "nativeRuntimeQualified": false,
+    "providerCalls": "Local synthetic fixtures only; no paid provider calls",
+    "aphrodySourceRetired": false,
+    "testResultsPrecedeFinalStyleFixes": true
+  }
+}

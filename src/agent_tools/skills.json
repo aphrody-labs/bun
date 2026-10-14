@@ -3,14 +3,17 @@
   "skills": [
     {
       "name": "bun-yolo",
-      "description": "Use bun:yolo for typed native Jev/System One judgments, confidence and abstention, Bun MCP decisions and the supervised Python SDK bridge.",
+      "description": "Use Bun's internal typed decision capability for boolean, choice and score results, native confidence and abstention, Bun MCP decisions and the supervised Python SDK bridge.",
       "sections": [
         {
           "kind": "markdown",
           "file": "packages/bun-agent-plugin/skills/bun-yolo/SKILL.md",
           "heading": "Typed judgments through Bun"
         },
-        { "kind": "pages", "files": ["docs/runtime/yolo.mdx", "docs/runtime/decisions.mdx"] }
+        {
+          "kind": "pages",
+          "files": ["docs/runtime/yolo.mdx", "docs/runtime/decisions.mdx"]
+        }
       ]
     },
     {
@@ -22,7 +25,10 @@
           "file": "packages/bun-nginx/README.md",
           "heading": "Bun NGINX"
         },
-        { "kind": "pages", "files": ["docs/runtime/nginx.mdx"] }
+        {
+          "kind": "pages",
+          "files": ["docs/runtime/nginx.mdx"]
+        }
       ]
     },
     {
@@ -42,17 +48,34 @@
     },
     {
       "name": "cpp-bun",
-      "description": "C++ in the Bun fork: JavaScriptCore bindings in src/jsc/bindings, JS classes and .classes.ts codegen, exception scopes (BUN_JSC_validateExceptionChecks), GC and iso subspaces, Rust and C++ interop. Use when editing the runtime's .cpp/.h files or their Rust counterparts.",
+      "description": "C++ in Bun OS: JavaScriptCore bindings in src/jsc/bindings, JS classes and .classes.ts codegen, exception scopes (BUN_JSC_validateExceptionChecks), GC and iso subspaces, Rust and C++ interop. Use when editing the runtime's .cpp/.h files or their Rust counterparts.",
       "sections": [
-        { "kind": "markdown", "file": "scripts/build/CLAUDE.md", "heading": "Common tasks" },
+        {
+          "kind": "markdown",
+          "file": "scripts/build/CLAUDE.md",
+          "heading": "Common tasks"
+        },
         {
           "kind": "markdown",
           "file": ".claude/skills/implementing-jsc-classes-cpp/SKILL.md",
           "heading": "Class Structure"
         },
-        { "kind": "markdown", "file": "scripts/build/CLAUDE.md", "heading": "Phase 2 — emitBun (`bun.ts::emitBun`)" },
-        { "kind": "markdown", "file": "src/CLAUDE.md", "heading": "JSC Interop & FFI Safety" },
-        { "kind": "files", "glob": "src/**/*.classes.ts", "title": "Class definitions (`*.classes.ts`)", "limit": 0 },
+        {
+          "kind": "markdown",
+          "file": "scripts/build/CLAUDE.md",
+          "heading": "Phase 2 — emitBun (`bun.ts::emitBun`)"
+        },
+        {
+          "kind": "markdown",
+          "file": "src/CLAUDE.md",
+          "heading": "JSC Interop & FFI Safety"
+        },
+        {
+          "kind": "files",
+          "glob": "src/**/*.classes.ts",
+          "title": "Class definitions (`*.classes.ts`)",
+          "limit": 0
+        },
         {
           "kind": "pages",
           "files": [
@@ -72,7 +95,10 @@
             "verify"
           ]
         },
-        { "kind": "lsp", "languages": ["cpp", "rust"] },
+        {
+          "kind": "lsp",
+          "languages": ["cpp", "rust"]
+        },
         {
           "kind": "scripts",
           "names": [
@@ -92,7 +118,7 @@
     },
     {
       "name": "webkit",
-      "description": "The WebKit/JavaScriptCore fork behind the Bun fork (aphrody-labs/WebKit, prebuilt from oven-sh/WebKit): the pinned WEBKIT_VERSION, building JSC locally with `bun run build:local`, patching JSC and publishing prebuilts, rebasing on upstream WebKit. Use when a change needs JSC, WTF or bmalloc sources.",
+      "description": "The WebKit/JavaScriptCore engine integrated into Bun OS (aphrody-labs/WebKit, prebuilt from oven-sh/WebKit): the pinned WEBKIT_VERSION, building JSC locally with `bun run build:local`, patching JSC and publishing prebuilts, rebasing on upstream WebKit. Use when a change needs JSC, WTF or bmalloc sources.",
       "sections": [
         {
           "kind": "markdown",
@@ -115,9 +141,19 @@
           "within": "P. Fork WebKit",
           "bold": "Flux d'un patch JSC/WebKit"
         },
-        { "kind": "markdown", "file": ".claude/commands/upgrade-webkit.md", "title": "Rebasing on upstream WebKit" },
-        { "kind": "skills", "names": ["javascriptcore-garbage-collector", "implementing-jsc-classes-cpp"] },
-        { "kind": "lsp", "languages": ["cpp"] },
+        {
+          "kind": "markdown",
+          "file": ".claude/commands/upgrade-webkit.md",
+          "title": "Rebasing on upstream WebKit"
+        },
+        {
+          "kind": "skills",
+          "names": ["javascriptcore-garbage-collector", "implementing-jsc-classes-cpp"]
+        },
+        {
+          "kind": "lsp",
+          "languages": ["cpp"]
+        },
         {
           "kind": "scripts",
           "names": [
@@ -135,11 +171,22 @@
     },
     {
       "name": "win32",
-      "description": "Win32, COM, WinRT and NT in the Bun fork: bun:windows, bun:winrt, bun:winui, bun msvc and bun winmd, the Rust modules behind them (src/runtime/windows, src/windows_sys), HANDLE ownership, wide strings, HRESULT/NTSTATUS errors, the MSVC toolchain and Windows debugging. Use for any Windows-specific code or build.",
+      "description": "Win32, COM, WinRT and NT in Bun OS: bun:windows, bun:winrt, bun:winui, bun msvc and bun winmd, the Rust modules behind them (src/runtime/windows, src/windows_sys), HANDLE ownership, wide strings, HRESULT/NTSTATUS errors, the MSVC toolchain and Windows debugging. Use for any Windows-specific code or build.",
       "sections": [
-        { "kind": "markdown", "file": "docs/runtime/windows.mdx", "heading": "Errors" },
-        { "kind": "markdown", "file": "docs/runtime/windows.mdx", "heading": "API families" },
-        { "kind": "rustdoc", "globs": ["src/runtime/windows/**/*.rs", "src/windows_sys/*.rs"] },
+        {
+          "kind": "markdown",
+          "file": "docs/runtime/windows.mdx",
+          "heading": "Errors"
+        },
+        {
+          "kind": "markdown",
+          "file": "docs/runtime/windows.mdx",
+          "heading": "API families"
+        },
+        {
+          "kind": "rustdoc",
+          "globs": ["src/runtime/windows/**/*.rs", "src/windows_sys/*.rs"]
+        },
         {
           "kind": "pages",
           "files": [
@@ -161,8 +208,14 @@
           "file": ".claude/docs/windows-deep.md",
           "heading": "7. Débogueurs, symboles, procédure crash → cause"
         },
-        { "kind": "skills", "names": ["rust-system-calls", "verify"] },
-        { "kind": "lsp", "languages": ["rust", "cpp"] },
+        {
+          "kind": "skills",
+          "names": ["rust-system-calls", "verify"]
+        },
+        {
+          "kind": "lsp",
+          "languages": ["rust", "cpp"]
+        },
         {
           "kind": "scripts",
           "names": ["bd", "build:release", "watch-windows", "rust:check-all", "rust:clippy", "test"]
@@ -171,10 +224,16 @@
     },
     {
       "name": "linux-kernel",
-      "description": "Linux kernel work for the Bun fork: bun:linux (namespaces, cgroups, seccomp, io_uring probe, eBPF, netlink, perf_event), bun_sys syscall wrappers, the /dev/bun_accel driver of the aphrody-labs/linux fork (Kbuild, Kconfig, checkpatch, selftests), clangd with compile_commands.json, WSL kernel and Alpine images. Use for kernel patches or Linux-only runtime code.",
+      "description": "Linux kernel work for Bun OS: bun:linux (namespaces, cgroups, seccomp, io_uring probe, eBPF, netlink, perf_event), bun_sys syscall wrappers, the /dev/bun_accel driver of the aphrody-labs/linux sources (Kbuild, Kconfig, checkpatch, selftests), clangd with compile_commands.json, WSL kernel and Alpine images. Use for kernel patches or Linux-only runtime code.",
       "sections": [
-        { "kind": "rustdoc", "globs": ["src/runtime/linux/*.rs", "src/sys/bun_accel.rs", "src/sys/linux_syscall.rs"] },
-        { "kind": "pages", "files": ["docs/runtime/linux.mdx", "docs/aphrody/wsl.md"] },
+        {
+          "kind": "rustdoc",
+          "globs": ["src/runtime/linux/*.rs", "src/sys/bun_accel.rs", "src/sys/linux_syscall.rs"]
+        },
+        {
+          "kind": "pages",
+          "files": ["docs/runtime/linux.mdx", "docs/aphrody/wsl.md"]
+        },
         {
           "kind": "markdown",
           "file": "PLAN-ALPINE-BUN.md",
@@ -187,18 +246,39 @@
           "within": "V. bun:ffi, TinyCC et noyau",
           "bold": "Passe finale"
         },
-        { "kind": "markdown", "file": "PLAN-ALPINE-BUN.md", "within": "U3. Root et noyau", "bold": "Config noyau" },
-        { "kind": "markdown", "file": "docs/aphrody/wsl.md", "heading": "Kernel" },
-        { "kind": "skills", "names": ["rust-system-calls"] },
-        { "kind": "lsp", "languages": ["cpp", "rust"] },
-        { "kind": "scripts", "names": ["bd", "rust:check-all", "rust:clippy", "test"] }
+        {
+          "kind": "markdown",
+          "file": "PLAN-ALPINE-BUN.md",
+          "within": "U3. Root et noyau",
+          "bold": "Config noyau"
+        },
+        {
+          "kind": "markdown",
+          "file": "docs/aphrody/wsl.md",
+          "heading": "Kernel"
+        },
+        {
+          "kind": "skills",
+          "names": ["rust-system-calls"]
+        },
+        {
+          "kind": "lsp",
+          "languages": ["cpp", "rust"]
+        },
+        {
+          "kind": "scripts",
+          "names": ["bd", "rust:check-all", "rust:clippy", "test"]
+        }
       ]
     },
     {
       "name": "bun-apis",
-      "description": "Which Bun API replaces which Node.js module or npm package in an application run by the Bun fork, and how complete the Node.js compatibility is. Use before adding a dependency or writing Node-style code.",
+      "description": "Which Bun API replaces which Node.js module or npm package in an application run by Bun OS, and how complete the Node.js compatibility is. Use before adding a dependency or writing Node-style code.",
       "sections": [
-        { "kind": "markdown", "file": "docs/runtime/bun-apis.mdx" },
+        {
+          "kind": "markdown",
+          "file": "docs/runtime/bun-apis.mdx"
+        },
         {
           "kind": "pages",
           "files": ["docs/runtime/nodejs-compat.mdx", "docs/runtime/n2b.mdx", "docs/runtime/python.mdx"]
@@ -208,12 +288,21 @@
     {
       "name": "n2b",
       "description": "Move a Node.js project to Bun with n2b (`bun n2b`): safe and behavior-changing rewrites, reports, project migration. Use when converting Node code, scripts or package.json to Bun.",
-      "sections": [{ "kind": "markdown", "file": "docs/runtime/n2b.mdx" }]
+      "sections": [
+        {
+          "kind": "markdown",
+          "file": "docs/runtime/n2b.mdx"
+        }
+      ]
     },
     {
       "name": "bun-deps",
       "description": "Read the installed sources and docs of a project's dependencies (npm packages, Cargo crates, vendored libraries) at their exact versions, and digest a directory into one prompt, with the `bun mcp` tools git_ingest and deps_*. Use instead of fetching a library's repository from the web.",
-      "sections": [{ "kind": "tools" }]
+      "sections": [
+        {
+          "kind": "tools"
+        }
+      ]
     }
   ]
 }

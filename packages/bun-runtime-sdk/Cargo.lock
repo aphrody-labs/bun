@@ -80,6 +80,174 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
+name = "bun_arena"
+version = "0.153.0"
+dependencies = [
+ "allocator-api2",
+ "bun_ecma_collections",
+ "hashbrown 0.17.1",
+ "rustc-hash",
+]
+
+[[package]]
+name = "bun_ecma_ast"
+version = "0.153.0"
+dependencies = [
+ "bitflags",
+ "bun_arena",
+ "bun_ecma_ast_macros",
+ "bun_ecma_collections",
+ "bun_ecma_diagnostics",
+ "bun_ecma_regexp",
+ "bun_ecma_span",
+ "bun_ecma_str",
+ "bun_ecma_syntax",
+ "bun_estree",
+]
+
+[[package]]
+name = "bun_ecma_ast_macros"
+version = "0.153.0"
+dependencies = [
+ "phf",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
+]
+
+[[package]]
+name = "bun_ecma_ast_visit"
+version = "0.153.0"
+dependencies = [
+ "bun_arena",
+ "bun_ecma_ast",
+ "bun_ecma_span",
+ "bun_ecma_syntax",
+]
+
+[[package]]
+name = "bun_ecma_collections"
+version = "0.153.0"
+
+[[package]]
+name = "bun_ecma_diagnostics"
+version = "0.153.0"
+dependencies = [
+ "bun_ecma_span",
+ "bytecount",
+ "cow-utils",
+ "itoa",
+ "memchr",
+ "percent-encoding",
+ "smallvec",
+ "textwrap",
+ "unicode-segmentation",
+ "unicode-width",
+]
+
+[[package]]
+name = "bun_ecma_parser"
+version = "0.153.0"
+dependencies = [
+ "bitflags",
+ "bun_arena",
+ "bun_ecma_ast",
+ "bun_ecma_collections",
+ "bun_ecma_diagnostics",
+ "bun_ecma_regexp",
+ "bun_ecma_span",
+ "bun_ecma_str",
+ "bun_ecma_syntax",
+ "bun_ecmascript",
+ "cow-utils",
+ "memchr",
+ "num-bigint",
+ "num-traits",
+ "rustc-hash",
+ "seq-macro",
+]
+
+[[package]]
+name = "bun_ecma_regexp"
+version = "0.153.0"
+dependencies = [
+ "bitflags",
+ "bun_arena",
+ "bun_ecma_ast_macros",
+ "bun_ecma_diagnostics",
+ "bun_ecma_span",
+ "bun_ecma_str",
+ "phf",
+ "rustc-hash",
+ "unicode-id-start",
+]
+
+[[package]]
+name = "bun_ecma_span"
+version = "0.153.0"
+dependencies = [
+ "bun_arena",
+ "bun_ecma_ast_macros",
+ "bun_ecma_str",
+ "bun_estree",
+ "compact_str",
+]
+
+[[package]]
+name = "bun_ecma_str"
+version = "0.153.0"
+dependencies = [
+ "bun_arena",
+ "bun_estree",
+ "compact_str",
+ "hashbrown 0.17.1",
+]
+
+[[package]]
+name = "bun_ecma_syntax"
+version = "0.153.0"
+dependencies = [
+ "bitflags",
+ "bun_arena",
+ "bun_ecma_ast_macros",
+ "bun_ecma_span",
+ "bun_ecma_str",
+ "bun_estree",
+ "bun_typed_index",
+ "cow-utils",
+ "dragonbox_ecma",
+ "nonmax",
+ "phf",
+ "unicode-id-start",
+]
+
+[[package]]
+name = "bun_ecmascript"
+version = "0.153.0"
+dependencies = [
+ "bun_ecma_ast",
+ "bun_ecma_collections",
+ "bun_ecma_span",
+ "bun_ecma_syntax",
+ "dragonbox_ecma",
+ "itoa",
+ "num-bigint",
+ "num-traits",
+]
+
+[[package]]
+name = "bun_estree"
+version = "0.153.0"
+
+[[package]]
+name = "bun_typed_index"
+version = "5.0.0"
+dependencies = [
+ "nonmax",
+ "serde",
+]
+
+[[package]]
 name = "bytecount"
 version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -661,202 +829,6 @@ name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
-
-[[package]]
-name = "oxc_allocator"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9222664e7018ba33c0781da9b8b97007afdf86e4702123dde331c0f32168550"
-dependencies = [
- "allocator-api2",
- "hashbrown 0.17.1",
- "oxc_data_structures",
- "rustc-hash",
-]
-
-[[package]]
-name = "oxc_ast"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b02c8089e522e19f85f03e384042b9acd2e7013e125bc11e17ff052160b5ce8"
-dependencies = [
- "bitflags",
- "oxc_allocator",
- "oxc_ast_macros",
- "oxc_data_structures",
- "oxc_diagnostics",
- "oxc_estree",
- "oxc_regular_expression",
- "oxc_span",
- "oxc_str",
- "oxc_syntax",
-]
-
-[[package]]
-name = "oxc_ast_macros"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b795bfdf0b88722a9f0e9a61a9ef6d2ecd115a728f5f0290fcc66da3ec5151ea"
-dependencies = [
- "phf",
- "proc-macro2",
- "quote",
- "syn 3.0.6",
-]
-
-[[package]]
-name = "oxc_ast_visit"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62ee65572c656f232524b4c55c0fe8fc9b54a0f444a40c74727f623aecb2dd54"
-dependencies = [
- "oxc_allocator",
- "oxc_ast",
- "oxc_span",
- "oxc_syntax",
-]
-
-[[package]]
-name = "oxc_data_structures"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6fbea321d618c6b87789cfc19aee4e332525b25420c8c5644ea71f1ffae5e68"
-
-[[package]]
-name = "oxc_diagnostics"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a93ce3ad9aacc728d625990815e41a844e3285c518b8a4508c4f1a423f5251cd"
-dependencies = [
- "bytecount",
- "cow-utils",
- "itoa",
- "memchr",
- "oxc_span",
- "percent-encoding",
- "smallvec",
- "textwrap",
- "unicode-segmentation",
- "unicode-width",
-]
-
-[[package]]
-name = "oxc_ecmascript"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52605e06c9ef037d346a45e89db78f60962e39f26f648b41d930854354ba1e93"
-dependencies = [
- "dragonbox_ecma",
- "itoa",
- "num-bigint",
- "num-traits",
- "oxc_ast",
- "oxc_data_structures",
- "oxc_span",
- "oxc_syntax",
-]
-
-[[package]]
-name = "oxc_estree"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58d091d1d56046eca8741fc89d7e205a9c4c560ff80313be931a6be57edbcc3e"
-
-[[package]]
-name = "oxc_index"
-version = "5.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "191884bee6c3744909a51acc7d78d4ae370d817b25875b10642f632327b6296e"
-dependencies = [
- "nonmax",
- "serde",
-]
-
-[[package]]
-name = "oxc_parser"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71ce9e6d646d84b30f8eb4e1a1b50c69e66f4ef08066c721a3b82a451326bad4"
-dependencies = [
- "bitflags",
- "cow-utils",
- "memchr",
- "num-bigint",
- "num-traits",
- "oxc_allocator",
- "oxc_ast",
- "oxc_data_structures",
- "oxc_diagnostics",
- "oxc_ecmascript",
- "oxc_regular_expression",
- "oxc_span",
- "oxc_str",
- "oxc_syntax",
- "rustc-hash",
- "seq-macro",
-]
-
-[[package]]
-name = "oxc_regular_expression"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "369f33abce8a9a6a49c97a16579d8bb42331f1dd0ea5826412729ab94085c155"
-dependencies = [
- "bitflags",
- "oxc_allocator",
- "oxc_ast_macros",
- "oxc_diagnostics",
- "oxc_span",
- "oxc_str",
- "phf",
- "rustc-hash",
- "unicode-id-start",
-]
-
-[[package]]
-name = "oxc_span"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "152232e21d62e0ddd2a6c23867121c3252e663f05cdc432578d9e1efc52a253b"
-dependencies = [
- "compact_str",
- "oxc_allocator",
- "oxc_ast_macros",
- "oxc_estree",
- "oxc_str",
-]
-
-[[package]]
-name = "oxc_str"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37716fe1827bf766fa68e9f1011408ca0149b90903ae171289c48401229e2f34"
-dependencies = [
- "compact_str",
- "hashbrown 0.17.1",
- "oxc_allocator",
- "oxc_estree",
-]
-
-[[package]]
-name = "oxc_syntax"
-version = "0.153.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2214f0546f6df736d976b611782df7072fbe8010e4f3bbd3b98bee37e814b6a"
-dependencies = [
- "bitflags",
- "cow-utils",
- "dragonbox_ecma",
- "nonmax",
- "oxc_allocator",
- "oxc_ast_macros",
- "oxc_estree",
- "oxc_index",
- "oxc_span",
- "oxc_str",
- "phf",
- "unicode-id-start",
-]
 
 [[package]]
 name = "parking_lot"
@@ -1651,6 +1623,11 @@ version = "1.0.0"
 dependencies = [
  "anyhow",
  "blake3",
+ "bun_arena",
+ "bun_ecma_ast",
+ "bun_ecma_ast_visit",
+ "bun_ecma_parser",
+ "bun_ecma_span",
  "chrono",
  "dashmap",
  "dunce",
@@ -1659,11 +1636,6 @@ dependencies = [
  "libc",
  "notify",
  "notify-debouncer-full",
- "oxc_allocator",
- "oxc_ast",
- "oxc_ast_visit",
- "oxc_parser",
- "oxc_span",
  "parking_lot",
  "rayon",
  "regex",

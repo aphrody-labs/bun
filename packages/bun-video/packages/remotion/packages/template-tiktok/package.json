@@ -6,7 +6,7 @@
 		"dev": "remotion studio",
 		"build": "remotion bundle",
 		"upgrade": "remotion upgrade",
-		"lint": "eslint src && tsc",
+		"lint": "bun lint src && bun check",
 		"create-subtitles": "node sub.mjs"
 	},
 	"repository": {},
@@ -28,9 +28,8 @@
 		"@remotion/captions": "workspace:*",
 		"@types/react": "19.2.7",
 		"@types/web": "0.0.166",
-		"eslint": "9.39.5",
-		"prettier": "3.8.1",
-		"typescript": "5.9.3"
+		"eslint": "9.39.5"
+
 	},
 	"private": true
 }

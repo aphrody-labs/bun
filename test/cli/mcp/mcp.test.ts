@@ -697,7 +697,7 @@ describe("native MCP Jev", () => {
       async fetch(request) {
         expect(new URL(request.url).pathname).toBe("/v1/systemone");
         expect(request.headers.get("authorization")).toBe("Bearer fixture-key");
-        const body = await request.json();
+        const body = (await request.json()) as typeof jevFixtureRequest;
         expect(body.state).toEqual(jevFixtureRequest.state);
         expect(body.questions).toEqual(jevFixtureRequest.questions);
         calls++;

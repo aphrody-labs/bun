@@ -1,0 +1,1 @@
+{"kind":"bun-static-netlink-owner","nativeHost":"linux-x64","libmnlVersion":"1.0.5","libnftnlVersion":"1.2.0","mnlBindingVersion":"0.2.2","nftnlBindingVersion":"0.6.4","socketBindAndOwnedClose":true,"inMemoryRuleRoundtrip":true,"mnlEmbeddedExactlyOnce":true,"noDynamicNetlinkDependency":true,"ELFFloorAtMost217":true,"passed":true,"fullReleaseQualified":false}

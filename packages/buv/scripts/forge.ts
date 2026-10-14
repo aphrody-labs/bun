@@ -69,7 +69,6 @@ export async function main(argv: string[]): Promise<number> {
         if (!artifact) throw new Error("smoke requires --artifact or the assemble step");
         checked = await smoke(resolve(artifact), {
           expectUv: uv.upstreamTag,
-          expectRuff: "0.16.10",
           expectPython: "3.12.15",
           wheel: value("--wheel"),
         });

@@ -26,8 +26,8 @@ databases remain excluded from Git. The graph records unresolved calls explicitl
 it does not infer compatibility from a file, crate or matching hash alone.
 
 Finish the pending native bridge, codec, compiler and plugin gates before marking
-those capabilities ready. The existing package transfer receipt describes its
-historical scope and must not become a receipt for a different runtime.
+those capabilities ready. Current source and runtime receipts describe only the
+artifact they actually qualify.
 
 ## Performance contract
 
@@ -87,12 +87,13 @@ allocator while a shared interpreter is live. Only its owner may initialize and
 finalize it. Leases are tested through cancellation, worker shutdown and extension
 code retaining an exported view; buffers remain valid until the last lease ends.
 
-The current string/JSON bridge is useful but allocates. Add CPython's buffer
-protocol for large numeric arrays and byte buffers with explicit leases, lengths,
-alignment and lifetime checks. Do not use JSON for tensor payloads. Add batched
-calls to amortize GIL and ABI crossings; measure before introducing object handles
-or a result cache. Tensor/device buffers need separate ownership and stream
-synchronization tests before advertising PyTorch/PyCUDA interoperability.
+The string/JSON bridge allocates. `bun:python` therefore exposes CPython's buffer
+protocol for contiguous writable byte buffers with explicit leases, lengths and
+lifetime checks; JSON remains unsuitable for tensor payloads. `evalBatch()`
+amortizes GIL and ABI crossings for bounded groups of scalar results. Measure
+before introducing object handles or a result cache.
+Tensor/device buffers need separate ownership and stream synchronization tests
+before advertising PyTorch/PyCUDA interoperability.
 
 Python workers serialize dependent operations, bound outstanding requests and
 preserve cancellation/shutdown. Offloading protects the JS event loop; it does
@@ -173,7 +174,7 @@ a gate green.
 1. Finish current gates and publish exact evidence for the existing native bridge,
    codecs, source graphs and CPython JSON patch.
 2. Qualify produced EXE/DLL/ELF/WASI artifacts and their dependency closures.
-3. Add leased buffers and batched FFI calls with latency/RSS/event-loop benchmarks.
+3. Extend batched-call and leased-buffer latency/RSS/event-loop benchmarks.
 4. Qualify Python libraries, free-threaded/subinterpreter variants and device buffers
    against a versioned compatibility matrix.
 5. Make promotion gates and rollback automatic on qualified hosts, then broaden

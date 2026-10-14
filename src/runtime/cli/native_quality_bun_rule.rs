@@ -230,7 +230,7 @@ mod tests {
             ("if (obj.x) (() => obj.x)();", 0),
             ("if (obj.x) use(obj.x, obj.x);", 1),
         ] {
-            let parsed = aphrody_oxc_bridge::parse(source, "a.ts").unwrap();
+            let parsed = bun_ecma_api::parse(source, "a.ts").unwrap();
             assert_eq!(
                 super::diagnostics(&parsed, "error").len(),
                 expected,

@@ -43,7 +43,7 @@ import { envify } from "./rust/cargo-env.ts";
 import { emitRustPlan, emitRustUnits, registerRustUnitRules } from "./rust/emit.ts";
 import { emitRustNativeLink } from "./rust/native-link.ts";
 import { type PlanInput, manifestInputPaths, planEnv, planPath, readPlan } from "./rust/plan.ts";
-import { buildRustGraph, linkedRlibs } from "./rust/units.ts";
+import { buildRustGraph, linkedRlibs, type NativeWebPProvider } from "./rust/units.ts";
 import { quote } from "./shell.ts";
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -242,6 +242,8 @@ export interface RustBuildInputs {
    * re-plans — and order-only for every crate edge.
    */
   vendorStamps: string[];
+  /** The same native WebP inputs that Bun.Image links, supplied before Rust bindings build. */
+  nativeWebP?: NativeWebPProvider;
 }
 
 /** The `cargo build` invocation the Rust step plans with (`cargo build <args> --unit-graph`), and what it implies for every unit. */
@@ -811,6 +813,7 @@ export function emitRust(n: Ninja, cfg: Config, inputs: RustBuildInputs): { rlib
   const toolchainBin = (tool: string) => join(rustSysroot, "bin", `${tool}${cfg.host.exeSuffix}`);
   const context = {
     cfg,
+    ...(inputs.nativeWebP !== undefined ? { nativeWebP: inputs.nativeWebP } : {}),
     baseEnv: unitEnv,
     linker: { host: hostLinker(cfg, triple, linker), target: linker },
     // cargo exports CARGO as the toolchain's own binary, not the rustup proxy that found it.

@@ -10,11 +10,11 @@
 		"create-video": "bin.js"
 	},
 	"scripts": {
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
 		"test": "bun test src",
-		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts"
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && bun --env-file=../.env.bundle bundle.ts"
 	},
 	"author": "Jonny Burger <jonny@remotion.dev>",
 	"license": "SEE LICENSE IN LICENSE.md",
@@ -30,8 +30,8 @@
 		"@types/prompts": "2.4.9",
 		"react": "catalog:",
 		"@remotion/eslint-config-internal": "workspace:*",
-		"eslint": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"eslint": "catalog:"
+
 	},
 	"exports": {
 		"./package.json": "./package.json",

@@ -23,6 +23,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
+import { findWorkspaceRoot } from "./workspace-paths.ts";
 
 const REPO = process.env.APHRODY_BUN_REPO ?? "aphrody-labs/bun";
 const windows = process.platform === "win32";
@@ -794,16 +795,8 @@ function isCheckout(dir: string): boolean {
 
 function defaultDir(): string {
   if (process.env.APHRODY_BUN_CHECKOUT) return resolve(process.env.APHRODY_BUN_CHECKOUT);
-
-  for (const start of [process.cwd(), scriptCheckout]) {
-    let current = resolve(start);
-    while (true) {
-      if (existsSync(join(current, "WORKSPACE.md"))) return join(current, "bun");
-      const parent = dirname(current);
-      if (parent === current) break;
-      current = parent;
-    }
-  }
+  const workspace = findWorkspaceRoot(process.cwd(), scriptCheckout);
+  if (workspace) return join(workspace, "bun");
 
   return join(homedir(), "bun");
 }

@@ -1,5 +1,6 @@
 [package]
 name = "cef"
+workspace = ".."
 description = "Use cef in Rust"
 
 version.workspace = true

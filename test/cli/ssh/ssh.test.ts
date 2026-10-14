@@ -227,7 +227,7 @@ describe("bun ssh (in-process client, embedded server)", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, code] = await Promise.all([child.stdout.arrayBuffer(), child.stderr.text(), child.exited]);
+    const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).arrayBuffer(), child.stderr.text(), child.exited]);
     expect(stdout.byteLength).toBeGreaterThan(0);
     expect(stderr).toContain("SHA-256 or size mismatch");
     expect(await Bun.file(target).text()).toBe("preserved target");

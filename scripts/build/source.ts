@@ -466,7 +466,6 @@ export type DepName =
   | "lsquic"
   | "mimalloc"
   | "nodejs"
-  | "oxc"
   | "picohttpparser"
   | "rust-argon2"
   | "sqlite3"

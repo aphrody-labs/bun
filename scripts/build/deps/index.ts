@@ -30,7 +30,6 @@ import { lsqpack } from "./lsqpack.ts";
 import { lsquic } from "./lsquic.ts";
 import { mimalloc } from "./mimalloc.ts";
 import { nodejsHeaders } from "./nodejs-headers.ts";
-import { oxc } from "./oxc.ts";
 import { picohttpparser } from "./picohttpparser.ts";
 import { rustArgon2 } from "./rust-argon2.ts";
 import { uutils } from "./uutils.ts";
@@ -52,7 +51,6 @@ export const allDeps: readonly Dependency[] = [
   // Header-only / source-only first — no link order concerns.
   picohttpparser,
   nodejsHeaders,
-  oxc,
 
   zlib,
   zstd,
@@ -107,7 +105,6 @@ export {
   lsquic,
   mimalloc,
   nodejsHeaders,
-  oxc,
   picohttpparser,
   rustArgon2,
   sqlite,

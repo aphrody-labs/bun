@@ -11,7 +11,6 @@
 
     // JavaScript
     "oven.bun-vscode",
-    "esbenp.prettier-vscode",
 
     // TypeScript
     "better-ts-errors.better-ts-errors",
@@ -28,6 +27,6 @@
     "tamasfe.even-better-toml",
 
     // Other
-    "bierner.comment-tagged-templates",
-  ],
+    "bierner.comment-tagged-templates"
+  ]
 }

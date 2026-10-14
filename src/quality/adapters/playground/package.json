@@ -1,0 +1,56 @@
+{
+  "name": "oxc-playground",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "files": [
+    "browser.js",
+    "index.d.ts",
+    "index.js",
+    "playground.wasi-browser.js",
+    "playground.wasi.cjs",
+    "playground.wasm32-wasi.debug.wasm",
+    "playground.wasm32-wasi.wasm",
+    "wasi-worker-browser.mjs",
+    "wasi-worker.mjs"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "index.d.ts",
+      "browser": "playground.wasi-browser.js",
+      "default": "index.js"
+    },
+    "./*": "./*"
+  },
+  "scripts": {
+    "build-test": "echo 'Skipped because there are no tests.'",
+    "build-dev": "pnpm run build-wasm-dev && node scripts/patch.js",
+    "build": "pnpm run build-wasm-dev --release && node scripts/patch.js",
+    "build-wasm-dev": "napi build --platform --esm --target wasm32-wasip1-threads --dts playground.wasi.d.cts",
+    "postbuild-wasm-dev": "node scripts/patch-wasi-browser.js",
+    "postbuild": "publint"
+  },
+  "dependencies": {
+    "@napi-rs/wasm-runtime": "1.2.4"
+  },
+  "devDependencies": {
+    "@emnapi/core": "2.0.0-alpha.3",
+    "@emnapi/runtime": "2.0.0-alpha.3",
+    "@napi-rs/cli": "3.10.6",
+    "publint": "0.3.24"
+  },
+  "napi": {
+    "binaryName": "playground",
+    "packageName": "@oxc-playground/binding",
+    "targets": [
+      "wasm32-wasip1-threads"
+    ],
+    "wasm": {
+      "browser": {
+        "fs": false,
+        "asyncInit": true
+      }
+    }
+  }
+}

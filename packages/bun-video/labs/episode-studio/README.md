@@ -12,7 +12,7 @@ bun labs/episode-studio/server.ts --episode-dir .local/episodes/beerus-01 --port
 bun test labs/episode-studio/server.test.ts
 bun labs/episode-studio/browser-check.ts
 bun labs/episode-studio/browser-check.ts --check-only
-bunx --no-install tsgo --project labs/episode-studio/tsconfig.json
+bun check --project labs/episode-studio/tsconfig.json --noEmit
 ```
 
 Le serveur écoute uniquement sur `127.0.0.1`. `--port 0` choisit un port libre.

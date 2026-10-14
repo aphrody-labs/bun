@@ -1,5 +1,7 @@
 # CI machine images
 
+Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.
+
 CI's build and test machines start from images baked ahead of time: AWS AMIs for Linux, Azure Compute Gallery images for Windows. Everything about them is in one file, `spec.ts`: what exists, what is on it, how it gets there, and the generator that turns that into the scripts a bake runs. macOS test machines are described there too, but CI does not bake them (see [macOS](#macos)).
 
 ## How `spec.ts` is laid out
@@ -43,7 +45,7 @@ bun test test/internal/source-lints/ci-images.test.ts test/internal/source-lints
 
 ## A tool's identity
 
-The name covers everything `spec.ts` decides; the record adds what is only decided on the day of the bake. So that adding or removing a tool cannot leave the record wrong, `Tool` requires an `identity`, and `tsc` refuses a tool without one:
+The name covers everything `spec.ts` decides; the record adds what is only decided on the day of the bake. So that adding or removing a tool cannot leave the record wrong, `Tool` requires an `identity`, and `bun check` reports a tool without one:
 
 - `pinned(value)`: known in this file (a version, a tag). The value is written into the record as it is.
 - `observed(step)`: only known on the machine. The step is rendered into the script right after the tool's own steps, and what it prints is the record; a tool that observed nothing fails the bake. `treeDigest(...directories)` is the step for something with no version to ask for, like the glibc and musl sysroots, whose packages are whatever the distro serves that day.

@@ -119,7 +119,7 @@ export function markdownInventory(tree: Pick<GitTree, "sha" | "files" | "read">)
       p =>
         p === "package.json" ||
         p === "src/resolve_builtins/HardcodedModule.rs" ||
-        /^(?:packages|vendor)\/.+\/package\.json$/.test(p) ||
+        /^(?:packages|vendor|src)\/.+\/package\.json$/.test(p) ||
         /^(?:LICENSE[^/]*|COPYING[^/]*)$/.test(p),
     )
     .sort();
@@ -137,7 +137,7 @@ export function markdownInventory(tree: Pick<GitTree, "sha" | "files" | "read">)
           throw new TypeError("Package manifest must be a JSON object");
         declaration = parsed;
       } catch (error) {
-        if (!/^vendor\/[^/]+\/.+\/(?:fixtures?|test-fixtures)\//.test(path))
+        if (!/^(?:vendor\/[^/]+|src)\/.+\/(?:fixtures?|test-fixtures)\//.test(path))
           throw new Error(`Invalid product manifest ${path}: ${String(error)}`);
         unresolvedManifests.push({ path, sha256: digest(content), parseError: String(error) });
         return [];
@@ -172,7 +172,7 @@ export function renderRootMarkdown(inventory: ReturnType<typeof markdownInventor
   return new Map([
     [
       "SOURCE-INDEX.md",
-      `# Source index\n\n${provenance}\n## Registered modules\n\n${inventory.modules.map(m => `- \`${quote(m)}\``).join("\n")}\n\n## Package manifests\n\n| Name | Version | Manifest | Private |\n| --- | --- | --- | --- |\n${inventory.packages.map(p => `| ${quote(p.name)} | ${quote(p.version)} | ${p.path} | ${p.private} |`).join("\n")}\n\n## Unresolved vendored fixture manifests\n\nThese source fixtures are retained with their hashes and parse errors; they do not declare qualified packages.\n\n${inventory.unresolvedManifests.map(p => `- ${quote(p.path)}: SHA-256 ${p.sha256}; ${quote(p.parseError)}`).join("\n")}\n\n## Licenses\n\n${inventory.licenses.map(p => `- [${p}](${p})`).join("\n")}\n`,
+      `# Source index\n\n${provenance}\n## Registered modules\n\n${inventory.modules.map(m => `- \`${quote(m)}\``).join("\n")}\n\n## Package manifests\n\n| Name | Version | Manifest | Private |\n| --- | --- | --- | --- |\n${inventory.packages.map(p => `| ${quote(p.name)} | ${quote(p.version)} | ${p.path} | ${p.private} |`).join("\n")}\n\n## Unresolved source fixture manifests\n\nThese source fixtures are retained with their hashes and parse errors; they do not declare qualified packages.\n\n${inventory.unresolvedManifests.map(p => `- ${quote(p.path)}: SHA-256 ${p.sha256}; ${quote(p.parseError)}`).join("\n")}\n\n## Licenses\n\n${inventory.licenses.map(p => `- [${p}](${p})`).join("\n")}\n`,
     ],
     [
       "BUILD-COMMANDS.md",

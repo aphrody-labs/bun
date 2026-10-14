@@ -310,7 +310,7 @@ writeFileSync(
 	basicContent,
 );
 execSync(
-	`bunx oxfmt packages/studio/src/components/Timeline/google-fonts-list.ts --write`,
+	`bun fmt packages/studio/src/components/Timeline/google-fonts-list.ts --write`,
 	{
 		stdio: 'inherit',
 	},

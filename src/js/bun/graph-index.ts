@@ -85,6 +85,7 @@ const protectedParts = new Set([
 let producer: Promise<string> | undefined;
 
 type FileRecord = {
+  git?: import("bun:graph-index").GitSourceFile;
   absolute: string;
   path: string;
   bytes: number;
@@ -254,6 +255,7 @@ function metadataNode(file: FileRecord): RecordNode {
     provenance: file.native && !file.reason ? "EXTRACTED" : "UNRESOLVED",
     hashKind: file.sha256 ? "content-sha256" : "metadata-only",
     unresolvedReason: file.reason,
+    ...(file.git ? { gitBlob: file.git.gitBlob, gitMode: file.git.mode, gitPath: file.git.path } : {}),
   };
 }
 
@@ -370,10 +372,7 @@ async function scan(root: string, options: IndexOptions, maxFiles: number, maxRe
         !stat.isSymbolicLink() &&
         stat.isFile() &&
         stat.size <= maxReadBytes &&
-        (textExtensions.has(extension) ||
-          /(^|\/)(?:LICENSE(?:-[\w.-]+)?|NOTICE|Makefile|BunMakefile|Dockerfile|CMakeLists\.txt|BUILD\.bazel)$/i.test(
-            filePath,
-          ));
+        gitTextFile(filePath, extension);
       const native = readable && nativeExtensions.has(extension);
       let reason = stat.isSymbolicLink()
         ? "symlink-metadata-only"
@@ -405,6 +404,112 @@ async function scan(root: string, options: IndexOptions, maxFiles: number, maxRe
   if (requested)
     for (const name of requested) if (!domains.has(name)) throw new Error(`Unknown or empty source domain ${name}`);
   return [...domains.values()].sort((a, b) => a.name.localeCompare(b.name, "en"));
+}
+
+function gitTextFile(path: string, extension: string) {
+  return (
+    textExtensions.has(extension) ||
+    /(^|\/)(?:LICENSE(?:-[\w.-]+)?|NOTICE|Makefile|BunMakefile|Dockerfile|CMakeLists\.txt|BUILD\.bazel)$/i.test(path)
+  );
+}
+async function gitDomains(root: string, options: IndexOptions, maxFiles: number, maxReadBytes: number) {
+  const input = options.input!;
+  if (
+    input.kind !== "git" ||
+    !["oven-sh/bun", "aphrody-labs/bun"].includes(input.repository) ||
+    !/^[a-f0-9]{40}$/.test(input.revision) ||
+    typeof input.readFile !== "function" ||
+    !input.files?.[Symbol.asyncIterator]
+  )
+    throw new TypeError("Pinned public Bun Git input is invalid");
+  const domains = new Map<string, Domain>(),
+    paths = new Set<string>();
+  const requested = options.domains ? new Set(options.domains) : undefined;
+  let total = 0,
+    selected = 0;
+  for await (const file of input.files) {
+    options.signal?.throwIfAborted();
+    validateRelativePath(file.path, "Git path");
+    if (++total > maxFiles || paths.has(file.path))
+      throw new RangeError("Git input exceeds maxFiles or repeats a path");
+    paths.add(file.path);
+    if (
+      !["100644", "100755", "120000", "160000"].includes(file.mode) ||
+      !/^[a-f0-9]{40}$/.test(file.gitBlob) ||
+      !Number.isSafeInteger(file.bytes) ||
+      file.bytes < 0 ||
+      (file.sha256 != null && !/^[a-f0-9]{64}$/.test(file.sha256))
+    )
+      throw new TypeError("Invalid pinned Git file descriptor");
+    if ((options.excludePaths ?? []).some(path => file.path === path || file.path.startsWith(path + "/"))) continue;
+    if (options.surfaces && !options.surfaces.some(path => file.path.startsWith(path + "/"))) continue;
+    const parts = file.path.split("/");
+    const surface = parts.length === 1 ? "root" : parts[0]!;
+    const name = parts.length > 2 ? parts.slice(0, 2).join("/") : surface;
+    if (requested && !requested.has(name)) continue;
+    const prefix = name === "root" ? "" : name + "/";
+    const path = file.path.startsWith(prefix) ? file.path.slice(prefix.length) : file.path;
+    const extension = extname(path).slice(1).toLowerCase();
+    // Public committed skills are authorized source; filesystem scans and provider stores remain protected.
+    const publicSkill = /(^|\/)\.(?:claude|codex|agents)\/skills\//i.test(file.path);
+    const protectedPath =
+      (!publicSkill && parts.some(part => protectedParts.has(part.toLowerCase()))) ||
+      /(^|\/)(?:\.env(?:\.|$)|.*\.(?:pem|key|pfx|p12)$)/i.test(file.path);
+    const regular = file.mode === "100644" || file.mode === "100755";
+    const readable = regular && !protectedPath && file.bytes <= maxReadBytes && gitTextFile(path, extension);
+    const native = readable && nativeExtensions.has(extension);
+    const reason = !regular
+      ? file.mode === "160000"
+        ? "gitlink-metadata-only"
+        : "symlink-metadata-only"
+      : protectedPath
+        ? "protected-metadata-only"
+        : !readable
+          ? "binary-or-size-metadata-only"
+          : !native
+            ? "unsupported-native-format"
+            : null;
+    let domain = domains.get(name);
+    if (!domain)
+      domains.set(
+        name,
+        (domain = { name, root: join(root, ...(name === "root" ? [] : name.split("/"))), surface, files: [] }),
+      );
+    domain.files.push({
+      absolute: join(root, ...file.path.split("/")),
+      path,
+      bytes: file.bytes,
+      mtime: 0,
+      sha256: file.sha256 ?? null,
+      native,
+      readable,
+      reason,
+      git: Object.freeze({ ...file }),
+    });
+    selected++;
+    if (total % 1000 === 0) await scheduler.yield();
+  }
+  if (!total) throw new Error("Pinned Git input is empty");
+  if (requested)
+    for (const domain of requested) if (!domains.has(domain)) throw new Error("Unknown Git source domain " + domain);
+  return { domains: [...domains.values()].sort((a, b) => a.name.localeCompare(b.name, "en")), total, selected };
+}
+async function gitBytes(file: FileRecord, options: IndexOptions) {
+  const input = options.input!;
+  const git = file.git!;
+  const bytes = await input.readFile(git, options.signal);
+  if (
+    bytes.length !== file.bytes ||
+    bytes.length > (options.maxReadBytes ?? 16 * 1024 * 1024) ||
+    new Bun.CryptoHasher("sha1")
+      .update("blob " + file.bytes + "\0")
+      .update(bytes)
+      .digest("hex") !== git.gitBlob
+  )
+    throw new Error("Pinned Git blob size or identity changed: " + git.path);
+  const actual = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+  if (file.sha256 && actual !== file.sha256) throw new Error("Pinned Git SHA-256 mismatch: " + git.path);
+  return { bytes, sha256: actual };
 }
 
 async function indexDomain(
@@ -453,7 +558,20 @@ async function indexDomain(
   const stems = new Map<string, FileRecord[]>();
   for (const file of domain.files) {
     signal?.throwIfAborted();
-    if (file.readable) {
+    if (file.readable && file.git) {
+      const content = await gitBytes(file, options);
+      file.sha256 = content.sha256;
+      try {
+        new TextDecoder("utf-8", { fatal: true }).decode(content.bytes);
+        coverage.hashedSourceBytes += file.bytes;
+      } catch {
+        file.sha256 = null;
+        file.native = false;
+        file.readable = false;
+        file.reason = "invalid-utf8-metadata-only";
+        coverage.parseErrors++;
+      }
+    } else if (file.readable) {
       const before = await lstat(file.absolute);
       if (before.isSymbolicLink() || !before.isFile() || !contained(sourceRoot, await realpath(file.absolute)))
         throw new Error(`Source path changed before hashing: ${file.path}`);
@@ -502,11 +620,19 @@ async function indexDomain(
       maxAstDepth,
       maxNodes,
       maxEdges,
+      ...(options.input ? { inputKind: "git", inputRepository: options.input.repository } : {}),
     }),
   );
   for (const file of domain.files)
     digest.update(
-      JSON.stringify([file.path, file.sha256, file.bytes, file.sha256 ? null : file.mtime, file.reason]) + "\n",
+      JSON.stringify([
+        file.path,
+        file.sha256,
+        file.bytes,
+        file.sha256 ? null : file.mtime,
+        file.reason,
+        ...(file.git ? [file.git.gitBlob, file.git.mode] : []),
+      ]) + "\n",
     );
   const inputSHA256 = digest.digest("hex");
   const repository = registry.repository(`${namespace}/${domain.name}`, "source", domain.root, revision, {
@@ -515,8 +641,8 @@ async function indexDomain(
     source: scope.source,
     surface: domain.surface,
     dirty,
-    dirtyScope: options.surfaces ? "selected-surfaces" : "src-and-packages",
-    dirtySurfaces: options.surfaces ?? ["src", "packages"],
+    dirtyScope: options.input ? "pinned-git-snapshot" : options.surfaces ? "selected-surfaces" : "src-and-packages",
+    dirtySurfaces: options.input ? (options.surfaces ?? ["all-git-paths"]) : (options.surfaces ?? ["src", "packages"]),
   });
   const insert = registry.db.query(
     "INSERT INTO files VALUES(?,?,?,?,?,?,?) ON CONFLICT(repository_id,path) DO UPDATE SET sha256=excluded.sha256,language=excluded.language,bytes=excluded.bytes,metadata=excluded.metadata",
@@ -685,12 +811,16 @@ async function indexDomain(
     signal?.throwIfAborted();
     if (!file.native) continue;
     if (chunk.length >= filesPerChunk || chunkBytes + file.bytes > sourceBytesPerChunk) await flush();
-    const stat = await lstat(file.absolute);
-    if (stat.isSymbolicLink() || stat.size !== file.bytes || !contained(sourceRoot, await realpath(file.absolute)))
-      throw new Error(`Source path changed before extraction: ${file.path}`);
-    const bytes = await Bun.file(file.absolute)
-      .slice(0, file.bytes + 1)
-      .bytes();
+    let bytes: Uint8Array;
+    if (file.git) bytes = (await gitBytes(file, options)).bytes;
+    else {
+      const stat = await lstat(file.absolute);
+      if (stat.isSymbolicLink() || stat.size !== file.bytes || !contained(sourceRoot, await realpath(file.absolute)))
+        throw new Error("Source path changed before extraction: " + file.path);
+      bytes = await Bun.file(file.absolute)
+        .slice(0, file.bytes + 1)
+        .bytes();
+    }
     if (bytes.length !== file.bytes || new Bun.CryptoHasher("sha256").update(bytes).digest("hex") !== file.sha256)
       throw new Error(`Source changed before extraction: ${file.path}`);
     let content: string;
@@ -720,14 +850,15 @@ async function indexDomain(
     inputSHA256,
     producerSHA256,
     producerHashKind: "runtime-executable",
-    revisionSource: options.revision ? "explicit-verified-when-git" : "git-head",
+    revisionSource: options.input ? "pinned-git-object" : options.revision ? "explicit-verified-when-git" : "git-head",
     dirty,
-    dirtyScope: options.surfaces ? "selected-surfaces" : "src-and-packages",
-    dirtySurfaces: options.surfaces ?? ["src", "packages"],
+    dirtyScope: options.input ? "pinned-git-snapshot" : options.surfaces ? "selected-surfaces" : "src-and-packages",
+    dirtySurfaces: options.input ? (options.surfaces ?? ["all-git-paths"]) : (options.surfaces ?? ["src", "packages"]),
     sourceBytes: coverage.sourceBytes,
     hashedSourceBytes: coverage.hashedSourceBytes,
     sourceIdentity: "immutable-file-sha256",
-    sourceConsistency: "per-file-observation",
+    sourceConsistency: options.input ? "pinned-git-object" : "per-file-observation",
+    ...(options.input ? { inputKind: "git", inputRepository: options.input.repository } : {}),
   };
   const artifact = await writeGraph(
     join(artifactDirectory, new Bun.CryptoHasher("sha256").update(scope.source).digest("hex")),
@@ -792,7 +923,7 @@ async function indexCodebase(registry: Registry, root: string, options: IndexOpt
     throw new TypeError("namespace must be a short identifier (letters, numbers, dot, underscore, hyphen)");
   options.signal?.throwIfAborted();
   const sourceRoot = await realpath(root);
-  const surfaces = options.surfaces ?? ["src", "packages"];
+  const surfaces = options.surfaces ?? (options.input ? ["root"] : ["src", "packages"]);
   if (!Array.isArray(surfaces) || surfaces.length === 0 || surfaces.length > 1024)
     throw new TypeError("surfaces must contain between 1 and 1024 relative directory paths");
   for (const surface of surfaces) validateRelativePath(surface, "surface");
@@ -812,10 +943,9 @@ async function indexCodebase(registry: Registry, root: string, options: IndexOpt
       }))
   )
     throw new TypeError("Invalid source domain selection");
-  const [actualRevision, dirty] = await Promise.all([
-    revisionAt(sourceRoot, options.signal),
-    dirtyAt(sourceRoot, surfaces, options.signal),
-  ]);
+  const [actualRevision, dirty] = options.input
+    ? ([options.input.revision, null] as const)
+    : await Promise.all([revisionAt(sourceRoot, options.signal), dirtyAt(sourceRoot, surfaces, options.signal)]);
   if (options.revision && actualRevision && options.revision !== actualRevision)
     throw new Error("Explicit source revision differs from Git HEAD");
   const revision = options.revision ?? actualRevision;
@@ -832,7 +962,7 @@ async function indexCodebase(registry: Registry, root: string, options: IndexOpt
   const physicalSurfaces = await Promise.all(
     surfaces.map(surface => canonicalDestination(resolve(sourceRoot, ...surface.split("/")), options.signal)),
   );
-  for (const directory of [artifactDirectory, physicalArtifactDirectory]) {
+  for (const directory of options.input ? [] : [artifactDirectory, physicalArtifactDirectory]) {
     const artifactRelativePath = canonical(relative(sourceRoot, directory));
     const artifactExcluded = excluded.some(
       path => artifactRelativePath === path || artifactRelativePath.startsWith(`${path}/`),
@@ -845,14 +975,43 @@ async function indexCodebase(registry: Registry, root: string, options: IndexOpt
       throw new Error("Graph artifacts cannot be written inside indexed source surfaces");
   }
   producer ??= hashFile(process.execPath);
-  const [domains, producerSHA256] = await Promise.all([scan(sourceRoot, options, maxFiles, maxReadBytes), producer]);
+  const git = options.input ? await gitDomains(sourceRoot, options, maxFiles, maxReadBytes) : null;
+  const [domains, producerSHA256] = await Promise.all([
+    git ? Promise.resolve(git.domains) : scan(sourceRoot, options, maxFiles, maxReadBytes),
+    producer,
+  ]);
   const results = await parallel(domains, concurrency, options.signal, domain =>
     indexDomain(registry, domain, revision, options, producerSHA256, artifactDirectory, dirty, sourceRoot),
   );
-  const finishedRevision = actualRevision ? await revisionAt(sourceRoot, options.signal) : revision;
+  const finishedRevision = options.input
+    ? options.input.revision
+    : actualRevision
+      ? await revisionAt(sourceRoot, options.signal)
+      : revision;
   if (finishedRevision !== revision)
     throw new Error("Git HEAD changed during source indexing; inspect exact published domain snapshots");
-  return { root: sourceRoot, profile: "bun", namespace, surfaces, revision, dirty, producerSHA256, domains: results };
+  return {
+    root: sourceRoot,
+    profile: "bun",
+    namespace,
+    surfaces: git ? [...new Set(git.domains.map(d => d.surface))] : surfaces,
+    revision,
+    dirty,
+    producerSHA256,
+    domains: results,
+    ...(git
+      ? {
+          input: {
+            kind: "git" as const,
+            repository: options.input!.repository,
+            revision,
+            files: git.total,
+            selectedFiles: git.selected,
+            fileCoverageComplete: git.total === git.selected,
+          },
+        }
+      : {}),
+  };
 }
 
 export default { indexCodebase };

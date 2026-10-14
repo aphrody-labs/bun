@@ -1,0 +1,44 @@
+[package]
+edition = "2024"
+rust-version = "1.95.0"
+name = "bun_toml_formatter"
+version = "0.14.6"
+authors = ["Boshen"]
+build = false
+include = ["src/**/*", "LICENSE", "README.md", "CHANGELOG.md"]
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "A TOML formatter library"
+homepage.workspace = true
+readme = "README.md"
+keywords = ["toml", "formatter"]
+categories = ["parser-implementations", "parsing"]
+license = "MIT"
+repository.workspace = true
+publish = false
+
+[lib]
+name = "oxc_toml"
+path = "src/lib.rs"
+test = false
+doctest = false
+
+[dev-dependencies.ignore]
+version = "0.4"
+
+[dev-dependencies.insta]
+version = "1.45"
+
+[dev-dependencies.toml]
+version = "1.0.0"
+
+[dev-dependencies.walkdir]
+version = "2"
+
+[package.metadata.bun.upstream]
+package = "oxc-toml"
+repository = "https://github.com/oxc-project/oxc-toml"
+homepage = "https://github.com/oxc-project/oxc-toml"

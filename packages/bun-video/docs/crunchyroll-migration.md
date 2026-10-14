@@ -92,6 +92,17 @@ The API does not implement DRM, license acquisition or media playback. Generated
 routes and synthetic tests are separate from qualification against an actual
 authorized Crunchyroll account and supported browser environment.
 
+## Private export to Shenron
+
+`bun packages/bun-video/labs/crunchyroll-shenron-watchlist.ts` reads cookies from
+the encrypted Windows vault, fetches `/fr/watchlist` with redirects restricted to
+Crunchyroll, and writes observed references and titles to
+`C:\shenron\data\home\imports`. This private metadata artifact is not ingested
+into Shenron's database or editorial catalog. Cookie values are never exported.
+An HTTP 401/403, a page with no references, or an access error stops the pipeline
+without creating a file. The report marks authentication as unqualified: page
+content alone does not prove which account returned it.
+
 The native TypeScript client in `src/crunchyroll.ts` implements every public function
 from the inspected MIT-licensed `crunchyroll.js` 1.1.1 migration baseline: `login`, `getProfile`,
 `getAnime`, `getSeasons`, `getEpisodes`, `getCategories`, `getRate`, `getSimilar`,

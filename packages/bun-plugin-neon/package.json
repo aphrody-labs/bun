@@ -33,7 +33,7 @@
   },
   "scripts": {
     "test": "bun test ./test",
-    "check:types": "tsc --noEmit"
+    "check:types": "bun check --noEmit"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0"

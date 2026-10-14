@@ -26,6 +26,7 @@ export function nativeLinkResponse(args: string[]): string {
 export function nativeLinkArguments(
   outputs: (Pick<BuildScriptOutput, "linkLibs" | "linkSearch"> & { cwd: string })[],
   platform: "linux" | "windows" = "linux",
+  staticSQLite = false,
 ): string[] {
   const args: string[] = [];
   // Search directories precede libraries, preserving Cargo's order (no sorting or library deduplication).
@@ -64,6 +65,14 @@ export function nativeLinkArguments(
         assert(!mods.get("whole-archive"), `Bundled whole-archive requires rustc final linking: ${spec}`);
         continue;
       }
+      if (staticSQLite && name === "sqlite3") {
+        // Bun's final link already provides the canonical SQLite archive or object.
+        assert(
+          mods.size === 0 || (kind === "static" && mods.size === 1 && mods.get("bundle") === false),
+          `Unsupported native SQLite owner modifiers: ${spec}`,
+        );
+        continue;
+      }
       if (platform === "windows") {
         assert(!mods.has("as-needed"), `as-needed is not supported by the Windows linker: ${spec}`);
         const library = mods.get("verbatim") ? name : `${name}.lib`;
@@ -99,10 +108,15 @@ export function emitRustNativeLink(n: Ninja, cfg: Config, graph: RustGraph): str
   const script = import.meta.filename;
   const manifest = resolve(graph.dir, "native-link.json");
   const response = resolve(graph.dir, "native-link.rsp");
+  const sqliteInput = !cfg.staticSqlite
+    ? undefined
+    : cfg.archiveDeps
+      ? resolve(cfg.buildDir, "deps/sqlite3", `${cfg.libPrefix}sqlite3${cfg.libSuffix}`)
+      : resolve(cfg.buildDir, `obj/src/jsc/bindings/sqlite/sqlite3.c${cfg.objSuffix}`);
   writeIfChanged(manifest, JSON.stringify([...scripts.values()], null, 2) + "\n");
   const hostWindows = cfg.host.os === "windows";
   n.rule("rust_native_link", {
-    command: `${quote(cfg.bun, hostWindows)} ${quote(script, hostWindows)} $manifest $out ${cfg.windows ? "windows" : "linux"}`,
+    command: `${quote(cfg.bun, hostWindows)} ${quote(script, hostWindows)} $manifest $out ${cfg.windows ? "windows" : "linux"}${sqliteInput === undefined ? "" : " static-sqlite"}`,
     description: "Rust native link inputs $out",
     restat: true,
   });
@@ -110,7 +124,13 @@ export function emitRustNativeLink(n: Ninja, cfg: Config, graph: RustGraph): str
     outputs: [response],
     rule: "rust_native_link",
     inputs: [...scripts.keys()],
-    implicitInputs: [manifest, script, resolve(import.meta.dir, "../fs.ts"), resolve(import.meta.dir, "../error.ts")],
+    implicitInputs: [
+      manifest,
+      script,
+      resolve(import.meta.dir, "../fs.ts"),
+      resolve(import.meta.dir, "../error.ts"),
+      ...(sqliteInput === undefined ? [] : [sqliteInput]),
+    ],
     vars: { manifest: quote(manifest, hostWindows) },
   });
   return response;
@@ -118,15 +138,16 @@ export function emitRustNativeLink(n: Ninja, cfg: Config, graph: RustGraph): str
 
 if (import.meta.main) {
   try {
-    const [manifest, response, platform = "linux"] = process.argv.slice(2);
+    const [manifest, response, platform = "linux", sqliteOwner] = process.argv.slice(2);
     assert(platform === "linux" || platform === "windows", "Unsupported Rust native linker platform");
+    assert(sqliteOwner === undefined || sqliteOwner === "static-sqlite", "Unsupported Rust SQLite owner");
     assert(manifest !== undefined && response !== undefined, "native-link.ts requires a manifest and response path");
     const scripts = JSON.parse(readFileSync(manifest, "utf8")) as { output: string; cwd: string }[];
     const outputs = scripts.map(({ output, cwd }) => ({
       ...(JSON.parse(readFileSync(output, "utf8")) as BuildScriptOutput),
       cwd,
     }));
-    writeIfChanged(response, nativeLinkResponse(nativeLinkArguments(outputs, platform)));
+    writeIfChanged(response, nativeLinkResponse(nativeLinkArguments(outputs, platform, sqliteOwner !== undefined)));
   } catch (error) {
     process.stderr.write(error instanceof BuildError ? error.format() : `${error}\n`);
     process.exitCode = 1;

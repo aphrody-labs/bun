@@ -22,7 +22,7 @@ const inputs = [
   "src/js/bun/graphx.ts",
   "src/runtime/cli/uv_command.rs",
   "src/runtime/cli/python_compile.rs",
-  "packages/buv/crates/buv-runtime/py/compile.py",
+  "src/runtime/cli/python_compile.py",
   "packages/bun-python-native/wasm/build.ts",
   "packages/buv/PLAN.md",
   "scripts/aphrody/graph-docs.ts",

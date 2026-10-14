@@ -149,7 +149,7 @@ packs SDK sources and Boq rather than the entire transferred application tree.
 Interactive PKCE login remains with the original process owner; native replacement
 requires faithful callback/refresh qualification.
 
-Run scoped strict TypeScript, oxlint, oxfmt and `bun bd -j1 test ./packages/bun-google/test`
+Run `bun check`, `bun lint`, `bun fmt` and `bun bd -j1 test ./packages/bun-google/test`
 from the root. Tests use mocked stores and loopback HTTP, never live credentials.
 Source version 1.4.4, registry availability and native release receipts qualify separately;
 see [publication boundary](../../docs/project/google-browser-publication.md).

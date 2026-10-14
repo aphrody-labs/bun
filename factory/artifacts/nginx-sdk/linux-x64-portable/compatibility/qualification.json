@@ -1,0 +1,209 @@
+{
+  "schema": 1,
+  "kind": "bun-canonical-glibc-adapter-qualification",
+  "measuredAt": "2026-10-13T21:15:30.095Z",
+  "sourceBase": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+  "sourceSnapshotDirty": true,
+  "source": [
+    {
+      "path": "/home/ubuntu/build/bun-os-obscura-4634063/src/jsc/bindings/workaround-missing-symbols.cpp",
+      "bytes": 23317,
+      "sha256": "e6cab5c4aac15f496a88d2ac6e307acb87a836e01ab62051f01caa196d77c226"
+    },
+    {
+      "path": "/home/ubuntu/build/bun-os-obscura-4634063/test/integration/glibc-compat/probe.cpp",
+      "bytes": 9304,
+      "sha256": "1d1034b704a1a3f9430b0daddfdff3bbcb96eb95fc5deb94a911678af8d95091"
+    },
+    {
+      "path": "/home/ubuntu/build/bun-os-obscura-4634063/test/integration/glibc-compat/run.sh",
+      "bytes": 2540,
+      "sha256": "9bd44ae220e2607427f263b0c6baa2b8f09f25772291de9b5106355d7120b073"
+    }
+  ],
+  "abiOwner": {
+    "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/qualification-owner/media-sdk-abi.ts",
+    "bytes": 4664,
+    "sha256": "f4615233b1a486b4e1d8cd747e6078facbae2adc1d6fa21f93e4a5f9e018d2df"
+  },
+  "records": [
+    {
+      "target": "linux-x64",
+      "binary": {
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-x64-probe",
+        "bytes": 166809,
+        "sha256": "9314ae5e1251cc76b7a459748f197a79e49d12ac271798ee1ac4926dbcc929f1"
+      },
+      "execution": {
+        "command": [
+          "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-x64-probe"
+        ],
+        "out": "glob64 native callback parity stat=2 lstat=1\nGNU gettid/entropy256/EINTR/ENOSYS/device/errno/EOF/FD/fortify/erase/glob64/ALTDIR/stat64 PASS\n",
+        "err": "*** buffer overflow detected ***: terminated\n",
+        "mode": "native-host"
+      },
+      "abi": {
+        "schema": 1,
+        "target": "linux-x64",
+        "libc": "gnu",
+        "releaseGLIBCFloor": "2.17",
+        "maximumGLIBC": "2.17",
+        "files": [
+          {
+            "file": "bin/linux-x64-probe",
+            "sha256": "9314ae5e1251cc76b7a459748f197a79e49d12ac271798ee1ac4926dbcc929f1",
+            "minimumGLIBC": "2.17",
+            "needed": [
+              "libdl.so.2",
+              "libpthread.so.0",
+              "libm.so.6",
+              "libc.so.6",
+              "ld-linux-x86-64.so.2"
+            ],
+            "rpath": "$ORIGIN/../lib"
+          }
+        ]
+      },
+      "object": {
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-x64.o",
+        "bytes": 32304,
+        "sha256": "2ca928e669a395f8fc7aa9c02326f639f4a40789bcaa541f587941ebb26d9ea3"
+      },
+      "erasureAssembly": "\n/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-x64.o:\tfile format elf64-x86-64\n\nDisassembly of section .text.__wrap___explicit_bzero_chk:\n\n0000000000000000 <__wrap___explicit_bzero_chk>:\n       0: 50                           \tpushq\t%rax\n       1: 48 39 d6                     \tcmpq\t%rdx, %rsi\n       4: 77 68                        \tja\t0x6e <__wrap___explicit_bzero_chk+0x6e>\n       6: 48 85 f6                     \ttestq\t%rsi, %rsi\n       9: 74 61                        \tje\t0x6c <__wrap___explicit_bzero_chk+0x6c>\n       b: 89 f0                        \tmovl\t%esi, %eax\n       d: 83 e0 07                     \tandl\t$0x7, %eax\n      10: 48 83 fe 08                  \tcmpq\t$0x8, %rsi\n      14: 73 04                        \tjae\t0x1a <__wrap___explicit_bzero_chk+0x1a>\n      16: 31 c9                        \txorl\t%ecx, %ecx\n      18: eb 3b                        \tjmp\t0x55 <__wrap___explicit_bzero_chk+0x55>\n      1a: 48 83 e6 f8                  \tandq\t$-0x8, %rsi\n      1e: 31 c9                        \txorl\t%ecx, %ecx\n      20: c6 04 0f 00                  \tmovb\t$0x0, (%rdi,%rcx)\n      24: c6 44 0f 01 00               \tmovb\t$0x0, 0x1(%rdi,%rcx)\n      29: c6 44 0f 02 00               \tmovb\t$0x0, 0x2(%rdi,%rcx)\n      2e: c6 44 0f 03 00               \tmovb\t$0x0, 0x3(%rdi,%rcx)\n      33: c6 44 0f 04 00               \tmovb\t$0x0, 0x4(%rdi,%rcx)\n      38: c6 44 0f 05 00               \tmovb\t$0x0, 0x5(%rdi,%rcx)\n      3d: c6 44 0f 06 00               \tmovb\t$0x0, 0x6(%rdi,%rcx)\n      42: c6 44 0f 07 00               \tmovb\t$0x0, 0x7(%rdi,%rcx)\n      47: 48 83 c1 08                  \taddq\t$0x8, %rcx\n      4b: 48 39 ce                     \tcmpq\t%rcx, %rsi\n      4e: 75 d0                        \tjne\t0x20 <__wrap___explicit_bzero_chk+0x20>\n      50: 48 85 c0                     \ttestq\t%rax, %rax\n      53: 74 17                        \tje\t0x6c <__wrap___explicit_bzero_chk+0x6c>\n      55: 48 01 cf                     \taddq\t%rcx, %rdi\n      58: 31 c9                        \txorl\t%ecx, %ecx\n      5a: 66 0f 1f 44 00 00            \tnopw\t(%rax,%rax)\n      60: c6 04 0f 00                  \tmovb\t$0x0, (%rdi,%rcx)\n      64: 48 ff c1                     \tincq\t%rcx\n      67: 48 39 c8                     \tcmpq\t%rcx, %rax\n      6a: 75 f4                        \tjne\t0x60 <__wrap___explicit_bzero_chk+0x60>\n      6c: 58                           \tpopq\t%rax\n      6d: c3                           \tretq\n      6e: e8 00 00 00 00               \tcallq\t0x73 <__wrap___explicit_bzero_chk+0x73>\n"
+    },
+    {
+      "target": "linux-arm64",
+      "binary": {
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-arm64-probe",
+        "bytes": 199545,
+        "sha256": "1ff8f0136a0e4906382c2a97c1e921e7416fbde2d3fc20c2324def3136328777"
+      },
+      "execution": {
+        "command": [
+          "qemu-aarch64",
+          "-L",
+          "/opt/linux-sysroot-glibc-arm64",
+          "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-arm64-probe"
+        ],
+        "out": "glob64 native callback parity stat=2 lstat=0\nGNU gettid/entropy256/EINTR/ENOSYS/device/errno/EOF/FD/fortify/erase/glob64/ALTDIR/stat64 PASS\n",
+        "err": "*** buffer overflow detected ***: terminated\nqemu: uncaught target signal 6 (Aborted) - core dumped\n",
+        "mode": "qemu-user"
+      },
+      "abi": {
+        "schema": 1,
+        "target": "linux-arm64",
+        "libc": "gnu",
+        "releaseGLIBCFloor": "2.17",
+        "maximumGLIBC": "2.17",
+        "files": [
+          {
+            "file": "bin/linux-arm64-probe",
+            "sha256": "1ff8f0136a0e4906382c2a97c1e921e7416fbde2d3fc20c2324def3136328777",
+            "minimumGLIBC": "2.17",
+            "needed": [
+              "libdl.so.2",
+              "libpthread.so.0",
+              "libm.so.6",
+              "libc.so.6",
+              "ld-linux-aarch64.so.1"
+            ],
+            "rpath": "$ORIGIN/../lib"
+          }
+        ]
+      },
+      "object": {
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-arm64.o",
+        "bytes": 36104,
+        "sha256": "0a671234596ff3f61c130dab05a9e0019c31756d0ee074b8f60f494bb2270367"
+      },
+      "erasureAssembly": "\n/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-arm64.o:\tfile format elf64-littleaarch64\n\nDisassembly of section .text.__wrap___explicit_bzero_chk:\n\n0000000000000000 <__wrap___explicit_bzero_chk>:\n       0: a9bf7bfd     \tstp\tx29, x30, [sp, #-0x10]!\n       4: 910003fd     \tmov\tx29, sp\n       8: eb02003f     \tcmp\tx1, x2\n       c: 54000108     \tb.hi\t0x2c <__wrap___explicit_bzero_chk+0x2c>\n      10: b40000a1     \tcbz\tx1, 0x24 <__wrap___explicit_bzero_chk+0x24>\n      14: f1000421     \tsubs\tx1, x1, #0x1\n      18: 3900001f     \tstrb\twzr, [x0]\n      1c: 91000400     \tadd\tx0, x0, #0x1\n      20: 54ffffa1     \tb.ne\t0x14 <__wrap___explicit_bzero_chk+0x14>\n      24: a8c17bfd     \tldp\tx29, x30, [sp], #0x10\n      28: d65f03c0     \tret\n      2c: 94000000     \tbl\t0x2c <__wrap___explicit_bzero_chk+0x2c>\n"
+    },
+    {
+      "target": "linux-x64-musl",
+      "binary": {
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-x64-musl-probe",
+        "bytes": 158856,
+        "sha256": "a12d1207f441c4ec588f769c5bc60a32ce7240541ba0a2bd08ba2e62083ddb5e"
+      },
+      "execution": {
+        "command": [
+          "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-x64-musl-probe"
+        ],
+        "out": "musl gettid PASS; GNU-only compatibility adapters excluded\n",
+        "err": "",
+        "mode": "native-host"
+      },
+      "abi": {
+        "schema": 1,
+        "target": "linux-x64-musl",
+        "libc": "musl",
+        "releaseGLIBCFloor": null,
+        "maximumGLIBC": null,
+        "files": [
+          {
+            "file": "bin/linux-x64-musl-probe",
+            "sha256": "a12d1207f441c4ec588f769c5bc60a32ce7240541ba0a2bd08ba2e62083ddb5e",
+            "minimumGLIBC": null,
+            "needed": [],
+            "rpath": null
+          }
+        ]
+      },
+      "object": {
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-x64-musl.o",
+        "bytes": 1416,
+        "sha256": "5871028aade58d69dda45137f860fa2a1150d0eb6f97b1db853692b4b2855e63"
+      },
+      "erasureAssembly": "\n/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-x64-musl.o:\tfile format elf64-x86-64\n"
+    },
+    {
+      "target": "linux-arm64-musl",
+      "binary": {
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-arm64-musl-probe",
+        "bytes": 175304,
+        "sha256": "9f1be2993549827ae736a7ea953f8251f27ab197c5051e02168a72e1783be9d8"
+      },
+      "execution": {
+        "command": [
+          "qemu-aarch64",
+          "-L",
+          "/opt/linux-sysroot-musl-arm64",
+          "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-arm64-musl-probe"
+        ],
+        "out": "musl gettid PASS; GNU-only compatibility adapters excluded\n",
+        "err": "",
+        "mode": "qemu-user"
+      },
+      "abi": {
+        "schema": 1,
+        "target": "linux-arm64-musl",
+        "libc": "musl",
+        "releaseGLIBCFloor": null,
+        "maximumGLIBC": null,
+        "files": [
+          {
+            "file": "bin/linux-arm64-musl-probe",
+            "sha256": "9f1be2993549827ae736a7ea953f8251f27ab197c5051e02168a72e1783be9d8",
+            "minimumGLIBC": null,
+            "needed": [],
+            "rpath": null
+          }
+        ]
+      },
+      "object": {
+        "path": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-arm64-musl.o",
+        "bytes": 1552,
+        "sha256": "b230fbbfcc374a7f2a011ec284a91295cbf98a1814feaa3465d7915750b26c16"
+      },
+      "erasureAssembly": "\n/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable/compatibility/linux-arm64-musl.o:\tfile format elf64-littleaarch64\n"
+    }
+  ],
+  "gnuAdapterQualified": true,
+  "allBunReleasePlatformsQualified": false,
+  "nativeBunRuntimeQualified": false,
+  "notes": [
+    "GNU64 probes exercise real entropy plus injected EINTR/ENOSYS/device/EACCES/EOF paths, FD cleanup and fortified abort.",
+    "ALTDIRFUNC callback behavior matches each actual libc provider: GNU x64 uses gl_lstat; focal ARM64 follows its native legacy behavior.",
+    "ARM64 behavior is emulated; this is not a native ARM64 NGINX or Bun runtime release gate."
+  ]
+}

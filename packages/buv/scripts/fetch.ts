@@ -2,23 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Fetches the pinned inputs of the runtime build.
 //!
-//!   bun scripts/fetch.ts [--root <dir>] [--cache <dir>] [--python <x.y.z>] [--skip-sources] [--skip-python]
+//!   bun scripts/fetch.ts [--root <dir>] [--cache <dir>] [--python <x.y.z>] [--skip-python]
 //!
-//! * sources: each fork of vendor.json is cloned shallow at its pin branch under vendor/ and must be at the pinned
-//!   commit; an existing checkout at another commit is an error, never silently moved;
 //! * CPython: the install tree of python-build-standalone for the default (or requested) version is downloaded
 //!   into the cache, verified against its sha256, extracted into build/python and described to PyO3 in
 //!   build/pyo3-config.txt (read through .cargo/config.toml).
 
 import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { type Asset, cacheDir, minorOf, readVendor, ROOT, run, sha256Bytes, type Source, type Vendor } from "./lib.ts";
+import { type Asset, cacheDir, minorOf, readVendor, ROOT, sha256Bytes, type Vendor } from "./lib.ts";
 
 export interface FetchOptions {
   root: string;
   cache: string;
   python?: string;
-  skipSources: boolean;
   skipPython: boolean;
 }
 
@@ -31,7 +28,6 @@ export function parseArgs(argv: string[]): FetchOptions {
     root: resolve(value("--root") ?? ROOT),
     cache: resolve(value("--cache") ?? cacheDir()),
     python: value("--python"),
-    skipSources: argv.includes("--skip-sources"),
     skipPython: argv.includes("--skip-python"),
   };
 }
@@ -61,33 +57,6 @@ export function pyo3Config(prefix: string, version: string): string {
     "suppress_build_script_link_lines=false",
     "",
   ].join("\n");
-}
-
-async function git(args: string[], cwd?: string): Promise<string> {
-  const result = await run(["git", ...args], { cwd });
-  if (result.code !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr.trim()}`);
-  return result.stdout.trim();
-}
-
-/** Clones one fork at its pin branch and checks the pinned commit. */
-export async function fetchSource(root: string, source: Source): Promise<string> {
-  if (source.embedded) {
-    if (!existsSync(resolve(root, source.path, "Cargo.toml")))
-      throw new Error(`${source.name}: embedded source is missing from the selected Bun workspace`);
-    return source.ref;
-  }
-  const destination = join(root, source.path);
-  if (!existsSync(join(destination, ".git"))) {
-    mkdirSync(join(destination, ".."), { recursive: true });
-    await git(["clone", "--quiet", "--depth", "1", "--branch", source.forkBranch, source.url, destination]);
-  }
-  const head = await git(["rev-parse", "HEAD"], destination);
-  if (head !== source.ref) {
-    throw new Error(
-      `${source.name}: checkout is at ${head}, the pin is ${source.ref}; remove ${source.path} to refetch`,
-    );
-  }
-  return head;
 }
 
 /** Downloads (or reuses) the archive of an asset and verifies its sha256 and size. */
@@ -134,16 +103,10 @@ export async function installPython(root: string, bytes: Uint8Array<ArrayBuffer>
 
 export async function main(argv: string[]): Promise<number> {
   const options = parseArgs(argv);
-  if (!argv.includes("--allow-network") && (!options.skipSources || !options.skipPython)) {
+  if (!argv.includes("--allow-network") && !options.skipPython) {
     throw new Error("network acquisition is disabled by default; pass --allow-network explicitly");
   }
   const vendor = await readVendor(options.root);
-  if (!options.skipSources) {
-    for (const source of vendor.sources) {
-      const head = await fetchSource(options.root, source);
-      console.log(`source ${source.name} ${head} (${source.forkBranch})`);
-    }
-  }
   if (!options.skipPython) {
     const release = vendor.releases.find(entry => entry.name === "python-build-standalone");
     const version = options.python ?? release?.defaultPython;

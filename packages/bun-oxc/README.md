@@ -1,13 +1,13 @@
 # @aphrody/bun-plugin-oxc
 
 [Oxc](https://oxc.rs) for Bun in one Node-API addon: parser, transformer, isolated declarations, minifier, resolver,
-oxlint (every rule and plugin, fixes) and oxfmt. It ships as a typed API, a Bun plugin (`Bun.plugin` and `Bun.build`),
+native AST lint rules and fixes, and oxfmt. It ships as a typed API, a Bun plugin (`Bun.plugin` and `Bun.build`),
 drop-ins for `oxc-parser` / `oxc-transform` / `oxc-minify`, and the `bun-oxc` CLI.
 
-Oxc version: crates **0.153.0**, oxlint **1.87.0**, oxfmt **0.72.0**, `oxc_resolver` **11.24.3**. The linter and the
-formatter come from the `aphrody` branch of [aphrody-labs/oxc](https://github.com/aphrody-labs/oxc) (tag
-`oxlint_v1.87.0` plus a patch that makes oxfmt's core API public); every other Oxc crate is pinned to the same commit
-through `[patch.crates-io]`, so the addon holds a single copy of the AST.
+Source versions: AST/compiler **0.153.0**, linter **1.87.0**, formatter **0.72.0**, resolver **11.24.3**.
+Their implementations belong to the root Cargo workspace. Parser declarations use the single local
+`adapters/types_npm/types.d.ts`, generated from the internal AST schema; no npm types package is needed.
+The same declarations are exported from `@aphrody/bun-plugin-oxc/types` and retain the upstream MIT license.
 
 ```ts
 import {
@@ -62,7 +62,7 @@ await Bun.build({
 | `minify(source, filename, options?)`, `minifyWithMap`                 | `compress`, `mangle`, `topLevel`, `whitespace`, `dropConsole`, `dropDebugger`, `target`, `sourcemap`                                                                                                                                    |
 | `isolatedDeclaration(source, filename, options?)`                     | `.d.ts` text (`stripInternal`, `sourcemap`)                                                                                                                                                                                             |
 | `check(source, filename)`                                             | syntax and semantic errors `{ ok, diagnostics }`                                                                                                                                                                                        |
-| `lint(source, filename, options?)`                                    | oxlint, every built-in rule: `{ diagnostics, fixed?, errorCount, warningCount }`. `config` (inline `.oxlintrc.json`), `configPath`, `discoverConfig`, `fix` (`true`/`"safe"`, `"suggestions"`, `"dangerous"`)                           |
+| `lint(source, filename, options?)`                                    | native AST rules: `{ diagnostics, fixed?, errorCount, warningCount }`. `config` (inline `.oxlintrc.json`), `configPath`, `discoverConfig`, `fix` (`true`/`"safe"`, `"suggestions"`, `"dangerous"`)                           |
 | `lintFix`, `lintRules()`                                              | fixed source; the rule table (`name`, `plugin`, `category`, `default`, `fix`, `docs`, `version`, `typeAware`)                                                                                                                           |
 | `format(source, filename, options?)`                                  | oxfmt (JS/TS, JSON, CSS, GraphQL, Markdown, YAML, TOML, `package.json`): `config` (inline `.oxfmtrc.json`), `configPath`, `discoverConfig`                                                                                              |
 | `resolve(from, specifier, options?)`                                  | `oxc_resolver`: `{ path, query, fragment, moduleType }`; `tsconfig`, `alias`, `fallback`, `conditionNames`, `extensions`, `extensionAlias`, `mainFields`, `modules`, `roots`...                                                         |
@@ -78,8 +78,9 @@ the addon start with their kind: `[syntax]`, `[input]`, `[tool]`, `[transform]`,
 `@aphrody/bun-plugin-oxc/parser`, `/transform` and `/minify` export the same functions, options and results as
 `oxc-parser`, `oxc-transform` and `oxc-minify` 0.153.0 (`parseSync`, `parse`, `Visitor`, `visitorKeys`,
 `transformSync`, `transform`, `isolatedDeclarationSync`, `moduleRunnerTransformSync`, `minifySync`, `minify`...). The
-addon links the official `oxc_parser_napi`, `oxc_transform_napi` and `oxc_minify_napi` crates, and `vendor/oxc-parser`
-holds oxc-parser's JS layer (synced by `bun scripts/sync-oxc-js.ts <oxc checkout>`). Raw transfer
+addon links the official `oxc_parser_napi`, `oxc_transform_napi` and `oxc_minify_napi` crates, and `src/parser-core`
+owns the parser JS layer, visitors and deserializers. Transform and minify declarations live in
+`src/transform-core` and `src/minify-core`. Sources and generated assets have one canonical owner. Raw transfer
 (`experimentalRawTransfer`, `experimentalLazy`) needs ArrayBuffers above 4 GiB, which JavaScriptCore refuses:
 `rawTransferSupported()` is `false` on Bun.
 
@@ -96,14 +97,17 @@ TS/JSX (default filter `.ts .tsx .mts .cts .jsx`).
 
 ## oxlint JS plugins
 
-`lint()` runs every built-in rule in process. `jsPlugins` entries need oxlint's JS host: write them with
-`definePlugin` / `defineRule` / `defineConfig` (from `@aphrody/bun-plugin-oxc/oxlint`, identical to oxlint's) and run
-`runOxlint(args)` or `bun-oxc oxlint ...`, which spawn the oxlint CLI (`APHRODY_OXLINT` or `oxlint` on PATH). oxfmt
-JS configs and Prettier-backed embedded formatting also need the npm CLIs.
+`lint()` runs the native built-in rules in process. Use `bun lint` for repository linting.
+`definePlugin` / `defineRule` / `defineConfig` remain identity helpers for compatible configuration objects.
+Unsupported JavaScript plugins, JavaScript formatter configurations and Prettier-backed embedded languages
+return explicit input errors. These commands use their native owners without an external fallback.
+Configurations requesting `options.typeAware`, `options.typeCheck` or applicable type-aware rules also fail explicitly:
+the native lint owner does not run type-aware checks. `lintRules()` exposes upstream rule
+metadata; a rule's presence there does not mean its typed checks run in this owner.
 
 ## CLI
 
-`bun-oxc transform | minify | dts | format | lint | check | resolve | parse | analyze | rules | oxlint | version`.
+`bun-oxc transform | minify | dts | format | lint | check | resolve | parse | analyze | rules | version`.
 Run `bun-oxc help` for the flags (`--target`, `--decorators legacy`, `--react-refresh`, `--fix`, `--write`, `--check`,
 `--json`...).
 
@@ -113,9 +117,10 @@ Run `bun-oxc help` for the flags (`--target`, `--decorators legacy`, `--react-re
 root, the optional package `@aphrody/bun-plugin-oxc-<platform>`. Platforms: `win32-x64-msvc`, `win32-arm64-msvc`,
 `darwin-x64`, `darwin-arm64`, `linux-{x64,arm64}-{gnu,musl}`.
 
-Crates: `aphrody-oxc-bridge` (published, crates.io deps only, C ABI 2), `aphrody-oxc-tools` (unpublished: oxlint and
-oxfmt from git) and `bun-plugin-oxc-napi` (the addon). Build from the repository root with
-`bun scripts/aphrody/build-napi.ts packages/bun-oxc`. Tests: `cargo test --workspace` in this directory and
+Native owners: `src/transpiler/ecma_api` (`bun_ecma_api`, C ABI 2) and `src/quality` (`bun_quality`, oxlint and
+oxfmt), both internal members of Bun's root Cargo workspace. This package owns only `bun-plugin-oxc-napi`
+(the addon). Build from the repository root with
+`bun scripts/aphrody/build-napi.ts packages/bun-oxc`. Test the native owners from the root workspace and run
 `bun test test/integration/bun-plugin-oxc/`.
 
 License: MIT.

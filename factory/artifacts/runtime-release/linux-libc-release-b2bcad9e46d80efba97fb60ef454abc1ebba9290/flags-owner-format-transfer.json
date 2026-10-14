@@ -1,0 +1,8 @@
+{
+  "path": "/home/ubuntu/build/bun-os-obscura-4634063/scripts/build/flags.ts",
+  "beforeSHA256": "216c1f2e1a05404b7d52c0c56d43aafcc6fd3289c91dd8fe489ac975b328b5cc",
+  "afterSHA256": "49dc9eab91a731b9cde0d7630ee5d884a64f487bbdb931779299cb276e0b685f",
+  "bytes": 83228,
+  "change": "one residual CRLF normalized to LF",
+  "logicalSourceUnchanged": true
+}

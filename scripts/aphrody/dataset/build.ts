@@ -4,7 +4,7 @@
 //   bun scripts/aphrody/dataset/build.ts [--out build/dataset] [--typecheck] [--bun <binary>]
 //
 // Sources: docs/**/*.mdx code blocks, @example blocks and function signatures of packages/bun-types/*.d.ts,
-// short tests of test/js/bun, the n2b registry (src/n2b/registry/registry/*.toml) and the curated
+// short tests of test/js/bun, the n2b registry (src/migrate/registry/data/*.toml) and the curated
 // Node → Bun pairs of packages/bun-agent-plugin/src/native.ts, REVIEW.md rules, and `bun <command> --help` of the release build when present.
 // Every snippet must transpile (Bun.Transpiler); --typecheck runs tsc against packages/bun-types and records the
 // result per entry. Deterministic: same checkout, same bytes (no timestamps; entries sorted by id).
@@ -585,9 +585,8 @@ export function finalize(
   return { entries, dropped };
 }
 
-/** Typechecks the TS/JS snippets against packages/bun-types in one tsc run; sets checks.types per entry. */
-export function typecheck(root: string, entries: Entry[], tsc = Bun.which("tsc")): boolean {
-  if (!tsc) return false;
+/** Typechecks TS/JS snippets against packages/bun-types with Bun; sets checks.types per entry. */
+export function typecheck(root: string, entries: Entry[], bun = process.execPath): boolean {
   const dir = mkdtempSync(join(tmpdir(), "bun-native-tsc-"));
   try {
     const files: string[] = [];
@@ -620,7 +619,7 @@ export function typecheck(root: string, entries: Entry[], tsc = Bun.which("tsc")
     for (let pass = 0; pass < 5; pass++) {
       const left = files.filter(f => !failed.has(f));
       writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: options, files: [types, ...left] }));
-      const r = Bun.spawnSync([tsc, "-p", "tsconfig.json", "--pretty", "false"], {
+      const r = Bun.spawnSync([bun, "check", "-p", "tsconfig.json", "--pretty", "false"], {
         cwd: dir,
         stdout: "pipe",
         stderr: "pipe",
@@ -632,6 +631,7 @@ export function typecheck(root: string, entries: Entry[], tsc = Bun.which("tsc")
         any = true;
         if (!m[2]!.startsWith("1") || m[2]!.length !== 4) syntaxOnly = false;
       }
+      if (r.exitCode && !any) throw new Error(`bun check failed: ${r.stderr.toString() || r.stdout.toString()}`);
       if (!any || !syntaxOnly) break;
     }
     for (const [name, e] of byFile) e.checks.types = !failed.has(name);
@@ -655,7 +655,7 @@ export function collect(opts: BuildOptions): { drafts: Draft[]; help?: string } 
   const cwd = process.cwd();
   process.chdir(root);
   try {
-    drafts.push(...fromN2b(join(root, "src", "n2b", "registry", "registry")));
+    drafts.push(...fromN2b(join(root, "src", "migrate", "registry", "data")));
   } finally {
     process.chdir(cwd);
   }

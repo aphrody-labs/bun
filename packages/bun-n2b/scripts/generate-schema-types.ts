@@ -1,5 +1,5 @@
 // Regenerates the n2b report types from the canonical JSON Schema:
-//   - crates/n2b-types/src/schema.rs  via `cargo typify`
+//   - src/migrate/schema/types.rs  via `cargo typify`
 //   - src/types.ts                    via `json2ts --unreachableDefinitions` (json-schema-to-typescript)
 // Both files are committed; --check exits 1 on drift.
 //
@@ -12,15 +12,15 @@ import { join, resolve } from "node:path";
 const PKG = resolve(import.meta.dir, "..");
 
 export async function schemaPaths(root = PKG) {
-  const crate = join(root, "crates/n2b-types");
+  const crate = resolve(root, "../../src/migrate");
   const schema = join(crate, "schema/v2.json");
   if (!(await Bun.file(schema).exists())) {
     throw new Error(`Canonical N2B schema missing: ${schema}`);
   }
   return {
     schema,
-    rust: join(crate, "src/schema.rs"),
-    format: join(root, "rustfmt.toml"),
+    rust: join(crate, "schema/types.rs"),
+    format: resolve(root, "../../src/migrate/rustfmt.toml"),
     ts: join(root, "src/types.ts"),
   };
 }
@@ -29,13 +29,13 @@ type SchemaPaths = Awaited<ReturnType<typeof schemaPaths>>;
 
 const BANNER_RS = `// @generated — DO NOT EDIT MANUALLY.
 // Regenerate with: bun packages/bun-n2b/scripts/generate-schema-types.ts
-// Source of truth: packages/bun-n2b/crates/n2b-types/schema/v2.json
+// Source of truth: src/migrate/schema/v2.json
 
 `;
 
 const BANNER_TS = `// @generated — DO NOT EDIT MANUALLY.
 // Regenerate with: bun packages/bun-n2b/scripts/generate-schema-types.ts
-// Source of truth: packages/bun-n2b/crates/n2b-types/schema/v2.json
+// Source of truth: src/migrate/schema/v2.json
 
 `;
 

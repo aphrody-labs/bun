@@ -1,5 +1,7 @@
 # TypeScript Build System
 
+Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.
+
 This directory generates `build.ninja`. The scripts **describe** the build; ninja **performs** it.
 
 ## Goals
@@ -88,7 +90,7 @@ Edge dependency types:
 
 ```sh
 bun scripts/build.ts --configure-only       # regenerate build.ninja, don't run ninja
-bunx tsc --noEmit -p scripts/build/tsconfig.json   # typecheck
+bun check --noEmit -p scripts/build/tsconfig.json   # typecheck
 grep "yourtarget\|yourrule" build/debug/build.ninja  # inspect generated output
 bun run build --target=<target>             # build a specific target (e.g. tinycc, bun-rust)
 bun run build -n -d explain                 # what would rebuild, and why (dry run)
@@ -138,7 +140,7 @@ Tables: `cpuTargetFlags` (`-march`/`-mcpu`/`-mtune` — also forwarded to local 
 
 **Add a ninja rule** — add its name to `ruleVars` in `ninja.ts` with the `$variables` its text reads, and `n.rule()` it in the module's `registerXxxRules()`. `n.build({ rule, vars })` is typed by the table, and configure fails if the table and the rule's text disagree. Text that needs other variables on some platform is another rule (`pch` / `pch_msvc`). ninja's own bindings (`pool`, `depfile`, `early_output_prefix`) are fields of the build statement, not `vars`.
 
-**Add a Config field** — add to `Config` interface and `PartialConfig` in `config.ts`, resolve in `resolveConfig()`. Add its entry to `configFlags` in `build.ts`: every `PartialConfig` field is a `--<field>` flag, and tsc fails without one.
+**Add a Config field** — add to `Config` interface and `PartialConfig` in `config.ts`, resolve in `resolveConfig()`. Add its entry to `configFlags` in `build.ts`: every `PartialConfig` field is a `--<field>` flag, and `bun check` reports a missing field.
 
 **Add a profile** — one entry in `profiles.ts`. Copy `debug` or `release-asan`.
 
@@ -237,7 +239,7 @@ It is configured by `configureCodegen()`, not `configure()`, and resolves a `Cod
 | `xmlByteClass.ts`              | Generates `xml_byte_class.{h,rs}` — the XML byte classification shared by the SIMD kernels and the Rust scalar indexer                                                  |
 | `stream.ts`                    | Subprocess output wrapper — FD-3 sideband, prefixed line streaming                                                                                                      |
 | `shell.ts`                     | `quote()`/`slash()` — shell escaping for ninja commands                                                                                                                 |
-| `lock.ts`                      | Local build-directory lock (`lockBuildDir()`) and `unlockRunningExe()` for a Windows binary still running                                                              |
+| `lock.ts`                      | Local build-directory lock (`lockBuildDir()`) and `unlockRunningExe()` for a Windows binary still running                                                               |
 | `fs.ts`                        | `writeIfChanged()`, `mkdirAll()`                                                                                                                                        |
 | `error.ts`                     | `BuildError` with hint/file/cause, `assert()`                                                                                                                           |
 | `download.ts`                  | `downloadWithRetry()`, archive extraction                                                                                                                               |

@@ -35,7 +35,7 @@
       ],
       "command": [
         "bun",
-        "node_modules/oxlint/bin/oxlint",
+        "lint",
         "--config=oxlint.json",
         "scripts/aphrody/verify-fusion.ts",
         "scripts/aphrody/verify-fusion.test.ts",
@@ -393,7 +393,7 @@
       "id": "root-lint",
       "requires": ["native-build"],
       "scope": ["src/js", "oxlint.json"],
-      "command": ["bun", "run", "lint"],
+      "command": ["bun", "lint", "--config=oxlint.json", "--format=github", "src/js"],
       "kind": "light",
       "required": true,
       "allOnly": true

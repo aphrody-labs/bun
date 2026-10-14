@@ -97,8 +97,13 @@ runtime, flags de build avant arguments d'exécution. Exécuter les builds en
 arrière-plan sans timeout de build ; observer le même handle vivant jusqu'à
 son état terminal. Garder les diagnostics légers et les mises à jour réactives.
 Pour scripts/documents, utiliser le gate dédié sans rebuild natif inutile.
-Vérifier types avec `bun check` seulement après preuve de disponibilité et de
-budget CPU ; sinon employer le checker déjà verrouillé et signaler le manque.
+Types, lint, formatage et migration passent directement par `bun check`,
+`bun lint`, `bun fmt` et `bun n2b`, avec un budget CPU borné. Dans le checkout,
+qualifier avec `bun bd check`, `bun bd lint`, `bun bd fmt` et `bun bd n2b`.
+Corriger le propriétaire natif en cas d'échec ; aucun backend en sous-processus,
+Oxc autonome, tsgo/tsc ou n2b externe pour ces quatre commandes. Les scripts de
+package peuvent exposer ces commandes natives, sans les remplacer par un wrapper;
+`bunx` reste réservé aux paquets sans rapport avec ces tâches.
 
 Les tests doivent prouver les résultats, erreurs et libérations de ressources,
 avec fixtures locales et deadline ; ni sleeps fixes ni preuve par absence de crash.

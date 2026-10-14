@@ -3,7 +3,7 @@ name = "aphrody-tauri-cli"
 version = "1.4.4"
 authors = ["Tauri Programme within The Commons Conservancy"]
 edition = "2024"
-rust-version = "1.95"
+rust-version.workspace = true
 categories = ["gui", "web-programming"]
 license = "Apache-2.0 OR MIT"
 homepage = "https://tauri.app"
@@ -93,11 +93,10 @@ css-color = "0.2"
 resvg = "0.48"
 dunce = { workspace = true }
 glob = { workspace = true }
-# 0.111 raised msrv to 1.91
-oxc_parser = "0.110"
-oxc_span = "0.110"
-oxc_allocator = "0.110"
-oxc_ast = "0.110"
+oxc_parser = { package = "bun_ecma_parser", path = "../../../../src/js_parser/ecma", version = "0.153.0" }
+oxc_span = { package = "bun_ecma_span", path = "../../../../src/ast/span", version = "0.153.0" }
+oxc_allocator = { package = "bun_arena", path = "../../../../src/collections/arena", version = "0.153.0" }
+oxc_ast = { package = "bun_ecma_ast", path = "../../../../src/ast/ecma", version = "0.153.0" }
 magic_string = "0.3"
 phf = { version = "0.14", features = ["macros"] }
 walkdir = { workspace = true }

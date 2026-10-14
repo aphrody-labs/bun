@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "url": "https://docs.typesafe.ai/llms.txt",
+      "bytes": 16655,
+      "sha256": "4acbbf437e9f58674240fb12859a7befa8bac5866bb221398f08382c0abc8b4d",
+      "fetchedAt": "2026-10-13T20:25:26.831Z"
+    },
+    {
+      "url": "https://docs.typesafe.ai/agent-skill",
+      "bytes": 366157,
+      "sha256": "d676498fd8a4e8e7fdae898aa87bc5df077ee144dc70677716c6412edf62ec80",
+      "fetchedAt": "2026-10-13T20:25:26.951Z"
+    },
+    {
+      "url": "https://docs.typesafe.ai/sdk/javascript",
+      "bytes": 314024,
+      "sha256": "d78206c1dcb0824137c6e63385771848b27b39fe9647eb4d03d563bbcdb2652e",
+      "fetchedAt": "2026-10-13T20:25:27.100Z"
+    },
+    {
+      "url": "https://docs.typesafe.ai/sdk/javascript/api/classes/TypeSafeClient",
+      "bytes": 438741,
+      "sha256": "7e04b4e45a3524d05795300f97e0163208b97d0e042c4178fc6dc7d930711fe3",
+      "fetchedAt": "2026-10-13T20:25:27.345Z"
+    }
+  ],
+  "installation": "manual official typesafe-ai skill; single canonical directory with Codex/Claude aliases"
+}

@@ -17,10 +17,10 @@
   },
   "scripts": {
     "example": "bun --config=./example/bunfig.toml example/index.html",
-    "lint": "oxlint .",
-    "fmt": "prettier --write .",
-    "check:types": "tsc --noEmit",
-    "build:types": "tsc --emitDeclarationOnly --declaration --declarationDir ./dist"
+    "lint": "bun lint .",
+    "fmt": "bun fmt --write .",
+    "check:types": "bun check --noEmit",
+    "build:types": "bun ../../scripts/aphrody/emit-typescript.ts --emitDeclarationOnly --declaration --declarationDir ./dist"
   },
   "devDependencies": {
     "@types/bun": "../bun-types",

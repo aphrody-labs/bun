@@ -1,0 +1,56 @@
+---
+title: Recipes with bun just
+description: Run justfile recipes with Bun's embedded task runner.
+---
+
+`bun just` runs justfile recipes through Bun's linked Rust task runner. It searches the current directory and its parents for `justfile` or `.justfile`.
+
+```just
+test:
+  bun test
+
+build: test
+  bun build ./src/index.ts --outdir dist
+```
+
+```sh
+bun just --list
+bun just test
+bun just --dry-run build
+```
+
+Recipes preserve Just's default `sh -cu` interpreter. On Windows, install a POSIX shell and make `sh` available on `PATH`, or select another interpreter with `set windows-shell`.
+
+Use `bun just --bun-shell recipe` to select Bun Shell explicitly. It runs with unset-variable checking and does not implement every POSIX shell feature. Explicit `set shell`, `set windows-shell`, command-line shell options and shebang recipes keep their configured interpreters. Recipe dependencies, arguments, variables, imports, modules, dotenv files, listing, formatting and exit codes follow the embedded `just` implementation.
+
+Enable `set positional-arguments` or add `[positional-arguments]` to a recipe to receive its name as `$0` and its arguments as `$1`, `$2`, and so on:
+
+```just
+set positional-arguments
+
+greet name:
+  @printf '%s: %s\n' "$0" "$1"
+```
+
+`bun just greet 'Bun user'` prints `greet: Bun user`. In `shell(command, args...)`, `$0` is the command string and the additional arguments start at `$1`.
+
+Use `bun --cwd path/to/project just build` to select a project. Options after `just` belong to the recipe runner:
+
+```sh
+bun just --justfile tasks.just --working-directory . --list
+bun just --fmt --check
+bun just --dump --dump-format json
+```
+
+A package script named `just` takes precedence over the built-in command, following Bun's other project commands. A script containing `bun just` enters the built-in runner.
+
+In Bun Shell recipes, `{{just_command()}}` returns a quoted invocation of the embedded runner, including the `just` subcommand. Use it for recursive recipes. `just_executable()` keeps its upstream contract and returns only the executable path.
+The recursive command preserves `--bun-shell` when selected.
+Children of the embedded runner inherit `npm_lifecycle_event=just`, so recursive calls stay in the built-in runner even when a recipe changes to a directory containing a package script named `just`.
+
+```just
+again:
+  {{just_command()}} test
+```
+
+The recipe runner lives under `src/just` in Bun's root Cargo workspace and is compiled into Bun. Running recipes does not download a separate task runner. `bun just --help` lists the available options.

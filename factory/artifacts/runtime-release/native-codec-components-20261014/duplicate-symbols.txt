@@ -1,0 +1,3 @@
+# strong external symbols defined in more than one link input (0)
+
+# weak definitions whose size differs between objects (0) — informational

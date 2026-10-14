@@ -169,7 +169,7 @@
     "test": "vitest run",
     "test:acorn-writer": "bun scripts/run-acorn-writer-tests.ts",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check --noEmit",
     "report:gsap-writers": "bun src/routes/gsapMutationCapabilities.report.ts",
     "prepublishOnly": "echo skip"
   },
@@ -186,7 +186,6 @@
     "@types/node": "^25.0.10",
     "tsup": "^8.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.0.0",
     "vitest": "^4.1.11"
   },
   "engines": {

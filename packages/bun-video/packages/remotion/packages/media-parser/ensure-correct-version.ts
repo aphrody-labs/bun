@@ -13,4 +13,4 @@ export const VERSION = '${version}';
 await Bun.write(path.resolve(process.cwd(), 'src/version.ts'), src);
 
 cp.execSync('bun run make');
-cp.execSync('bun x tsc -d');
+cp.execSync('bun ../../../../../../scripts/aphrody/emit-typescript.ts -d');

@@ -1,8 +1,9 @@
-use aphrody_oxc_tools::{FixMode, FormatOptions, LintOptions};
+use bun_quality::{FixMode, FormatConfigScopes, FormatOptions, LintOptions};
 use std::{
     collections::BTreeSet,
     io::Write,
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
 };
 
 const HELP: &str = "Usage: bun lint|fmt [options] [files or directories]\nEmbedded OXC; no package installation or subprocess backend.\n  -c, --config PATH  Native JSON/JSONC configuration\n  --ignore-pattern GLOB  Exclude matching paths\n  --fix             Apply safe lint fixes\n  --check           Check formatting without writing\n  --write           Write formatted files\n  --stdin-filepath NAME  Format UTF-8 stdin as a virtual file (fmt only; maximum 8 MiB)\n  --format json|github|default  Lint diagnostic format\n  --deny-warnings   Treat lint warnings as failure\n  --no-n2b          Compatibility flag; native lint runs OXC rules only\nUnsupported JS plugins and embedded Prettier formatting fail explicitly.\n";
@@ -32,7 +33,7 @@ fn format_stdin(
         source.extend_from_slice(&buffer[..count]);
     }
     let source = std::str::from_utf8(&source).map_err(|_| "formatter stdin must be UTF-8")?;
-    let formatted = aphrody_oxc_tools::format(
+    let formatted = bun_quality::format(
         source,
         filename,
         &FormatOptions {
@@ -52,23 +53,14 @@ fn format_stdin(
     Ok(0)
 }
 
-pub(crate) fn exec_if_selected() -> Option<u8> {
-    let argv = bun_core::argv().into_iter().collect::<Vec<_>>();
-    let mut skip = false;
-    let at = argv.iter().enumerate().find_map(|(index, arg)| {
-        if skip {
-            skip = false;
-            return None;
-        }
-        if *arg == b"--cwd" {
-            skip = true;
-            return None;
-        }
-        matches!(*arg, b"lint" | b"fmt").then_some(index)
-    })?;
-    let lint = argv[at] == b"lint";
-    let args = argv[at + 1..]
-        .iter()
+pub(crate) fn exec_if_selected(ctx: &crate::Command::Context) -> Option<u8> {
+    let lint = match &**ctx.positionals.first()? {
+        b"lint" => true,
+        b"fmt" => false,
+        _ => return None,
+    };
+    let args = super::arguments::command_arguments(ctx)
+        .into_iter()
         .map(|arg| {
             std::str::from_utf8(arg)
                 .map(str::to_owned)
@@ -173,7 +165,6 @@ fn lint_config(
         }
         Ok(matched)
     };
-    let ignored = matches(&value["ignorePatterns"])?;
     let mut severity = None;
     fn strip_rules(
         value: &mut serde_json::Value,
@@ -246,66 +237,195 @@ fn lint_config(
     if severity.is_some() && !has_plugin {
         return Err("Bun custom rule requires its compiled plugin declaration".into());
     }
-    Ok((value, severity, ignored))
+    Ok((value, severity, false))
+}
+
+fn protected_component(component: &std::ffi::OsStr) -> bool {
+    let Some(name) = component.to_str() else {
+        return false;
+    };
+    [
+        ".git",
+        "node_modules",
+        "target",
+        ".aphrody",
+        ".codex",
+        ".claude",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        "__pycache__",
+        ".venv",
+        "cookies",
+        "sessions",
+        "credentials",
+        "secrets",
+    ]
+    .iter()
+    .any(|protected| {
+        if cfg!(windows) {
+            name.eq_ignore_ascii_case(protected)
+        } else {
+            name == *protected
+        }
+    })
+}
+
+#[derive(Clone)]
+enum QualityIgnoreRules {
+    Lint(ignore::gitignore::Gitignore),
+    Format(FormatConfigScopes),
+}
+
+impl QualityIgnoreRules {
+    fn load(lint: bool, cwd: &Path, config: Option<&Path>) -> Result<Self, String> {
+        if !lint {
+            return FormatConfigScopes::load_native(cwd, config, true).map(Self::Format);
+        }
+        let config = config.map(Path::to_path_buf).or_else(|| {
+            cwd.ancestors().find_map(|directory| {
+                [".oxlintrc.json", ".oxlintrc.jsonc"]
+                    .iter()
+                    .map(|name| directory.join(name))
+                    .find(|path| path.is_file())
+            })
+        });
+        let owner = config.as_deref().and_then(Path::parent).unwrap_or(cwd);
+        let mut builder = ignore::gitignore::GitignoreBuilder::new(owner);
+        if let Some(config) = config {
+            let parsed =
+                oxc_linter::Oxlintrc::from_file(&config).map_err(|error| error.to_string())?;
+            for pattern in parsed.ignore_patterns {
+                builder
+                    .add_line(Some(config.clone()), &pattern)
+                    .map_err(|error| error.to_string())?;
+            }
+        }
+        builder
+            .build()
+            .map(Self::Lint)
+            .map_err(|error| error.to_string())
+    }
+
+    fn ignores(&self, path: &Path, is_dir: bool) -> Result<bool, String> {
+        match self {
+            Self::Lint(rules) => Ok(path.starts_with(rules.path())
+                && rules.matched_path_or_any_parents(path, is_dir).is_ignore()),
+            Self::Format(scopes) => scopes
+                .resolve(path)
+                .map(|config| config.is_path_ignored(path, is_dir)),
+        }
+    }
+}
+
+fn ignored_root(path: &Path, cwd: &Path) -> Result<bool, String> {
+    let mut directories = path
+        .ancestors()
+        .skip(1)
+        .take_while(|dir| dir.starts_with(cwd))
+        .collect::<Vec<_>>();
+    directories.reverse();
+    let mut ignored = false;
+    for directory in directories {
+        let gitignore = directory.join(".gitignore");
+        if !gitignore.is_file() {
+            continue;
+        }
+        let mut builder = ignore::gitignore::GitignoreBuilder::new(directory);
+        if let Some(error) = builder.add(gitignore) {
+            return Err(error.to_string());
+        }
+        let rules = builder.build().map_err(|error| error.to_string())?;
+        let matched = rules.matched_path_or_any_parents(path, path.is_dir());
+        if matched.is_ignore() {
+            ignored = true;
+        } else if matched.is_whitelist() {
+            ignored = false;
+        }
+    }
+    Ok(ignored)
 }
 
 fn collect(
     path: &Path,
     lint: bool,
     files: &mut BTreeSet<PathBuf>,
-    depth: usize,
+    cwd: &Path,
+    ignores: &globset::GlobSet,
+    config_ignores: &QualityIgnoreRules,
 ) -> Result<(), String> {
     if path.components().any(|component| {
         matches!(component, std::path::Component::ParentDir)
-            || matches!(
-                component.as_os_str().to_str(),
-                Some(
-                    ".aphrody"
-                        | ".codex"
-                        | ".claude"
-                        | "cookies"
-                        | "sessions"
-                        | "credentials"
-                        | "secrets"
-                )
-            )
+            || protected_component(component.as_os_str())
     }) {
         return Err(format!(
             "protected or parent-traversing quality path: {}",
             path.display()
         ));
     }
-    if depth > 128 {
-        return Err("directory nesting exceeds 128 levels".into());
+    // WalkBuilder deliberately admits explicit roots even when Gitignore excludes them.
+    let relative = path.strip_prefix(cwd).unwrap_or(path);
+    if path.is_symlink()
+        || ignored_root(path, cwd)?
+        || ignores.is_match(relative)
+        || (path.is_dir()
+            && ignores.is_match(format!(
+                "{}/",
+                relative.to_string_lossy().replace('\\', "/")
+            )))
+        || config_ignores.ignores(path, path.is_dir())?
+    {
+        return Ok(());
     }
-    if let Ok(dir) = bun_sys::Dir::open(path_bytes(path)?) {
-        let mut iter = bun_sys::dir_iterator::iterate(dir.fd());
-        while let Some(entry) = iter.next().map_err(|error| format!("{error:?}"))? {
-            let name = entry.name.slice_u8();
-            if matches!(
-                name,
-                b".git"
-                    | b"node_modules"
-                    | b"target"
-                    | b".aphrody"
-                    | b".codex"
-                    | b".claude"
-                    | b"cookies"
-                    | b"sessions"
-                    | b"credentials"
-            ) {
-                continue;
+    let root = cwd.to_owned();
+    let ignores = ignores.clone();
+    let config_ignores = config_ignores.clone();
+    let error = Arc::new(Mutex::new(None));
+    let filter_error = Arc::clone(&error);
+    let mut builder = ignore::WalkBuilder::new(path);
+    builder
+        .hidden(false)
+        .require_git(false)
+        .git_ignore(true)
+        .git_exclude(true)
+        .git_global(false)
+        .follow_links(false)
+        .max_depth(Some(129))
+        .filter_entry(move |entry| {
+            if protected_component(entry.file_name()) || entry.path_is_symlink() {
+                return false;
             }
-            if !matches!(
-                entry.kind,
-                bun_sys::FileKind::File | bun_sys::FileKind::Directory
-            ) {
-                continue;
+            let relative = entry.path().strip_prefix(&root).unwrap_or(entry.path());
+            let is_dir = entry.file_type().is_some_and(|kind| kind.is_dir());
+            if ignores.is_match(relative)
+                || (is_dir
+                    && ignores.is_match(format!(
+                        "{}/",
+                        relative.to_string_lossy().replace('\\', "/")
+                    )))
+            {
+                return false;
             }
-            let name = std::str::from_utf8(name).map_err(|error| error.to_string())?;
-            collect(&path.join(name), lint, files, depth + 1)?;
+            match config_ignores.ignores(entry.path(), is_dir) {
+                Ok(ignored) => !ignored,
+                Err(message) => {
+                    *filter_error.lock().unwrap() = Some(message);
+                    false
+                }
+            }
+        });
+    for entry in builder.build() {
+        let entry = entry.map_err(|error| error.to_string())?;
+        if let Some(error) = entry.error() {
+            return Err(error.to_string());
         }
-    } else {
+        if entry.depth() > 128 {
+            return Err("directory nesting exceeds 128 levels".into());
+        }
+        if !entry.file_type().is_some_and(|kind| kind.is_file()) {
+            continue;
+        }
+        let path = entry.path();
         let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
         let supported = matches!(
             extension,
@@ -335,26 +455,13 @@ fn collect(
             files.insert(path.to_owned());
         }
     }
+    if let Some(message) = error.lock().unwrap().take() {
+        return Err(message);
+    }
     Ok(())
 }
 
 fn run(lint: bool, args: &[String]) -> Result<u8, String> {
-    if args
-        .iter()
-        .any(|arg| matches!(arg.as_str(), "--help" | "-h"))
-    {
-        std::io::stdout()
-            .write_all(
-                format!(
-                    "Usage: bun {} {}",
-                    if lint { "lint" } else { "fmt" },
-                    &HELP[20..]
-                )
-                .as_bytes(),
-            )
-            .map_err(|error| error.to_string())?;
-        return Ok(0);
-    }
     let cwd_bytes = super::check_command::working_directory();
     let cwd = PathBuf::from(std::str::from_utf8(&cwd_bytes).map_err(|error| error.to_string())?);
     let (mut config, mut fix, mut check, mut deny, mut format) =
@@ -366,6 +473,19 @@ fn run(lint: bool, args: &[String]) -> Result<u8, String> {
     let mut args = args.iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
+            "--help" | "-h" => {
+                std::io::stdout()
+                    .write_all(
+                        format!(
+                            "Usage: bun {} {}",
+                            if lint { "lint" } else { "fmt" },
+                            &HELP[20..]
+                        )
+                        .as_bytes(),
+                    )
+                    .map_err(|error| error.to_string())?;
+                return Ok(0);
+            }
             "--" => {
                 roots.extend(args.cloned());
                 break;
@@ -419,44 +539,23 @@ fn run(lint: bool, args: &[String]) -> Result<u8, String> {
         roots.push(".".into());
     }
     let ignores = ignores.build().map_err(|error| error.to_string())?;
+    let config_ignores = QualityIgnoreRules::load(lint, &cwd, config.as_deref())?;
     let mut files = BTreeSet::new();
     for root in roots {
-        collect(&cwd.join(root), lint, &mut files, 0)?;
+        collect(
+            &cwd.join(root),
+            lint,
+            &mut files,
+            &cwd,
+            &ignores,
+            &config_ignores,
+        )?;
     }
     let mut diagnostics = Vec::new();
     let mut failed = false;
+    let mut format_error = false;
     for file in files {
         let relative = file.strip_prefix(&cwd).unwrap_or(&file);
-        if ignores.is_match(relative) {
-            continue;
-        }
-        let mut ignored = false;
-        let mut directories = file
-            .ancestors()
-            .skip(1)
-            .take_while(|dir| dir.starts_with(&cwd))
-            .collect::<Vec<_>>();
-        directories.reverse();
-        for directory in directories {
-            let gitignore = directory.join(".gitignore");
-            if !bun_sys::exists(path_bytes(&gitignore)?) {
-                continue;
-            }
-            let mut builder = ignore::gitignore::GitignoreBuilder::new(directory);
-            if let Some(error) = builder.add(gitignore) {
-                return Err(error.to_string());
-            }
-            let rules = builder.build().map_err(|error| error.to_string())?;
-            let matched = rules.matched_path_or_any_parents(&file, false);
-            if matched.is_ignore() {
-                ignored = true;
-            } else if matched.is_whitelist() {
-                ignored = false;
-            }
-        }
-        if ignored {
-            continue;
-        }
         let source = read(&file)?;
         let filename = file.to_str().ok_or("non-UTF-8 path")?;
         if lint {
@@ -469,7 +568,7 @@ fn run(lint: bool, args: &[String]) -> Result<u8, String> {
             if config_ignored {
                 continue;
             }
-            let report = aphrody_oxc_tools::lint(
+            let report = bun_quality::lint(
                 &source,
                 filename,
                 &LintOptions {
@@ -490,7 +589,7 @@ fn run(lint: bool, args: &[String]) -> Result<u8, String> {
             .map_err(|error| error.to_string())?;
             let builtin = file.starts_with(cwd.join("src/js/builtins"));
             let metadata = if builtin || bun_severity.is_some() {
-                match aphrody_oxc_bridge::parse_with_comments(&source, filename) {
+                match bun_ecma_api::parse_with_comments(&source, filename) {
                     Ok(metadata) => Some(metadata),
                     Err(_) if report.error_count > 0 => None,
                     Err(error) => return Err(error.to_string()),
@@ -536,7 +635,7 @@ fn run(lint: bool, args: &[String]) -> Result<u8, String> {
                 }
             }
         } else {
-            let formatted = aphrody_oxc_tools::format(
+            let formatted = match bun_quality::format(
                 &source,
                 filename,
                 &FormatOptions {
@@ -545,8 +644,18 @@ fn run(lint: bool, args: &[String]) -> Result<u8, String> {
                     discover_config: true,
                     ..Default::default()
                 },
-            )
-            .map_err(|error| error.to_string())?;
+            ) {
+                Ok(formatted) => formatted,
+                Err(error) => {
+                    format_error = true;
+                    diagnostics.push(serde_json::json!({
+                        "filename": relative.to_string_lossy(),
+                        "severity": "error",
+                        "message": error.to_string(),
+                    }));
+                    continue;
+                }
+            };
             if formatted != source {
                 if check {
                     failed = true;
@@ -598,5 +707,5 @@ fn run(lint: bool, args: &[String]) -> Result<u8, String> {
             }
         }
     }
-    Ok(u8::from(failed))
+    Ok(if format_error { 2 } else { u8::from(failed) })
 }

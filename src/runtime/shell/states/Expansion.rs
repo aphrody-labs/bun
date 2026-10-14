@@ -176,7 +176,7 @@ impl Expansion {
                     ast::Atom::Compound(c) => &c.atoms[me.word_idx as usize],
                 };
                 let shell = me.base.shell();
-                let is_cmd_subst = Self::expand_simple_no_io(
+                let is_cmd_subst = match Self::expand_simple_no_io(
                     shell,
                     simple,
                     &mut me.current_out,
@@ -186,7 +186,14 @@ impl Expansion {
                     event_loop,
                     command_ctx,
                     vm_args_utf8,
-                );
+                    interp.flags.get().nounset(),
+                ) {
+                    Ok(is_cmd_subst) => is_cmd_subst,
+                    Err(error) => {
+                        interp.throw(error);
+                        return Yield::Failed(this);
+                    }
+                };
                 if !is_cmd_subst {
                     me.word_idx += 1;
                     continue;
@@ -468,7 +475,8 @@ impl Expansion {
         event_loop: EventLoopHandle,
         command_ctx: *mut bun_options_types::context::ContextData,
         vm_args_utf8: &mut Vec<bun_core::Utf8Bytes<'static>>,
-    ) -> bool {
+        nounset: bool,
+    ) -> Result<bool, ShellErr> {
         use crate::shell::env_str::EnvStr;
         match atom {
             ast::SimpleAtom::Text(txt) => out.extend_from_slice(txt),
@@ -488,11 +496,19 @@ impl Expansion {
                 } else if let Some(v) = shell.export_env.get(EnvStr::init_slice(label)) {
                     out.extend_from_slice(v.slice());
                     v.deref();
+                } else if nounset && *label == b"?" {
+                    out.push(b'0');
+                } else if nounset {
+                    return Err(Self::unset_variable(label));
                 }
             }
             ast::SimpleAtom::VarArgv(int) => {
                 // SAFETY: `command_ctx` is the live VM ctx; `vm_args_utf8` borrows it.
-                Interpreter::append_var_argv(out, *int, event_loop, command_ctx, vm_args_utf8);
+                if !Interpreter::append_var_argv(out, *int, event_loop, command_ctx, vm_args_utf8)
+                    && nounset
+                {
+                    return Err(Self::unset_variable(&[b'0' + *int]));
+                }
             }
             ast::SimpleAtom::Asterisk => {
                 meta_offsets.push(out.len() as u32);
@@ -526,9 +542,16 @@ impl Expansion {
                     out.push(b'~');
                 }
             }
-            ast::SimpleAtom::CmdSubst(_) => return true,
+            ast::SimpleAtom::CmdSubst(_) => return Ok(true),
         }
-        false
+        Ok(false)
+    }
+
+    fn unset_variable(label: &[u8]) -> ShellErr {
+        let mut message = Vec::with_capacity(label.len() + b": unbound variable".len());
+        message.extend_from_slice(label);
+        message.extend_from_slice(b": unbound variable");
+        ShellErr::Custom(message.into_boxed_slice())
     }
 
     /// Flush `current_out` into `out`

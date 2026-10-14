@@ -1,0 +1,197 @@
+{
+  "schema": 1,
+  "kind": "release-native-capacity-audit",
+  "auditedAt": "2026-10-13",
+  "source": "dac165d7e2925594130724b8115cd760765accf5",
+  "remoteMainObserved": "83cef44a85a671846dc02355e431a280e96c12a1",
+  "dispatched": false,
+  "qualification": "Read-only source and GitHub metadata audit; no CI run, build or native execution",
+  "github": {
+    "repository": "aphrody-labs/bun",
+    "visibility": "public",
+    "actionsEnabled": true,
+    "allowedActions": "all",
+    "configuredRepositoryRunners": 0,
+    "secretNamesOnly": [
+      "APHRODY_SYNC_TOKEN",
+      "CARGO_REGISTRY_TOKEN",
+      "NPM_TOKEN",
+      "R2_ACCESS_KEY_ID",
+      "R2_ENDPOINT",
+      "R2_SECRET_ACCESS_KEY"
+    ],
+    "secretValuesRead": false,
+    "workflowsObservedActive": [
+      "aphrody-release.yml",
+      "aphrody-release-smoke.yml",
+      "aphrody-release-surfaces.yml",
+      "aphrody-publish-npm.yml",
+      "aphrody-publish-crates.yml",
+      "bun-video-release.yml"
+    ],
+    "bootstrap": {
+      "tag": "aphrody-v1.4.3-aphrody.4",
+      "source": "41211b56872ca2957e5c037ad1756f56f8f89b7c",
+      "latest": true,
+      "assets": [
+        "bun-linux-x64.zip",
+        "bun-linux-x64-musl.zip",
+        "bun-windows-x64.zip",
+        "aphrody-bun-windows-service.zip",
+        "SHA256SUMS.txt"
+      ],
+      "missingNativeTargets": [
+        "linux-aarch64",
+        "linux-aarch64-musl",
+        "darwin-x64",
+        "darwin-aarch64",
+        "windows-aarch64"
+      ],
+      "requested144TagHTTP": 404
+    }
+  },
+  "nativeLabels": [
+    {
+      "target": "linux-x64",
+      "runner": "ubuntu-24.04",
+      "abi": "GNU",
+      "cpu": 4,
+      "ramGB": 16,
+      "documentedDiskGB": 14
+    },
+    {
+      "target": "linux-aarch64",
+      "runner": "ubuntu-24.04-arm",
+      "abi": "GNU",
+      "cpu": 4,
+      "ramGB": 16,
+      "documentedDiskGB": 14
+    },
+    {
+      "target": "linux-x64-musl",
+      "runner": "ubuntu-24.04",
+      "abi": "Alpine 3.24 native x64 container",
+      "cpu": 4,
+      "ramGB": 16,
+      "documentedDiskGB": 14
+    },
+    {
+      "target": "linux-aarch64-musl",
+      "runner": "ubuntu-24.04-arm",
+      "abi": "Alpine 3.24 native arm64 container",
+      "cpu": 4,
+      "ramGB": 16,
+      "documentedDiskGB": 14
+    },
+    {
+      "target": "darwin-x64",
+      "runner": "macos-15-intel",
+      "cpu": 4,
+      "ramGB": 14,
+      "documentedDiskGB": 14
+    },
+    {
+      "target": "darwin-aarch64",
+      "runner": "macos-15",
+      "cpu": 3,
+      "ramGB": 7,
+      "documentedDiskGB": 14
+    },
+    {
+      "target": "windows-x64",
+      "runner": "windows-2025",
+      "cpu": 4,
+      "ramGB": 16,
+      "documentedDiskGB": 14
+    },
+    {
+      "target": "windows-aarch64",
+      "runner": "windows-11-arm",
+      "cpu": 4,
+      "ramGB": 16,
+      "documentedDiskGB": 14
+    }
+  ],
+  "sources": {
+    ".github/workflows/aphrody-release.yml": "68bdb272e0bd063e232743f087d30f0955d041aa1d3e1b9a1364befe0dc45227",
+    ".github/workflows/aphrody-release-smoke.yml": "fc2f84285062b2fa488cf516a396733501678f599db5a0b8bae347c6ec42c67a",
+    ".github/workflows/aphrody-release-surfaces.yml": "0a5f08fb232015baa6984bb58e8518ea9f4d14d6c69cbf8979090427bf9a7246",
+    ".github/workflows/bun-video-release.yml": "9ed0bc718cf694e40d01e1738d137b7571be35e343c9b200003657ff48e4de25",
+    ".github/workflows/aphrody-publish-npm.yml": "b9fc984c9a3e05bad5792ebb73e546c11e395d475d2d8881bb7a3bbb13a17ac5",
+    ".github/workflows/aphrody-publish-crates.yml": "5c96a04e7a2d2e04345888f877bf2925895da57d29e260d121c8efdde2c8ebbd",
+    "scripts/aphrody/build-host.ts": "5b120f34e7698b9f675a04c6b81190611bf9e4a2b73cb6a341a8165f643d0e52",
+    "scripts/aphrody/release-matrix.ts": "86b94ad2f61d0be5e340351b55ed1a1b2cdc7e7d0260d83471d98c04b089313f",
+    "scripts/aphrody/media-release.ts": "d6a9adc463164586ae32deae022e0c12a1ebbcf4da3af5c0cea5c33cff661fe4",
+    "scripts/aphrody/media-sdk-factory.ts": "a8021075ef28ba714cf036d660780f14af551d7123c4ab67bef40190f34a12f3",
+    "scripts/aphrody/release-factory.ts": "415994fada87b51b99062df22a1927a303c8a8f908e9c3d1059d18c54decaef0",
+    "packages/bun-video/src/sdk-manifest.json": "23fb2fbb8598d1618fc80f756671fed0c1b5aa7e26a9d3090e534e4b61210fa2"
+  },
+  "gaps": [
+    "Existing release workflow only plans and consumes existing VPS factory drafts; no main-triggered native build job",
+    "Fork bootstrap assets absent for five native targets; latest is the older three-target 1.4.3 release",
+    "Six complete SDK targets remain unqualified: linux arm64 GNU, both musl, both Darwin, Windows arm64",
+    "All sixteen distributed FFmpeg/mpv manifest asset lists are empty; two source-qualified x64 prefixes are not registered distributed archives",
+    "Source SDK packing and normalization currently require a Linux host; no native Darwin/Windows packing branch",
+    "Smoke matrix has perf triplets only, prints source identity without comparing it and emits no artifact-bound media native receipts",
+    "runtimeReleaseMatrix emits perf and full (16 variants), while media-release assembles eight full products; the generic verifier additionally requires baseline aliases and a VPS schema, so it cannot directly consume eight media receipts",
+    "Standard documented 14GB disk is below Windows factory 20GiB preflight; fresh observed available disk/RAM required before a heavy build",
+    "Mac arm64 RAM is 7GB; full LTO resource feasibility is not proven",
+    "GitHub stock LLVM is not the source-pinned LLVM23 toolchain; pinned native LLVM/Rust/sysroots/dependency closure needed",
+    "Legacy VPS command jobs6 and Windows command jobs4 disagree with owner jobs2 budget; Windows metadata maxJobs1 also disagrees with its command",
+    "Factory verifier demands host=vps and excludes stable while integration pendingOwners exists; an honest GitHub runner receipt/aggregate owner is required",
+    "npm/crates tag workflows publish independently before the full runtime/media gate aggregate",
+    "Bun Video tag workflow packs without its build:library step and its R2 step references names absent from repository secret inventory",
+    "Winget distribution owner/manifests absent in inspected release pipeline; package manager consumer library is not release submission",
+    "Runtime1.4.4, BunVideo1.4.4-video.2 and runtime SDK1.4.5 have distinct immutable publication versions"
+  ],
+  "proposedOwnerPipeline": {
+    "workflow": ".github/workflows/aphrody-release.yml",
+    "triggers": [
+      "push main: candidate build/gates only",
+      "push bun-v*/aphrody-v*: same exact-source build and aggregate, then eligible publication",
+      "workflow_dispatch: exact source, candidate/stable fields"
+    ],
+    "jobs": [
+      "plan exact 40-char source and canonical 8 full targets",
+      "native-build matrix max-parallel2; one heavy stage per runner jobs2",
+      "native gates and media-release assembly per target",
+      "aggregate exactly8 matching artifact-bound receipts",
+      "publish existing runtime/npm/crates/R2 owner scripts and Winget manifests only after aggregate"
+    ],
+    "prerequisite": "Five valid fork bootstrap artifacts and target-specific resource/toolchain/SDK dependency profiles",
+    "linux": "GNU target sysroot and ELF floor <=2.17; oldest ABI native container execution and newer-host execution. Musl on same-architecture Alpine container, no QEMU/Wine/Rosetta accepted as native target qualification",
+    "nativeGates": [
+      "source revision and process platform/arch",
+      "image/video exact pixels",
+      "FFmpeg native decode/encode",
+      "mpv CPU/null and API2.5",
+      "C ABI1.6 and AVIO/Blob contracts",
+      "changed runtime Yolo/Jev/MCP/Nginx/SQLite/transpiler-cache tests",
+      "contained ELF/PE/Mach-O dependency closure and ABI",
+      "public source/header/license digests"
+    ],
+    "receipts": "Source40, Bun revision/version, runner OS/arch, target, exact SDK source40 pins, toolchain/sysroot/dependency hashes, artifact SHA256, bounded gate logs and native pass status",
+    "publishing": "Existing publish workflows should be callable under the exact-source aggregate instead of independent tag publication. Preserve candidate/stable distinctions, immutable versions and all existing stable integration guards",
+    "winget": "Generate x64/arm64 installer manifests from qualified public URLs/hashes, validate and native-install-test, submit to microsoft/winget-pkgs; merge/index availability remains separate from local validation",
+    "forbidden": [
+      "CI dispatch now",
+      "relaxing ABI allowlist/floor",
+      "skips or waivers replacing native gates",
+      "claiming completed full release",
+      "new task/goal tracker",
+      "native/source patches during this audit"
+    ]
+  },
+  "primaryReferences": [
+    "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
+    "https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/run-jobs-in-a-container",
+    "https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Arm64-Readme.md",
+    "https://github.com/actions/runner-images/blob/main/images/windows/Windows11-Arm64-Readme.md",
+    "https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md",
+    "https://docs.github.com/en/actions/reference/workflows-and-actions/variables",
+    "https://docs.github.com/en/actions/reference/limits",
+    "https://docs.github.com/en/actions/concepts/runners/larger-runners",
+    "https://learn.microsoft.com/en-us/windows/package-manager/package/repository",
+    "https://learn.microsoft.com/en-us/windows/package-manager/package/manifest"
+  ]
+}

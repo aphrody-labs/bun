@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use aphrody_n2b_core::{
+use bun_migrate::{
     report, run,
     scanners::source::scan_source,
     types::{FileFix, Mode, Report, RunOptions},
@@ -53,7 +53,20 @@ pub fn version() -> String {
 /// Runs the n2b CLI in process with `args` (without the program name) and returns its exit status.
 #[napi]
 pub fn run_cli(args: Vec<String>) -> i32 {
-    aphrody_n2b::run_cli(std::iter::once("n2b".to_owned()).chain(args))
+    bun_migrate::run_cli(std::iter::once("n2b".to_owned()).chain(args))
+}
+
+/// Returns the rule catalogue without capturing process output.
+#[napi]
+pub fn rules() -> serde_json::Value {
+    bun_migrate::cli::rules_json()
+}
+
+/// Renders the default migration prompt without capturing process output.
+#[napi]
+pub fn prompt_markdown(root: String) -> Result<String> {
+    bun_migrate::cli::prompt_markdown(PathBuf::from(root))
+        .map_err(|error| Error::from_reason(format!("{error:#}")))
 }
 
 #[napi(object)]

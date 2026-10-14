@@ -12,11 +12,11 @@
 		"url": "https://github.com/remotion-dev/remotion/issues"
 	},
 	"scripts": {
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
-		"watch": "tsgo -w",
-		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts"
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
+		"watch": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -w",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && bun --env-file=../.env.bundle bundle.ts"
 	},
 	"dependencies": {
 		"@radix-ui/react-select": "2.1.1",
@@ -41,8 +41,8 @@
 		"tailwindcss": "4.2.0",
 		"@tailwindcss/cli": "4.2.0",
 		"tailwind-merge": "2.6.0",
-		"bun-plugin-tailwind": "0.1.2",
-		"@typescript/native-preview": "catalog:"
+		"bun-plugin-tailwind": "0.1.2"
+
 	},
 	"keywords": [],
 	"publishConfig": {

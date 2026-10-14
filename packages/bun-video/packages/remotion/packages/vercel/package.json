@@ -10,11 +10,11 @@
 	},
 	"type": "module",
 	"scripts": {
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
-		"watch": "tsgo -w",
-		"make": "bun --env-file=../.env.bundle bundle.ts && tsgo && tsgo -p tsconfig.scripts.json"
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
+		"watch": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -w",
+		"make": "bun --env-file=../.env.bundle bundle.ts && bun ../../../../../../scripts/aphrody/emit-typescript.ts && bun check -p tsconfig.scripts.json"
 	},
 	"author": "Jonny Burger <jonny@remotion.dev>",
 	"contributors": [],
@@ -41,8 +41,8 @@
 		"@remotion/eslint-config-internal": "workspace:*",
 		"@vercel/blob": "2.3.0",
 		"@vercel/sandbox": "1.6.0",
-		"eslint": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"eslint": "catalog:"
+
 	},
 	"keywords": [
 		"remotion",

@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "test": "bun test scripts transfer-integrity.test.ts",
+    "test": "bun test scripts consolidation.test.ts",
     "fetch": "bun scripts/fetch.ts",
     "forge": "bun scripts/forge.ts",
     "assemble": "bun scripts/assemble.ts",

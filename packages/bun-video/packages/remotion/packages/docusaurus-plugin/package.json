@@ -4,8 +4,8 @@
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"scripts": {
-		"lint": "eslint src",
-		"make": "tsgo -d",
+		"lint": "bun lint src",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d",
 		"test": "bun test src"
 	},
 	"author": "Jonny Burger <jonny@remotion.dev>",
@@ -25,8 +25,8 @@
 	},
 	"devDependencies": {
 		"@remotion/eslint-config-internal": "workspace:*",
-		"eslint": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"eslint": "catalog:"
+
 	},
 	"private": true,
 	"repository": {

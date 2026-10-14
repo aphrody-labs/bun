@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { buildArgs, findTarget, releaseTargets, type ReleaseTarget } from "./build-host.ts";
 import { createMullvadBuildPlan } from "./mullvad-sidecar.ts";
+import { findWorkspaceRoot } from "./workspace-paths.ts";
 import bootstraps from "./release-bootstraps.json";
 
 export type RuntimeFlavor = "perf" | "full";
@@ -252,17 +253,9 @@ export function windowsRuntimeReleasePlan(revision: string, targets: string[] = 
     throw new Error("The Omar PC factory accepts Windows targets only");
   let source = process.env.APHRODY_BUN_CHECKOUT ? resolve(process.env.APHRODY_BUN_CHECKOUT) : undefined;
   if (!source) {
-    let current = resolve(process.cwd());
-    while (true) {
-      const workspaceCheckout = join(current, "bun");
-      if (existsSync(join(current, "WORKSPACE.md")) && existsSync(join(workspaceCheckout, "scripts/build.ts"))) {
-        source = workspaceCheckout;
-        break;
-      }
-      const parent = dirname(current);
-      if (parent === current) break;
-      current = parent;
-    }
+    const workspace = findWorkspaceRoot(process.cwd());
+    const workspaceCheckout = workspace && join(workspace, "bun");
+    if (workspaceCheckout && existsSync(join(workspaceCheckout, "scripts/build.ts"))) source = workspaceCheckout;
   }
   source ??= resolve(import.meta.dir, "../..");
   source = source.replaceAll("\\", "/").replace(/\/$/, "");

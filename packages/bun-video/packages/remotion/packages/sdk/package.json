@@ -11,11 +11,11 @@
 	"type": "module",
 	"scripts": {
 		"test": "bun test src/test",
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
-		"watch": "tsgo -w",
-		"make": "tsgo && bun --env-file=../.env.bundle bundle.ts"
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
+		"watch": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -w",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts && bun --env-file=../.env.bundle bundle.ts"
 	},
 	"author": "Jonny Burger <jonny@remotion.dev>",
 	"contributors": [],
@@ -45,7 +45,6 @@
 		"@happy-dom/global-registrator": "14.5.1",
 		"@remotion/eslint-config-internal": "workspace:*",
 		"@testing-library/react": "16.1.0",
-		"@typescript/native-preview": "catalog:",
 		"eslint": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:"

@@ -1,0 +1,57 @@
+{
+  "name": "@bun-internal/lint-development",
+  "version": "1.87.0",
+  "private": true,
+  "description": "Development and conformance sources for Bun's native lint owner.",
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#oxlint": "./native.ts",
+    "#oxlint/plugins": "./native.ts",
+    "#oxlint/plugins-dev": "./src-js/plugins-dev.ts"
+  },
+  "scripts": {
+    "build": "bun ../../../scripts/aphrody/build-napi.ts packages/bun-oxc",
+    "build-dev": "bun ../../../scripts/aphrody/build-napi.ts packages/bun-oxc --debug",
+    "test": "bun --cwd ../../.. bd --ci=on -j1 test test/cli/lint/toolchain.test.ts --max-concurrency=1",
+    "generate-config-types": "bun scripts/generate-config-types.ts",
+    "init-conformance": "bun exec 'cd conformance && ./init.sh'",
+    "conformance": "bun --conditions=code ./conformance/src/index.ts"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/core": "0.18.5",
+    "@babel/code-frame": "^8.0.0",
+    "@napi-rs/cli": "3.10.6",
+    "@oxapps/shared": "file:../shared",
+    "@type-challenges/utils": "^0.1.1",
+    "@types/babel__code-frame": "^7.27.0",
+    "@types/esquery": "^1.5.4",
+    "@types/estree": "^1.0.8",
+    "@types/json-schema": "^7.0.15",
+    "@types/json-stable-stringify-without-jsonify": "^1.0.2",
+    "@types/node": "24.1.0",
+    "@types/serialize-javascript": "^5.0.4",
+    "@typescript-eslint/parser": "^8.54.0",
+    "@typescript-eslint/scope-manager": "^8.54.0",
+    "ajv": "6.14.0",
+    "cross-env": "10.1.0",
+    "eslint": "10.11.0",
+    "eslint-vitest-rule-tester": "^3.0.1",
+    "esquery": "^1.6.0",
+    "execa": "^10.0.0",
+    "json-schema-to-typescript": "16.0.0",
+    "json-stable-stringify-without-jsonify": "^1.0.1",
+    "rolldown": "1.2.12",
+    "serialize-javascript": "^7.0.4",
+    "tsdown": "0.23.0",
+    "tsx": "^4.21.0",
+    "type-fest": "^5.2.0",
+    "vite-plus": "1.0.0",
+    "vitest": "5.0.1",
+    "vscode-languageserver-protocol": "^3.17.5",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  },
+  "engines": {
+    "bun": ">=1.4.4"
+  }
+}

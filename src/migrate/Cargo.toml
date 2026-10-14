@@ -1,0 +1,63 @@
+[package]
+name = "bun_migrate"
+publish = false
+description = "Bun's native project migration engine, registry, report schema and CLI."
+version = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
+license = "Apache-2.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = "https://github.com/aphrody-labs/bun/tree/main/src/migrate"
+readme = "README.md"
+
+[lib]
+path = "lib.rs"
+
+[[bin]]
+name = "n2b"
+path = "bin/n2b.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+toml = { workspace = true }
+regex = { workspace = true }
+once_cell = { workspace = true }
+bun_no_window = { workspace = true }
+serde_yaml = { workspace = true }
+anyhow = { workspace = true }
+memchr = { workspace = true }
+crossbeam-channel = { workspace = true }
+ignore = { workspace = true }
+globset = { workspace = true }
+colored = { workspace = true }
+url = { workspace = true }
+walkdir = { workspace = true }
+which = { workspace = true }
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json", "blocking", "charset", "http2", "system-proxy"] }
+octocrab = { workspace = true }
+tokio = { version = "1.53.1", features = ["full"] }
+oxc_allocator = { workspace = true }
+oxc_parser = { workspace = true }
+oxc_ast = { workspace = true }
+oxc_ast_visit = { workspace = true }
+oxc_span = { workspace = true }
+clap = { workspace = true }
+rustls = { workspace = true }
+similar = { workspace = true }
+fastembed = { workspace = true, optional = true }
+
+[features]
+default = []
+ai = ["dep:fastembed"]
+
+[dev-dependencies]
+proptest = { workspace = true }
+tempfile = { workspace = true }
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+assert_cmd = { workspace = true }
+jsonschema = { workspace = true }
+
+[lints]
+workspace = true

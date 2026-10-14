@@ -15,7 +15,7 @@ test("source paths reject traversal and platform-specific escapes", () => {
 
 test("source verification rejects changed, missing and additional blobs", async () => {
   const source = FULLSTACK_SOURCES[0];
-  const bytes = new TextEncoder().encode("original\n");
+  const bytes = Buffer.from("original\n");
   using dir = tempDir("fullstack-source", {
     "vendor/axum/src/lib.rs": bytes,
     "docs/project/axum-source.json": JSON.stringify({

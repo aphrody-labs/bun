@@ -1,4 +1,2 @@
 target/
 *.node
-!/crates/n2b-core/src/github/
-!/crates/n2b/tests/fixtures/**/package-lock.json

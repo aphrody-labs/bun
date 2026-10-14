@@ -82,6 +82,12 @@ bun upgrade
 
 Upgrades select published Bun OS releases. Build the checkout with \`bun bd\` and test its executable with \`bun bd test <file>\` when working on Bun OS itself.
 
+## Native quality and migration
+
+Use \`bun check\`, \`bun lint\`, \`bun fmt\` and \`bun n2b\` directly for type checking, lint, formatting and migration. These commands use their linked native owners; external subprocess backends, bunx wrappers, standalone Oxc tools, tsgo/tsc and external n2b are not permitted for these tasks.
+
+Qualify checkout changes with \`bun bd check\`, \`bun bd lint\`, \`bun bd fmt\` and \`bun bd n2b\`. Native failures must be corrected in their owner.
+
 ## Packages and native imports
 
 Dedicated SDK catalogs: [Google REST and Cloud Code](packages/bun-google/README.md),

@@ -36,7 +36,7 @@ bun n2b --report=json > n2b.json
 bun n2b --report=jsonl
 ```
 
-[`bun lint`](/runtime/lint) runs the same rules beside oxlint and merges the findings into one report, so most projects only need `bun lint` and `bun lint --fix`.
+`bun n2b` runs the embedded migration engine directly. Its reports remain separate from `bun lint` diagnostics. Package scripts may expose the native quality and migration commands but must not replace them with wrappers or external backends; `bunx` remains for unrelated packages.
 
 ### Migrate a project
 
@@ -51,10 +51,10 @@ bun migrate
 
 `bun migrate` is the same as `bun n2b migrate`.
 
-### How n2b is installed
+### Embedded engine
 
-n2b is not part of the `bun` binary. The first `bun n2b`, `bun migrate` or `bun lint` downloads a pinned version of `@aphrody/bun-plugin-n2b` with [`bun x`](/pm/bunx) and caches it.
+n2b and its rule registry are linked into the `bun` binary. Scans and reports run in process without installing a package or launching a migration backend. `BUN_N2B` does not select another implementation. `--external-backend` is unsupported; after `--`, it is a literal scan path. Project migration can run `bun install` when applying dependency changes.
 
 `bun n2b --help` lists every n2b command and flag.
 
-If `package.json` has an `n2b` or `migrate` script, `bun n2b` or `bun migrate` runs that script. Inside the script, the name is the command.
+`bun n2b` and `bun migrate` always select the native commands. Use `bun run n2b` or `bun run migrate` to run a project's scripts.

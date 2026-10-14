@@ -1,0 +1,54 @@
+[package]
+edition = "2024"
+rust-version = "1.95.0"
+name = "bun_graphql_parser"
+version = "0.0.9"
+build = false
+include = ["src/**/*", "LICENSE-*", "README.md", "CHANGELOG.md"]
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "Spec-compliant GraphQL parser."
+documentation = "https://docs.rs/oxc-graphql-parser"
+readme = "README.md"
+keywords = ["graphql", "parser", "graphql-tooling", "oxc"]
+categories = ["compilers", "development-tools", "parser-implementations", "parsing", "web-programming"]
+license = "MIT OR Apache-2.0"
+repository.workspace = true
+publish = false
+
+homepage.workspace = true
+[features]
+codspeed = ["criterion2/codspeed"]
+default = []
+
+[lib]
+name = "oxc_graphql_parser"
+path = "src/lib.rs"
+
+[dependencies.memchr]
+version = "2.6.1"
+
+[dependencies.oxc_allocator]
+version = "=0.153.0"
+package = "bun_arena"
+path = "../../collections/arena"
+
+[dependencies.thiserror]
+version = "2.0.0"
+
+[dev-dependencies.annotate-snippets]
+version = "0.12.0"
+
+[dev-dependencies.ariadne]
+version = "0.6.0"
+
+[dev-dependencies.criterion2]
+version = "3"
+default-features = false
+
+[package.metadata.bun.upstream]
+package = "oxc-graphql-parser"
+repository = "https://github.com/oxc-project/oxc-graphql-parser"

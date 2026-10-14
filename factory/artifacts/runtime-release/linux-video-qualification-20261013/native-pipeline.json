@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "sourceCommit": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+  "native": true,
+  "passed": true,
+  "releaseEligible": false,
+  "qualification": "behavior-from-pinned-source-with-preserved-doc-edit",
+  "metadata": {
+    "width": 64,
+    "height": 48,
+    "duration": 3,
+    "codec": "H.264 (Baseline)",
+    "fpsNumerator": 24,
+    "fpsDenominator": 1,
+    "container": "MPEG-4",
+    "fileBytes": 34623,
+    "frameCount": 72,
+    "audioStreams": [
+      {
+        "sampleRate": 48000,
+        "channels": 1,
+        "codec": "AAC"
+      }
+    ]
+  },
+  "remuxMetadata": {
+    "width": 64,
+    "height": 48,
+    "duration": 3,
+    "codec": "H.264 (Baseline)",
+    "fpsNumerator": 24,
+    "fpsDenominator": 1,
+    "container": "MPEG-4",
+    "fileBytes": 8357,
+    "frameCount": 72,
+    "audioStreams": []
+  },
+  "decodedPixelEvidence": {
+    "distinctRGBColors": 923,
+    "earlierFrameTime": 0.5,
+    "referenceFrameTime": 1,
+    "earlierRGBA_SHA256": "a9aad2fc8f76b56a7a5f3f5a2702d6f79b4bfaeccf3ef1313e7bf39da08d8624",
+    "referenceRGBA_SHA256": "b24705482fabf7a22364e856be99bd48036e95228380f36ace906207de689e4e",
+    "framesDiffer": true
+  },
+  "aacRemux": {
+    "supported": false,
+    "code": "ERR_VIDEO_PROVIDER",
+    "message": "remux cannot preserve this track configuration",
+    "reason": "AAC roll sample groups cannot be preserved by this owner"
+  },
+  "network": {
+    "scope": "synthetic loopback fixture only",
+    "transport": "explicit bounded fetch then Blob/bytes",
+    "url": "http://127.0.0.1:17391/synthetic.mp4",
+    "range": true,
+    "blob": true,
+    "bytes": true,
+    "rawURL": {
+      "supported": false,
+      "code": "ERR_VIDEO_PROVIDER",
+      "message": "No such file or directory (os error 2)"
+    },
+    "requests": 3
+  },
+  "files": [
+    {
+      "name": "h264-aac-synthetic.mp4",
+      "bytes": 34623,
+      "sha256": "ae24ed8f36c6104d2c01ba443500bc8ccd2d6b08b91a7389ba3e35ee3ed0285d"
+    },
+    {
+      "name": "h264-video-only.mp4",
+      "bytes": 8418,
+      "sha256": "f78f040aab991e478b07864932af5163a2361ab1d1b623f74c4ac35e3febbc78"
+    },
+    {
+      "name": "synthetic-remux.mp4",
+      "bytes": 8357,
+      "sha256": "ddc19a93f63f61484a06bd9458ea2251fc5bc9a171bdeee6fc6e4477979c58dd"
+    },
+    {
+      "name": "frame.png",
+      "bytes": 1690,
+      "sha256": "4eae58818eae0e19170715af1c3832397ad167e5df535c2884b8e5231e4f60be"
+    },
+    {
+      "name": "audio.wav",
+      "bytes": 3244,
+      "sha256": "17c04a28528084a9bbdd201c1753d351573fcc29d53938d192aa39fd1dfb3dae"
+    },
+    {
+      "name": "preview.gif",
+      "bytes": 2424,
+      "sha256": "7c039ddd0d6e472c93374010b1b14e7692f365d1907aff9859a67ad4eb734308"
+    }
+  ],
+  "createdAt": "2026-10-13T17:31:18.736Z"
+}

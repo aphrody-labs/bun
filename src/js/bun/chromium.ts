@@ -195,8 +195,8 @@ async function connect(endpoint: string, options: Options = {}, launchDeadline?:
       await response.body?.cancel();
       throw new Error(`CDP discovery failed: HTTP ${response.status}`);
     }
-    const version = await response.json();
-    if (!version || typeof version.webSocketDebuggerUrl !== "string")
+    const version: unknown = await response.json();
+    if (!version || typeof version !== "object" || !("webSocketDebuggerUrl" in version) || typeof version.webSocketDebuggerUrl !== "string")
       throw new TypeError("CDP discovery returned no browser WebSocket endpoint");
     url = endpointURL(version.webSocketDebuggerUrl);
     signal.throwIfAborted();
@@ -393,7 +393,7 @@ async function launch(
   try {
     const spawnOptions = { stdin: "ignore", stdout: "ignore", stderr: "pipe" } as const;
     if (process.platform === "win32") {
-      job = new (require("bun:windows").Job)();
+      job = new (require("bun:windows").Job)(undefined);
       job.setLimits({ killOnClose: true });
       proc = job.spawn(args, spawnOptions);
     } else {

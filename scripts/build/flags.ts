@@ -1281,6 +1281,7 @@ export const linkerFlags: Flag[] = [
       "getrandom",
       "getentropy",
       "gettid",
+      "explicit_bzero",
       "__explicit_bzero_chk",
       "log",
       "log2",

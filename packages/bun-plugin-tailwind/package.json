@@ -48,8 +48,8 @@
   },
   "scripts": {
     "build": "bun scripts/build.ts",
-    "types:prepare": "bun ../../test/node_modules/typescript7/bin/tsc --singleThreaded --project tsconfig.m3-types.json",
-    "check:types": "bun run types:prepare && bun ../../test/node_modules/typescript7/bin/tsc --singleThreaded --noEmit"
+    "types:prepare": "bun ../../scripts/aphrody/emit-typescript.ts --singleThreaded --project tsconfig.m3-types.json",
+    "check:types": "bun run types:prepare && bun check --singleThreaded --noEmit"
   },
   "dependencies": {
     "@aphrody/m3-tailwind": "^3.3.7",

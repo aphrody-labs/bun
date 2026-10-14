@@ -46,28 +46,28 @@
       "types": "./src/oxlint.ts",
       "default": "./src/oxlint.ts"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./types": {
+      "types": "./adapters/types_npm/types.d.ts"
+    }
   },
   "bin": {
     "bun-oxc": "./src/cli.ts"
   },
   "files": [
     "src",
-    "vendor",
     "README.md",
-    "*.node"
+    "*.node",
+    "LICENSE",
+    "adapters/types_npm/types.d.ts"
   ],
   "napi": {
     "name": "bun-plugin-oxc",
     "crate": "bun-plugin-oxc-napi"
   },
   "scripts": {
-    "build": "bun ../../scripts/aphrody/build-napi.ts .",
-    "test": "cargo test --workspace && bun test ../../test/integration/bun-plugin-oxc/",
-    "sync-oxc-js": "bun scripts/sync-oxc-js.ts"
-  },
-  "dependencies": {
-    "@oxc-project/types": "0.153.0"
+    "build": "bun ../../scripts/aphrody/build-napi.ts packages/bun-oxc",
+    "test": "bun ../../scripts/build/rust/cargo-serial.ts test --manifest-path ../../Cargo.toml -j 1 -p bun_ecma_api -p bun_quality -p bun-plugin-oxc-napi && bun test ../../test/integration/bun-plugin-oxc/"
   },
   "engines": {
     "bun": ">=1.4.2"

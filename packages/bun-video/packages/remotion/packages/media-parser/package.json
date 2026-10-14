@@ -6,10 +6,10 @@
 	"version": "4.0.534",
 	"main": "dist/index.js",
 	"scripts": {
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
-		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts",
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && bun --env-file=../.env.bundle bundle.ts",
 		"prepublishOnly": "bun ensure-correct-version.ts"
 	},
 	"devDependencies": {
@@ -18,8 +18,8 @@
 		"@remotion/eslint-config-internal": "workspace:*",
 		"eslint": "catalog:",
 		"mediabunny": "catalog:",
-		"@types/bun": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"@types/bun": "catalog:"
+
 	},
 	"publishConfig": {
 		"access": "public"

@@ -44,7 +44,7 @@
   "scripts": {
     "build": "bun run build:hf-early-stub && bun run --cwd ../.. build:hyperframes-runtime:modular && bun build.mjs",
     "build:hf-early-stub": "bun run scripts/build-hf-early-stub.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check --noEmit",
     "parity:check": "bun src/parity-harness.ts",
     "parity:plans": "bun src/plan-parity-harness.ts",
     "parity:fixtures": "bun src/parity-fixtures.ts",
@@ -93,7 +93,6 @@
     "@webgpu/types": "^0.1.69",
     "esbuild": "^0.25.12",
     "tsx": "^4.21.0",
-    "typescript": "^5.7.2",
     "vitest": "^4.1.11"
   },
   "engines": {

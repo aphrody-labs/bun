@@ -1,4 +1,4 @@
-export async function run(argv, options = {}) {
+export async function run(argv: string[], options: NonNullable<Parameters<typeof Bun.Curl.run>[1]> = {}) {
   if (!Bun.Curl.available) {
     const error = new Error("The native curl provider is not enabled in this build");
     error.code = "ERR_CURL_PROVIDER_UNAVAILABLE";
@@ -17,15 +17,17 @@ export async function run(argv, options = {}) {
     if (!["maxOutputBytes", "timeout", "signal", "cwd", "env", "stdin"].includes(key))
       throw new TypeError(`Unsupported Curl.run option: ${key}`);
   }
+  const input = options.stdin;
+  const stdin = input instanceof ArrayBuffer ? new Uint8Array(input) : input ?? "ignore";
   await using child = Bun.spawn({
     cmd: [process.execPath, "--bun-internal-curl", ...argv],
-    stdin: options.stdin ?? "ignore", stdout: "pipe", stderr: "pipe",
+    stdin, stdout: "pipe", stderr: "pipe",
     cwd: options.cwd, env: options.env, signal: options.signal, timeout, killSignal: "SIGKILL",
   });
   let total = 0;
-  async function collect(stream) {
+  async function collect(stream: typeof child.stdout) {
     const reader = stream.getReader();
-    const chunks = [];
+    const chunks: Uint8Array[] = [];
     let length = 0;
     try {
       while (true) {
@@ -47,7 +49,9 @@ export async function run(argv, options = {}) {
       return output;
     } finally { reader.releaseLock(); }
   }
-  const results = await Promise.allSettled([collect(child.stdout), collect(child.stderr), child.exited]);
-  for (const result of results) if (result.status === "rejected") throw result.reason;
-  return { stdout: results[0].value, stderr: results[1].value, exitCode: results[2].value, signalCode: child.signalCode };
+  const [stdout, stderr, exit] = await Promise.allSettled([collect(child.stdout), collect(child.stderr), child.exited]);
+  if (stdout.status === "rejected") throw stdout.reason;
+  if (stderr.status === "rejected") throw stderr.reason;
+  if (exit.status === "rejected") throw exit.reason;
+  return { stdout: stdout.value, stderr: stderr.value, exitCode: exit.value, signalCode: child.signalCode };
 }

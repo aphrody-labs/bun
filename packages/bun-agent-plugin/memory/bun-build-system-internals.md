@@ -45,7 +45,7 @@ The TS scripts DESCRIBE the build and emit `build/<profile>/build.ninja`; ninja 
 ## Module inventory (scripts/build/)
 
 build.ts(entry, parent dir) · configure.ts · config.ts (Config/PartialConfig/Toolchain, resolveConfig, bunExeName, shouldStrip, computeBuildDirName) · profiles.ts · tools.ts (findTool, resolveLlvmToolchain, findMsvcLinker, findCargo; env overrides `BUN_TOOLCHAIN_LLVM`, `BUN_TOOLCHAIN_RUST`, `BUN_TOOLCHAIN_CARGO`) · flags.ts · ninja.ts (`ruleVars` table types `n.build`) · ninja-release.ts · rules.ts · compile.ts (cc/cxx/pch/link/ar) · unified.ts · source.ts (Dependency, resolveDep) · codegen.ts · rust.ts + rust/{plan,units,emit,run,toml,cargo-env,native-link}.ts · cargo-config.ts · bun.ts · shims.ts + shims/macho-postlink.c · workarounds.ts · macos-sdk.ts · winsysroot.ts (xwin sysroot for cross-Windows) · features-json.ts · depVersionsHeader.ts (`bun_dependency_versions.h` for process.versions) · buildOptionsRs.ts (`build_options.rs`) · jsonByteClass.ts / xmlByteClass.ts · stream.ts · shell.ts (quote/slash; cmd.exe quoting partial) · fs.ts · error.ts (BuildError{hint,file,cause}) · download.ts · fetch-cli.ts (build-time downloads, `.h.in` substitution, forbidUndefined check) · verify-binary.ts · binary-expectations.ts · annotations.ts · ci.ts · clean.ts · timings.ts · npm-ci.ts · ci-images/spec.ts (pins, images; `bun run ci:images`).
-Typecheck build scripts: `bunx tsc --noEmit -p scripts/build/tsconfig.json`.
+Typecheck build scripts with native `bun check -p scripts/build/tsconfig.json`; qualify checkout changes with `bun bd check -p scripts/build/tsconfig.json`. Do not use an external checker fallback.
 
 ## Recipes
 

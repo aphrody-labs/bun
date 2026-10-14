@@ -1,8 +1,8 @@
 # JSON output
 
 `n2b --report json` prints a document that follows schema v2. The schema is
-[`crates/n2b-types/schema/v2.json`](../crates/n2b-types/schema/v2.json). Its Rust types are
-`aphrody_n2b_types::schema`. `--report jsonl` prints the findings with one JSON object per line.
+[`src/migrate/schema/v2.json`](../../../src/migrate/schema/v2.json). Its Rust types are
+`bun_migrate::schema`. `--report jsonl` prints the findings with one JSON object per line.
 `--report sarif` prints SARIF 2.1.0 for code-scanning tools.
 
 This output comes from `n2b . --report json` on a file containing `const fs = require("fs");`:
@@ -87,4 +87,4 @@ This output comes from `n2b . --report json` on a file containing `const fs = re
 | `compat`                  | Optional module support: `status` (`full`, `partial`, `missing`), `module`, `missing_apis`, `equivalent`, `bunpp` |
 
 The `version` field appears in JSON, JSONL and SARIF output. Regenerate the baselines in
-`crates/n2b/tests/baselines/` after a version bump.
+`src/migrate/tests/baselines/` after a version bump.

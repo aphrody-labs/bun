@@ -1,0 +1,248 @@
+[package]
+name = "bun_ecma_ast_tools"
+version = "0.0.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+repository.workspace = true
+homepage.workspace = true
+[lints.rust]
+absolute_paths_not_starting_with_crate = "warn"
+non_ascii_idents = "warn"
+unit_bindings = "warn"
+tail_expr_drop_order = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+unused_unsafe = "warn"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ["cfg(coverage)", "cfg(coverage_nightly)"]
+
+[lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+allow_attributes = "warn"
+clone_on_ref_ptr = "warn"
+self_named_module_files = "warn"
+empty_drop = "warn"
+empty_structs_with_brackets = "warn"
+empty_enum_variants_with_brackets = "warn"
+exit = "warn"
+format_push_string = "warn"
+fn_to_numeric_cast_any = "warn"
+unnecessary_self_imports = "warn"
+try_err = "warn"
+error_impl_error = "warn"
+filetype_is_file = "warn"
+get_unwrap = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+unnecessary_safety_comment = "warn"
+undocumented_unsafe_blocks = "warn"
+infinite_loop = "warn"
+map_with_unused_argument_over_ranges = "warn"
+unused_result_ok = "warn"
+pathbuf_init_then_push = "warn"
+pub_underscore_fields = "warn"
+non_zero_suggestions = "warn"
+precedence_bits = "warn"
+struct_excessive_bools = "allow"
+too_many_lines = "allow"
+must_use_candidate = "allow"
+wildcard_imports = "allow"
+doc_markdown = "allow"
+similar_names = "allow"
+fn_params_excessive_bools = "allow"
+too_many_arguments = "allow"
+non_std_lazy_statics = "allow"
+result_large_err = "allow"
+missing_const_for_fn = "allow"
+option_if_let_else = "allow"
+or_fun_call = "allow"
+cognitive_complexity = "allow"
+non_send_fields_in_send_ty = "allow"
+use_self = "allow"
+significant_drop_tightening = "allow"
+branches_sharing_code = "allow"
+fallible_impl_from = "allow"
+useless_let_if_seq = "allow"
+impl_trait_in_params = "allow"
+significant_drop_in_scrutinee = "warn"
+iter_on_single_items = "warn"
+unused_peekable = "warn"
+too_long_first_doc_paragraph = "warn"
+suspicious_operation_groupings = "warn"
+redundant_clone = "warn"
+byte_char_slices = "allow"
+question_mark = "allow"
+multiple_crate_versions = "allow"
+
+[lints.clippy.all]
+level = "warn"
+priority = -1
+
+[lints.clippy.pedantic]
+level = "warn"
+priority = -1
+
+[lints.clippy.complexity]
+level = "warn"
+priority = -1
+
+[lints.clippy.nursery]
+level = "warn"
+priority = -1
+
+[lints.clippy.cargo]
+level = "warn"
+priority = -1
+
+[[bin]]
+name = "oxc_ast_tools"
+test = true
+doctest = false
+path = "src/main.rs"
+
+[dependencies.oxc_allocator]
+version = "=0.153.0"
+path = "../../collections/arena"
+optional = true
+package = "bun_arena"
+
+[dependencies.oxc_ast]
+version = "=0.153.0"
+path = "../../ast/ecma"
+optional = true
+package = "bun_ecma_ast"
+
+[dependencies.oxc_ast_visit]
+version = "=0.153.0"
+path = "../../ast/visit"
+optional = true
+package = "bun_ecma_ast_visit"
+
+[dependencies.oxc_codegen]
+version = "=0.153.0"
+path = "../../js_printer/ecma"
+default-features = false
+optional = true
+features = ["sourcemap"]
+package = "bun_ecma_codegen"
+
+[dependencies.oxc_minifier]
+version = "=0.153.0"
+path = "../../transpiler/minifier"
+optional = true
+package = "bun_ecma_minifier"
+
+[dependencies.oxc_parser]
+version = "=0.153.0"
+path = "../../js_parser/ecma"
+features = ["regular_expression"]
+optional = true
+package = "bun_ecma_parser"
+
+[dependencies.oxc_span]
+version = "=0.153.0"
+path = "../../ast/span"
+features = ["serialize"]
+optional = true
+package = "bun_ecma_span"
+
+[dependencies.oxc_str]
+version = "=0.153.0"
+path = "../../bun_core/ecma_strings"
+package = "bun_ecma_str"
+
+[dependencies.oxc_syntax]
+version = "=0.153.0"
+path = "../../ast/syntax"
+features = ["serialize"]
+optional = true
+package = "bun_ecma_syntax"
+
+[dependencies.bitflags]
+version = "2.13.0"
+
+[dependencies.bpaf]
+version = "0.9.26"
+features = ["autocomplete", "bright-color", "derive"]
+
+[dependencies.convert_case]
+version = "0.12.0"
+
+[dependencies.cow-utils]
+version = "0.1.3"
+
+[dependencies.indexmap]
+version = "2"
+
+[dependencies.itertools]
+version = "0.15.0"
+
+[dependencies.javascript-globals]
+version = "2.0.0"
+
+[dependencies.lazy-regex]
+version = "3.6.0"
+
+[dependencies.oxc_index]
+version = "=5.0.0"
+features = ["nonmax", "serde"]
+package = "bun_typed_index"
+path = "../../collections/typed_index"
+
+[dependencies.phf]
+version = "0.14.0"
+features = ["macros"]
+
+[dependencies.phf_codegen]
+version = "0.14.0"
+
+[dependencies.prettyplease]
+version = "0.3.0"
+
+[dependencies.proc-macro2]
+version = "1"
+
+[dependencies.quote]
+version = "1"
+
+[dependencies.rayon]
+version = "1.12.0"
+
+[dependencies.rustc-hash]
+version = "2"
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1"
+
+[dependencies.syn]
+version = "3"
+default-features = false
+features = ["extra-traits", "full", "parsing", "printing"]
+
+[dependencies.toml]
+version = "1.1.2"
+
+[dependencies.bun_quality]
+package = "bun_quality"
+path = "../../quality"
+version = "=1.4.4"
+optional = true
+
+[features]
+default = ["generate-js"]
+generate-js = ["dep:oxc_allocator", "dep:oxc_ast", "dep:oxc_ast_visit", "dep:oxc_codegen", "dep:oxc_minifier", "dep:oxc_parser", "dep:oxc_span", "dep:oxc_syntax", "dep:bun_quality"]
+
+[package.metadata.bun.upstream]
+package = "oxc_ast_tools"

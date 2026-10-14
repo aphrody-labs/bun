@@ -28,6 +28,13 @@ test runner and package manager.
   Check provenance with `bun agent-plugin doctor --json`.
 - Build and execute checkout changes with `bun bd [command]`; test with
   `bun bd test <file>`. Installed Bun does not include checkout changes.
+- Run type checking, lint, formatting and migration through the native commands
+  `bun check`, `bun lint`, `bun fmt` and `bun n2b`. Do not delegate these commands
+  to subprocess backends, `bunx`, standalone Oxc tools, tsgo/tsc or external n2b.
+  Qualify checkout changes with `bun bd check`, `bun bd lint`, `bun bd fmt` and
+  `bun bd n2b`; fix native failures instead of selecting an external fallback.
+  Package scripts may expose these native commands, but must not replace them
+  with wrappers or external backends.
 - Build scripts accept trailing execution arguments. Put build flags before them;
   see `scripts/build.ts`. Do not invoke the debug executable directly.
 - Run long builds asynchronously; keep user updates responsive. Do not impose
@@ -47,7 +54,8 @@ test runner and package manager.
 - Use `itBundled` for bundler tests. Reserve `test/regression/issue/<number>`
   for real GitHub issues that previously worked and then regressed.
 - Use `bun:test` and harness helpers: `bunExe`, `bunEnv`, `tempDir`,
-  `normalizeBunSnapshot`. Prefer subprocess `-e` for single-file fixtures.
+  `normalizeBunSnapshot`. Prefer in-process fixtures; use a subprocess only when
+  the test needs to verify CLI behavior, process isolation, workers or teardown.
 - Assert meaningful output before exit status; avoid absence-of-crash assertions.
 - Use `port: 0`, local HTTP fixtures and `VerdaccioRegistry`; no public network.
 - Await events or poll with a deadline; no fixed sleeps. Keep tests short and use

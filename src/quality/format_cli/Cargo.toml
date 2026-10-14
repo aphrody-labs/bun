@@ -1,0 +1,297 @@
+[package]
+name = "bun_format_cli"
+version = "0.72.0"
+authors = ["Boshen <boshenc@gmail.com>", "Oxc contributors"]
+categories = ["compilers", "development-tools", "web-programming"]
+edition = "2024"
+homepage.workspace = true
+keywords = ["JavaScript", "TypeScript", "linter", "minifier", "parser"]
+license = "MIT"
+publish = false
+repository.workspace = true
+rust-version = "1.97.0"
+description = "A collection of JavaScript tools written in Rust."
+
+[lints.rust]
+absolute_paths_not_starting_with_crate = "warn"
+non_ascii_idents = "warn"
+unit_bindings = "warn"
+tail_expr_drop_order = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+unused_unsafe = "warn"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ["cfg(coverage)", "cfg(coverage_nightly)"]
+
+[lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+allow_attributes = "warn"
+clone_on_ref_ptr = "warn"
+self_named_module_files = "warn"
+empty_drop = "warn"
+empty_structs_with_brackets = "warn"
+empty_enum_variants_with_brackets = "warn"
+exit = "warn"
+format_push_string = "warn"
+fn_to_numeric_cast_any = "warn"
+unnecessary_self_imports = "warn"
+try_err = "warn"
+error_impl_error = "warn"
+filetype_is_file = "warn"
+get_unwrap = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+unnecessary_safety_comment = "warn"
+undocumented_unsafe_blocks = "warn"
+infinite_loop = "warn"
+map_with_unused_argument_over_ranges = "warn"
+unused_result_ok = "warn"
+pathbuf_init_then_push = "warn"
+pub_underscore_fields = "warn"
+non_zero_suggestions = "warn"
+precedence_bits = "warn"
+struct_excessive_bools = "allow"
+too_many_lines = "allow"
+must_use_candidate = "allow"
+wildcard_imports = "allow"
+doc_markdown = "allow"
+similar_names = "allow"
+fn_params_excessive_bools = "allow"
+too_many_arguments = "allow"
+non_std_lazy_statics = "allow"
+result_large_err = "allow"
+missing_const_for_fn = "allow"
+option_if_let_else = "allow"
+or_fun_call = "allow"
+cognitive_complexity = "allow"
+non_send_fields_in_send_ty = "allow"
+use_self = "allow"
+significant_drop_tightening = "allow"
+branches_sharing_code = "allow"
+fallible_impl_from = "allow"
+useless_let_if_seq = "allow"
+impl_trait_in_params = "allow"
+significant_drop_in_scrutinee = "warn"
+iter_on_single_items = "warn"
+unused_peekable = "warn"
+too_long_first_doc_paragraph = "warn"
+suspicious_operation_groupings = "warn"
+redundant_clone = "warn"
+byte_char_slices = "allow"
+question_mark = "allow"
+multiple_crate_versions = "allow"
+
+[lints.clippy.all]
+level = "warn"
+priority = -1
+
+[lints.clippy.pedantic]
+level = "warn"
+priority = -1
+
+[lints.clippy.complexity]
+level = "warn"
+priority = -1
+
+[lints.clippy.nursery]
+level = "warn"
+priority = -1
+
+[lints.clippy.cargo]
+level = "warn"
+priority = -1
+
+[lib]
+crate-type = ["lib", "cdylib"]
+path = "src/lib.rs"
+doctest = false
+name = "oxfmt"
+
+[[bin]]
+name = "oxfmt"
+path = "src/main.rs"
+test = false
+doctest = false
+
+[dependencies.oxc_allocator]
+version = "=0.153.0"
+path = "../../collections/arena"
+features = ["pool"]
+package = "bun_arena"
+
+[dependencies.oxc_config]
+path = "../config"
+package = "bun_quality_config"
+version = "=0.0.0"
+
+[dependencies.oxc_diagnostics]
+version = "=0.153.0"
+path = "../diagnostics"
+package = "bun_ecma_diagnostics"
+
+[dependencies.oxc_formatter]
+path = "../format_js"
+package = "bun_format_js"
+version = "=0.72.0"
+
+[dependencies.oxc_formatter_core]
+path = "../format_core"
+package = "bun_format_core"
+version = "=0.72.0"
+
+[dependencies.oxc_formatter_css]
+path = "../format_css"
+package = "bun_format_css"
+version = "=0.72.0"
+
+[dependencies.oxc_formatter_graphql]
+path = "../format_graphql"
+package = "bun_format_graphql"
+version = "=0.72.0"
+
+[dependencies.oxc_formatter_json]
+path = "../format_json"
+package = "bun_format_json"
+version = "=0.72.0"
+
+[dependencies.oxc_formatter_markdown]
+path = "../format_markdown"
+package = "bun_format_markdown"
+version = "=0.72.0"
+
+[dependencies.oxc_formatter_yaml]
+path = "../format_yaml"
+package = "bun_format_yaml"
+version = "=0.72.0"
+
+[dependencies.oxc_language_server]
+path = "../../lsp/quality"
+default-features = false
+package = "bun_quality_lsp"
+version = "=1.41.0"
+
+[dependencies.oxc_napi]
+version = "=0.153.0"
+path = "../adapters/common"
+package = "bun_ecma_napi"
+
+[dependencies.oxc_span]
+version = "=0.153.0"
+path = "../../ast/span"
+package = "bun_ecma_span"
+
+[dependencies.bpaf]
+version = "0.9.26"
+features = ["autocomplete", "bright-color", "derive"]
+
+[dependencies.cow-utils]
+version = "0.1.3"
+
+[dependencies.editorconfig-parser]
+version = "0.0.4"
+
+[dependencies.fast-glob]
+version = "1.1.1"
+
+[dependencies.ignore]
+version = "0.4.30"
+features = ["simd-accel"]
+
+[dependencies.json-strip-comments]
+version = "3.1.1"
+
+[dependencies.phf]
+version = "0.14.0"
+features = ["macros"]
+
+[dependencies.rayon]
+version = "1.12.0"
+
+[dependencies.rustc-hash]
+version = "2"
+
+[dependencies.schemars]
+package = "bun_json_schema"
+version = "=0.9.1"
+path = "../../parsers/json_schema"
+
+[dependencies.serde]
+version = "1"
+
+[dependencies.serde_json]
+version = "1"
+features = ["unbounded_depth"]
+
+[dependencies.simdutf8]
+version = "0.1.5"
+features = ["aarch64_neon"]
+
+[dependencies.sort-package-json]
+version = "1.0.0"
+
+[dependencies.oxc-toml]
+version = "=0.14.6"
+package = "bun_toml_formatter"
+path = "../../parsers/toml_formatter"
+
+[dependencies.tokio]
+version = "1.52.3"
+default-features = false
+features = ["rt-multi-thread", "macros"]
+
+[dependencies.tracing]
+version = "0.1.44"
+
+[dependencies.tracing-subscriber]
+version = "0.3.23"
+
+[dependencies.tower-lsp-server]
+version = "0.24.0-rc.1"
+features = ["url-fluent-uri"]
+
+[dependencies.napi]
+version = "3"
+features = ["async", "serde-json"]
+optional = true
+
+[dependencies.napi-derive]
+version = "3"
+optional = true
+
+[build-dependencies.napi-build]
+version = "2"
+
+[dev-dependencies.tempfile]
+version = "3.27.0"
+
+[target."cfg(not(any(target_os = \"linux\", target_os = \"freebsd\", target_arch = \"arm\", target_arch = \"riscv64\", target_family = \"wasm\")))".dependencies.mimalloc-safe]
+version = "0.1.64"
+optional = true
+features = ["skip_collect_on_exit"]
+
+[target."cfg(all(target_os = \"linux\", not(target_arch = \"arm\"), not(target_arch = \"aarch64\"), not(target_arch = \"riscv64\")))".dependencies.mimalloc-safe]
+version = "0.1.64"
+optional = true
+features = ["skip_collect_on_exit", "local_dynamic_tls"]
+
+[target."cfg(all(target_os = \"linux\", target_arch = \"aarch64\"))".dependencies.mimalloc-safe]
+version = "0.1.64"
+optional = true
+features = ["skip_collect_on_exit", "local_dynamic_tls", "no_opt_arch"]
+
+[features]
+default = ["napi"]
+napi = ["dep:napi", "dep:napi-derive"]
+allocator = ["dep:mimalloc-safe"]
+detect_code_removal = ["oxc_formatter/detect_code_removal"]
+
+[package.metadata.bun.upstream]
+package = "oxfmt"
+repository = "https://github.com/oxc-project/oxc"
+homepage = "https://oxc.rs"

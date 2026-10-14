@@ -13,12 +13,12 @@
 	},
 	"type": "module",
 	"scripts": {
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
-		"watch": "tsgo -w",
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
+		"watch": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -w",
 		"test": "node src/test/execute.mjs",
-		"make": "tsgo && bun --env-file=../.env.bundle bundle.ts"
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts && bun --env-file=../.env.bundle bundle.ts"
 	},
 	"dependencies": {
 		"mediabunny": "catalog:",
@@ -37,8 +37,8 @@
 		"playwright": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
-		"vitest": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"vitest": "catalog:"
+
 	},
 	"keywords": [],
 	"publishConfig": {

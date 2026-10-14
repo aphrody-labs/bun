@@ -1,0 +1,192 @@
+{
+  "schema": 1,
+  "kind": "buv-runtime-abi16-native-python-consumer-qualification",
+  "capturedAt": "2026-10-13T20:33:29.440Z",
+  "artifact": {
+    "manifest": {
+      "schema": 1,
+      "name": "buv-runtime",
+      "version": "1.0.0",
+      "target": "x86_64-pc-windows-msvc",
+      "abi": "1.6",
+      "compatibility": {
+        "abiMajor": 1
+      },
+      "sources": {
+        "bun": {
+          "rev": "ffb9a96ceb4131829c441d17d5713d9c6de27a56",
+          "dirty": false
+        }
+      },
+      "build": {
+        "panicRecovery": true,
+        "profile": "runtime",
+        "native": {
+          "name": "buv-runtime",
+          "version": "1.0.0",
+          "abi": "1.6",
+          "target": "x86_64-pc-windows-msvc",
+          "rustc": "rustc 1.100.0-nightly (574ff7d98 2026-09-14)",
+          "git_rev": "ffb9a96ceb41",
+          "panic_recovery": true
+        }
+      },
+      "capabilities": [
+        "system.stats",
+        "bench.compute",
+        "process.supervise",
+        "http.probe",
+        "process.stdin",
+        "process.wait"
+      ],
+      "files": {
+        "buv_runtime.dll": {
+          "bytes": 559616,
+          "sha256": "dbce4057ca89bb622d60ab87f555706b5cf9614e04799ee608b69d110f364e06"
+        },
+        "yolo_runtime.h": {
+          "bytes": 9159,
+          "sha256": "5318c1eb09523b8aeb606cc7d673c9f2f62c9d4fff776622a06303289376e9d6"
+        },
+        "buv_runtime.h": {
+          "bytes": 3161,
+          "sha256": "56495ea151b57b00f915e3fed9ab75e1a1bcefdc8bc648493f4db09a8b4b82a1"
+        }
+      }
+    },
+    "files": [
+      {
+        "path": "C:\\bun\\packages\\bun-runtime-sdk\\target\\artifact\\x86_64-pc-windows-msvc\\current\\manifest.json",
+        "bytes": 1187,
+        "sha256": "30759d7ab6487650a4ca7c46db6afca82a8702e63c5ff291c406c704092a2352"
+      },
+      {
+        "path": "C:\\bun\\packages\\bun-runtime-sdk\\target\\artifact\\x86_64-pc-windows-msvc\\current\\buv_runtime.dll",
+        "bytes": 559616,
+        "sha256": "dbce4057ca89bb622d60ab87f555706b5cf9614e04799ee608b69d110f364e06"
+      },
+      {
+        "path": "C:\\bun\\packages\\bun-runtime-sdk\\target\\artifact\\x86_64-pc-windows-msvc\\current\\yolo_runtime.h",
+        "bytes": 9159,
+        "sha256": "5318c1eb09523b8aeb606cc7d673c9f2f62c9d4fff776622a06303289376e9d6"
+      },
+      {
+        "path": "C:\\bun\\packages\\bun-runtime-sdk\\target\\artifact\\x86_64-pc-windows-msvc\\current\\buv_runtime.h",
+        "bytes": 3161,
+        "sha256": "56495ea151b57b00f915e3fed9ab75e1a1bcefdc8bc648493f4db09a8b4b82a1"
+      }
+    ]
+  },
+  "runtime": {
+    "version": "1.4.4",
+    "revision": "d2ff37699e391e8e271fc877e9bcc81cdc49fa82",
+    "platform": "win32",
+    "arch": "x64",
+    "release": {
+      "name": "node",
+      "sourceUrl": "https://github.com/aphrody-labs/bun/releases/download/bun-v1.4.4/bun-windows-x64-full.zip",
+      "headersUrl": "https://nodejs.org/download/release/v26.3.0/node-v26.3.0-headers.tar.gz"
+    },
+    "executable": {
+      "path": "C:/bun/build/release/bun.exe",
+      "bytes": 193779200,
+      "sha256": "a9c2c6121d14799f0cacb0387c3086e1765d174243b99b2fa0a7d8171cd079ed"
+    }
+  },
+  "source": {
+    "bunHead": "ffb9a96ceb4131829c441d17d5713d9c6de27a56",
+    "sdkOwnerCommits": [
+      "9ed47534dbb",
+      "22372e69866"
+    ],
+    "pythonSources": [
+      {
+        "path": "C:\\bun\\packages\\bun-runtime-sdk\\python\\ctypes\\yolo_runtime.py",
+        "bytes": 19869,
+        "sha256": "fcbe95e098cc9b434aae8410052399459aeb3050f4ec7d1c4fd1952a035aaddc"
+      },
+      {
+        "path": "C:\\bun\\packages\\bun-runtime-sdk\\python\\ctypes\\bun_yolo.py",
+        "bytes": 10748,
+        "sha256": "37a91661458f9ce1255b72b3810f86c58458e535108beb1e7a4a539226cbfa14"
+      },
+      {
+        "path": "C:\\bun\\packages\\bun-runtime-sdk\\python\\ctypes\\yolo_worker.ts",
+        "bytes": 4368,
+        "sha256": "b3d7bdf3f059a7837041ef581083f4b877e0b8770bcd6e8800ac976ee4f232e0"
+      },
+      {
+        "path": "C:\\bun\\packages\\bun-runtime-sdk\\python\\ctypes\\test_yolo_runtime.py",
+        "bytes": 13620,
+        "sha256": "d4bd5c816aadfea802f4f5f147e62fc544dd92a7e6813d60ffd250abbe423f9e"
+      },
+      {
+        "path": "C:\\bun\\packages\\bun-runtime-sdk\\python\\ctypes\\test_bun_yolo.py",
+        "bytes": 10862,
+        "sha256": "51aeb2a5693615d955fc2725890448e7376b3ad16460b2572632e1b8eecbf130"
+      }
+    ],
+    "pythonPendingNativeGateFixes": true,
+    "consumerHead": "c0515bf40bb4303ec87465600da8ad245776f5e4",
+    "consumerFixture": {
+      "path": "C:/src/aphrody/py/packages/aphrody/tests/test_bun_decision_native.py",
+      "bytes": 2428,
+      "sha256": "a117c96e2568f941ea42f4f634b11a67345486c7651c60c6a97de2049bc0194d"
+    }
+  },
+  "gates": {
+    "rustUnitTests": {
+      "passed": 28,
+      "failed": 0,
+      "ignored": 1,
+      "ignoredReason": "Self-spawn child fixture invoked by its parent tests",
+      "command": "bun scripts/build/rust/cargo-serial.ts --msvc test --manifest-path packages/bun-runtime-sdk/Cargo.toml -p yolo-runtime --lib --jobs 1 -- --test-threads=1"
+    },
+    "sdkPython": {
+      "passed": 40,
+      "failed": 0
+    },
+    "aphrodyConsumer": {
+      "passed": 2,
+      "failed": 0,
+      "usageCases": [
+        null,
+        {
+          "input_tokens": 12,
+          "output_tokens": 3
+        }
+      ],
+      "dependencyVersions": {
+        "pydantic": "2.14.1",
+        "pydantic-ai-slim": "2.55.0",
+        "pydantic-graph": "2.55.0",
+        "httpx": "0.28.1",
+        "sniffio": "1.3.1"
+      },
+      "existingEnvironmentModified": false,
+      "note": "Explicit locked sniffio in uv cache avoids an incomplete namespace in the existing .venv."
+    },
+    "logs": [
+      {
+        "path": "C:\\bun\\build\\media\\buv-runtime-abi16-python-tests.log",
+        "bytes": 101,
+        "sha256": "508a926efbf197878b330372b5adb9a0e09d2834e8d4129a25f764aa63591c79"
+      },
+      {
+        "path": "C:\\bun\\build\\media\\buv-runtime-abi16-aphrody-tests.log",
+        "bytes": 148,
+        "sha256": "be93b945d522bc6e39d41cac8f4037de2f9d59936000defcc4b07ef4ad15dc12"
+      }
+    ]
+  },
+  "nativeStdinWaitQualified": true,
+  "nativePythonBridgeQualified": true,
+  "nativeAphrodyConsumerQualified": true,
+  "freshBunReleaseQualified": false,
+  "allReleasePlatformsQualified": false,
+  "limits": [
+    "Bun runtime d2 is older than the SDK source stamp and has pending default-export fixes.",
+    "The decision fixture uses the real code provider; no model weights or remote inference were qualified.",
+    "Rust Linux stdin cancellation fixtures remain unexecuted."
+  ]
+}

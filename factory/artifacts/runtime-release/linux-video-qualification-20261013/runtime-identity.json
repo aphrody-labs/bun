@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "sourceCommit": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+  "version": "1.4.4",
+  "platform": "linux",
+  "arch": "x64",
+  "execPath": "/home/ubuntu/build/bun-os-obscura-4634063/build/release/bun-profile",
+  "bytes": 402072928,
+  "sha256": "068cd3271a555e765cc329f104803bdd91246e99763b9f851e6b3614b7c1d093",
+  "video": {
+    "type": "function",
+    "available": true
+  },
+  "image": "function",
+  "createdAt": "2026-10-13T17:31:04.326Z"
+}

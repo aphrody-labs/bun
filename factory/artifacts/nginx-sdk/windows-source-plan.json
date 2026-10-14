@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "kind": "bun-nginx-native-provider-plan",
+  "platform": "win32",
+  "arch": "x64",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "bunVersion": "1.4.4",
+    "bunRevision": "c62d01d81506a8b78b1d39b44d17edc81b4a6355"
+  },
+  "destination": "C:\\bun\\factory\\artifacts\\nginx-sdk\\windows-source",
+  "source": "C:\\bun\\vendor\\nginx",
+  "ngxRust": "C:\\bun\\vendor\\ngx-rust",
+  "module": "C:\\bun\\packages\\bun-nginx\\native",
+  "objects": "C:\\bun\\factory\\artifacts\\nginx-sdk\\windows-source\\objects",
+  "sources": [
+    {
+      "repository": "https://github.com/nginx/nginx.git",
+      "revision": "0a5db852e18d1c22c62a5ede1412ac3f416111a0",
+      "release": "1.31.6",
+      "path": "C:\\bun\\vendor\\nginx",
+      "license": "BSD-2-Clause",
+      "licensePath": "vendor/nginx/LICENSE",
+      "tree": "c9c6afad8fbaf7e73b06b0f6fa6686c1bc798668",
+      "inventorySha256": "12aecff98da5a3e8deef012eac5e20f9072f9693f59a850b26e90fc8607cf34e",
+      "licenseSha256": "08845fe39e06b51dad7685c28140ab49577a86e947523e16b536a46caf89ad5c"
+    },
+    {
+      "repository": "https://github.com/nginx/ngx-rust.git",
+      "revision": "cf58b5270dc5e9b855dab765e9f13ba2a12c7709",
+      "package": "ngx",
+      "version": "0.5.0",
+      "path": "C:\\bun\\vendor\\ngx-rust",
+      "license": "Apache-2.0",
+      "licensePath": "vendor/ngx-rust/LICENSE",
+      "vendoredFeature": false,
+      "initializeNestedNginxSubmodule": false,
+      "tree": "263d009778a49a787b9b10acd57bddc824615356",
+      "inventorySha256": "5c078aa5d5d2fdbf76d7777d7d8accd2e9cd7e78429e1c5693b335e24a9b2f0b",
+      "licenseSha256": "444e7731cbe71bc2f52bbbffb809f41ca562524e4e2945da78cf3b41305b3de0"
+    }
+  ],
+  "moduleInputs": [
+    {
+      "name": "Cargo.toml",
+      "sha256": "88c1bfe64bc61d320bee5f9a0fe350df64836c33c2bac42fd1a760adf88ecbc8"
+    },
+    {
+      "name": "Cargo.lock",
+      "sha256": "ef1944e5c55b09b2d59d89b6fad7f43cee4084fe8fe6e7c233d109e884220964"
+    },
+    {
+      "name": "build.rs",
+      "sha256": "f5a2077118f875dc1ae1483bafe743c7081ff203dc27852c82d6844c79b2c982"
+    },
+    {
+      "name": "config",
+      "sha256": "d831d9f8136d00be64df2e76f437ba47ce05a31eda38e35401992aaf487fb61f"
+    },
+    {
+      "name": "config.make",
+      "sha256": "02952213c7bc645234f99d60266237c9f95f50d3591fb238abfc9d9c140a40df"
+    },
+    {
+      "name": "src/lib.rs",
+      "sha256": "b19777c21423456be650040c2e80571fc44893dea62495ef4a04bfc87518fb73"
+    },
+    {
+      "name": "sources.json",
+      "sha256": "cbeea03826dfbc11b170ba8fc03c93f1c42be02f4e6d88ba2d78f46023bba14d"
+    }
+  ],
+  "jobs": 2,
+  "configureArguments": [
+    "--builddir=C:\\bun\\factory\\artifacts\\nginx-sdk\\windows-source\\objects",
+    "--prefix=C:\\bun\\factory\\artifacts\\nginx-sdk\\windows-source\\prefix",
+    "--with-compat",
+    "--with-threads",
+    "--with-http_ssl_module",
+    "--with-http_v2_module",
+    "--with-http_v3_module",
+    "--with-stream",
+    "--with-stream_ssl_module",
+    "--with-stream_ssl_preread_module",
+    "--with-mail",
+    "--with-mail_ssl_module",
+    "--add-module=C:\\bun\\packages\\bun-nginx\\native"
+  ],
+  "commands": [
+    {
+      "executable": "sh",
+      "args": [
+        "auto/configure",
+        "--builddir=C:\\bun\\factory\\artifacts\\nginx-sdk\\windows-source\\objects",
+        "--prefix=C:\\bun\\factory\\artifacts\\nginx-sdk\\windows-source\\prefix",
+        "--with-compat",
+        "--with-threads",
+        "--with-http_ssl_module",
+        "--with-http_v2_module",
+        "--with-http_v3_module",
+        "--with-stream",
+        "--with-stream_ssl_module",
+        "--with-stream_ssl_preread_module",
+        "--with-mail",
+        "--with-mail_ssl_module",
+        "--add-module=C:\\bun\\packages\\bun-nginx\\native"
+      ],
+      "cwd": "C:\\bun\\vendor\\nginx"
+    },
+    {
+      "executable": "make",
+      "args": [
+        "-f",
+        "C:\\bun\\factory\\artifacts\\nginx-sdk\\windows-source\\objects\\Makefile",
+        "-j2"
+      ],
+      "cwd": "C:\\bun\\vendor\\nginx"
+    }
+  ],
+  "environment": {
+    "BUN_NGX_RUST_SOURCE_DIR": "C:\\bun\\vendor\\ngx-rust",
+    "NGX_CARGO": "bun C:\\bun\\scripts\\build\\rust\\cargo-serial.ts",
+    "CARGO_BUILD_JOBS": "2",
+    "NGX_RUSTC_OPT": "--locked --jobs=2"
+  },
+  "heavyLock": null,
+  "executionSupported": false,
+  "missingGates": [
+    "native module compile",
+    "HTTP and HEAD",
+    "event-loop timer and client abort",
+    "reload/quit lifecycle",
+    "invalid configuration",
+    "dynamic ABI mismatch",
+    "shared-library and libc baseline",
+    "native MSVC configure/toolchain gate",
+    "Windows exact target Rust module ABI"
+  ],
+  "nativeModuleQualified": false,
+  "allReleasePlatformsQualified": false
+}

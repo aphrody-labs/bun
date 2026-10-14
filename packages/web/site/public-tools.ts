@@ -68,5 +68,5 @@ export function publicBunToolRequest(name: string, input: unknown, base: string 
       throw new TypeError(`Invalid ${name}`);
     url.searchParams.set(name, String(value));
   }
-  return new Request(url, { method: "GET" });
+  return new Request(url.href, { method: "GET" });
 }

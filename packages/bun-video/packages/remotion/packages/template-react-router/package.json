@@ -8,9 +8,9 @@
 	"scripts": {
 		"build": "react-router build",
 		"dev": "react-router dev",
-		"lint": "eslint . && tsc",
+		"lint": "bun lint . && bun check",
 		"start": "react-router-serve build/server/index.js",
-		"typecheck": "react-router typegen && tsc",
+		"typecheck": "react-router typegen && bun check",
 		"remotion:studio": "remotion studio",
 		"remotion:renderlambda": "remotion lambda render remotion-react-router-example LogoAnimation out/logo-animation-lambda-rendered.mp4",
 		"remotion:deploy": "tsx app/deploy.ts"
@@ -50,8 +50,7 @@
 		"@types/react-dom": "19.2.3",
 		"dotenv": "17.3.1",
 		"eslint": "9.39.5",
-		"prettier": "3.8.1",
-		"tsx": "4.19.3",
-		"typescript": "5.9.3"
+		"tsx": "4.19.3"
+
 	}
 }

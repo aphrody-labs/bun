@@ -50,23 +50,28 @@ export async function setupSdk(root = repoRoot()) {
     throw new Error("SDK cache must not traverse a link");
   if (existsSync(spec.sdk) && lstatSync(spec.sdk).isSymbolicLink())
     throw new Error("SDK payload must not traverse a link");
-  const index = await (await sdkFetch("https://api.nuget.org/v3/index.json")).json();
-  const registration = index.resources.find((resource: any) => resource["@type"] === "RegistrationsBaseUrl/3.6.0")?.[
-    "@id"
-  ];
+  const index = await (await sdkFetch("https://api.nuget.org/v3/index.json")).json() as {
+    resources?: { "@type"?: unknown; "@id"?: unknown }[];
+  };
+  const registration = index.resources?.find(resource => resource["@type"] === "RegistrationsBaseUrl/3.6.0")?.["@id"];
   if (typeof registration !== "string") throw new Error("NuGet registration resource is missing");
-  const packages = [];
+  const packages: { id: string; version: string; sha512: string; bytes: number; entries: number }[] = [];
   for (const id of spec.packages) {
-    const registered = await (await sdkFetch(`${registration}${id}/${spec.packageVersion}.json`)).json();
+    const registered = await (await sdkFetch(`${registration}${id}/${spec.packageVersion}.json`)).json() as {
+      catalogEntry?: unknown; packageContent?: unknown;
+    };
     if (typeof registered.catalogEntry !== "string" || typeof registered.packageContent !== "string")
       throw new Error("SDK registration metadata is incomplete");
-    const catalog = await (await sdkFetch(registered.catalogEntry)).json();
+    const catalog = await (await sdkFetch(registered.catalogEntry)).json() as {
+      id?: unknown; version?: unknown; packageHashAlgorithm?: unknown; packageHash?: unknown; packageSize?: unknown;
+    };
     if (
       typeof catalog.id !== "string" ||
       catalog.id.toLowerCase() !== id ||
       catalog.version !== spec.packageVersion ||
       catalog.packageHashAlgorithm !== "SHA512" ||
       typeof catalog.packageHash !== "string" ||
+      typeof catalog.packageSize !== "number" ||
       !Number.isSafeInteger(catalog.packageSize) ||
       catalog.packageSize <= 0 ||
       catalog.packageSize > 512 * 1024 * 1024
@@ -192,7 +197,7 @@ export function validate(layoutValue = layout()): string[] {
 }
 
 export function environment(layoutValue = layout(), current: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
-  const env = { ...current, CEF_PATH: layoutValue.distribution };
+  const env: NodeJS.ProcessEnv = { ...current, CEF_PATH: layoutValue.distribution };
   env.BUN_CHROMIUM_SOURCE = layoutValue.chromiumSource;
   env.BUN_CEF_VERSION = CEF_VERSION;
   env.BUN_CEF_CHROMIUM_VERSION = CEF_CHROMIUM_VERSION;

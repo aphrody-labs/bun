@@ -7,11 +7,11 @@
 	"description": "Utilities for streaming data between programs",
 	"main": "dist",
 	"scripts": {
-		"lint": "eslint src",
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
+		"lint": "bun lint src",
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
 		"test": "bun test src",
-		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts"
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && bun --env-file=../.env.bundle bundle.ts"
 	},
 	"author": "Jonny Burger <jonny@remotion.dev>",
 	"contributors": [],
@@ -24,8 +24,8 @@
 	},
 	"devDependencies": {
 		"@remotion/eslint-config-internal": "workspace:*",
-		"eslint": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"eslint": "catalog:"
+
 	},
 	"exports": {
 		"./package.json": "./package.json",

@@ -10,10 +10,10 @@
 		"dist"
 	],
 	"scripts": {
-		"lint": "eslint src",
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"make": "tsgo -d"
+		"lint": "bun lint src",
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d"
 	},
 	"bugs": {
 		"url": "https://github.com/remotion-dev/remotion/issues"
@@ -31,8 +31,8 @@
 		"eslint-plugin-react": "7.37.4",
 		"eslint-plugin-react-hooks": "4.6.0",
 		"@remotion/eslint-config-internal": "workspace:*",
-		"eslint": "catalog:",
-		"@typescript/native-preview": "catalog:"
+		"eslint": "catalog:"
+
 	},
 	"keywords": [
 		"remotion",

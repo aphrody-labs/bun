@@ -37,7 +37,7 @@ export type GenerateOptions = {
   skillDirs?: string[];
 };
 
-const N2B_PACKAGES = "packages/bun-n2b/crates/n2b-registry/registry/packages.toml";
+const N2B_PACKAGES = "src/migrate/registry/data/packages.toml";
 
 // ─── Reading sources ───────────────────────────────────────────────────────
 
@@ -329,7 +329,7 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
       .join(", ")}, ...), build profiles, Windows/Linux toolchains, codegen and vendored dependencies.`,
     [
       "# Building the Aphrody runtime",
-      section(claude, "Building and Running Bun") ?? "",
+      section(claude, "Runtime and builds") ?? section(claude, "Building and Running Bun") ?? "",
       "## package.json scripts",
       table(
         scripts.map(([k, v]) => [`\`bun run ${k}\``, `\`${v}\``]),
@@ -385,6 +385,7 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
     "How the Aphrody runtime works and is documented: Bun APIs, CLI commands, built-in JS modules, node:* compatibility, Bun.serve, fetch and streams, HTTP/SQL/Valkey, the shell, the test runner and the package manager (bun install, lockfile, linkers).",
     [
       "# The Bun runtime",
+      "Use native `bun check`, `bun lint`, `bun fmt` and `bun n2b` directly. Checkout qualification uses `bun bd check`, `bun bd lint`, `bun bd fmt` and `bun bd n2b`; no subprocess or external backend may replace them. Package scripts may expose these native commands but must not wrap or replace them; `bunx` is reserved for unrelated packages.",
       "## Runtime documentation pages (docs/)",
       table(
         runtimePages.map(p => [p.title, `\`docs${p.page}.mdx\``, p.description]),
@@ -497,7 +498,7 @@ export function generate(options: GenerateOptions): Files {
       return `- \`${s.name}\`: ${(fm.description ?? "").replace(/\s+/g, " ")}`;
     })
     .join("\n");
-  const instructions = `# Bun (Aphrody runtime)\n\n${rules}\n\n${toolsDoc}\n\n## Decision identity\n\nYolo is Bun's typed decision layer. Read yolo/system-prompt.md for its public identity and yolo/context-catalog.json for source-derived resource references. A selection proposes a resource; it does not execute or authorize a tool.\n\n## Skills\n\n${skillIndex}\n`;
+  const instructions = `# Bun OS\n\n${rules}\n\n${toolsDoc}\n\n## Decision identity\n\nYolo is Bun's typed decision layer. Read yolo/system-prompt.md for its public identity and yolo/context-catalog.json for source-derived resource references. A selection proposes a resource; it does not execute or authorize a tool.\n\n## Skills\n\n${skillIndex}\n`;
   const context = [rules, "## Bun-native code", NATIVE_RULES.map(r => `- ${r}`).join("\n")].join("\n\n");
 
   // Content shared by every target, before the version stamp.

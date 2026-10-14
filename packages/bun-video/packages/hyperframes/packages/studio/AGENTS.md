@@ -1,5 +1,7 @@
 # Working on Studio
 
+Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.
+
 Read this before your first change in `packages/studio`. It is the handful of
 things that are not visible from the source, and that cost real time to
 rediscover.
@@ -145,7 +147,7 @@ bun run --cwd packages/studio test:edit-accuracy -- --grid pr --filter '^resize-
 - **`bunx fallow audit --base origin/main --fail-on-issues`** — complexity per
   function, duplication, unused exports. Adding branches to an already-complex
   function trips it; extract rather than nest.
-- **oxlint and oxfmt**, not eslint or prettier.
+- **`bun lint` and `bun fmt`**, not eslint or prettier.
 - **Before and After captures.** A PR that changes code under `packages/studio`
   or `packages/player` needs `## Before` and `## After` sections in its
   description, each with an image or video. The exemptions (a small change with

@@ -6,10 +6,10 @@
 	"version": "4.0.534",
 	"main": "dist/index.js",
 	"scripts": {
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src",
-		"lint": "eslint src",
-		"make": "tsgo -d",
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src",
+		"lint": "bun lint src",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d",
 		"testwebrenderer": "vitest src/test --browser --run",
 		"studio": "cd ../example && bunx remotion studio ../react18-tests/src/test/studio.ts"
 	},
@@ -34,8 +34,8 @@
 		"vitest": "catalog:",
 		"vitest-browser-react": "2.3.0",
 		"@types/react": "18.3.1",
-		"@types/react-dom": "18.3.1",
-		"@typescript/native-preview": "catalog:"
+		"@types/react-dom": "18.3.1"
+
 	},
 	"peerDependencies": {
 		"react": ">=18.0.0",

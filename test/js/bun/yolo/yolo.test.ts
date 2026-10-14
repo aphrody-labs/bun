@@ -6,7 +6,7 @@ import Yolo, {
   confidenceThreshold,
   decide,
   inspect,
-  jev,
+  remote,
   local,
   noul,
   score,
@@ -102,11 +102,24 @@ describe("bun:yolo native decisions", () => {
         },
       });
     });
-    expect(await decide({ state: { query: "Bun.Video resize" }, questions }, { provider })).toEqual({
-      allowed: true,
-      action: "docs",
-      quality: 1.5,
-    });
+    const decision = await decide({ state: { query: "Bun.Video resize" }, questions }, { provider });
+    expect(decision).toEqual({ allowed: true, action: "docs", quality: 1.5 });
+    const branches: string[] = [];
+    for (const enabled of [decision.allowed, !decision.allowed]) {
+      if (enabled) branches.push(decision.action);
+      else branches.push("none");
+    }
+    expect(branches).toEqual(["docs", "none"]);
+    let remaining = 2,
+      iterations = 0;
+    while (decision.allowed && remaining > 0) {
+      iterations++;
+      remaining--;
+    }
+    expect(iterations).toBe(2);
+    expect(Boolean(decision.allowed) && decision.action === "docs" && decision.quality >= 1).toBe(true);
+    const action = async () => (decision.allowed ? decision.action : "none");
+    expect(await action()).toBe("docs");
     expect(calls).toBe(1);
   });
 
@@ -160,6 +173,92 @@ describe("bun:yolo native decisions", () => {
     expect(await decide({ state: null, questions }, { provider })).toEqual({ allowed: true });
   });
 
+  test("invalid arguments and request descriptors reject before provider I/O", async () => {
+    let calls = 0;
+    const provider = code(() => {
+      calls++;
+      return response({ a: { type: "noul", noul: 1 } });
+    });
+    const request = { state: null, questions: { a: noul() } };
+    for (const run of [inspect, decide]) {
+      for (const options of [
+        null,
+        [],
+        { timeout: 0 },
+        { timeout: 1.5 },
+        { maxRetries: 4 },
+        { threshold: NaN },
+        { threshold: 1.01 },
+        { signal: {} },
+      ]) {
+        await expect(
+          run(
+            request,
+            options === null || Array.isArray(options) ? (options as any) : ({ provider, ...options } as any),
+          ),
+        ).rejects.toThrow();
+      }
+      for (const invalid of [
+        null,
+        [],
+        { state: null, questions: {} },
+        { state: null, questions: { a: { type: "choice", criteria: { only: "One" } } } },
+        { state: null, questions: Object.fromEntries(Array.from({ length: 65 }, (_, i) => [String(i), noul()])) },
+      ]) {
+        await expect(run(invalid as any, { provider })).rejects.toThrow();
+      }
+      await expect(run(request, { provider: {} as any })).rejects.toThrow("provider.systemOne");
+    }
+    await expect(Yolo(null, request.questions.a, null as any)).rejects.toThrow("options");
+    const controller = new AbortController();
+    const reason = new Error("cancelled before I/O");
+    controller.abort(reason);
+    await expect(decide(request, { provider, signal: controller.signal })).rejects.toBe(reason);
+    expect(calls).toBe(0);
+    for (const options of [
+      null,
+      [],
+      { client: {} },
+      { client: provider, baseURL: "https://example.com" },
+      { model: "" },
+      { baseURL: "ftp://example.com" },
+      { baseURL: "https://user:pass@example.com" },
+      { baseURL: "https://example.com?query=1" },
+      { baseURL: "http://example.com" },
+    ]) {
+      expect(() => remote(options as any)).toThrow();
+    }
+    expect(calls).toBe(0);
+  });
+
+  test("both result paths pin asynchronous descriptor mutations and reject invalid provider answers", async () => {
+    for (const run of [inspect, decide]) {
+      const request = { state: null, questions: { a: noul() } };
+      const started = Promise.withResolvers<Request>();
+      const pending = Promise.withResolvers<unknown>();
+      const task = run(request, {
+        provider: code(normalized => {
+          started.resolve(normalized);
+          return pending.promise;
+        }),
+      });
+      const normalized = await started.promise;
+      (normalized.questions.a as any).type = "choice";
+      (request.questions.a as any).type = "choice";
+      pending.resolve(response({ a: { type: "noul", noul: 1 } }));
+      const result = await task;
+      expect(run === inspect ? (result as any).answers.a.noul : (result as any).a).toBe(run === inspect ? 1 : true);
+      for (const answers of [
+        { wrong: { type: "noul", noul: 1 } },
+        { a: { type: "noul", noul: 1.01 } },
+        { a: { type: "choice", choice: "other", confidence: 1, probabilities: { other: 1 } } },
+      ]) {
+        await expect(
+          run({ state: null, questions: { a: noul() } }, { provider: code(() => response(answers)) }),
+        ).rejects.toThrow();
+      }
+    }
+  });
   test("caller abort and operation deadline settle providers that never complete", async () => {
     const controller = new AbortController();
     const started = Promise.withResolvers<void>();
@@ -182,7 +281,7 @@ describe("bun:yolo native decisions", () => {
     }
   });
 
-  test("native Jev HTTP schema, bounded retries and strict streamed JSON", async () => {
+  test("native remote HTTP schema, bounded retries and strict streamed JSON", async () => {
     const oldKey = process.env.TYPESAFE_API_KEY;
     process.env.TYPESAFE_API_KEY = "yolo-local-fixture";
     let calls = 0,
@@ -201,7 +300,7 @@ describe("bun:yolo native decisions", () => {
       },
     });
     try {
-      const provider = jev({ baseURL: server.url.origin, model: "fixture-model" });
+      const provider = remote({ baseURL: server.url.origin, model: "fixture-model" });
       expect(await Yolo(null, noul("Is the public API documented?"), { provider, maxRetries: 2 })).toBe(true);
       expect(calls).toBe(3);
       failure = true;
@@ -218,7 +317,7 @@ describe("bun:yolo native decisions", () => {
 
   test("SDK transport receives cancellation and retry bounds without a second engine", async () => {
     let calls = 0;
-    const provider = jev({
+    const provider = remote({
       client: {
         async systemOne(_request, options) {
           calls++;

@@ -65,15 +65,30 @@ if (import.meta.main) {
       domains: { type: "string", multiple: true },
       concurrency: { type: "string", default: "2" },
       "artifact-directory": { type: "string" },
+      "git-repository": { type: "string" },
+      "git-revision": { type: "string" },
+      surfaces: { type: "string", multiple: true },
     },
     strict: true,
   });
   if (!values.root) throw new Error("Source indexing requires --root <checkout>");
   if (values.profile !== "bun") throw new Error("Bun source indexing uses profile bun");
   using registry = new BunPython(resolve(values.db));
+  if (!!values["git-repository"] !== !!values["git-revision"])
+    throw new Error("Pinned Git indexing requires both --git-repository and --git-revision");
+  const { createGitIndexInput } = await import("./dataset/source.ts");
+  await using git = values["git-repository"]
+    ? await createGitIndexInput({
+        repository: values["git-repository"] as "oven-sh/bun" | "aphrody-labs/bun",
+        root: resolve(values.root),
+        revision: values["git-revision"]!,
+      })
+    : null;
   const result = await indexCodebase(registry, resolve(values.root), {
     profile: "bun",
     concurrency: Number(values.concurrency),
+    ...(git ? { input: git.input } : {}),
+    ...(values.surfaces ? { surfaces: values.surfaces } : {}),
     ...(values.domains ? { domains: values.domains } : {}),
     ...(values["artifact-directory"] ? { artifactDirectory: resolve(values["artifact-directory"]) } : {}),
   });

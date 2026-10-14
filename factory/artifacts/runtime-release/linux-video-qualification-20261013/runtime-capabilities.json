@@ -1,0 +1,296 @@
+{
+  "schema": 1,
+  "kind": "bun-runtime-capabilities",
+  "measuredAt": "2026-10-13T17:31:18.762Z",
+  "runtime": {
+    "version": "1.4.4",
+    "revision": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+    "platform": "linux",
+    "arch": "x64",
+    "libc": {
+      "kind": "glibc",
+      "version": "2.43",
+      "requiredVersions": [
+        "2.2.5",
+        "2.3",
+        "2.3.2",
+        "2.3.4",
+        "2.4",
+        "2.5",
+        "2.6",
+        "2.7",
+        "2.9",
+        "2.10",
+        "2.12",
+        "2.14",
+        "2.15",
+        "2.16",
+        "2.17",
+        "2.27",
+        "2.32",
+        "2.33",
+        "2.34",
+        "2.35",
+        "2.38",
+        "2.39",
+        "2.43"
+      ],
+      "minimumDirectRequirement": "2.43",
+      "compatibility": "Direct ELF requirements only; older-host execution and transitive SDK closure are separate gates"
+    },
+    "executable": {
+      "path": "/home/ubuntu/build/bun-os-obscura-4634063/build/release/bun-profile",
+      "bytes": 402072928,
+      "sha256": "068cd3271a555e765cc329f104803bdd91246e99763b9f851e6b3614b7c1d093"
+    },
+    "linkage": {
+      "measuredOnThisHost": true,
+      "dependencies": [
+        "linux-vdso.so.1",
+        "libc.so.6",
+        "/lib64/ld-linux-x86-64.so.2",
+        "libmnl.so.0",
+        "libnftnl.so.11",
+        "libdbus-1.so.3",
+        "libm.so.6",
+        "libsystemd.so.0"
+      ]
+    }
+  },
+  "source": {
+    "repository": "https://github.com/aphrody-labs/bun",
+    "commit": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+    "checkout": "/home/ubuntu/build/bun-os-obscura-4634063",
+    "dirty": true,
+    "dirtyPaths": [
+      ".claude/skills/cpp-bun/SKILL.md"
+    ],
+    "codeMatchesCommit": true,
+    "buildGeneratedModeChanges": [
+      "apps/desktop/src/main.ts",
+      "packages/bun-google/src/cli.ts",
+      "packages/bun-google/src/public-index-cli.ts",
+      "packages/bun-next/bin/next-bun.js"
+    ],
+    "preservedDocSHA256": "3ba3782a70e1ce6ee420d7ca16067683b8c08d952d6dc49d116beb7761d3a1ba"
+  },
+  "build": {
+    "profile": "release",
+    "target": "linux-x64-gnu",
+    "baseline": true,
+    "lto": true,
+    "canary": false,
+    "coreutils": true,
+    "videoNative": true,
+    "jobs": 2,
+    "linkThreadsRequested": 2,
+    "linkThreadsFlagEffective": false,
+    "linkCPUSet": [
+      0,
+      1
+    ],
+    "receipt": "build-command.txt"
+  },
+  "apis": {
+    "video": {
+      "available": true,
+      "methods": [
+        "audio",
+        "avif",
+        "blob",
+        "buffer",
+        "bytes",
+        "dataurl",
+        "extract",
+        "flip",
+        "flop",
+        "frame",
+        "frames",
+        "gif",
+        "heic",
+        "jpeg",
+        "metadata",
+        "modulate",
+        "placeholder",
+        "png",
+        "remux",
+        "resize",
+        "rgba",
+        "rotate",
+        "toBase64",
+        "toBuffer",
+        "toDataURL",
+        "webp",
+        "write"
+      ],
+      "qualified": [
+        "MP4 H264 metadata",
+        "H264 RGBA/frame via Image",
+        "bounded frame sequences",
+        "AAC-LC PCM16 WAV",
+        "animated GIF",
+        "H264 video-only remux with preserved decoded pixels"
+      ],
+      "limits": [
+        "AAC roll sample groups cannot be preserved by remux",
+        "Memory input <=256 MiB; file input <=64 GiB",
+        "Raw HTTP(S) strings are local paths; fetch→Blob/bytes must be explicit"
+      ]
+    },
+    "image": {
+      "available": true,
+      "methods": [
+        "avif",
+        "blob",
+        "buffer",
+        "bytes",
+        "dataurl",
+        "extract",
+        "flip",
+        "flop",
+        "heic",
+        "jpeg",
+        "metadata",
+        "modulate",
+        "placeholder",
+        "png",
+        "resize",
+        "rgba",
+        "rotate",
+        "toBase64",
+        "toBuffer",
+        "webp",
+        "write"
+      ]
+    }
+  },
+  "cli": {
+    "video": {
+      "available": true,
+      "exitCode": 0,
+      "sourceNote": "Canonical bun video CLI measured independently from native API",
+      "qualifiedCommands": [
+        "info",
+        "metadata",
+        "frame",
+        "frames",
+        "audio",
+        "gif",
+        "remux"
+      ],
+      "receipt": "native-cli.json"
+    }
+  },
+  "transport": {
+    "scope": "synthetic loopback fixture only",
+    "transport": "explicit bounded fetch then Blob/bytes",
+    "url": "http://127.0.0.1:17391/synthetic.mp4",
+    "range": true,
+    "blob": true,
+    "bytes": true,
+    "rawURL": {
+      "supported": false,
+      "code": "ERR_VIDEO_PROVIDER",
+      "message": "No such file or directory (os error 2)"
+    },
+    "requests": 3
+  },
+  "gates": {
+    "native": true,
+    "passed": true,
+    "pipeline": "native-pipeline.json",
+    "tests": {
+      "native": true,
+      "passed": true,
+      "passCount": 161,
+      "failCount": 0,
+      "expectedFiles": [
+        "./test/js/bun/video/test.ts",
+        "./test/cli/video/video.test.ts",
+        "./test/js/bun/image/image.test.ts",
+        "./test/js/bun/image/image-kernels.test.ts"
+      ]
+    },
+    "binaryRelease": {
+      "schema": 1,
+      "kind": "release-binary-expectations",
+      "sourceCommit": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+      "passed": false,
+      "failedChecks": 1,
+      "unexpectedSharedLibraries": [
+        "libdbus-1.so.3",
+        "libmnl.so.0",
+        "libnftnl.so.11"
+      ],
+      "reportedMaximumGLIBC": "2.43",
+      "scope": "Release CI expectations: local native build warns without failing",
+      "sourceReceipt": "build.log"
+    },
+    "receipts": [
+      {
+        "name": "binary-release-gate.json",
+        "bytes": 407,
+        "sha256": "daeb6f741316406747917b28802397907bd0740406d3869499ec249c05403a48"
+      },
+      {
+        "name": "runtime-identity.json",
+        "bytes": 459,
+        "sha256": "37e467bc4d60b292038e84a521ea27ee5a04bebe291cfea8eaded8548cd67da2"
+      },
+      {
+        "name": "native-tests.log",
+        "bytes": 17579,
+        "sha256": "61d53e38806246254c975506e244c306b50e453187c7c6087d960cac68117a84"
+      },
+      {
+        "name": "native-pipeline.json",
+        "bytes": 2732,
+        "sha256": "da6bddcae811355cc0640a0c47e1ace227d026688c7b88fda19968278aba800c"
+      },
+      {
+        "name": "native-cli.json",
+        "bytes": 5716,
+        "sha256": "fc0cfbcd3d48e42cdbf66e3a13944d6c43d7c87dcb7001d58f132a5d555280f6"
+      },
+      {
+        "name": "runtime-elf-version-info.log",
+        "bytes": 26807,
+        "sha256": "9e635a4e359af95a05e88cbd6f1648e8e836803db5b5994c7f69e6bc70222d0f"
+      },
+      {
+        "name": "runtime-ldd.log",
+        "bytes": 550,
+        "sha256": "9bff588abd63d664cfe465f8b6b57272c37a366f438672160132953f077a4a99"
+      },
+      {
+        "name": "build-command.txt",
+        "bytes": 127,
+        "sha256": "2b819e78491e700379027e6d133510345095908e97f95853576fbb025c51d2cb"
+      },
+      {
+        "name": "configure.log",
+        "bytes": 269,
+        "sha256": "2a0f416e5d9f27772542897edbb2a95fbdbfbd581f132b31724a95c67b6de7ab"
+      },
+      {
+        "name": "source-snapshot.json",
+        "bytes": 1520,
+        "sha256": "34fb21aa8e901b4472cc8dddc2873b38e5808472489f20b417f698e8e5c8e995"
+      }
+    ]
+  },
+  "release": {
+    "eligible": false,
+    "completeFactoryReleaseQualified": false,
+    "reason": "Behavior qualification preserves one local documentation edit; all platform release receipts and common source pin remain separate"
+  },
+  "releaseEligibility": {
+    "eligible": false,
+    "sourceClean": false,
+    "binaryReleaseGatePassed": false,
+    "reasons": [
+      "Preserved pre-existing documentation edit",
+      "Unexpected shared libraries fail release CI binary expectations"
+    ]
+  }
+}

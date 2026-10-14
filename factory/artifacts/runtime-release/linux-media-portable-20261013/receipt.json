@@ -1,0 +1,84 @@
+{
+  "schema": 1,
+  "sourceCommits": [
+    "165df62bc02539eaa74e29126355a860e0738405",
+    "d3916f15622783ed9add7cd65d55f56c00177093"
+  ],
+  "GNUx64": {
+    "ffmpeg": {
+      "sourceRevision": "7e93014c5bbb61e7c22afebb478bf92f7a08d59a",
+      "passed": true,
+      "maximumGLIBC": "2.17",
+      "ELFMembers": 23,
+      "notices": 5,
+      "functional": {
+        "PNG": {
+          "exactRGBABytes": 16384,
+          "dimensions": [
+            64,
+            64
+          ]
+        },
+        "video": {
+          "codec": "ffv1",
+          "frames": 4,
+          "dimensions": [
+            64,
+            64
+          ]
+        },
+        "audio": {
+          "codec": "pcm_s16le",
+          "sampleRate": 8000
+        }
+      }
+    },
+    "mpv": {
+      "sourceRevision": "c3ac7f39514c7f45bc38a18e66887240539ee33c",
+      "passed": true,
+      "maximumGLIBC": "2.17",
+      "ELFMembers": 42,
+      "notices": 14,
+      "functional": {
+        "api": "MPV_API_PASS major=2 minor>=5 cpu=64x64 pause=roundtrip end=EOF",
+        "cli": {
+          "nullOutput": true,
+          "dimensions": [
+            64,
+            64
+          ],
+          "EOF": true
+        }
+      }
+    }
+  },
+  "adapterProbesPassed": [
+    "x64-gnu",
+    "arm64-gnu",
+    "x64-musl",
+    "arm64-musl"
+  ],
+  "fullSDKBuildsPending": [
+    "linux-arm64",
+    "linux-x64-musl",
+    "linux-arm64-musl"
+  ],
+  "oldGLIBCExecution": "not-performed",
+  "graphics": "not-qualified",
+  "archivesPublished": false,
+  "hostLibcChanged": false,
+  "VPSHeavySlot": "released-to-release_inventory",
+  "tests": {
+    "ELFUnitTests": 6,
+    "assertions": 16,
+    "lint": true,
+    "shellcheck": true,
+    "clangFormat": true
+  },
+  "hashes": {
+    "ffmpeg-qualification.json": "547b41d030bf0016470b261ba6878e44f332a529403102d42b792c875daf1275",
+    "mpv-qualification.json": "5f6296c69ac1d43ad9fd9850b333ed7df952b3382d6448f82849f65a8ca30461",
+    "adapter-receipt.json": "e14f7ba1b6366b308d2f10c919da5f0d92572f8fbcc160689475c8e742d40ff6",
+    "portable-source-receipt.json": "d29a945612a12e8115520265000bf186f352fe68f9ff22609f406f72ea65f92b"
+  }
+}

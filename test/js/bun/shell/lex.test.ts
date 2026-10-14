@@ -43,6 +43,7 @@ describe("lex shell", () => {
       { "Delimit": {} },
       { "Text": "dev" },
       { "Delimit": {} },
+      { "DoubleQuotedText": "" },
       { "Var": "PORT" },
       { "Eof": {} },
     ];
@@ -57,6 +58,7 @@ describe("lex shell", () => {
       { "Text": "dev" },
       { "Delimit": {} },
       { "Text": "foo" },
+      { "DoubleQuotedText": "" },
       { "Var": "PORT" },
       { "Eof": {} },
     ];
@@ -69,6 +71,7 @@ describe("lex shell", () => {
       { "Text": "echo" },
       { "Delimit": {} },
       { "Text": "foo" },
+      { "DoubleQuotedText": "" },
       { "Var": "NICE" },
       { "Text": "good" },
       { "DoubleQuotedText": "NICE" },
@@ -117,6 +120,7 @@ describe("lex shell", () => {
       { "Text": "NAME=zack" },
       { "Delimit": {} },
       { "Text": "FULLNAME=" },
+      { "DoubleQuotedText": "" },
       { "Var": "NAME" },
       { "DoubleQuotedText": " radisic" },
       { "Delimit": {} },

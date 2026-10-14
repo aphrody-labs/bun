@@ -298,14 +298,19 @@ int __wrap_getentropy(void* buffer, size_t length)
     return 0;
 }
 
-[[noreturn]] void __chk_fail();
-void __wrap___explicit_bzero_chk(void* buffer, size_t length, size_t capacity)
+void __wrap_explicit_bzero(void* buffer, size_t length)
 {
-    if (length > capacity) __chk_fail();
     volatile unsigned char* bytes = static_cast<volatile unsigned char*>(buffer);
     for (size_t i = 0; i < length; i++)
         bytes[i] = 0;
     __asm__ volatile("" ::: "memory");
+}
+
+[[noreturn]] void __chk_fail();
+void __wrap___explicit_bzero_chk(void* buffer, size_t length, size_t capacity)
+{
+    if (length > capacity) __chk_fail();
+    __wrap_explicit_bzero(buffer, length);
 }
 
 } // extern "C"

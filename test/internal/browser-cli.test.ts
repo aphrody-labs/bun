@@ -16,13 +16,14 @@ test("native Crawl optional provider rejects before reading options", async () =
   expect(typeof Bun.Crawl.available).toBe("boolean");
   if (Bun.Crawl.available) return;
   let touched = false;
-  const options = {
-    get action() {
+  const options: Bun.CrawlOptions = {
+    store: "unavailable-provider-must-not-access",
+    get action(): Bun.CrawlOptions["action"] {
       touched = true;
       throw new Error("unexpected getter");
     },
   };
-  await expect(Bun.Crawl.run(options as Bun.CrawlOptions)).rejects.toThrow("ERR_CRAWL_PROVIDER_UNAVAILABLE");
+  await expect(Bun.Crawl.run(options)).rejects.toThrow("ERR_CRAWL_PROVIDER_UNAVAILABLE");
   expect(touched).toBe(false);
 });
 
@@ -175,7 +176,7 @@ test("download preserves redirected asset base and rejects non-HTML responses", 
     port: 0,
     fetch(request) {
       const url = new URL(request.url);
-      if (url.pathname === "/start") return Response.redirect(new URL("/nested/page", url), 302);
+      if (url.pathname === "/start") return Response.redirect(new URL("/nested/page", url).href, 302);
       if (url.pathname === "/nested/page")
         return new Response('<html><head></head><body><img src="image.png"></body></html>', {
           headers: { "content-type": "text/html" },

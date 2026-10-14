@@ -116,7 +116,7 @@ export async function importDenoCore() {
   if (archiveBytes.length > 150 * 1024 * 1024) throw new Error("Deno source archive exceeds budget");
   const archive = await new Bun.Archive(archiveBytes).files();
   const prefix = `deno_core-${DENO_CORE_REVISION}/`;
-  const verified = [];
+  const verified: { entry: (typeof entries)[number]; bytes: Uint8Array }[] = [];
   for (const entry of entries) {
     const file = archive.get(prefix + entry.path);
     if (!file) throw new Error(`Deno archive source absent: ${entry.path}`);
@@ -130,7 +130,7 @@ export async function importDenoCore() {
   await mkdir(dirname(target), { recursive: true });
   if ((await lstat(dirname(target))).isSymbolicLink()) throw new Error("Deno source parent is a symlink");
   await mkdir(target);
-  const receiptFiles = [];
+  const receiptFiles: { path: string; mode: string; blob: string; size: number; sha256: string }[] = [];
   for (const { entry, bytes } of verified) {
     const path = join(target, entry.path);
     await mkdir(dirname(path), { recursive: true });

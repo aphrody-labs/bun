@@ -5,11 +5,13 @@ const {
   ptr,
   read,
   suffix,
-}: Pick<typeof import("bun:ffi"), "CString" | "dlopen" | "ptr" | "read" | "suffix"> = require("bun:ffi");
+  toArrayBuffer,
+}: Pick<typeof import("bun:ffi"), "CString" | "dlopen" | "ptr" | "read" | "suffix" | "toArrayBuffer"> =
+  require("bun:ffi");
 const {
   FFIType,
 }: {
-  FFIType: Pick<typeof import("bun:ffi").FFIType, "cstring" | "i32" | "ptr" | "void" | "u32">;
+  FFIType: Pick<typeof import("bun:ffi").FFIType, "cstring" | "i32" | "ptr" | "void" | "u32" | "u64">;
 } = require("bun:ffi");
 const { existsSync } = require("node:fs");
 const {
@@ -61,6 +63,8 @@ class PythonError extends Error {
 }
 
 const SYMBOLS = {
+  bun_py_abi_version: { args: [], returns: FFIType.u32 },
+  bun_py_capabilities: { args: [], returns: FFIType.u64 },
   aphrody_py_load: { args: [FFIType.cstring], returns: FFIType.i32 },
   aphrody_py_init: { args: [], returns: FFIType.i32 },
   aphrody_py_run: { args: [FFIType.cstring], returns: FFIType.i32 },
@@ -73,15 +77,29 @@ const SYMBOLS = {
   aphrody_py_finalize: { args: [], returns: FFIType.i32 },
   aphrody_py_last_error: { args: [], returns: FFIType.ptr },
   aphrody_py_string_free: { args: [FFIType.ptr], returns: FFIType.void },
+  bun_py_buffer_acquire: { args: [FFIType.cstring, FFIType.u32, FFIType.ptr], returns: FFIType.i32 },
+  bun_py_buffer_release: { args: [FFIType.u64], returns: FFIType.i32 },
+  bun_py_buffer_deallocator: { args: [FFIType.ptr, FFIType.ptr], returns: FFIType.void },
 } as const;
 
 type Symbols = ReturnType<typeof dlopen<typeof SYMBOLS>>["symbols"];
 
 const HOST_ABI_VERSION = 1;
-const HOST_SYMBOLS = {
-  ...SYMBOLS,
-  bun_py_abi_version: { args: [], returns: FFIType.u32 },
-} as const;
+const WRITABLE_BUFFER_CAPABILITY = 1n;
+const BUFFER_DESCRIPTOR_SIZE = 32;
+const MAX_BATCH_EXPRESSIONS = 1024;
+const MAX_BATCH_SOURCE_LENGTH = 8 * 1024 * 1024;
+
+function batchExpression(expressions: readonly string[]): string {
+  if (expressions.length > MAX_BATCH_EXPRESSIONS) {
+    throw new PythonError(PyStatus.Arg, `Python batch exceeds ${MAX_BATCH_EXPRESSIONS} expressions`);
+  }
+  const source = `[${expressions.map(expression => `str((${expression}))`).join(",")}]`;
+  if (source.length > MAX_BATCH_SOURCE_LENGTH) {
+    throw new PythonError(PyStatus.Arg, "Python batch source exceeds 8 MiB");
+  }
+  return source;
+}
 
 /** The explicit or embedded Bun Python host; no core runtime library supplies this ABI. */
 function pythonHostLibraryPath(env: NodeJS.ProcessEnv = process.env): string {
@@ -149,7 +167,7 @@ class Python implements Disposable {
   readonly #symbols: Symbols;
   readonly #close: () => void;
   #closed = false;
-  /** True when this process started the interpreter (and so finalises it on dispose). */
+  /** True when this handle caused the shared host to start the interpreter. */
   readonly started: boolean;
 
   private constructor(symbols: Symbols, close: () => void, started: boolean) {
@@ -159,27 +177,19 @@ class Python implements Disposable {
   }
 
   static open(options: { libraryPath?: string; libpython?: string | null } = {}): Python {
-    const lib =
-      options.libraryPath === undefined
-        ? dlopen(pythonHostLibraryPath(), HOST_SYMBOLS)
-        : dlopen(options.libraryPath, SYMBOLS);
+    const lib = dlopen(options.libraryPath === undefined ? pythonHostLibraryPath() : options.libraryPath, SYMBOLS);
     const symbols = lib.symbols;
     const fail = (status: number): never => {
       const message = takeString(symbols, symbols.aphrody_py_last_error());
       throw new PythonError(status, message || `aphrody_py status ${status}`);
     };
     try {
-      if ("bun_py_abi_version" in symbols) {
-        if (typeof symbols.bun_py_abi_version !== "function") {
-          throw new PythonError(PyStatus.Unsupported, "Bun Python host has no ABI version function");
-        }
-        const version = symbols.bun_py_abi_version();
-        if (version !== HOST_ABI_VERSION) {
-          throw new PythonError(
-            PyStatus.Unsupported,
-            `Bun Python host ABI ${version} is incompatible with SDK ABI ${HOST_ABI_VERSION}`,
-          );
-        }
+      const version = symbols.bun_py_abi_version();
+      if (version !== HOST_ABI_VERSION) {
+        throw new PythonError(
+          PyStatus.Unsupported,
+          `Bun Python host ABI ${version} is incompatible with SDK ABI ${HOST_ABI_VERSION}`,
+        );
       }
       const libpython = options.libpython === undefined ? buvLibpython() : options.libpython;
       const library = libpython === null ? null : cstr(libpython);
@@ -251,6 +261,11 @@ class Python implements Disposable {
     );
   }
 
+  /** Evaluates up to 1024 expressions in one GIL/FFI crossing. */
+  evalBatch(expressions: readonly string[]): string[] {
+    return this.evalJSON<string[]>(batchExpression(expressions));
+  }
+
   /** `module.function(arg)` (no argument when `arg` is undefined), returns `str(result)`. */
   call(module: string, fn: string, arg?: string): string {
     this.#ensureOpen();
@@ -262,15 +277,48 @@ class Python implements Disposable {
     );
   }
 
-  /** Finalises only this handle's owned interpreter, then closes the host library once. */
+  /** Shares a contiguous writable Python buffer with JavaScript without copying it. */
+  buffer(expression: string): ArrayBuffer {
+    this.#ensureOpen();
+    if ((BigInt(this.#symbols.bun_py_capabilities()) & WRITABLE_BUFFER_CAPABILITY) === 0n) {
+      throw new PythonError(PyStatus.Unsupported, "Bun Python host has no writable buffer capability");
+    }
+    const source = cstr(expression);
+    const descriptor = new Uint8Array(BUFFER_DESCRIPTOR_SIZE);
+    const fields = new DataView(descriptor.buffer);
+    fields.setUint32(0, BUFFER_DESCRIPTOR_SIZE, true);
+    this.#check(this.#symbols.bun_py_buffer_acquire(ptr(source), 1, ptr(descriptor)));
+    const address = fields.getBigUint64(8, true);
+    const length = fields.getBigUint64(16, true);
+    const lease = fields.getBigUint64(24, true);
+    if (length > BigInt(Number.MAX_SAFE_INTEGER) || (address === 0n && length !== 0n)) {
+      this.#symbols.bun_py_buffer_release(lease);
+      throw new PythonError(PyStatus.Unsupported, "Python buffer cannot be represented by JavaScript");
+    }
+    if (length === 0n) {
+      this.#check(this.#symbols.bun_py_buffer_release(lease));
+      return new ArrayBuffer(0);
+    }
+    try {
+      return toArrayBuffer(
+        address,
+        0,
+        Number(length),
+        lease,
+        this.#symbols.bun_py_buffer_deallocator.ptr,
+      );
+    } catch (error) {
+      this.#symbols.bun_py_buffer_release(lease);
+      throw error;
+    }
+  }
+
+  /** Releases this client lease; the last client finalises an interpreter owned by the host. */
   close(): void {
     if (this.#closed) return;
+    this.#check(this.#symbols.aphrody_py_finalize());
     this.#closed = true;
-    try {
-      if (this.started) this.#check(this.#symbols.aphrody_py_finalize());
-    } finally {
-      this.#close();
-    }
+    this.#close();
   }
 
   [Symbol.dispose](): void {
@@ -377,6 +425,10 @@ class PythonAsync implements AsyncDisposable {
         `__import__('json').dumps((${expression}), ensure_ascii=False, allow_nan=False, separators=(',', ':'))`,
       ),
     );
+  }
+  /** Evaluates up to 1024 expressions in one worker request and one GIL/FFI crossing. */
+  evalBatch(expressions: readonly string[]): Promise<string[]> {
+    return this.evalJSON<string[]>(batchExpression(expressions));
   }
   call(module: string, fn: string, arg?: string) {
     return this.#request("call", [module, fn, arg]);

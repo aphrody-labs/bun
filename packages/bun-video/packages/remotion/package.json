@@ -5,7 +5,7 @@
 	"license": "SEE LICENSE IN LICENSE.md",
 	"scripts": {
 		"test": "turbo run lint test --no-update-notifier",
-		"ts-build": "tsc -b --verbose --watch",
+		"ts-build": "bun ../../../../scripts/aphrody/emit-typescript.ts -b --verbose --watch",
 		"stylecheck": "turbo run lint formatting --no-update-notifier && bun run checkskills",
 		"formatting": "turbo run formatting --no-update-notifier",
 		"format": "bun pre-commit.ts",
@@ -68,9 +68,6 @@
 		"@types/deno": "2.0.0",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
-		"oxfmt": "0.35.0",
-		"prettier": "catalog:",
-		"prettier-plugin-organize-imports": "3.2.4",
 		"react-scan": "0.5.7",
 		"vite": "6.4.4"
 	},

@@ -8,13 +8,14 @@ fallbacks for this workflow.
 
 In this source checkout, use `bun bd` to build through the owner factory and
 `bun bd test <file>` to test the changed runtime. Native quality commands are
-`bun bd check`, `bun bd lint` and `bun bd fmt`. In a consumer checkout, use the
-corresponding `bun check`, `bun lint` and `bun fmt` commands after qualifying the
+`bun bd check`, `bun bd lint`, `bun bd fmt` and `bun bd n2b`. In a consumer checkout, use the
+corresponding `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands after qualifying the
 installed runtime revision. `bun run <name>` explicitly selects a package script.
 
 The source-native linter and formatter use the pinned integrated OXC engine. They do not
 install or launch a package backend. Unsupported configuration fails explicitly.
-The legacy `--external-backend` compatibility adapter is outside this workflow.
+Quality and migration have no external backend adapter. Environment overrides
+do not select tools, and `--external-backend` is an unsupported option.
 
 Native `bun check` validates types; it does not emit SDK declarations. Declaration
 producers retain their locked TypeScript SDK as an internal library invoked by
@@ -32,4 +33,4 @@ can retire its current external Infra adapter. Preserve protected host credentia
 and plan before applying changes; an architectural target does not prove migration.
 Keep source qualification, installed-runtime qualification and production checks
 separate. Source version `1.4.4` does not establish a published runtime release;
-the installed published runtime is `1.4.3-aphrody.4` until a new release is qualified.
+qualify the actual installed revision before delivery.

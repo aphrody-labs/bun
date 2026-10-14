@@ -1,0 +1,246 @@
+{
+  "schema": 1,
+  "kind": "bun-linux-candidate-source-contract",
+  "source": {
+    "commit": "b2bcad9e46d80efba97fb60ef454abc1ebba9290",
+    "dirty": true,
+    "codeMatchesCommit": false,
+    "trackedDeltas": [
+      {
+        "path": ".claude/skills/bun-nginx/SKILL.md",
+        "beforeBlob": "c52c7b54bdb113546f25c4f817dde77af40b20d9",
+        "afterSHA256": "2dee939242cd628a2a1c47090da49d8c7aa05ab0e2bbf5c4967a355f0daeaff9",
+        "bytes": 4395,
+        "gitRaw": ":100644 100644 c52c7b54bdb113546f25c4f817dde77af40b20d9 0000000000000000000000000000000000000000 M\t.claude/skills/bun-nginx/SKILL.md"
+      },
+      {
+        "path": "apps/desktop/src/main.ts",
+        "beforeBlob": "e0bddb1831ecbd8c99a9874e5a6e66e2db4d1fd4",
+        "afterSHA256": "f8506993b7578996a539c4609d90dfad53f7863aa30418bfe6f26f01ad5e17dc",
+        "bytes": 445,
+        "gitRaw": ":100644 100755 e0bddb1831ecbd8c99a9874e5a6e66e2db4d1fd4 0000000000000000000000000000000000000000 M\tapps/desktop/src/main.ts"
+      },
+      {
+        "path": "packages/bun-google/src/cli.ts",
+        "beforeBlob": "935c59334ebded185f0ffd1e5421a32b02b93c91",
+        "afterSHA256": "21499cd7c8d7c9aafd2844ff6abc5f3e47e949e1ef0ff5f93f31187f6b9be6f8",
+        "bytes": 2871,
+        "gitRaw": ":100644 100755 935c59334ebded185f0ffd1e5421a32b02b93c91 0000000000000000000000000000000000000000 M\tpackages/bun-google/src/cli.ts"
+      },
+      {
+        "path": "packages/bun-google/src/public-index-cli.ts",
+        "beforeBlob": "d94830e58b52404882fb56f50a1fcdc70ef9a3e8",
+        "afterSHA256": "4be2b722280401ebcb057ab601d3046a1c65551a01b00f9101f58c8b24265e1f",
+        "bytes": 4318,
+        "gitRaw": ":100644 100755 d94830e58b52404882fb56f50a1fcdc70ef9a3e8 0000000000000000000000000000000000000000 M\tpackages/bun-google/src/public-index-cli.ts"
+      },
+      {
+        "path": "packages/bun-next/bin/next-bun.js",
+        "beforeBlob": "fffa289a9f0b8e03e3002b02140afdfe3abe2ccd",
+        "afterSHA256": "2e9b25ffb50778d76d200fd67c0217bde1e913beb1018a6e9dfbaeb50baaf223",
+        "bytes": 2476,
+        "gitRaw": ":100644 100755 fffa289a9f0b8e03e3002b02140afdfe3abe2ccd 0000000000000000000000000000000000000000 M\tpackages/bun-next/bin/next-bun.js"
+      },
+      {
+        "path": "scripts/build/bun.ts",
+        "beforeBlob": "7e533463b9a4fa9f61aeb3d2908a3f6393bbb802",
+        "afterSHA256": "fd8e5a78ac53195b0fbcb1dc2801cc61cf08abaaf519693693eb65bef6f154bb",
+        "bytes": 51352,
+        "gitRaw": ":100644 100644 7e533463b9a4fa9f61aeb3d2908a3f6393bbb802 0000000000000000000000000000000000000000 M\tscripts/build/bun.ts"
+      },
+      {
+        "path": "scripts/build/deps/libwebp.ts",
+        "beforeBlob": "762034f19c8f80390f7eb5a8853b360dd8d4bf10",
+        "afterSHA256": "ece9d3f905954d193db25f2f601ccb56443e495992834c82f312e9f582507d05",
+        "bytes": 5612,
+        "gitRaw": ":100644 100644 762034f19c8f80390f7eb5a8853b360dd8d4bf10 0000000000000000000000000000000000000000 M\tscripts/build/deps/libwebp.ts"
+      },
+      {
+        "path": "scripts/build/deps/uutils.ts",
+        "beforeBlob": "9291c70c117b608ff6d8a4a7ab427a94bf252d4b",
+        "afterSHA256": "4e26b8c0cc37bfd9c9e241359acfe9d24864096b3be86f9298fe4d0f90d1e44e",
+        "bytes": 1168,
+        "gitRaw": ":100644 100644 9291c70c117b608ff6d8a4a7ab427a94bf252d4b 0000000000000000000000000000000000000000 M\tscripts/build/deps/uutils.ts"
+      },
+      {
+        "path": "scripts/build/flags.ts",
+        "beforeBlob": "33d8ff8d978c3ea1df8e59fca43ebb48414189c4",
+        "afterSHA256": "49dc9eab91a731b9cde0d7630ee5d884a64f487bbdb931779299cb276e0b685f",
+        "bytes": 83228,
+        "gitRaw": ":100644 100644 33d8ff8d978c3ea1df8e59fca43ebb48414189c4 0000000000000000000000000000000000000000 M\tscripts/build/flags.ts"
+      },
+      {
+        "path": "scripts/build/rust.ts",
+        "beforeBlob": "1e8f2cfdafe5ad19f32df49baa42e1f0dc897fdc",
+        "afterSHA256": "336f880ba781f60cb5b694647d49a57d22f3b1e1b754b1b4643ec0b2c628b4b9",
+        "bytes": 49850,
+        "gitRaw": ":100644 100644 1e8f2cfdafe5ad19f32df49baa42e1f0dc897fdc 0000000000000000000000000000000000000000 M\tscripts/build/rust.ts"
+      },
+      {
+        "path": "scripts/build/rust/emit.ts",
+        "beforeBlob": "1eb95d7a5753d5d29bfea5bbdd25f46588faa483",
+        "afterSHA256": "3db86ef911bcdd7d3d34711261ab24056a473bdc1812c2407767f506acd9821e",
+        "bytes": 10861,
+        "gitRaw": ":100644 100644 1eb95d7a5753d5d29bfea5bbdd25f46588faa483 0000000000000000000000000000000000000000 M\tscripts/build/rust/emit.ts"
+      },
+      {
+        "path": "scripts/build/rust/native-link.ts",
+        "beforeBlob": "60115ee601f88ba2cb815a5eba72247a702cdfa4",
+        "afterSHA256": "30aecd3bb316ef1d24030304eec6da4ba41c779d91d9c7b7b488ee88aa244fae",
+        "bytes": 7865,
+        "gitRaw": ":100644 100644 60115ee601f88ba2cb815a5eba72247a702cdfa4 0000000000000000000000000000000000000000 M\tscripts/build/rust/native-link.ts"
+      },
+      {
+        "path": "scripts/build/rust/run.ts",
+        "beforeBlob": "17ca9dee90da30b1a02d19f299e4c61692d7fd03",
+        "afterSHA256": "a142a9e1dd2e65f9d29d643c88b0f185ced73d42d5fdb67d50db63bbedd3d6c9",
+        "bytes": 28294,
+        "gitRaw": ":100644 100644 17ca9dee90da30b1a02d19f299e4c61692d7fd03 0000000000000000000000000000000000000000 M\tscripts/build/rust/run.ts"
+      },
+      {
+        "path": "scripts/build/rust/units.ts",
+        "beforeBlob": "7dd486c771dc85c00b09d95ba4d80aeca81fe51e",
+        "afterSHA256": "f2f9ec2d770d7dd33b0bc4db69ca3d8d12423c598c8cf3ce04892b18480df6fd",
+        "bytes": 42459,
+        "gitRaw": ":100644 100644 7dd486c771dc85c00b09d95ba4d80aeca81fe51e 0000000000000000000000000000000000000000 M\tscripts/build/rust/units.ts"
+      },
+      {
+        "path": "src/jsc/bindings/workaround-missing-symbols.cpp",
+        "beforeBlob": "48f39309f3e5bdb9a7d15a2f489def22db1cd51e",
+        "afterSHA256": "e718acbc818210bb8c7500e8117035124cd9ff118a0236f2b666e416591d3073",
+        "bytes": 23421,
+        "gitRaw": ":100644 100644 48f39309f3e5bdb9a7d15a2f489def22db1cd51e 0000000000000000000000000000000000000000 M\tsrc/jsc/bindings/workaround-missing-symbols.cpp"
+      },
+      {
+        "path": "src/runtime/curl/sdk/CMakeLists.txt",
+        "beforeBlob": "7ee85bb71c33e26f2e0581579ae83daf705b1ddb",
+        "afterSHA256": "a47a37a57fc4f82a7e3aaa04ae19ee7a865fa10a7101086f7de93d4b3f5c2516",
+        "bytes": 2588,
+        "gitRaw": ":100644 100644 7ee85bb71c33e26f2e0581579ae83daf705b1ddb 0000000000000000000000000000000000000000 M\tsrc/runtime/curl/sdk/CMakeLists.txt"
+      },
+      {
+        "path": "test/internal/build-rust-native-link.test.ts",
+        "beforeBlob": "de127665453c9afce99dce62e744a26d68f407d8",
+        "afterSHA256": "c1121a2841e9347a90b2a51c5ae90681081779ab7efc331c2016964774b6c226",
+        "bytes": 14979,
+        "gitRaw": ":100644 100644 de127665453c9afce99dce62e744a26d68f407d8 0000000000000000000000000000000000000000 M\ttest/internal/build-rust-native-link.test.ts"
+      },
+      {
+        "path": "test/internal/build-rust-units.test.ts",
+        "beforeBlob": "b45c4fbaffec6209cfd5282f7659ca1a11c741d4",
+        "afterSHA256": "3004f0f8a702edb63545bbfa5b327889c4225ba69becace42410e13407a666dc",
+        "bytes": 37713,
+        "gitRaw": ":100644 100644 b45c4fbaffec6209cfd5282f7659ca1a11c741d4 0000000000000000000000000000000000000000 M\ttest/internal/build-rust-units.test.ts"
+      }
+    ],
+    "untrackedInputs": [
+      {
+        "path": "patches/uutils/linux-kernel-timer.patch",
+        "bytes": 10710,
+        "sha256": "590de7fabc6c8bc8e2d023d41be52a4282d18d98c41463e10219e4ec88b058fb"
+      }
+    ],
+    "acquisition": {
+      "upstream": "aphrody-labs/uutils-coreutils",
+      "commit": "ca3e965d688739916016d4fe1a277701b44f3445",
+      "ref": "735c68976a8bf45d",
+      "patch": {
+        "path": "patches/uutils/linux-kernel-timer.patch",
+        "sha256": "590de7fabc6c8bc8e2d023d41be52a4282d18d98c41463e10219e4ec88b058fb",
+        "bytes": 10710
+      },
+      "files": [
+        {
+          "path": "vendor/uutils/src/uucore/src/lib/features/process/unix.rs",
+          "sha256": "12126c68e39497b75788accd9ce199001089f9add15f7edca71a2d60374b8391",
+          "bytes": 20067
+        },
+        {
+          "path": "vendor/uutils/src/uucore/src/lib/mods/locale.rs",
+          "sha256": "10debfdee829796672a662bf33989e20a5bb5a70eb651be33b3ecb4bba3ef09b",
+          "bytes": 72876
+        }
+      ]
+    }
+  },
+  "nativeProviderOverlay": {
+    "path": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/webp-native-owner-20261014/source-overlay.json",
+    "bytes": 1328,
+    "sha256": "2b477fa4dbf881a1747ee6d7f8095d7b57bc0cc9947a3d7a32834b1eff63db9f",
+    "sourceCommit": "a03813c8ca9d39c6325738a10516935a28aaab16",
+    "targetCommit": "b2bcad9e46d80efba97fb60ef454abc1ebba9290",
+    "dirty": true,
+    "codeMatchesCommit": false,
+    "files": [
+      {
+        "path": "scripts/build/bun.ts",
+        "bytes": 51352,
+        "sha256": "fd8e5a78ac53195b0fbcb1dc2801cc61cf08abaaf519693693eb65bef6f154bb"
+      },
+      {
+        "path": "scripts/build/rust.ts",
+        "bytes": 49850,
+        "sha256": "336f880ba781f60cb5b694647d49a57d22f3b1e1b754b1b4643ec0b2c628b4b9"
+      },
+      {
+        "path": "scripts/build/rust/units.ts",
+        "bytes": 42459,
+        "sha256": "f2f9ec2d770d7dd33b0bc4db69ca3d8d12423c598c8cf3ce04892b18480df6fd"
+      },
+      {
+        "path": "scripts/build/rust/run.ts",
+        "bytes": 28294,
+        "sha256": "a142a9e1dd2e65f9d29d643c88b0f185ced73d42d5fdb67d50db63bbedd3d6c9"
+      },
+      {
+        "path": "scripts/build/rust/emit.ts",
+        "bytes": 10861,
+        "sha256": "3db86ef911bcdd7d3d34711261ab24056a473bdc1812c2407767f506acd9821e"
+      },
+      {
+        "path": "scripts/build/deps/libwebp.ts",
+        "bytes": 5612,
+        "sha256": "ece9d3f905954d193db25f2f601ccb56443e495992834c82f312e9f582507d05"
+      },
+      {
+        "path": "test/internal/build-rust-units.test.ts",
+        "bytes": 37713,
+        "sha256": "3004f0f8a702edb63545bbfa5b327889c4225ba69becace42410e13407a666dc"
+      }
+    ]
+  },
+  "nativePreflightReceipts": [
+    {
+      "path": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/webp-native-owner-20261014/receipt.json",
+      "bytes": 296,
+      "sha256": "e25b53ab46b82ccedf53cdc3b8f31274cc25d48afef5dd70c19524f0ca2a8555"
+    },
+    {
+      "path": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/netlink-native-owner-20261014/receipt.json",
+      "bytes": 361,
+      "sha256": "8bbf8d72f2dfae7e99da770ce8aab2a98a066873fa27d49db0c8e4f6b4e7aa5f"
+    },
+    {
+      "path": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/explicit-bzero-owner-20261014/receipt.json",
+      "bytes": 449,
+      "sha256": "e373c0b9016e4a69f768384587260b2f0a0e02929d0d06eb5a65acb340577e5a"
+    },
+    {
+      "path": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/native-codec-components-20261014/component-artifacts.sha256.txt",
+      "bytes": 577,
+      "sha256": "60d9409fda7750132eef62f2e44540fe5274979e229471b41f6c9b3a35576bb0"
+    }
+  ],
+  "thinLTO": {
+    "linkFlags": "ldflags = -Wl,--lto-whole-program-visibility -flto=thin -fwhole-program-vtables -fforce-emit-vtables -Xlinker --thinlto-cache-dir=/home/ubuntu/.bun/build-cache/thinlto/lld/llvm-23.1.3/linux-x64-gnu -Xlinker --thinlto-cache-policy=cache_size=10%:cache_size_bytes=4g:cache_size_files=20000:prune_after=168h:prune_interval=5m -Wl,--lto-O2 -Wl,--lto-CGO2 --target=x86_64-linux-gnu --sysroot=/opt/linux-sysroot-glibc -Wl,--wrap=exp -Wl,--wrap=exp2 -Wl,--wrap=exp2f -Wl,--wrap=expf -Wl,--wrap=fcntl64 -Wl,--wrap=glob64 -Wl,--wrap=getrandom -Wl,--wrap=getentropy -Wl,--wrap=gettid -Wl,--wrap=explicit_bzero -Wl,--wrap=__explicit_bzero_chk -Wl,--wrap=log -Wl,--wrap=log2 -Wl,--wrap=log2f -Wl,--wrap=logf -Wl,--wrap=pow -Wl,--wrap=powf -Wl,--wrap=quick_exit -Wl,--wrap=__libc_start_main -Wl,--wrap=__pthread_key_create -Wl,--wrap=dladdr -Wl,--wrap=dlerror -Wl,--wrap=dlsym -Wl,--wrap=dlvsym -Wl,--wrap=pthread_attr_setstack -Wl,--wrap=pthread_attr_setstacksize -Wl,--wrap=pthread_getattr_np -Wl,--wrap=pthread_getspecific -Wl,--wrap=pthread_key_create -Wl,--wrap=pthread_key_delete -Wl,--wrap=pthread_kill -Wl,--wrap=pthread_mutex_trylock -Wl,--wrap=pthread_mutexattr_destroy -Wl,--wrap=pthread_mutexattr_init -Wl,--wrap=pthread_mutexattr_settype -Wl,--wrap=pthread_once -Wl,--wrap=pthread_rwlock_destroy -Wl,--wrap=pthread_rwlock_rdlock -Wl,--wrap=pthread_rwlock_unlock -Wl,--wrap=pthread_rwlock_wrlock -Wl,--wrap=pthread_setspecific -Wl,--wrap=fstat -Wl,--wrap=fstat64 -Wl,--wrap=fstatat -Wl,--wrap=fstatat64 -Wl,--wrap=mknod -Wl,--wrap=copy_file_range -Wl,--wrap=memfd_create -Wl,--wrap=statx -Wl,--wrap=_dl_find_object -Wl,--wrap=posix_spawn_file_actions_addchdir_np -Wl,--wrap=execve -Wl,--wrap=pthread_create -Wl,--wrap=realpath -static-libstdc++ -static-libgcc -Wl,--no-eh-frame-hdr --ld-path=/usr/lib/llvm-23/bin/ld.lld -fno-pic -Wl,-no-pie -Wl,--as-needed -Wl,-z,stack-size=12800000 -Wl,-z,lazy -Wl,-z,norelro -Wl,-O2 -Wl,--gdb-index -Wl,-z,combreloc -Wl,--hash-style=both -Wl,--build-id=sha1 -Wl,--gc-sections -Wl,--icf=safe -Wl,-Map=/home/ubuntu/build/bun-os-obscura-4634063/build/release/bun-profile.linker-map -Wl,--symbol-ordering-file=/home/ubuntu/build/bun-os-obscura-4634063/build/release/linker.order -Wl,--no-warn-symbol-ordering -Wl,-Bsymbolic-functions -Wl,--export-dynamic-symbol-list=/home/ubuntu/build/bun-os-obscura-4634063/build/release/exports.list -Wl,--version-script=/home/ubuntu/build/bun-os-obscura-4634063/src/linker.lds -Wl,--compress-debug-sections=zlib -lc -lpthread -ldl -l:libatomic.a @/home/ubuntu/build/bun-os-obscura-4634063/build/release/rust-target/native-link.rsp",
+    "flagsSource": {
+      "path": "scripts/build/flags.ts",
+      "bytes": 83228,
+      "sha256": "49dc9eab91a731b9cde0d7630ee5d884a64f487bbdb931779299cb276e0b685f"
+    },
+    "measuredCacheBenefit": false
+  },
+  "qualification": "candidate-development-only",
+  "fullReleaseQualified": false,
+  "siteRuntimeHomeFactCompatible": false
+}

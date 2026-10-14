@@ -1,0 +1,395 @@
+{
+  "schema": 1,
+  "component": "ffmpeg",
+  "target": "linux-x64",
+  "sourceCommit": "165df62bc02539eaa74e29126355a860e0738405",
+  "noticesCommit": "d3916f15622783ed9add7cd65d55f56c00177093",
+  "sourceRevision": "7e93014c5bbb61e7c22afebb478bf92f7a08d59a",
+  "sourceClean": true,
+  "passed": true,
+  "linuxABI": {
+    "schema": 1,
+    "target": "linux-x64",
+    "libc": "gnu",
+    "releaseGLIBCFloor": "2.17",
+    "maximumGLIBC": "2.17",
+    "files": [
+      {
+        "file": "lib/libswresample.so.7.1.102",
+        "sha256": "aff88b6a507e059404e82f59df261ffd335358e78d71fda1947737422de1764c",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libswscale.so.10.1.102",
+        "sha256": "a05364f3e19e9798137f172e6823654c37ecf181458297e6b4e611279425e942",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavfilter.so.12.1.102",
+        "sha256": "d526642a217eecd204d2c43efb7f3068ef324bb173ebb7773a30b15d4365ea75",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libswscale.so.10",
+          "libavformat.so.63",
+          "libavcodec.so.63",
+          "libswresample.so.7",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavdevice.so.63.1.102",
+        "sha256": "dd837227342b55abb184a4cd59d894853869b6f36f14878d58cc2b217a728a88",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavfilter.so.12",
+          "libavformat.so.63",
+          "libavcodec.so.63",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavcodec.so.63.1.102",
+        "sha256": "e4ca56de8e66db70a2db05f5c0d1d66b262ff2bd98829af5582d59ec43ee3418",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libswresample.so.7",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavutil.so.61.1.102",
+        "sha256": "3addedff1d4d1d1219281c5e6d3bcdc8bd26011afa36e5b63c02310fc923f1ca",
+        "minimumGLIBC": "2.17",
+        "needed": [
+          "libm.so.6",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavformat.so.63.1.102",
+        "sha256": "20c249feb7e45394d84635a206146231a9d0b164782ef116017de6f30d811b03",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavcodec.so.63",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libswresample.so.7",
+        "sha256": "aff88b6a507e059404e82f59df261ffd335358e78d71fda1947737422de1764c",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavformat.so.63",
+        "sha256": "20c249feb7e45394d84635a206146231a9d0b164782ef116017de6f30d811b03",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavcodec.so.63",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavfilter.so",
+        "sha256": "d526642a217eecd204d2c43efb7f3068ef324bb173ebb7773a30b15d4365ea75",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libswscale.so.10",
+          "libavformat.so.63",
+          "libavcodec.so.63",
+          "libswresample.so.7",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavdevice.so",
+        "sha256": "dd837227342b55abb184a4cd59d894853869b6f36f14878d58cc2b217a728a88",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavfilter.so.12",
+          "libavformat.so.63",
+          "libavcodec.so.63",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libswresample.so",
+        "sha256": "aff88b6a507e059404e82f59df261ffd335358e78d71fda1947737422de1764c",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavformat.so",
+        "sha256": "20c249feb7e45394d84635a206146231a9d0b164782ef116017de6f30d811b03",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavcodec.so.63",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libswscale.so.10",
+        "sha256": "a05364f3e19e9798137f172e6823654c37ecf181458297e6b4e611279425e942",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavfilter.so.12",
+        "sha256": "d526642a217eecd204d2c43efb7f3068ef324bb173ebb7773a30b15d4365ea75",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libswscale.so.10",
+          "libavformat.so.63",
+          "libavcodec.so.63",
+          "libswresample.so.7",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavutil.so",
+        "sha256": "3addedff1d4d1d1219281c5e6d3bcdc8bd26011afa36e5b63c02310fc923f1ca",
+        "minimumGLIBC": "2.17",
+        "needed": [
+          "libm.so.6",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavcodec.so",
+        "sha256": "e4ca56de8e66db70a2db05f5c0d1d66b262ff2bd98829af5582d59ec43ee3418",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libswresample.so.7",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavdevice.so.63",
+        "sha256": "dd837227342b55abb184a4cd59d894853869b6f36f14878d58cc2b217a728a88",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavfilter.so.12",
+          "libavformat.so.63",
+          "libavcodec.so.63",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libswscale.so",
+        "sha256": "a05364f3e19e9798137f172e6823654c37ecf181458297e6b4e611279425e942",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavutil.so.61",
+        "sha256": "3addedff1d4d1d1219281c5e6d3bcdc8bd26011afa36e5b63c02310fc923f1ca",
+        "minimumGLIBC": "2.17",
+        "needed": [
+          "libm.so.6",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "lib/libavcodec.so.63",
+        "sha256": "e4ca56de8e66db70a2db05f5c0d1d66b262ff2bd98829af5582d59ec43ee3418",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libswresample.so.7",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN"
+      },
+      {
+        "file": "bin/ffmpeg",
+        "sha256": "81328f9ecffa9877102b9e0597fbcc1f4fb1aea60246f6e1b1212873753bbefc",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavdevice.so.63",
+          "libavfilter.so.12",
+          "libavformat.so.63",
+          "libavcodec.so.63",
+          "libswresample.so.7",
+          "libswscale.so.10",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN/../lib"
+      },
+      {
+        "file": "bin/ffprobe",
+        "sha256": "47319ba4e59a1b51699a93c06cb2a96e8745a13543dc37b1d7b5fcaeda57be57",
+        "minimumGLIBC": "2.14",
+        "needed": [
+          "libm.so.6",
+          "libavdevice.so.63",
+          "libavfilter.so.12",
+          "libavformat.so.63",
+          "libavcodec.so.63",
+          "libswresample.so.7",
+          "libswscale.so.10",
+          "libavutil.so.61",
+          "libpthread.so.0",
+          "libc.so.6"
+        ],
+        "rpath": "$ORIGIN/../lib"
+      }
+    ]
+  },
+  "layout": {
+    "schema": 1,
+    "component": "ffmpeg",
+    "target": "linux-x64",
+    "version": "9.0.2-27-g7e93014c5b",
+    "sourceRevision": "7e93014c5bbb61e7c22afebb478bf92f7a08d59a",
+    "qualification": "headers-and-file-layout-only",
+    "files": {
+      "include/libavutil/version.h": "9173c3eae6d2a81d5db376784431768b37f436bfb42c00d70abc99d34d8ddbac",
+      "lib/libavutil.so.61.1.102": "3addedff1d4d1d1219281c5e6d3bcdc8bd26011afa36e5b63c02310fc923f1ca",
+      "include/libavcodec/version_major.h": "4ce6f0974cff7069900045ee551001bb57902a2f5ec0b5f538fbc1e4e9f6aa83",
+      "lib/libavcodec.so.63.1.102": "e4ca56de8e66db70a2db05f5c0d1d66b262ff2bd98829af5582d59ec43ee3418",
+      "include/libavformat/version_major.h": "436db6c1b56db87e83682639fd0285e8b0138acc4fb572868c70a690eda7bb5e",
+      "lib/libavformat.so.63.1.102": "20c249feb7e45394d84635a206146231a9d0b164782ef116017de6f30d811b03",
+      "include/libavdevice/version_major.h": "0efd5fa8f843690041e388e98a0acd53a37ae3129bfb0f8a8aa6d4798caa43b8",
+      "lib/libavdevice.so.63.1.102": "dd837227342b55abb184a4cd59d894853869b6f36f14878d58cc2b217a728a88",
+      "include/libavfilter/version_major.h": "1e25372ff02d13346c534159d48d965e67cee1caa63400dc5074e76fe0bdb222",
+      "lib/libavfilter.so.12.1.102": "d526642a217eecd204d2c43efb7f3068ef324bb173ebb7773a30b15d4365ea75",
+      "include/libswscale/version_major.h": "b5981c7a57dda91c1b58aa9df212dd0214091f9d87448f2d86dac07f0ea17549",
+      "lib/libswscale.so.10.1.102": "a05364f3e19e9798137f172e6823654c37ecf181458297e6b4e611279425e942",
+      "include/libswresample/version_major.h": "c730cced7041664f716e82872850329b59fa965f1c93044ce37593bd14a59c40",
+      "lib/libswresample.so.7.1.102": "aff88b6a507e059404e82f59df261ffd335358e78d71fda1947737422de1764c",
+      "bin/ffmpeg": "81328f9ecffa9877102b9e0597fbcc1f4fb1aea60246f6e1b1212873753bbefc",
+      "bin/ffprobe": "47319ba4e59a1b51699a93c06cb2a96e8745a13543dc37b1d7b5fcaeda57be57"
+    },
+    "licenses": [
+      "share/licenses/zlib-ng/LICENSE.md",
+      "share/licenses/gcc-runtime/copyright",
+      "share/licenses/ffmpeg/COPYING.LGPLv2.1",
+      "share/licenses/ffmpeg/LICENSE.md",
+      "share/licenses/ffmpeg/COPYING.LGPLv3"
+    ]
+  },
+  "licenses": {
+    "share/licenses/zlib-ng/LICENSE.md": "6c9f0d975b41afaa34d22f55bb8986ce69e5cb7ad327cb2b28820cd425edf5ee",
+    "share/licenses/gcc-runtime/copyright": "8ba50f4dfe8dadecf284eded29df23e05824a417e814b86b113b4c924a795bd5",
+    "share/licenses/ffmpeg/COPYING.LGPLv2.1": "246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30",
+    "share/licenses/ffmpeg/LICENSE.md": "2e1d16c72fd74e12063776371da757322f8b77589386532f4fd8634bde7de1af",
+    "share/licenses/ffmpeg/COPYING.LGPLv3": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768"
+  },
+  "functional": {
+    "PNG": {
+      "exactRGBABytes": 16384,
+      "dimensions": [
+        64,
+        64
+      ]
+    },
+    "video": {
+      "codec": "ffv1",
+      "frames": 4,
+      "dimensions": [
+        64,
+        64
+      ]
+    },
+    "audio": {
+      "codec": "pcm_s16le",
+      "sampleRate": 8000
+    }
+  },
+  "oldGLIBCExecution": "not-performed",
+  "graphics": "not-qualified",
+  "archivePublished": false
+}

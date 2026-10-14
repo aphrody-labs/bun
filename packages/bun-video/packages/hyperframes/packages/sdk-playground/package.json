@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
@@ -16,7 +16,6 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
-    "typescript": "^5.0.0",
     "vite": "^6.4.2",
     "vitest": "^4.1.11"
   },

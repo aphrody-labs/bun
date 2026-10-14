@@ -8,11 +8,11 @@
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.mjs",
 	"scripts": {
-		"make": "tsgo -d && bun --env-file=../.env.bundle bundle.ts",
+		"make": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d && bun --env-file=../.env.bundle bundle.ts",
 		"generate": "bun --env-file=.env scripts/update-font-db.ts",
 		"test": "bun test test",
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src"
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src"
 	},
 	"license": "SEE LICENSE IN LICENSE.md",
 	"dependencies": {
@@ -21,8 +21,8 @@
 	"devDependencies": {
 		"@types/css-font-loading-module": "0.0.14",
 		"@types/prettier": "2.7.2",
-		"postcss": "8.5.23",
-		"@typescript/native-preview": "catalog:"
+		"postcss": "8.5.23"
+
 	},
 	"types": "dist/cjs/index.d.ts",
 	"typesVersions": {

@@ -11,9 +11,9 @@
 		"testmonorepo": "bun test src/monorepo --run --timeout 40000",
 		"testtemplates": "bun test src/templates --timeout 400000",
 		"testlambda": "exit 0",
-		"lint": "tsc -d",
-		"formatting": "oxfmt src --check",
-		"format": "oxfmt src"
+		"lint": "bun ../../../../../../scripts/aphrody/emit-typescript.ts -d",
+		"formatting": "bun fmt src --check",
+		"format": "bun fmt src"
 	},
 	"private": true,
 	"devDependencies": {

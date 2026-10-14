@@ -55,9 +55,9 @@ export function packageJsonTo16(source: string): CodemodResult {
   for (const [name, script] of Object.entries(pkg.scripts ?? {})) {
     let next = script;
     if (/\bnext\s+lint\b/.test(next)) {
-      next = next.replace(/\bnext\s+lint\b[^&|;]*/, "oxlint .");
+      next = next.replace(/\bnext\s+lint\b[^&|;]*/, "bun lint .");
       warnings.push(
-        `script ${name}: \`next lint\` is removed in Next 16; it now runs oxlint (use eslint if the project is configured for it)`,
+        `script ${name}: \`next lint\` is removed in Next 16; it now runs bun lint`,
       );
     }
     next = next.replace(/(\bnext\s+(?:dev|build))\s+--turbo(?:pack)?\b/g, "$1");

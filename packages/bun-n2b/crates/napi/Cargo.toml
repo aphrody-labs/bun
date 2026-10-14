@@ -1,22 +1,38 @@
 [package]
 name = "bun-plugin-n2b-napi"
 description = "Node-API addon behind @aphrody/bun-plugin-n2b."
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-license.workspace = true
-repository.workspace = true
+license = "Apache-2.0"
 publish = false
+
+[package.version]
+workspace = true
+
+[package.edition]
+workspace = true
+
+[package.rust-version]
+workspace = true
+
+[package.repository]
+workspace = true
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-aphrody-n2b.workspace = true
-aphrody-n2b-core.workspace = true
-napi = { version = "3", default-features = false, features = ["napi4", "serde-json"] }
 napi-derive = "3"
-serde_json = { workspace = true }
+
+[dependencies.bun_migrate]
+workspace = true
+
+[dependencies.napi]
+version = "3"
+default-features = false
+features = ["napi4", "serde-json"]
+
+[dependencies.serde_json]
+version = "1.0.151"
+features = ["preserve_order"]
 
 [build-dependencies]
 napi-build = "2"

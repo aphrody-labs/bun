@@ -1,12 +1,12 @@
 import type { BunPlugin } from "bun";
 import { mkdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import type * as Parser from "../vendor/oxc-parser/index";
+import type * as Parser from "./parser-core/index";
 import { native } from "./native";
 
 export { nativePath, platformKeys } from "./native";
-export { definePlugin, defineRule, defineConfig, runOxlint } from "./oxlint";
-export type { OxlintPlugin, OxlintRule, OxlintConfig, RunOxlintOptions } from "./oxlint";
+export { definePlugin, defineRule, defineConfig } from "./oxlint";
+export type { OxlintPlugin, OxlintRule, OxlintConfig } from "./oxlint";
 // The official oxc-parser / oxc-transform / oxc-minify APIs (async ones under the subpaths
 // `@aphrody/bun-plugin-oxc/parser`, `/transform`, `/minify`).
 export { transformSync, isolatedDeclarationSync, moduleRunnerTransformSync } from "./transform";

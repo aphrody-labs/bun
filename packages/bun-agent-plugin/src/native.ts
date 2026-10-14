@@ -1,6 +1,6 @@
 // The bun-native rules every agent gets: Bun APIs before Node.js modules and npm packages. PAIRS is one Node.js /
 // npm snippet and its Bun-native equivalent per common task; the generator turns it, with the n2b registry
-// (packages/bun-n2b/crates/n2b-registry/registry/packages.toml), into the `bun-native` skill and the data of the
+// (src/migrate/registry/data/packages.toml), into the `bun-native` skill and the data of the
 // user-prompt-submit hook. scripts/aphrody/dataset/build.ts ships the pairs in the bun-native dataset and
 // typechecks their `after` side against packages/bun-types. Runs under Bun and Node.
 
@@ -395,11 +395,11 @@ console.log(metadata.width, metadata.height, metadata.codec);`,
   {
     task: "Package scripts and CLI",
     instead: ["npm install", "npx", "yarn", "pnpm", "npm run"],
-    use: "bun install / bunx / bun run",
+    use: "bun install / bun fmt / bun run; bunx only for commands without a native Bun owner",
     before: `npm install
-npx prettier --write .
+bun fmt .
 npm run build`,
-    after: `// bun install, bun add <pkg>, bun add -d <pkg>, bunx prettier --write ., bun run build
+    after: `// bun install, bun add <pkg>, bun add -d <pkg>, bun fmt ., bun run build
 console.log(Bun.version);`,
   },
 ];
@@ -411,6 +411,7 @@ export const SEARCH_URL = "https://aphrody.app/api/bun/search?q=";
 /** Compact, injected at session start (hooks/context.md) and summarized by the user-prompt-submit hook. */
 export const RULES = [
   "Write Bun-native code: a Bun API before a Node.js module, a built-in before an npm package.",
+  "Quality and migration: run native `bun check`, `bun lint`, `bun fmt` and `bun n2b` directly; never delegate them to subprocess backends, standalone Oxc, tsgo/tsc or external n2b. Qualify checkout changes with `bun bd check`, `bun bd lint`, `bun bd fmt` and `bun bd n2b`. Package scripts may expose these native commands but must not wrap or replace them; `bunx` is reserved for unrelated packages.",
   "HTTP and WebSocket servers: Bun.serve({ routes, fetch, websocket }), never express/fastify/koa/ws.",
   "Files: Bun.file(path).text()/.json()/.bytes()/.exists() and Bun.write(path, data), not fs.readFile/fs.writeFile.",
   "Databases: bun:sqlite (Database), Bun.sql/Bun.SQL (Postgres, MySQL), Bun.redis; never better-sqlite3, pg, ioredis.",

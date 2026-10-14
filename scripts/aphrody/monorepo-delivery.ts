@@ -481,8 +481,9 @@ export async function executeDeliveryPlan(
   source: Inventory["source"],
   steps: Step[],
   profile: FactoryHostProfile,
-  options: { receiptPath: string; snapshotHash: string; resume?: boolean },
+  options: { receiptPath: string; snapshotHash: string; resume?: boolean; signal?: AbortSignal },
 ) {
+  options.signal?.throwIfAborted();
   options = {
     ...options,
     receiptPath: await validateExecutionReceiptPath(root, profile.factoryRoot, options.receiptPath),
@@ -566,6 +567,7 @@ export async function executeDeliveryPlan(
         cwd: resolve(root, step.directory),
         stdout: "inherit",
         stderr: "inherit",
+        signal: options.signal,
         env: {
           ...process.env,
           CARGO_BUILD_JOBS: String(step.execution!.cpu),
@@ -619,6 +621,7 @@ export async function executeDeliveryPlan(
     }
   };
   while (pending.size || active.size) {
+    if (options.signal?.aborted) failure ??= new Error("Delivery cancelled", { cause: options.signal.reason });
     if (!failure)
       for (const [id, original] of pending) {
         if (!original.requires.every(required => completed.has(required))) continue;

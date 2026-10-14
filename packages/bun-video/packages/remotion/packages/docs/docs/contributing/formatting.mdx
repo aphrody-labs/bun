@@ -13,22 +13,22 @@ In VS Code, you can install the [Oxc extension](https://marketplace.visualstudio
 
 The editor should automatically pick up our `.vscode/settings.json` file and format your code when you save a file.
 
-To manually format a whole package, run `bunx oxfmt src --write` on a package. Example:
+To manually format a whole package, run `bun fmt src --write` on a package. Example:
 
 ```bash
 cd packages/renderer
-bunx oxfmt src --write
+bun fmt src --write
 ```
 
 ## ESLint
 
 ESLint will warn about code style issues and errors. You can install the [ESLint VS Code](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) extension to get warnings in the editor as you write code. Extensions for other editors are available on the [ESLint website](https://eslint.org/docs/user-guide/integrations).
 
-You can also run `bun run lint` in any package to check if there are any errors. Example:
+You can also run `bun lint` in any package to check if there are any errors. Example:
 
 ```bash
 cd packages/renderer
-bun run lint
+bun lint
 ```
 
 ## Testing everything

@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "kind": "nginx-native-engine-qualification",
+  "measuredAt": "2026-10-13T18:27:47.856Z",
+  "version": "1.28.3",
+  "executable": {
+    "path": "/usr/sbin/nginx",
+    "bytes": 1603320,
+    "sha256": "94eb839f1cdc7f3f42062d352b504fe406e2f888d83b554af7ea25bcdc9506f5",
+    "format": "ELF",
+    "architecture": "x64"
+  },
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "bunVersion": "1.4.4",
+    "bunRevision": "f54a341270501b3b77ea3dc4a728f33fa44810db"
+  },
+  "nativeBunController": false,
+  "gates": {
+    "configuration": true,
+    "http": {
+      "status": 200,
+      "body": "first",
+      "server": "nginx/1.28.3"
+    },
+    "masterPID": 385489,
+    "range": {
+      "status": 206,
+      "contentRange": "bytes 0-4/17",
+      "body": "NGINX"
+    },
+    "reload": {
+      "status": 200,
+      "body": "second",
+      "server": "nginx/1.28.3"
+    },
+    "invalidConfigurationRejected": true,
+    "originalMasterSurvivesInvalidConfig": {
+      "status": 200,
+      "body": "second",
+      "server": "nginx/1.28.3"
+    },
+    "quit": true,
+    "exitCode": 0
+  },
+  "commands": [
+    {
+      "flags": [
+        "-V"
+      ],
+      "stdout": "",
+      "stderr": "nginx version: nginx/1.28.3 (Ubuntu)\nbuilt with OpenSSL 3.5.5 27 Jan 2026\nTLS SNI support enabled\nconfigure arguments: --with-cc-opt='-g -O2 -Werror=implicit-function-declaration -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -ffile-prefix-map=/build/nginx-N87s5e/nginx-1.28.3=. -flto=auto -ffat-lto-objects -fstack-protector-strong -fstack-clash-protection -Wformat -Werror=format-security -fcf-protection -fdebug-prefix-map=/build/nginx-N87s5e/nginx-1.28.3=/usr/src/nginx-1.28.3-2ubuntu1.11 -fPIC -Wdate-time -D_FORTIFY_SOURCE=3' --with-ld-opt='-Wl,-Bsymbolic-functions -Wl,--package-metadata=%7B%22type%22:%22deb%22%2C%22os%22:%22ubuntu%22%2C%22name%22:%22nginx%22%2C%22version%22:%221.28.3-2ubuntu1.11%22%2C%22architecture%22:%22amd64%22%7D -flto=auto -ffat-lto-objects -Wl,-z,relro -Wl,-z,now -fPIC' --override-system=Linux --override-release=3.16.0 --override-machine=x86_64 --prefix=/usr/share/nginx --conf-path=/etc/nginx/nginx.conf --http-log-path=/var/log/nginx/access.log --error-log-path=stderr --lock-path=/var/lock/nginx.lock --pid-path=/run/nginx.pid --modules-path=/usr/lib/nginx/modules --http-client-body-temp-path=/var/lib/nginx/body --http-fastcgi-temp-path=/var/lib/nginx/fastcgi --http-proxy-temp-path=/var/lib/nginx/proxy --http-scgi-temp-path=/var/lib/nginx/scgi --http-uwsgi-temp-path=/var/lib/nginx/uwsgi --with-compat --with-debug --with-pcre-jit --with-http_ssl_module --with-http_stub_status_module --with-http_realip_module --with-http_auth_request_module --with-http_v2_module --with-http_v3_module --with-http_dav_module --with-http_slice_module --with-threads --build=Ubuntu --with-http_addition_module --with-http_flv_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_mp4_module --with-http_random_index_module --with-http_secure_link_module --with-http_sub_module --with-mail_ssl_module --with-stream_ssl_module --with-stream_ssl_preread_module --with-stream_realip_module --with-http_geoip_module=dynamic --with-http_image_filter_module=dynamic --with-http_perl_module=dynamic --with-http_xslt_module=dynamic --with-mail=dynamic --with-stream=dynamic --with-stream_geoip_module=dynamic\n",
+      "exitCode": 0
+    },
+    {
+      "flags": [
+        "-t"
+      ],
+      "stdout": "",
+      "stderr": "nginx: the configuration file /home/ubuntu/builds/bun-os-factory/artifacts/nginx-sdk/linux-x64/engine-gate-8gYxX7/nginx.conf syntax is ok\nnginx: configuration file /home/ubuntu/builds/bun-os-factory/artifacts/nginx-sdk/linux-x64/engine-gate-8gYxX7/nginx.conf test is successful\n",
+      "exitCode": 0
+    },
+    {
+      "flags": [
+        "-s",
+        "reload"
+      ],
+      "stdout": "",
+      "stderr": "2026/10/13 18:27:47 [notice] 385492#385492: signal process started\n",
+      "exitCode": 0
+    },
+    {
+      "flags": [
+        "-t"
+      ],
+      "stdout": "",
+      "stderr": "2026/10/13 18:27:47 [emerg] 385509#385509: unknown directive \"this\" in /home/ubuntu/builds/bun-os-factory/artifacts/nginx-sdk/linux-x64/engine-gate-8gYxX7/nginx.conf:1\nnginx: configuration file /home/ubuntu/builds/bun-os-factory/artifacts/nginx-sdk/linux-x64/engine-gate-8gYxX7/nginx.conf test failed\n",
+      "exitCode": 1
+    },
+    {
+      "flags": [
+        "-s",
+        "quit"
+      ],
+      "stdout": "",
+      "stderr": "2026/10/13 18:27:47 [notice] 385510#385510: signal process started\n",
+      "exitCode": 0
+    }
+  ],
+  "stdout": "",
+  "stderr": "",
+  "elapsedMilliseconds": 153.47883700000003
+}

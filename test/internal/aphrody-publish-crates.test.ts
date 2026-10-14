@@ -1,8 +1,23 @@
 import { expect, test } from "bun:test";
-import { tempDir } from "harness";
+import { bunEnv, bunExe, tempDir } from "harness";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stage } from "../../scripts/aphrody/publish-crates.ts";
+
+test("internal owners cannot be selected for crate publication", async () => {
+  for (const owner of ["src/migrate", "packages/bun-n2b", "packages/bun-oxc"]) {
+    await using proc = Bun.spawn([bunExe(), "scripts/aphrody/publish-crates.ts", "--only", owner], {
+      cwd: join(import.meta.dir, "../.."),
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect(stdout).toBe("");
+    expect(stderr).toContain(`Unknown crate publication target: ${owner}`);
+    expect(exitCode).not.toBe(0);
+  }
+});
 
 test("staged crates are renamed but keep their library names", () => {
   using dir = tempDir("aphrody-crates", {});

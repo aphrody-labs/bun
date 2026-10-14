@@ -1,6 +1,6 @@
 // @generated — DO NOT EDIT MANUALLY.
 // Regenerate with: bun packages/bun-n2b/scripts/generate-schema-types.ts
-// Source of truth: packages/bun-n2b/crates/n2b-types/schema/v2.json
+// Source of truth: src/migrate/schema/v2.json
 
 /**
  * This interface was referenced by `N2BReport`'s JSON-Schema

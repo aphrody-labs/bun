@@ -13,6 +13,8 @@ No interpreter, model, cache, credential or provider history is copied here.
 - Yolo's PyO3 extension remains in the existing `bun-runtime-sdk` package.
 - uv, Ruff and the complete vu runtime have a separate package owner; this
   package does not duplicate their resolver, CLI or interpreter distribution.
+- The JavaScript binding is the built-in `bun:python` module. This package owns
+  only the native host and its C ABI; it carries no parallel JS wrapper.
 
 Build the Python wheel from the Python product checkout with a qualified
 `APHRODY_BUN_CHECKOUT`. Native source is resolved there, never copied back.

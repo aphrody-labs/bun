@@ -4,8 +4,9 @@
 // Sortie : { binaires: { <bin>: [{ ref: "fichier:ligne", plateforme, via, ... }] }, ... }
 // plateforme : "win32" (exécuté sous Windows), "all" (tout OS, donc aussi Windows), "posix" (jamais sous Windows).
 import { existsSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { findWorkspaceRoot } from "../../workspace-paths.ts";
 
 export const POSIX_BINS = new Set(
   (
@@ -27,31 +28,14 @@ interface Root {
   globs: string[];
 }
 
-function findWorkspaceRoot(start: string): string | undefined {
-  let current = resolve(start);
-  while (true) {
-    if (existsSync(join(current, "WORKSPACE.md"))) return current;
-    const parent = dirname(current);
-    if (parent === current) return undefined;
-    current = parent;
-  }
-}
-
 function repositoryRoots(): Root[] {
   const bunCheckout = resolve(process.env.APHRODY_BUN_CHECKOUT?.trim() || resolve(import.meta.dir, "../../../.."));
   if (!existsSync(join(bunCheckout, "scripts/build.ts"))) {
     throw new Error(`Bun checkout not found at ${bunCheckout}; set APHRODY_BUN_CHECKOUT`);
   }
 
-  const configuredWorkspace = process.env.APHRODY_WORKSPACE?.trim();
-  const configuredWorkspaceRoot = configuredWorkspace ? resolve(configuredWorkspace) : undefined;
-  const workspace =
-    (configuredWorkspaceRoot && existsSync(join(configuredWorkspaceRoot, "WORKSPACE.md"))
-      ? configuredWorkspaceRoot
-      : undefined) ??
-    findWorkspaceRoot(process.cwd()) ??
-    findWorkspaceRoot(bunCheckout);
-  if (!workspace) throw new Error("Set APHRODY_WORKSPACE or run from a workspace containing WORKSPACE.md");
+  const workspace = findWorkspaceRoot(process.cwd(), bunCheckout);
+  if (!workspace) throw new Error("Set APHRODY_SOURCE_WORKSPACE or run from a workspace containing WORKSPACE.md");
 
   const aphrodyCheckout = resolve(process.env.APHRODY_APHRODY_CHECKOUT?.trim() || join(workspace, "aphrody"));
   if (!existsSync(join(aphrodyCheckout, "Cargo.toml"))) {

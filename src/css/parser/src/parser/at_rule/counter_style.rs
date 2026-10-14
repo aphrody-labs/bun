@@ -1,0 +1,22 @@
+use super::Parser;
+use crate::{
+    ast::*,
+    error::{Error, ErrorKind, PResult},
+    util,
+};
+
+// https://www.w3.org/TR/css-counter-styles-3/#the-counter-style-rule
+impl<'a> Parser<'a> {
+    // @counter-style <counter-style-name> { <declaration-list> }
+    // <counter-style-name> = <custom-ident>  (excludes CSS-wide keywords and `none`)
+    pub(super) fn parse_counter_style_prelude(&mut self) -> PResult<InterpolableIdent<'a>> {
+        let ident = self.parse()?;
+        if let InterpolableIdent::Literal(ident) = &ident
+            && (util::is_css_wide_keyword(ident.name) || ident.name.eq_ignore_ascii_case("none"))
+        {
+            self.recoverable_errors
+                .push(Error { kind: ErrorKind::CSSWideKeywordDisallowed, span: ident.span });
+        }
+        Ok(ident)
+    }
+}

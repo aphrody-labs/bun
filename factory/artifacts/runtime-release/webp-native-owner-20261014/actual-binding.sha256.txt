@@ -1,0 +1,4 @@
+bab48e907991c1fa71f7b28c949ec3f87dafbf7faac90f8f2c156c1dbff13007  /home/ubuntu/build/bun-os-obscura-4634063/build/release/rust-target/x86_64-unknown-linux-gnu/deps/liblibwebp_sys-8d68622523044888.rlib
+39ce2c23d9725e0584ed48a3b4c5e1666e9b5d060d04cf5b5fcf79f4506c3807  /home/ubuntu/build/bun-os-obscura-4634063/build/release/rust-target/x86_64-unknown-linux-gnu/deps/liblibwebp_sys-8d68622523044888.rmeta
+59faedc795721f5fd2908c3610d40967e1b3616267516d56e1a711f915a83959  /home/ubuntu/build/bun-os-obscura-4634063/build/release/rust-target/x86_64-unknown-linux-gnu/deps/libstd-1510802bed43a308.rlib
+80425108bfd0e20dc4aa68c8aa03ac19f741fdedf9e7aab4dbdba735402cb8ed  /home/ubuntu/build/bun-os-obscura-4634063/build/release/rust-target/x86_64-unknown-linux-gnu/deps/libstd-1510802bed43a308.rmeta

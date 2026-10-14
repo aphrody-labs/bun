@@ -70,16 +70,6 @@ describe.skipIf(!current)("buv native subcommands", () => {
     expect(readdirSync(join(tree, "__pycache__")).some(f => f.endsWith(".pyc"))).toBe(true);
   });
 
-  test("lint and format run the pinned ruff", () => {
-    const dir = join(scratch, "lint");
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, "ok.py"), "x = 1\n");
-    writeFileSync(join(dir, "bad.py"), "import os\n");
-    expect(run(["lint", "ok.py"], { cwd: dir }).code).toBe(0);
-    expect(run(["lint", "bad.py"], { cwd: dir }).code).toBe(1);
-    expect(run(["format", "--check", "ok.py"], { cwd: dir }).code).toBe(0);
-  });
-
   test("python runs the embedded interpreter when the project pins its minor or nothing", () => {
     const dir = join(scratch, "pin312");
     mkdirSync(dir, { recursive: true });

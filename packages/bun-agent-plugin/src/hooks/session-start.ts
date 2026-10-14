@@ -31,7 +31,7 @@ if (aphrody) {
 const checkout = bunCheckout(cwdOf(event));
 if (checkout) {
   lines.push(
-    `This is a Bun checkout (${checkout}): build with \`bun bd\`, test with \`bun bd test <file>\` (never plain \`bun test\`).`,
+    `This is a Bun checkout (${checkout}): build with \`bun bd\`, test with \`bun bd test <file>\`, and qualify native quality/migration with \`bun bd check\`, \`bun bd lint\`, \`bun bd fmt\`, \`bun bd n2b\`.`,
   );
 }
 

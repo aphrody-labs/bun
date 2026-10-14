@@ -126,7 +126,8 @@ describe("ServiceSupervisor", () => {
       expect(JSON.parse(line)).toEqual({ cwd: String(dir), value: "override" });
       const response = await fetch(sup.healthUrl!);
       expect(response.status).toBe(200);
-      expect((await response.json()).ok).toBe(true);
+      const health = (await response.json()) as { ok: boolean };
+      expect(health.ok).toBe(true);
       const head = await fetch(sup.healthUrl!, { method: "HEAD" });
       expect(head.status).toBe(200);
       expect(await head.text()).toBe("");

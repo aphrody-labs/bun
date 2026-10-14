@@ -374,6 +374,16 @@ impl InterpreterFlags {
             self.0 &= !0b100000
         }
     }
+    pub(crate) const fn nounset(self) -> bool {
+        self.0 & 0b1000000 != 0
+    }
+    pub(crate) fn set_nounset(&mut self, v: bool) {
+        if v {
+            self.0 |= 0b1000000
+        } else {
+            self.0 &= !0b1000000
+        }
+    }
 }
 
 impl Interpreter {
@@ -854,6 +864,7 @@ impl Interpreter {
         if from_source {
             let mut flags = interp.flags.get();
             flags.set_literal_unmatched_glob(true);
+            flags.set_nounset(ctx.runtime_options.shell_nounset);
             interp.flags.set(flags);
         }
         if let Some(session) = session.as_deref() {
@@ -1814,15 +1825,16 @@ impl Interpreter {
         event_loop: EventLoopHandle,
         command_ctx: *mut bun_options_types::context::ContextData,
         vm_args_utf8: &mut Vec<bun_core::Utf8Bytes<'static>>,
-    ) {
+    ) -> bool {
         let mut int = original_int;
         match event_loop {
             EventLoopHandle::Js { .. } => {
                 if int == 0 {
                     if let Ok(p) = bun_core::self_exe_path() {
                         out.extend_from_slice(p.as_bytes());
+                        return true;
                     }
-                    return;
+                    return false;
                 }
                 int -= 1;
 
@@ -1830,7 +1842,7 @@ impl Interpreter {
                     .bun_vm()
                     .cast::<bun_jsc::virtual_machine::VirtualMachine>();
                 if vm_ptr.is_null() {
-                    return;
+                    return false;
                 }
                 // SAFETY: `bun_vm()` on a JS event loop returns the live
                 // `*VirtualMachine` owning that loop.
@@ -1839,7 +1851,7 @@ impl Interpreter {
                 if !main.is_empty() {
                     if int == 0 {
                         out.extend_from_slice(main);
-                        return;
+                        return true;
                     }
                     int -= 1;
                 }
@@ -1850,7 +1862,7 @@ impl Interpreter {
                     let worker = unsafe { &*worker_ptr.cast::<bun_jsc::web_worker::WebWorker>() };
                     let argv = worker.argv();
                     if int as usize >= argv.len() {
-                        return;
+                        return false;
                     }
                     if vm_args_utf8.len() != argv.len() {
                         vm_args_utf8.reserve(argv.len());
@@ -1860,30 +1872,34 @@ impl Interpreter {
                         }
                     }
                     out.extend_from_slice(vm_args_utf8[int as usize].slice());
-                    return;
+                    return true;
                 }
 
                 if (int as usize) < vm.argv.len() {
                     out.extend_from_slice(&vm.argv[int as usize]);
+                    return true;
                 }
+                false
             }
             EventLoopHandle::Mini(_) => {
                 if command_ctx.is_null() {
-                    return;
+                    return false;
                 }
                 // SAFETY: `command_ctx` is the process-global `ContextData`
                 // (see `init`); it outlives the interpreter.
                 let ctx = unsafe { &*command_ctx };
                 if int as usize > ctx.passthrough.len() {
-                    return;
+                    return false;
                 }
                 if int == 0 {
                     if let Some(last) = ctx.positionals.last() {
                         out.extend_from_slice(last);
+                        return true;
                     }
-                    return;
+                    return false;
                 }
                 out.extend_from_slice(&ctx.passthrough[int as usize - 1]);
+                true
             }
         }
     }

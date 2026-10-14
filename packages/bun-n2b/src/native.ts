@@ -30,6 +30,8 @@ export interface NativeTransformResult {
 export interface N2BNative {
   version(): string;
   runCli(args: string[]): number;
+  rules(): unknown;
+  promptMarkdown(root: string): string;
   scan(root: string, options?: NativeScanOptions): N2BReport;
   transform(path: string, source: string, mode?: "check" | "fix" | "aggressive"): NativeTransformResult;
 }

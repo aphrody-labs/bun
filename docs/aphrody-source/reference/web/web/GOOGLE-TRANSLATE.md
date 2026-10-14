@@ -86,5 +86,5 @@ Enregistres dans `src/mcp/server.ts` :
 bun test test/unit/google-translate-engine.test.ts test/unit/google-translate-advanced.test.ts
 
 # Verification statique stricte TypeScript
-bunx tsc --noEmit
+bun check
 ```

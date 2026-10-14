@@ -29,7 +29,6 @@ import { downloadWithRetry, extractTarGz, fetchPrebuilt } from "./download.ts";
 import { BuildError, assert } from "./error.ts";
 import { writeIfChanged } from "./fs.ts";
 import { formatElapsed } from "./tty.ts";
-import { verifyVendorReceipt } from "../aphrody/vendor-oxc.ts";
 import { fetchNativeSDK } from "./native-sdk.ts";
 
 /**
@@ -237,16 +236,6 @@ async function fetchDep(
   }
 
   const identity = computeSourceIdentity(commit, patchContents);
-
-  if (name === "oxc" && existsSync(join(dest, ".bun-vendor.json"))) {
-    if (patches.length) throw new BuildError("OXC Git export cannot adopt archive patches");
-    await verifyVendorReceipt(dest, commit);
-    if (existsSync(refPath) && readFileSync(refPath, "utf8").trim() !== identity)
-      throw new BuildError("OXC Git export stamp differs; preserved");
-    if (!existsSync(refPath)) await writeFile(refPath, identity + "\n", { flag: "wx" });
-    console.log("verified OXC Git export");
-    return;
-  }
 
   // Short-circuit: already fetched at this identity?
   if (existsSync(refPath)) {

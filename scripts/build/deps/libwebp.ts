@@ -22,7 +22,7 @@
 
 import type { Dependency } from "../source.ts";
 
-const LIBWEBP_COMMIT = "b7e29b9d75bd31422b00c2a446d49d7af06c328d"; // v1.6.0
+export const LIBWEBP_COMMIT = "b7e29b9d75bd31422b00c2a446d49d7af06c328d"; // v1.6.0
 
 // prettier-ignore
 const DEC = [
@@ -77,11 +77,10 @@ const UTILS = [
 
 // RIFF container read/write — extracts/attaches the ICCP chunk so a
 // non-sRGB source (Display P3, Adobe RGB, Jpegli XYB) keeps its colour
-// meaning through a WebP re-encode. `anim_decode.c`/`anim_encode.c`
-// (WebPAnimDecoder/WebPAnimEncoder) are omitted: they layer ON TOP of
-// demux/mux, not the reverse, and Bun has no animated-WebP support.
-const DEMUX = ["demux"];
-const MUX = ["muxedit", "muxinternal", "muxread"];
+// meaning through a WebP re-encode. The animation entry points also satisfy
+// libwebp-sys's public bindings, which share this provider with Bun.Image.
+const DEMUX = ["demux", "anim_decode"];
+const MUX = ["muxedit", "muxinternal", "muxread", "anim_encode"];
 
 // prettier-ignore
 const SHARPYUV = [

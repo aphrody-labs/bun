@@ -2650,6 +2650,14 @@ impl<'bump, const ENCODING: StringEncoding> Lexer<'bump, ENCODING> {
                             self.break_word(AddDelimiter::No)?;
                             let var_tok = self.eat_var()?;
 
+                            // A quoted expansion contributes an argument even when its value is empty.
+                            if self.chars.state == CharState::Double && var_tok.len() > 0 {
+                                self.tokens.push(Token::DoubleQuotedText(TextRange {
+                                    start: var_tok.start,
+                                    end: var_tok.start,
+                                }));
+                            }
+
                             match var_tok.len() {
                                 0 => {
                                     self.append_char_to_str_pool(u32::from(b'$'))?;

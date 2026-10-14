@@ -9,7 +9,7 @@
 //   bun scripts/aphrody/publish-crates.ts                  stage + cargo package --list + publish --dry-run
 //   bun scripts/aphrody/publish-crates.ts --publish        publish every version not yet on crates.io
 //   options: --out <dir> (staging dir), --toolchain <name> (default stable), --skip-tests,
-//            --only sdk,packages/bun-n2b,packages/bun-oxc (default: all)
+//            --only sdk (default: all)
 
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -59,15 +59,10 @@ export const CRATES: Crate[] = [
   },
 ];
 
-// Fork-only crates, published under their own names straight from the package's
-// own Cargo workspace (no staging: nothing upstream to keep mergeable). Listed in
+// Fork-only crates, published under their own names from their owning Cargo workspace
+// (no staging: nothing upstream to keep mergeable). Listed in
 // dependency order.
 export const WORKSPACES: { dir: string; crates: string[] }[] = [
-  {
-    dir: "packages/bun-n2b",
-    crates: ["aphrody-n2b-types", "aphrody-n2b-registry", "aphrody-n2b-core", "aphrody-n2b"],
-  },
-  { dir: "packages/bun-oxc", crates: ["aphrody-oxc-bridge"] },
   // Both inherit the root workspace; selecting these packages avoids engine builds.
   { dir: "src/browser/crates/ssrf", crates: ["bun_browser_ssrf", "bun_browser_dom"] },
   { dir: "packages/bun-google/crates/boq", crates: ["aphrody-boq"] },
@@ -204,8 +199,11 @@ async function main() {
   const toolchain = opt("--toolchain") ?? "stable";
   const out = resolve(opt("--out") ?? join(tmpdir(), "aphrody-crates"));
   const skipTests = argv.includes("--skip-tests");
-  // --only sdk | packages/bun-n2b | packages/bun-oxc (comma-separated); default everything.
+  // Only registered publication owners may be selected.
   const only = opt("--only")?.split(",");
+  const targets = ["sdk", ...WORKSPACES.map(workspace => workspace.dir)];
+  const unknown = only?.filter(key => !targets.includes(key));
+  if (unknown?.length) throw new Error(`Unknown crate publication target: ${unknown.join(", ")}`);
   const selected = (key: string) => !only || only.includes(key);
 
   if (selected("sdk")) {

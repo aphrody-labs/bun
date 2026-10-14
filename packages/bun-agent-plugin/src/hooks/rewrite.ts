@@ -1,6 +1,6 @@
 // Rewrites shell commands that call another runtime or package manager into the Aphrody runtime's equivalent:
 // npm/npx/yarn/pnpm -> bun/bunx, node -> bun, pip/python/uv -> `bun uv`, and `bun test` inside a Bun checkout ->
-// `bun bd test`. Pure: no I/O, so the hooks and the tests share it.
+// `bun bd test`. Quality/migration tools become native check/lint/fmt/n2b commands. Pure: no I/O.
 
 export type RewriteOptions = {
   /** The working directory is a checkout of the Bun repository (`bun test` there must be `bun bd test`). */
@@ -234,6 +234,45 @@ function bunTest(args: string[], env: string[]): string[] | undefined {
   return ["bun", "bd", "test", ...args];
 }
 
+const QUALITY_COMMANDS = new Set(["check", "lint", "fmt", "n2b"]);
+const QUALITY_TOOLS: Record<string, string> = {
+  tsc: "check",
+  tsgo: "check",
+  typescript: "check",
+  "@typescript/native-preview": "check",
+  oxlint: "lint",
+  eslint: "lint",
+  oxfmt: "fmt",
+  prettier: "fmt",
+  n2b: "n2b",
+  "bun-plugin-n2b": "n2b",
+  "@aphrody/bun-plugin-n2b": "n2b",
+};
+
+function qualityCommand(value: string): string | undefined {
+  const executable = value.startsWith("@") ? value : value.split(/[\\/]/).at(-1) ?? value;
+  const name = commandName(executable);
+  const version = name.lastIndexOf("@");
+  return QUALITY_TOOLS[version > 0 ? name.slice(0, version) : name];
+}
+
+function nativeQuality(words: string[]): string[] | undefined {
+  if (words[0] === "bun" && words[1] === "run" && QUALITY_COMMANDS.has(words[2])) {
+    return ["bun", ...words.slice(2)];
+  }
+  if (words[0] === "bun" && QUALITY_COMMANDS.has(words[1])) return words;
+  const offset = words[0] === "bunx" ? 1 : words[0] === "bun" && words[1] === "x" ? 2 : 0;
+  if (offset) {
+    const args = bunxArgs(words.slice(offset));
+    let index = 0;
+    while (args[index]?.startsWith("--package=") || args[index] === "--bun") index++;
+    const command = qualityCommand(args[index] ?? "");
+    return command ? ["bun", command, ...args.slice(index + 1)] : undefined;
+  }
+  const command = qualityCommand(words[0]);
+  return command ? ["bun", command, ...words.slice(1)] : undefined;
+}
+
 function quote(arg: string): string {
   if (arg === "") return "''";
   return /^[\w@%+=:,./\\^~-]+$/.test(arg) ? arg : `'${arg.replace(/'/g, `'\\''`)}'`;
@@ -253,8 +292,8 @@ export function rewriteCommand(line: string, options: RewriteOptions = {}): Rewr
     }
     if (k >= tokens.length) continue;
     const head = tokens[k];
-    // Only bare names: an explicit path is a deliberate choice of binary.
-    if (/[\\/]/.test(head.value)) continue;
+    // Explicit quality-tool paths still use the mandatory native command.
+    if (/[\\/]/.test(head.value) && !qualityCommand(head.value)) continue;
     const name = commandName(head.value);
     const argTokens = tokens.slice(k + 1);
     const args = argTokens.map(t => t.value);
@@ -266,6 +305,9 @@ export function rewriteCommand(line: string, options: RewriteOptions = {}): Rewr
       case "npx":
       case "pnpx":
         next = ["bunx", ...bunxArgs(args)];
+        break;
+      case "bunx":
+        next = ["bunx", ...args];
         break;
       case "yarn":
         next = yarn(args);
@@ -299,6 +341,10 @@ export function rewriteCommand(line: string, options: RewriteOptions = {}): Rewr
       case "bun":
         if (options.bunCheckout && args[0] === "test") next = bunTest(args.slice(1), env);
         break;
+    }
+    const quality = nativeQuality(next ?? [name, ...args]);
+    if (quality) {
+      next = options.bunCheckout ? ["bun", "bd", ...quality.slice(1)] : quality;
     }
     if (!next) continue;
     // Keep the original spelling (quotes, escapes) of every argument that passes through unchanged.

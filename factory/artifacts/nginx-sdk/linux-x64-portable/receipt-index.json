@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "sourceDirectory": "/home/ubuntu/build/bun-os-obscura-4634063/factory/artifacts/nginx-sdk/linux-x64-portable",
+  "files": [
+    {
+      "name": "build-receipt.json",
+      "sha256": "2ecc90436d2ea8a3a2c42099d93533299ae21a1395c16153d25bd754792bf20c",
+      "bytes": 63001
+    },
+    {
+      "name": "module-engine-qualification.json",
+      "sha256": "10ef8b07eefb657363517c5f1f3c34e42462faa0789bc650cb323339cd582f20",
+      "bytes": 78377
+    },
+    {
+      "name": "portable-qualification.json",
+      "sha256": "1462a050012c0b6947abcecbb7b03fa5a8a307617f3057a0283502b2d751d7ee",
+      "bytes": 84532
+    },
+    {
+      "name": "dependencies/sdk-receipt.json",
+      "sha256": "6e750fa6fe7c8398c575ab8b16848c846b54f15133687fbff86ae9a706d30809",
+      "bytes": 39497
+    },
+    {
+      "name": "dependencies/pcre2-receipt.json",
+      "sha256": "30a2a22049e79ac3df33147026c9b5a8a652073263ce39a74ca28b7a5ef4a34e",
+      "bytes": 4032
+    },
+    {
+      "name": "engine-gates.log",
+      "sha256": "00c7366d8794cd39db4351783919c890f96d547b0a8e7109a802c1df8dbbec92",
+      "bytes": 1883
+    },
+    {
+      "name": "engine-gates.stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "name": "portable-gates.log",
+      "sha256": "0b9d48acab9161595e9f4aaf20759586698cee1b77497d909e69436f6f468f81",
+      "bytes": 249
+    },
+    {
+      "name": "portable-gates.stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "remoteRoot": "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/linux-video-qualification-20261013",
+  "sourceCommit": "f54a341270501b3b77ea3dc4a728f33fa44810db",
+  "files": [
+    {
+      "name": "runtime-capabilities.json",
+      "bytes": 7671,
+      "sha256": "807f1f87386c27950c1828e12de64e71c4ca9c7a6ab24869151ede221d418d86"
+    },
+    {
+      "name": "runtime-identity.json",
+      "bytes": 459,
+      "sha256": "37e467bc4d60b292038e84a521ea27ee5a04bebe291cfea8eaded8548cd67da2"
+    },
+    {
+      "name": "source-snapshot.json",
+      "bytes": 1520,
+      "sha256": "34fb21aa8e901b4472cc8dddc2873b38e5808472489f20b417f698e8e5c8e995"
+    },
+    {
+      "name": "binary-release-gate.json",
+      "bytes": 407,
+      "sha256": "daeb6f741316406747917b28802397907bd0740406d3869499ec249c05403a48"
+    },
+    {
+      "name": "native-pipeline.json",
+      "bytes": 2732,
+      "sha256": "da6bddcae811355cc0640a0c47e1ace227d026688c7b88fda19968278aba800c"
+    },
+    {
+      "name": "native-cli.json",
+      "bytes": 5716,
+      "sha256": "fc0cfbcd3d48e42cdbf66e3a13944d6c43d7c87dcb7001d58f132a5d555280f6"
+    },
+    {
+      "name": "native-tests.log",
+      "bytes": 17579,
+      "sha256": "61d53e38806246254c975506e244c306b50e453187c7c6087d960cac68117a84"
+    },
+    {
+      "name": "runtime-elf-version-info.log",
+      "bytes": 26807,
+      "sha256": "9e635a4e359af95a05e88cbd6f1648e8e836803db5b5994c7f69e6bc70222d0f"
+    },
+    {
+      "name": "runtime-ldd.log",
+      "bytes": 550,
+      "sha256": "9bff588abd63d664cfe465f8b6b57272c37a366f438672160132953f077a4a99"
+    },
+    {
+      "name": "build-command.txt",
+      "bytes": 127,
+      "sha256": "2b819e78491e700379027e6d133510345095908e97f95853576fbb025c51d2cb"
+    },
+    {
+      "name": "configure.log",
+      "bytes": 269,
+      "sha256": "2a0f416e5d9f27772542897edbb2a95fbdbfbd581f132b31724a95c67b6de7ab"
+    },
+    {
+      "name": "source-status-final.txt",
+      "bytes": 35,
+      "sha256": "036b3a8695932dddc3b35243151e27d6d56c0b5652308cbd37f95775c1a07eac"
+    },
+    {
+      "name": "driver.finished",
+      "bytes": 21,
+      "sha256": "0309d3808d22463dbeee711475cf7af50d0de1bd4939aab3ad1b1aade9d7cb28"
+    },
+    {
+      "name": "driver.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  ]
+}

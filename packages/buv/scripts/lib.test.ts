@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, expect, test } from "bun:test";
-import { mapLimit, minorOf, sha256Bytes, workspaceVersion } from "./lib.ts";
+import { mapLimit, minorOf, packageVersion, sha256Bytes } from "./lib.ts";
 
 describe("lib", () => {
   test("mapLimit keeps the order and never exceeds the limit", async () => {
@@ -29,7 +29,7 @@ describe("lib", () => {
     );
   });
 
-  test("the workspace version is read from the root manifest", async () => {
-    expect(await workspaceVersion()).toMatch(/^\d+\.\d+\.\d+$/);
+  test("the package version is read from package.json", async () => {
+    expect(await packageVersion()).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });

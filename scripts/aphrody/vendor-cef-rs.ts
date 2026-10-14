@@ -55,7 +55,7 @@ async function importSource() {
   if (bytes.length > 150 * 1024 * 1024) throw new Error("cef-rs source archive exceeds budget");
   const files = await new Bun.Archive(bytes).files();
   const prefix = `cef-rs-${CEF_RS_REVISION}/`;
-  const receiptFiles = [];
+  const receiptFiles: { path: string; mode: string; blob: string; size: number; sha256: string }[] = [];
   for (const entry of tree.tree.filter(entry => entry.type !== "tree")) {
     validateCEFSourcePath(entry.path);
     if (entry.type !== "blob" || !["100644", "100755"].includes(entry.mode))

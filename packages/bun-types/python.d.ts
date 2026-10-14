@@ -26,7 +26,11 @@ declare module "bun:python" {
     exec(source: string | TemplateStringsArray): void;
     eval(expression: string): string;
     evalJSON<T = unknown>(expression: string): T;
+    /** Evaluates up to 1024 expressions in one GIL/FFI crossing. */
+    evalBatch(expressions: readonly string[]): string[];
     call(module: string, fn: string, arg?: string): string;
+    /** Shares a contiguous writable Python buffer without copying it. */
+    buffer(expression: string): ArrayBuffer;
     close(): void;
     [Symbol.dispose](): void;
   }
@@ -38,6 +42,8 @@ declare module "bun:python" {
     exec(source: string | TemplateStringsArray): Promise<void>;
     eval(expression: string): Promise<string>;
     evalJSON<T = unknown>(expression: string): Promise<T>;
+    /** Evaluates up to 1024 expressions in one worker request and one GIL/FFI crossing. */
+    evalBatch(expressions: readonly string[]): Promise<string[]>;
     call(module: string, fn: string, arg?: string): Promise<string>;
     close(): Promise<void>;
     [Symbol.asyncDispose](): Promise<void>;

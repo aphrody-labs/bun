@@ -46,8 +46,8 @@ Branch names must start with `claude/` for CI (repo CLAUDE.md rule).
 
 ## GitHub Actions (`.github/workflows/`, guide `.github/workflows/CLAUDE.md`)
 
-- `format.yml` (name autofix.ci): runs `bun run codegen:string-maps` then prettier + clang-format-23 + `cargo fmt --all` in parallel; autofix.ci pushes fixes to the PR (run fails if it had something to push).
-- `lint.yml`: `bun lint` (oxlint) + `bun run build:types` + typecheck of src/js.
+- JS/TS formatting must use native `bun fmt`; qualify checkout changes through `bun bd fmt`. Keep codegen, clang-format and `cargo fmt --all` as separate build/Rust/C++ operations.
+- JS/TS lint and types must use native `bun lint --config oxlint.json` and `bun check`, with `bun run build:types` when generated declarations are required. Qualify checkout changes through `bun bd lint` and `bun bd check`; no external quality backend fallback.
 - `rust-lints.yml` (workflow `RUSTUP_TOOLCHAIN` pinned): `cargo clippy` (`bun run rust:clippy`), `cargo check --workspace --all-targets --keep-going`, `cargo miri test` (`bun run rust:miri`), lol-html `cargo test`, `mordant` (`cargo +$MORDANT_TOOLCHAIN install --git scarletindustries/mordant --rev $MORDANT_REV`, `bun scripts/rust-mordant.ts`).
 - `source-lints.yml`: `bun test test/internal/source-lints/`.
 - `bun-types.yml`: `bun test test/integration/bun-types/bun-types.test.ts` (no native build needed).

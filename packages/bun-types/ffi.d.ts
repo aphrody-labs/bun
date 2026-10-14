@@ -629,6 +629,8 @@ declare module "bun:ffi" {
         ? undefined
         : FFIReturnValue<NonNullable<Fns[K]["returns"]>>;
       __ffi_function_callable: typeof FFIFunctionCallableSymbol;
+      /** Pointer to the loaded native function. */
+      readonly ptr: Pointer;
       /** Struct layouts of a binding that has struct or union arguments or return (see {@link FFIStructType}). */
       readonly layouts?: {
         readonly args: readonly (FFIStructLayout | null)[];

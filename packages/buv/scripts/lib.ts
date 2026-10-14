@@ -53,12 +53,13 @@ export async function readIdentity(root = ROOT): Promise<Identity> {
   return (await Bun.file(join(root, "buv.json")).json()) as Identity;
 }
 
-/** The version of the buv workspace (`[workspace.package] version` of the root manifest). */
-export async function workspaceVersion(root = ROOT): Promise<string> {
-  const manifest = await Bun.file(join(root, "Cargo.toml")).text();
-  const match = manifest.match(/^\[workspace\.package\][\s\S]*?^version\s*=\s*"([^"]+)"/m);
-  if (!match?.[1]) throw new Error("Cargo.toml has no [workspace.package] version");
-  return match[1];
+/** The version of the native Buv package. */
+export async function packageVersion(root = ROOT): Promise<string> {
+  const manifest = (await Bun.file(join(root, "package.json")).json()) as { version?: unknown };
+  if (typeof manifest.version !== "string" || !/^\d+\.\d+\.\d+/.test(manifest.version)) {
+    throw new Error("package.json has no valid version");
+  }
+  return manifest.version;
 }
 
 /** Download cache of the pinned CPython archives (`BUV_CACHE`, default `~/.cache/buv`). */
