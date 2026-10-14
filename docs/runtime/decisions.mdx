@@ -1,24 +1,29 @@
 ---
-name: Jev and System One
-description: Typed model judgments through Bun's single native Yolo validator and private SDK bridge
+name: Typed decision boundaries
+description: Bun's native decision validator, confidence, abstention and supervised Python bridge
 ---
 
-Jev supplies typed judgments. [`bun:yolo`](/docs/runtime/yolo) adapts them into
+Bun's internal typed decision capability [`bun:yolo`](/docs/runtime/yolo) adapts application-supplied judgments into
 Noul booleans, named Choice keys and finite Score values. Rust validates the
 request, provider response and primitive conversion. A judgment is a proposal;
 application permission rules still authorize any subsequent operation.
 
 ```ts
-import { decide, noul, choice, score, jev } from "bun:yolo";
+import { decide, noul, choice, score, type Provider } from "bun:yolo";
 
-const result = await decide({
-  state: { query: "How do Bun.Video frames become images?", passage: "A curated source excerpt." },
-  questions: {
-    relevant: noul("Does `passage` help answer `query`?"),
-    route: choice("Which source fits?", { docs: "API documentation", graph: "Source relationships" }),
-    support: score("How directly does `passage` support `query`?", ["None", "Partial", "Direct"]),
-  },
-}, { provider: jev(), timeout: 10000, maxRetries: 0 });
+export async function selectSource(provider: Provider) {
+  return await decide(
+    {
+      state: { query: "How do Bun.Video frames become images?", passage: "A curated source excerpt." },
+      questions: {
+        relevant: noul("Does `passage` help answer `query`?"),
+        route: choice("Which source fits?", { docs: "API documentation", graph: "Source relationships" }),
+        support: score("How directly does `passage` support `query`?", ["None", "Partial", "Direct"]),
+      },
+    },
+    { provider, timeout: 10000, maxRetries: 0 },
+  );
+}
 // relevant: boolean; route: "docs" | "graph"; support: number in 0..2
 ```
 
@@ -38,23 +43,19 @@ This confidence minimum is distinct from the strict Noul probability threshold.
 
 ## Providers and boundaries
 
-`jev()` uses Bun HTTP and `TYPESAFE_API_KEY` from the process environment. The
-default endpoint is `https://api.typesafe.ai/v1/systemone`; an explicit HTTPS
-root can be selected with `baseURL` or `TYPESAFE_BASE_URL`. Loopback HTTP is
-accepted for local services and tests. Redirects reject. Optional
-`TYPESAFE_DEFAULT_MODEL` selects the model; no credential files are searched.
-
-An official TypeSafe SDK client may own transport through `jev({ client })`.
-The client does not become the validator. `code` also uses native validation,
-and `local` borrows a caller-owned `bun-llama` context without downloading
-weights. Local outputs are model judgments and do not inherit Jev calibration.
+Supply an application-owned `Provider` explicitly. Its private transport and
+model configuration stay with that application's owner. The client does not
+become the validator. `code` adapts deterministic or asynchronous callbacks
+through the same native validation; `local` borrows a caller-owned `bun-llama`
+context without downloading weights. Local outputs are model judgments;
+calibration, accuracy and trained weights require separate evidence.
 The native API and exact interfaces are in `packages/bun-types/yolo.d.ts`.
 
 Batches contain 1–64 questions; Choice has 2–255 options, Score has 2–10
 criteria. Request and response JSON are each bounded to 1 MiB. `timeout`
 bounds the complete operation, including retries, to 1–120000 ms.
 `maxRetries` is 0–3, default zero. A caller `AbortSignal` cancels pending work.
-Jev judgments do not generate an explanatory answer: an application may
+Typed judgments do not generate an explanatory answer: an application may
 separately generate text and then check its grounding against cited evidence.
 
 ## Python SDK
@@ -72,21 +73,18 @@ and lifetime behavior as `decide_async`.
 ```python
 import os
 from pathlib import Path
-from bun_yolo import Yolo, noul, choice
+from bun_yolo import Yolo, noul
 from yolo_runtime import Runtime
 
 # The release owner provisions a verified SDK manifest and qualified Bun.
-provider_environment = {"TYPESAFE_API_KEY": os.environ["TYPESAFE_API_KEY"]}
 with Runtime() as runtime:
-    client = Yolo(runtime, Path(os.environ["BUN_EXECUTABLE"]), env=provider_environment)
-    result = client.decide(
-        {"query": "Find native frame documentation"},
-        {"route": choice("Which source?", {"docs": "Docs", "graph": "Source graph"})},
-        options={"timeout": 10000, "maxRetries": 0},
-    )
+    client = Yolo(runtime, Path(os.environ["BUN_EXECUTABLE"]))
+    result = client.value({"type": "noul", "noul": 0.8}, noul("Fixture answer"))
+    assert result is True
 ```
 
-`provider_environment` is supplied by the caller's protected configuration;
+This example validates a supplied answer without model inference. Provider
+configuration for inference comes from the caller's protected configuration;
 no key is embedded in source. `Yolo` borrows the `Runtime`, accepts one active
 call per instance and never closes that borrowed handle. Each child has at
 most 1 MiB of input and captured output. `transport_timeout_ms` bounds the
@@ -103,7 +101,7 @@ names/codes; raw messages are deliberately not transported.
 
 Python transport fixtures do not qualify native execution. The native SDK
 and the Bun binary need separate per-target gates. Optional official Python
-TypeSafe compatibility, local-model execution, live provider accuracy and a
+provider-client compatibility, local-model execution, live provider accuracy and a
 published release remain separate qualifications. Existing application
 decision workflows and curated evals are retained until their consumer import
 switch passes; source migration alone does not authorize their removal.

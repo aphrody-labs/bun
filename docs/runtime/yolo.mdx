@@ -1,16 +1,18 @@
 ---
-name: Yolo
-description: Typed decisions with native Rust validation, Jev HTTP and optional local model providers
+name: Typed decisions
+description: Bun's internal typed decision capability, native Rust validation and explicit application providers
 ---
 
-`bun:yolo` turns named Noul, Choice and Score answers into JavaScript primitives. `bun:Yolo` resolves to the same module. Rust validates question types, answer names, enum keys and finite numeric bounds before returning a value.
+Yolo is Bun's internal typed decision capability. `bun:yolo` turns named Noul, Choice and Score answers into JavaScript primitives. `bun:Yolo` resolves to the same module. Rust validates question types, answer names, enum keys and finite numeric bounds before returning a value.
 
 ```ts
 import Yolo, { code, noul } from "bun:yolo";
 
 const provider = code(request => ({
   model: "public-access-rule",
-  answers: { answer: { type: "noul", noul: (request.state as { visibility: string }).visibility === "public" ? 1 : 0 } },
+  answers: {
+    answer: { type: "noul", noul: (request.state as { visibility: string }).visibility === "public" ? 1 : 0 },
+  },
   usage: null,
 }));
 
@@ -24,51 +26,48 @@ The result is a primitive `boolean`; false takes the false branch. A Noul become
 ## Named batches
 
 ```ts
-import { decide, noul, choice, score, jev } from "bun:yolo";
+import { decide, noul, choice, score, type Provider } from "bun:yolo";
 
-const result = await decide({
-  state: { query: "How does Bun.Video resize frames?", passage: "Bun.Video provides transformed frames." },
-  questions: {
-    relevant: noul("Does `passage` help answer `query`?"),
-    route: choice("Which public source fits `query`?", {
-      docs: "API documentation",
-      graph: "Relationships between source symbols",
-      none: "Neither source fits",
-    }),
-    evidence: score("How much support does `passage` provide for `query`?", [
-      "No supporting information",
-      "Information about the API, without the requested details",
-      "Information directly answering the requested details",
-    ]),
-  },
-}, { provider: jev(), timeout: 10000, maxRetries: 0 });
+export async function decideSources(provider: Provider) {
+  return await decide(
+    {
+      state: { query: "How does Bun.Video resize frames?", passage: "Bun.Video provides transformed frames." },
+      questions: {
+        relevant: noul("Does `passage` help answer `query`?"),
+        route: choice("Which public source fits `query`?", {
+          docs: "API documentation",
+          graph: "Relationships between source symbols",
+          none: "Neither source fits",
+        }),
+        evidence: score("How much support does `passage` provide for `query`?", [
+          "No supporting information",
+          "Information about the API, without the requested details",
+          "Information directly answering the requested details",
+        ]),
+      },
+    },
+    { provider, timeout: 10000, maxRetries: 0 },
+  );
+}
 // relevant: boolean; route: "docs" | "graph" | "none"; evidence: number in 0..2
 ```
 
-All questions for one state share one provider request. Choice supports 2–255 named options. Score supports 2–10 ordered criteria and may return a fractional value between zero and the final index. Batches contain 1–64 questions. Request and response JSON are each limited to 1 MiB. Unknown answer names, choice keys, wrong legends and numbers outside their range throw.
+The caller supplies the provider explicitly. A deterministic `code` fixture demonstrates the protocol; it does not perform a language judgment or qualify a model. All questions for one state share one provider request. Choice supports 2–255 named options. Score supports 2–10 ordered criteria and may return a fractional value between zero and the final index. Batches contain 1–64 questions. Request and response JSON are each limited to 1 MiB. Unknown answer names, choice keys, wrong legends and numbers outside their range throw.
 
 `inspect(request, options)` returns the validated `{ model, answers, usage }` response. `systemOne` aliases `inspect`. `value(answer, question, threshold?)` validates one answer and returns its primitive.
 
-## Jev
+## Application-owned providers
 
-`jev()` uses Bun's HTTP transport and the server-side `TYPESAFE_API_KEY` environment variable. It does not search credential files or browser stores. Its default endpoint is `https://api.typesafe.ai/v1/systemone`; `TYPESAFE_BASE_URL` or `baseURL` can select another HTTPS root. Loopback HTTP is supported for tests and local servers. Redirects are rejected. The model defaults to `TYPESAFE_DEFAULT_MODEL`, then `jev-latest`.
+An application supplies a `Provider` that owns its transport, credentials and model lifetime. `code(evaluate)` adapts a synchronous or asynchronous callback to this contract. The callback returns the raw named response; Rust still validates the request, answer distributions and primitive conversion. Keep provider configuration in protected server-side stores and inject only the qualified transport needed by the application.
 
-An official TypeSafe SDK client can own transport instead:
+This interface supplies structured decisions, not conversation generation. Native validation does not qualify provider accuracy, calibration, trained weights or a published inference service. See [typed decision boundaries](/docs/runtime/decisions) for confidence, abstention and the supervised Python bridge.
 
-```ts
-import { TypeSafeClient } from "@aphrody/typesafe-sdk";
-import { jev } from "bun:yolo";
-const provider = jev({ client: new TypeSafeClient({ logLevel: "warn" }) });
-```
-
-The request and answer shapes follow the [TypeSafe API](https://docs.typesafe.ai/api). The published `@aphrody/typesafe-sdk` fork shares this contract. Jev supplies judgments rather than generated text.
-
-`timeout` bounds the whole operation, including pending retries, to 1–120000 ms. `maxRetries` is an integer from zero to three, default zero. Native HTTP retries status 408, 429 and 5xx with bounded delay; SDK clients receive the same retry limit and cancellation signal. Connection and authentication failures reject. An `AbortSignal` cancels the request and settles the caller even when a custom provider does not complete.
+`timeout` bounds the whole operation, including pending retries, to 1–120000 ms. `maxRetries` is an integer from zero to three, default zero. Providers receive the deadline, retry limit and cancellation signal. Connection and authentication failures reject. An `AbortSignal` cancels the request and settles the caller even when a custom provider does not complete.
 
 ## Existing local models
 
 `local({ context, model, maxTokens? })` accepts a loaded `bun-llama` context. The caller selects the protected GGUF path and owns the context/model lifetime. No weights are downloaded or bundled into the core.
 
-The adapter requests strict JSON at temperature zero, caps generation at 1–4096 tokens (default 1024), and sends every answer through the same Rust validator. Markdown, explanatory text and responses outside the schema reject. A context accepts one active request at a time. Token usage is `null` because the context does not expose exact accounting. Local probabilities are model outputs; they do not inherit Jev's calibration. Grammar-constrained decoding depends on the local provider's capabilities and is not claimed by this adapter.
+The adapter requests strict JSON at temperature zero, caps generation at 1–4096 tokens (default 1024), and sends every answer through the same Rust validator. Markdown, explanatory text and responses outside the schema reject. A context accepts one active request at a time. Token usage is `null` because the context does not expose exact accounting. Local probabilities are model outputs; calibration requires separate evidence. Grammar-constrained decoding depends on the local provider's capabilities and is not claimed by this adapter.
 
 Optional providers require their credentials, native library and model to be available. Core validation and deterministic code providers work without those extensions.

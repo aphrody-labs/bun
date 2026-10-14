@@ -124,7 +124,7 @@ export async function buildBunRag(sql: SiteQuery, options: RagOptions, signal?: 
             );
             const relevance = response.answers.relevant.noul;
             const injection = response.answers.injection.noul;
-            if (!probability(relevance) || !probability(injection)) throw new Error("Invalid Jev probabilities");
+            if (!probability(relevance) || !probability(injection)) throw new Error("Invalid judgement probabilities");
             judgments[document.path] = { relevance, injection, model: response.model };
           } catch {
             signal?.throwIfAborted();
@@ -206,7 +206,7 @@ export async function buildBunRag(sql: SiteQuery, options: RagOptions, signal?: 
           },
         );
         const grounding = checked.answers.grounded.noul;
-        if (!probability(grounding)) throw new Error("Invalid Jev grounding probability");
+        if (!probability(grounding)) throw new Error("Invalid grounding probability");
         generation = {
           status: grounding >= RAG_POLICY.minimumGrounding ? "complete" : "rejected",
           model: generated.model,

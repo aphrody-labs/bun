@@ -1,6 +1,6 @@
 ---
 name: bun-yolo
-description: "Use bun:yolo for typed Jev/System One judgments, named Noul/Choice/Score batches, native answer validation, and its private Python SDK bridge."
+description: "Use Bun's internal typed decision capability for named Noul/Choice/Score batches, native answer validation, confidence and its private Python SDK bridge."
 ---
 
 # Typed judgments through Bun
@@ -10,14 +10,19 @@ relevance, intent routing or evidence support. Deterministic rules remain in
 application code. A judgment proposes a value; it does not authorize an action.
 
 ```ts
-import { decide, noul, choice, jev } from "bun:yolo";
-const result = await decide({
-  state: { query: "How does Bun.Video resize frames?", passage: "A curated public source excerpt." },
-  questions: {
-    relevant: noul("Does `passage` help answer `query`?"),
-    route: choice("Which source fits `query`?", { docs: "API docs", graph: "Source relationships" }),
-  },
-}, { provider: jev(), timeout: 10000, maxRetries: 0 });
+import { decide, noul, choice, type Provider } from "bun:yolo";
+export async function routeSource(provider: Provider) {
+  return await decide(
+    {
+      state: { query: "How does Bun.Video resize frames?", passage: "A curated public source excerpt." },
+      questions: {
+        relevant: noul("Does `passage` help answer `query`?"),
+        route: choice("Which source fits `query`?", { docs: "API docs", graph: "Source relationships" }),
+      },
+    },
+    { provider, timeout: 10000, maxRetries: 0 },
+  );
+}
 ```
 
 Rust owns question, answer and primitive validation. Noul returns a boolean
@@ -39,13 +44,12 @@ operation (1–120000 ms); `maxRetries` is 0–3. Use a caller `AbortSignal` for
 cancellation. Unknown names, mismatched legends, invalid probabilities or
 values outside their range reject.
 
-`jev()` uses the explicit process environment (`TYPESAFE_API_KEY`, optional
-`TYPESAFE_BASE_URL` and `TYPESAFE_DEFAULT_MODEL`) and Bun's bounded HTTP owner.
-It does not search credential files. Official TypeSafe clients can supply the
-transport; their results still pass through the same native validator. Use
-`code` for deterministic fixtures. `local` accepts an existing loaded
+Supply the application-owned provider explicitly; keep its credentials and
+backend configuration in protected server-side stores. Its results still pass
+through the same native validator. Use `code` for deterministic fixtures;
+fixtures do not perform language inference. `local` accepts an existing loaded
 `bun-llama` context; the caller owns its protected weights and lifetime.
-Local probabilities do not inherit Jev calibration.
+Local probabilities require their own accuracy and calibration evidence.
 
 The Python client is `packages/bun-runtime-sdk/python/ctypes/bun_yolo.py`.
 It delegates to the same `bun:yolo` through a one-call private stdio worker.
@@ -60,15 +64,15 @@ are refused before spawning, with no argv, temporary-file or polling fallback.
 abstention. Inject the borrowed client through the application's optional
 `aphrody.decision.bun_transport.BunTransport` only after its native gates pass.
 
-Read `docs/runtime/yolo.mdx`, `docs/runtime/jev.mdx` and
+Read `docs/runtime/yolo.mdx`, `docs/runtime/decisions.mdx` and
 `packages/bun-types/yolo.d.ts` before changing a contract. Source owners are
-`src/runtime/yolo`, the canonical Jev Rust owner and `src/js/bun/yolo.ts`;
+`src/runtime/yolo`, its canonical native core and `src/js/bun/yolo.ts`;
 Python changes stay in the existing runtime SDK. Keep curated application
 workflow/evaluation contracts separate from native inference and transport.
 
 For runtime changes use `bun bd test test/js/bun/yolo/yolo.test.ts` and the
 SDK's adjacent worker/ctypes tests. Select the native bridge gates explicitly
 after the runtime SDK and Bun binary are built. Fixture transport success,
-optional official SDK compatibility, live Jev inference and per-target release
+optional provider-client compatibility, live inference and per-target release
 qualification are separate evidence. Do not copy raw sessions, cookies,
 credentials, corpora or weights into request fixtures or plugin resources.

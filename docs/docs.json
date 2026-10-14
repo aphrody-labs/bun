@@ -195,7 +195,7 @@
               "/runtime/image",
               "/runtime/video",
               "/runtime/yolo",
-              "/runtime/jev",
+              "/runtime/decisions",
               "/runtime/nginx",
               "/runtime/hashing",
               "/runtime/glob",

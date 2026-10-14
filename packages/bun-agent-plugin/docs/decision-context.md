@@ -8,13 +8,15 @@ exact generated resources. This index qualifies source extraction, not binary
 availability or behavior.
 
 ```ts
-import { jev } from "bun:yolo";
+import type { Provider } from "bun:yolo";
 import { createContextSelector } from "bun-agent-plugin/decision";
 const selector = createContextSelector(await Bun.file("yolo/context-catalog.json").json());
-const result = await selector.select({
-  task: "Find callers of Bun.Video frame transforms",
-  provider: jev({ model: "jev-1.13.0" }),
-});
+export async function selectContext(provider: Provider) {
+  return await selector.select({
+    task: "Find callers of Bun.Video frame transforms",
+    provider,
+  });
+}
 ```
 
 Build the lexical index once. Selection sends only the task and candidate
@@ -42,8 +44,8 @@ The caller owns the cache URL, TTL and lifetime. Cached responses pass through
 Rust validation again; invalid data fails without a paid retry. `cacheHit`,
 request bytes, provider time, model and token usage remain observable.
 
-Use local `bun:yolo.code` fixtures for tests. A successful Jev call establishes
+Use local `bun:yolo.code` fixtures for tests. A successful provider call establishes
 that probe's protocol compatibility; it does not establish calibration,
 latency improvement, training correctness or every client's execution.
-Official semantics: [System One](https://docs.typesafe.ai/concepts/system-one),
-[Choice](https://docs.typesafe.ai/primitives/choice).
+The [Bun decision reference](/docs/runtime/decisions) defines confidence,
+abstention and the boundary between native validation and provider qualification.

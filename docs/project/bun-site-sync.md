@@ -26,7 +26,7 @@ must be absolute. For example, on the release host:
 
 Credentials stay in protected files. The owner connection applies the public
 schema migration and advances one snapshot transactionally. The Worker receives
-only the qualified `bun_site_http` read-only connection and the Jev credential
+only the qualified `bun_site_http` read-only connection and the private inference credential
 through Wrangler's standard input. Existing application secrets are preserved;
 this path does not run application D1 migrations.
 
