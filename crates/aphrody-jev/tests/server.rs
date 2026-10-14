@@ -97,9 +97,9 @@ async fn valid_request_is_served_and_invalid_one_is_422() {
 #[tokio::test]
 async fn confidence_policy_preserves_auth_and_rejects_invalid_thresholds_before_inference() {
     let hits = Arc::new(AtomicUsize::new(0));
-    let count = hits.clone();
+    let count = Arc::clone(&hits);
     let upstream = spawn(Router::new().route("/v1/systemone", post(move || {
-        let count = count.clone();
+        let count = Arc::clone(&count);
         async move {
             count.fetch_add(1, Ordering::SeqCst);
             Json(json!({"model":"fixture","usage":null,"answers":{"tool":{"type":"choice","choice":"read","confidence":0.7,"probabilities":{"read":0.7,"search":0.3}}}}))

@@ -7,6 +7,11 @@ The default core depends only on `serde`, `serde_json` and `thiserror`.
 `server` additionally enables the compatible HTTP routes and CLI entrypoint.
 Product configuration, process discovery and model loading remain with the caller.
 
+RAG consumers use `judge_passages` with at most eight requests in flight,
+preserving input order. `GuardPolicy::evidence()` filters prompt injection while
+retaining passages that correct a false factual premise in the query. The raw
+contradiction probability remains available for source review and explanations.
+
 ## Protocol
 
 `Entry` follows the official `@typesafe-ai/sdk` 0.6.0 declarations: text,

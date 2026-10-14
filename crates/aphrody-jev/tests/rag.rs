@@ -8,6 +8,11 @@ use aphrody_jev::{
 };
 use axum::{Json, Router, routing::post};
 use serde_json::{Value, json};
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+};
+use tokio::sync::{Notify, Semaphore};
 
 /// Deterministic stand-in for a Jev server: scores the passage text.
 async fn judge(Json(request): Json<Value>) -> Json<Value> {
@@ -76,4 +81,64 @@ async fn a_failed_judgement_fails_the_batch() {
     let router = router_for(Router::new().route("/v1/systemone", post(broken))).await;
     let err = judge_passages(&router, "q", &["p"]).await.unwrap_err();
     assert!(matches!(err, JevError::Format(_)), "{err}");
+}
+
+#[tokio::test]
+async fn passage_batch_bounds_concurrency_and_preserves_input_order() {
+    #[derive(Clone)]
+    struct Batch {
+        active: Arc<AtomicUsize>,
+        peak: Arc<AtomicUsize>,
+        ready: Arc<Notify>,
+        permits: Arc<Semaphore>,
+    }
+
+    async fn bounded(
+        axum::extract::State(batch): axum::extract::State<Batch>,
+        Json(request): Json<Value>,
+    ) -> Json<Value> {
+        let active = batch.active.fetch_add(1, Ordering::SeqCst) + 1;
+        batch.peak.fetch_max(active, Ordering::SeqCst);
+        if active == 8 {
+            batch.ready.notify_one();
+        }
+        batch.permits.acquire().await.unwrap().forget();
+        batch.active.fetch_sub(1, Ordering::SeqCst);
+        judge(Json(request)).await
+    }
+
+    let batch = Batch {
+        active: Arc::new(AtomicUsize::new(0)),
+        peak: Arc::new(AtomicUsize::new(0)),
+        ready: Arc::new(Notify::new()),
+        permits: Arc::new(Semaphore::new(0)),
+    };
+    let router = router_for(
+        Router::new()
+            .route("/v1/systemone", post(bounded))
+            .with_state(batch.clone()),
+    )
+    .await;
+    let passages = (0..17)
+        .map(|index| format!("Saiyan source {index}"))
+        .collect::<Vec<_>>();
+    let release = async {
+        batch.ready.notified().await;
+        tokio::task::yield_now().await;
+        batch.permits.add_permits(passages.len());
+    };
+    let (verdicts, ()) = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+        tokio::join!(judge_passages(&router, "Goku", &passages), release)
+    })
+    .await
+    .unwrap();
+    assert_eq!(batch.peak.load(Ordering::SeqCst), 8);
+    assert_eq!(
+        verdicts
+            .unwrap()
+            .iter()
+            .map(|verdict| verdict.index)
+            .collect::<Vec<_>>(),
+        (0..passages.len()).collect::<Vec<_>>()
+    );
 }
