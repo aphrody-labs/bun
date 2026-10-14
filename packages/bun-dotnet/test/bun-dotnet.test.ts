@@ -1,12 +1,29 @@
+/// <reference path="../../bun-types/index.d.ts" />
 import { beforeAll, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { build, dotnet, generateTypes, loadAssembly, packageOutput } from "../src/index.ts";
+import bunDotnet from "bun:dotnet";
+import {
+  build,
+  dotnet,
+  generateTypes,
+  loadAssembly,
+  loadNativeAssembly,
+  packageOutput,
+} from "../src/index.ts";
 
 const fixture = join(import.meta.dir, "fixture");
 const assembly = join(fixture, "bin", "Interop.dll");
 const packed = existsSync(join(packageOutput, "node-api-dotnet", "net10.0.js"));
+
+test("delegates SDK ownership to bun:dotnet", () => {
+  expect(dotnet).toBe(bunDotnet.dotnet);
+  expect(build).toBe(bunDotnet.build);
+  expect(generateTypes).toBe(bunDotnet.generateTypes);
+  expect(loadAssembly).toBe(bunDotnet.load);
+  expect(loadNativeAssembly).toBe(bunDotnet.loadAssembly);
+});
 
 test("drives the .NET SDK", async () => {
   const result = await dotnet(["--version"]);

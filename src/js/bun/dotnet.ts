@@ -102,7 +102,9 @@ function packageOutput() {
   const explicit = process.env.BUN_DOTNET_NODE_API;
   if (explicit) {
     const root = path.resolve(explicit);
-    return existsSync(path.join(root, "node-api-dotnet")) ? root : path.dirname(root);
+    return existsSync(path.join(root, "node-api-dotnet")) || existsSync(path.join(root, "node-api-dotnet-generator"))
+      ? root
+      : path.dirname(root);
   }
   const bunDotnet = resolveFrom("@aphrody/bun-dotnet/package.json");
   if (bunDotnet !== undefined) return path.join(path.dirname(bunDotnet), "dotnet", "out", "pkg");
@@ -185,7 +187,9 @@ function generateTypes(options) {
     require("node:path").join("node-api-dotnet-generator", "index.js"),
     "node-api-dotnet-generator",
   );
-  return spawnCollect([process.execPath, generator, ...args], options);
+  const env = { ...process.env, ...options.env };
+  env.DOTNET_ROLL_FORWARD ??= "Major";
+  return spawnCollect([process.execPath, generator, ...args], { ...options, env });
 }
 
 export default {
