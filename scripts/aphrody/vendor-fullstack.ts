@@ -41,7 +41,8 @@ export function validateSourcePath(path: string): void {
           part === "." ||
           part === ".." ||
           part.toLowerCase() === ".git" ||
-          /[<>:"|?*\u0000-\u001f]/.test(part) ||
+          /[<>:"|?*]/.test(part) ||
+          [...part].some(character => character.charCodeAt(0) < 32) ||
           /[. ]$/.test(part) ||
           /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(part),
       )

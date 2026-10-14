@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { FULLSTACK_SOURCES, gitBlob, validateSourcePath, verifySource } from "../../scripts/aphrody/vendor-fullstack";
 
 test("source paths reject traversal and platform-specific escapes", () => {
+  for (const path of ["src/file\n.rs", "src/file\t.rs"]) expect(() => validateSourcePath(path)).toThrow();
   for (const path of [".GIT/config", "src/CON.rs", "src/nul", "src/file.rs.", "src/file.rs ", "src/LPT1.rs"])
     expect(() => validateSourcePath(path)).toThrow();
   for (const path of ["../x", "/x", "C:/x", "a/x:stream", "a\\x", "a/../x", ".git/config", "a//x", "a/./x", "a\0x"])
