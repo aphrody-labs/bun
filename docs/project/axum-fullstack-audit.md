@@ -70,7 +70,7 @@ Statuts : S = source/API déclarée inspectée, sans exécution ; E = expérimen
 
 | Domaine | Axum/Tower et preuve vendored | API/propriétaire Bun et preuve | Statut et validation ciblée |
 | --- | --- | --- | --- |
-| Méthodes | MethodRouter et MethodFilter ; axum/src/routing/method_routing.rs:750 | Neuf méthodes dans ServerConfig.rs:814 ; union HTTPMethod dans packages/bun-types/serve.d.ts:590 | S : parser CONNECT/TRACE ; déclaration initialement limitée à sept. Qualifier types et callback de chaque méthode. |
+| Méthodes | MethodRouter et MethodFilter ; axum/src/routing/method_routing.rs:750 | Neuf méthodes dans ServerConfig.rs:814 et union HTTPMethod dans packages/bun-types/serve.d.ts:590 | S : déclaration alignée pour CONNECT/TRACE ; suite bun-types validée le 2026-10-14. Les callbacks réseau de chaque méthode restent à qualifier. |
 | HEAD implicite/explicite | Tests routing/tests/get_to_head.rs:9 ; exemple handle-head-request | ServerConfig.rs:826 et mod.rs:2521 ; RequestContext.rs:869 | S : GET de repli et HEAD explicite. Tester corps vide, headers/length, fonctions/statique/fichier et ordre d'insertion. |
 | 405 et Allow | method_routing.rs:1469 tests Allow ; routing/tests/mod.rs:222 | StaticRoute.rs:491, HTMLBundle.rs:254 ; mod.rs:2694 fallback global | S, différence : HTML GET/HEAD a 405+Allow ; méthode dynamique absente rejoint fetch/404. Préserver ce contrat ou proposer politique explicite. |
 | any/CONNECT/TRACE | MethodRouter any/service/MethodFilter ; method_routing.rs:1504 teste absence Allow sur any | Handler direct = RouteMethod::Any ; parser ServerConfig.rs:800 | S/N : CONNECT/TRACE routage ne garantit ni tunnel ni RFC8441. Tester request-target et fermeture réseau séparément. |

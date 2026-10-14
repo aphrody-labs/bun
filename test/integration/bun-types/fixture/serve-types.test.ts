@@ -828,6 +828,24 @@ test("multiple properties combined", {
   },
 });
 
+test("CONNECT and TRACE method handlers infer route parameters", {
+  port: 0,
+  routes: {
+    "/inspect/:id": {
+      CONNECT: req => {
+        expectType(req).is<Bun.BunRequest<"/inspect/:id">>();
+        expectType(req.params.id).is<string>();
+        return new Response(req.params.id);
+      },
+      TRACE: req => {
+        expectType(req).is<Bun.BunRequest<"/inspect/:id">>();
+        expectType(req.params.id).is<string>();
+        return new Response(req.params.id);
+      },
+    },
+  },
+});
+
 test("#24819 regression", {
   development: !process.env.production,
   routes: {

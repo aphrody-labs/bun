@@ -587,7 +587,7 @@ declare module "bun" {
           chromeDevToolsAutomaticWorkspaceFolders?: boolean;
         };
 
-    type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS";
+    type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS" | "CONNECT" | "TRACE";
 
     type Handler<Req extends Request, S, Res> = (request: Req, server: S) => MaybePromise<Res>;
 
