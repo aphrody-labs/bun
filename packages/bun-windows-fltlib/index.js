@@ -5,4 +5,4 @@ try {
 } catch {
   metadata = require("../bun-windows-win32/index.js");
 }
-module.exports = require("bun:windows").win32.defineFamily(require("./family.json"), metadata);
+module.exports = metadata.family("fltlib");

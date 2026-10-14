@@ -139,9 +139,9 @@ if (mode === "exports") {
   let missingDlls: string[] = [];
   const missing: string[] = [];
   for (const name of Object.keys(manifest.families)) {
-    const dir = join(repo, "packages", `bun-windows-${name}`);
-    if (!existsSync(join(dir, "family.json"))) continue;
-    const family = JSON.parse(readFileSync(join(dir, "family.json"), "utf8"));
+    const definition = join(shared, "families", `${name}.json`);
+    if (!existsSync(definition)) throw new Error(`Missing Win32 family definition: ${name}`);
+    const family = JSON.parse(readFileSync(definition, "utf8"));
     const module = k32.LoadLibraryExW(ptr(Buffer.from(family.dll + "\0", "utf16le")), null, 0x800);
     const fns = Object.entries(family.functions) as [string, unknown[]][];
     total += fns.length;

@@ -7,8 +7,7 @@
   "types": "index.d.ts",
   "files": [
     "index.js",
-    "index.d.ts",
-    "family.json"
+    "index.d.ts"
   ],
   "dependencies": {
     "@aphrody/bun-windows-win32": "1.4.4"

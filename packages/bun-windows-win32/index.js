@@ -3,9 +3,21 @@
 const { readFileSync } = require("node:fs");
 const { join } = require("node:path");
 const cache = new Map();
+const families = new Map();
 let types;
 module.exports = {
   manifest: require("./manifest.json"),
+  family(name) {
+    if (typeof name !== "string" || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(name) || !Object.hasOwn(module.exports.manifest.families, name))
+      throw new TypeError("Unknown Win32 family " + JSON.stringify(name));
+    let value = families.get(name);
+    if (value === undefined) {
+      const data = require("./families/" + name + ".json");
+      value = require("bun:windows").win32.defineFamily(data, module.exports);
+      families.set(name, value);
+    }
+    return value;
+  },
   namespace(name) {
     let data = cache.get(name);
     if (data === undefined) {
