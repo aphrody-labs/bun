@@ -400,6 +400,24 @@ export async function prepareNativeMedia(inputs: NativeMediaInputs, root: string
       throw new Error("AVIO source root differs from native producer");
     await runMediaBuild(input);
     await qualifyNativeMediaAVIO(inputs.target, root, prefix, diagnostics);
+    const avioQualification = await Bun.file(join(diagnostics, "avio-qualification.json")).json();
+    const avioSource = await Bun.file(join(input.output, "build-source-receipt.json")).json();
+    for (const component of ["ffmpeg", "mpv"] as const) {
+      const owner = inputs.components[component];
+      if (owner.kind !== "source") continue;
+      const receipt = await Bun.file(join(diagnostics, `${component}-sdk.json`)).json();
+      await packageBuiltMediaSDK(
+        component,
+        inputs.target,
+        owner.input.source ?? join(owner.input.sources, component),
+        prefix,
+        join(output, `sdk-${component}-pack`),
+        {
+          nativeQualification: { ...receipt.nativeQualification, avio: avioQualification, avioSource },
+          dependencies: { ...receipt.dependencies, avio: avioSource.source },
+        },
+      );
+    }
   }
   await qualifyMediaSDKClosure(inputs.target, prefix);
   return prefix;

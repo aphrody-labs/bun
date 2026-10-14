@@ -31,6 +31,25 @@ export interface MediaBuildCommand {
   timeout: number;
 }
 
+export function mediaGNUCompatibilityRustFlags(object: string, wraps: readonly string[]) {
+  if (
+    !isAbsolute(object) ||
+    /\s/.test(object) ||
+    !wraps.includes("getrandom") ||
+    !wraps.includes("statx") ||
+    !wraps.includes("fcntl64") ||
+    wraps.length > 64 ||
+    new Set(wraps).size !== wraps.length ||
+    wraps.some(symbol => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(symbol))
+  )
+    throw new Error("Canonical GNU compatibility object lacks its required bounded wrappers");
+  return (
+    ` -C link-arg=${object} ` +
+    wraps.map(symbol => `-C link-arg=-Wl,--wrap=${symbol}`).join(" ") +
+    " -C link-arg=-ldl -C link-arg=-lm"
+  );
+}
+
 function nativeGitBash(): string {
   if (Bun.env.BUN_MEDIA_BASH) return Bun.env.BUN_MEDIA_BASH;
   const git = Bun.which("git");
@@ -695,12 +714,7 @@ export async function runMediaBuild(input: MediaBuildInput, configureOnly = fals
           input.root,
         );
         const wraps = [...text.matchAll(/\b__wrap_([A-Za-z_][A-Za-z0-9_]*)$/gm)].map(match => match[1]!);
-        if (!wraps.includes("getrandom") || !wraps.includes("statx") || !wraps.includes("fcntl64") || wraps.length > 64)
-          throw new Error("Canonical GNU compatibility object lacks its required wrappers");
-        plan.env.RUSTFLAGS +=
-          ` -C link-arg=${object} ` +
-          wraps.map(symbol => `-C link-arg=-Wl,--wrap=${symbol}`).join(" ") +
-          " -C link-arg=-ldl -C link-arg=-lm";
+        plan.env.RUSTFLAGS += mediaGNUCompatibilityRustFlags(object, wraps);
         verified.dependencies["gnu-compatibility"] = {
           owner: "src/jsc/bindings/workaround-missing-symbols.cpp",
           sourceSHA256: await hashSDKFile(join(input.root, "src/jsc/bindings/workaround-missing-symbols.cpp")),

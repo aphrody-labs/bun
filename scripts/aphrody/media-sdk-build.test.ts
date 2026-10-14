@@ -6,6 +6,7 @@ import catalogue from "../../packages/bun-video/src/sdk-manifest.json";
 import {
   mediaBuildPlan,
   mediaBuildTarget,
+  mediaGNUCompatibilityRustFlags,
   validateMediaDependencyReceipt,
   type MediaBuildInput,
 } from "./media-sdk-build";
@@ -15,6 +16,22 @@ import { mediaSourceTree } from "./media-sdk-source";
 const root = resolve(import.meta.dir, "../..");
 const digest = "a".repeat(64);
 const targets = Object.keys(catalogue.targets) as Array<keyof typeof catalogue.targets>;
+
+test("AVIO and runtime SDK share bounded canonical GNU wrapper link arguments", () => {
+  const object = join(root, "build/bun-glibc-compat.o"),
+    symbols = ["getrandom", "statx", "fcntl64", "getentropy"];
+  const flags = mediaGNUCompatibilityRustFlags(object, symbols);
+  expect(flags).toContain(`-C link-arg=${object}`);
+  for (const symbol of symbols) expect(flags).toContain(`-Wl,--wrap=${symbol}`);
+  for (const invalid of [
+    symbols.slice(1),
+    [...symbols, "getrandom"],
+    [...symbols, "symbol;echo"],
+    Array(65).fill("getrandom"),
+  ])
+    expect(() => mediaGNUCompatibilityRustFlags(object, invalid)).toThrow("bounded wrappers");
+  expect(() => mediaGNUCompatibilityRustFlags("relative.o", symbols)).toThrow();
+});
 function input(target: (typeof targets)[number], component: MediaBuildInput["component"]): MediaBuildInput {
   const output = join(root, "build/media-recipe-fixture", target, component);
   return {

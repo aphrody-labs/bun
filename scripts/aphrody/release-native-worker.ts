@@ -23,6 +23,8 @@ import { qualifyNativeInstall, qualifyNativeWinget } from "./release-native-inst
 import type { NativePlatformQualification } from "./release-aggregation";
 import { nativeNginxRecipe, readNginxReleaseArtifact, type NginxReleaseManifest } from "./release-native-nginx";
 import { qualifyMediaELFs } from "./media-sdk-abi";
+import { mediaBuildTarget } from "./media-sdk-build";
+import { buildGNUX64RuntimeSDK, runtimeSDKCargoArgs } from "./runtime-sdk-build";
 
 type WorkerInput = { target: string; source: string; version: string; output: string; root: string };
 const root = resolve(import.meta.dir, "../..");
@@ -361,43 +363,49 @@ async function produce(input: WorkerInput) {
     throw new Error("GNU executable contract must enforce GLIBC <= 2.17 and exact closure");
   await run("runtime-closure", [process.execPath, "--no-env-file", "scripts/build/verify-binary.ts", "binary", spec]);
   const sdkRoot = join(input.root, "packages/bun-runtime-sdk");
-  await run(
-    "runtime-sdk-build",
-    [
-      process.execPath,
-      "--no-env-file",
-      join(input.root, "scripts/build/rust/cargo-serial.ts"),
-      ...(target.os === "windows" ? ["--msvc"] : []),
-      "build",
-      "--manifest-path",
-      join(sdkRoot, "Cargo.toml"),
-      "--locked",
-      "--profile",
+  let runtimeSDKArtifact: string;
+  if (target.sdkTarget === "linux-x64") {
+    if (!process.env.BUN_MEDIA_SDK_INPUTS)
+      throw new Error(
+        "Portable GNU x64 runtime SDK requires the explicit canonical AVIO build owner; host linking is insufficient",
+      );
+    const inputs = await readNativeMediaInputs(
+      process.env.BUN_MEDIA_SDK_INPUTS,
+      process.env.BUN_MEDIA_SDK_INPUTS_SHA256 ?? "",
+      "linux-x64",
+    );
+    if (!inputs.avio) throw new Error("Portable GNU x64 runtime SDK requires the canonical AVIO build receipt/object");
+    runtimeSDKArtifact = dirname(
+      (
+        await buildGNUX64RuntimeSDK({ ...inputs.avio.input, prefix }, join(input.output, "runtime-sdk-build"), {
+          path: join(diagnostics, "avio-qualification.json"),
+          sha256: await hashSDKFile(join(diagnostics, "avio-qualification.json")),
+        })
+      ).staged,
+    );
+  } else {
+    const sdkTarget = mediaBuildTarget(target.sdkTarget as MediaSDKTarget).rust;
+    await run("runtime-sdk-build", runtimeSDKCargoArgs(input.root, sdkTarget, 2), 1_800_000, sdkRoot);
+    const sdkBuiltLibrary = join(
+      sdkRoot,
+      "target",
+      sdkTarget,
       "runtime",
-      "-p",
-      "yolo-runtime",
-      "-j2",
-    ],
-    1_800_000,
-    sdkRoot,
-  );
-  const sdkBuiltLibrary = join(
-    sdkRoot,
-    "target/runtime",
-    target.os === "windows"
-      ? "yolo_runtime.dll"
-      : target.os === "darwin"
-        ? "libyolo_runtime.dylib"
-        : "libyolo_runtime.so",
-  );
-  if (target.os === "linux") await run("runtime-sdk-rpath", ["patchelf", "--set-rpath", "$ORIGIN", sdkBuiltLibrary]);
-  const stagedSDK = await run(
-    "runtime-sdk-stage",
-    [runtime, "--no-env-file", "scripts/stage.ts", sdkBuiltLibrary],
-    120_000,
-    sdkRoot,
-  );
-  const runtimeSDKArtifact = dirname(stagedSDK.stdout.trim());
+      target.os === "windows"
+        ? "yolo_runtime.dll"
+        : target.os === "darwin"
+          ? "libyolo_runtime.dylib"
+          : "libyolo_runtime.so",
+    );
+    if (target.os === "linux") await run("runtime-sdk-rpath", ["patchelf", "--set-rpath", "$ORIGIN", sdkBuiltLibrary]);
+    const stagedSDK = await run(
+      "runtime-sdk-stage",
+      [runtime, "--no-env-file", "scripts/stage.ts", sdkBuiltLibrary],
+      120_000,
+      sdkRoot,
+    );
+    runtimeSDKArtifact = dirname(stagedSDK.stdout.trim());
+  }
   const sdkArtifactManifest = await Bun.file(join(runtimeSDKArtifact, "manifest.json")).json();
   const sdkLibraries = Object.keys(sdkArtifactManifest.files).filter(name => /\.(?:dll|so|dylib)$/.test(name));
   if (sdkLibraries.length !== 1) throw new Error("Runtime SDK artifact must own exactly one native module");
