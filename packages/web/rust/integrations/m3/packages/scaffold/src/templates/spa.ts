@@ -131,7 +131,7 @@ export function spaFiles({ name }: SpaTemplateOptions): FileMap {
       dev: "m3-bun dev",
       build: "m3-bun build",
       serve: "m3-bun serve",
-      typecheck: "tsc -p tsconfig.json --noEmit",
+      typecheck: "bun check -p tsconfig.json --noEmit",
     },
     dependencies: {
       react: "catalog:",

@@ -41,7 +41,7 @@ export function appFiles(options: AppTemplateOptions): FileMap {
       serve: "m3-bun serve",
       "dev:bun": "m3-bun dev",
       "start:bun": "m3-bun serve",
-      typecheck: "tsc -p tsconfig.json --noEmit",
+      typecheck: "bun check -p tsconfig.json --noEmit",
     },
     dependencies: {
       ...options.dependencies,
