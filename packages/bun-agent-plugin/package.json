@@ -15,6 +15,7 @@
   "exports": {
     ".": "./src/cli.ts",
     "./rewrite": "./src/hooks/rewrite.ts",
+    "./decision": "./src/decision.ts",
     "./package.json": "./package.json"
   },
   "files": [
