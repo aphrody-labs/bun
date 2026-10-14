@@ -85,7 +85,7 @@ upstream `LICENSE` file.
 
 ## Python and system dependencies
 
-`bun --help` has no `systemdeps` command. This fork's system package manager is
+`bun --help` has no `systemdeps` command. Bun OS's system package manager is
 the `systemDependencies` package.json/lockfile mechanism, with `apt` accepted
 as an alias for the `deb` source. The integrated Linux adapter invokes trusted
 APT/dpkg through `bun pm apt`, with an explicit initialized root for transactions;

@@ -332,7 +332,7 @@ export function componentsPage(d: SiteData, ctx: PageContext): GeneratedPage {
     const others = d.org.public.filter(r => !r.usedBy.length);
     out.push(`## Organization repositories`);
     out.push(
-      `Public repositories of ${link(d.org.login, repoUrl(d.org.login))}. "Used by" lists the components of the distribution and of the runtime whose sources name the repository${d.org.privateCount ? `; ${plural(d.org.privateCount, "private repository", "private repositories")} are not listed` : ""}. Forks keep the licence of their upstream.`,
+      `Public repositories of ${link(d.org.login, repoUrl(d.org.login))}. "Used by" lists the components of the distribution and of the runtime whose sources name the repository${d.org.privateCount ? `; ${plural(d.org.privateCount, "private repository", "private repositories")} are not listed` : ""}. Integrated components retain their original licences and attribution.`,
     );
     if (used.length) out.push(`### Referenced by the distribution or the runtime\n\n${repoTable(used)}`);
     if (others.length) out.push(`### Other public repositories\n\n${repoTable(others)}`);
@@ -386,7 +386,8 @@ export function runtimePage(d: SiteData, ctx: PageContext): GeneratedPage | null
   const gh = repoUrl(rt.repo);
   const latest = latestRuntimeRelease(ctx.releases);
   const facts: string[][] = [
-    ["Upstream", `${link(rt.upstream.name, rt.upstream.url)}, base version ${code(rt.upstream.version)}`],
+    ["Upstream source", link(rt.upstream.name, rt.upstream.url)],
+    ["Source package version", code(rt.upstream.version)],
     ["Source", `${link(rt.repo, gh)} at ${link(short(rt.commit), `${gh}/commit/${rt.commit}`)} (${day(rt.date)})`],
     [
       "Licence",
@@ -394,7 +395,10 @@ export function runtimePage(d: SiteData, ctx: PageContext): GeneratedPage | null
     ],
   ];
   if (latest) facts.push(["Latest release", `${link(latest.tag, latest.url)} (${day(latest.publishedAt)})`]);
-  facts.push(["Fork commits", `${rt.commits.count} since ${day(rt.commits.first)} (merge commits excluded)`]);
+  facts.push([
+    "Maintained source commits",
+    `${rt.commits.count} since ${day(rt.commits.first)} (merge commits excluded)`,
+  ]);
   if (rt.lastUpstreamMerge)
     facts.push([
       "Last upstream merge",
@@ -413,7 +417,7 @@ export function runtimePage(d: SiteData, ctx: PageContext): GeneratedPage | null
 
   const out: string[] = [table(["Item", "Value"], facts)];
   out.push(
-    `## Commits by type\n\nConventional Commit types of the fork commits.\n\n${table(
+    `## Commits by type\n\nConventional Commit types of the maintained source commits.\n\n${table(
       ["Type", "Commits"],
       rt.commits.types.map(([t, n]) => [code(t), String(n)]),
     )}`,
@@ -427,11 +431,11 @@ export function runtimePage(d: SiteData, ctx: PageContext): GeneratedPage | null
     );
   if (rt.modules.length)
     out.push(
-      `## Built-in modules added\n\n${rt.modules.map(m => `- ${code(m)} (${link(`src/js/bun/${m.slice(4)}.ts`, `${gh}/blob/main/src/js/bun/${m.slice(4)}.ts`)})`).join("\n")}`,
+      `## Built-in module declarations\n\nNames come from the ${link("source registry", `${gh}/blob/${rt.commit}/src/resolve_builtins/HardcodedModule.rs`)}. A declaration does not establish platform availability or runtime qualification.\n\n${rt.modules.map(m => `- ${code(m)}`).join("\n")}`,
     );
   if (rt.commands.length)
     out.push(
-      `## CLI command implementations added\n\n${table(
+      `## CLI source files\n\nFile names identify source implementations; command registration and behavior require their own runtime evidence.\n\n${table(
         ["Name (from the file)", "Source"],
         rt.commands.map(f => [code(commandName(f)), link(f, `${gh}/blob/main/${f}`)]),
       )}`,
@@ -467,7 +471,7 @@ export function runtimePage(d: SiteData, ctx: PageContext): GeneratedPage | null
   return {
     path: "/runtime",
     title: `Runtime: ${rt.repo}`,
-    description: `The JavaScript runtime of Aphrody: a fork of ${rt.upstream.name} ${rt.upstream.version}, and what it adds.`,
+    description: "Bun OS: Aphrody runtime source, integrated components and qualification boundaries.",
     tab: "Runtime",
     markdown: out.join("\n\n"),
   };
@@ -620,10 +624,10 @@ export function documentPages(d: SiteData, ctx: PageContext): GeneratedPage[] {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Site du runtime seul (aphrody.app) : accueil depuis APHRODY.md du fork, page /runtime
+// Site de Bun OS (aphrody.app) : accueil depuis APHRODY.md, page /runtime
 
 /**
- * Liens relatifs d'un document du fork : une page de `docs/` devient sa route du site (`/docs/...`), tout autre
+ * Liens relatifs d'un document du runtime : une page de `docs/` devient sa route du site (`/docs/...`), tout autre
  * chemin pointe sur GitHub au commit publié ; les liens absolus et les ancres restent tels quels.
  */
 export function forkLinks(markdown: string, repo: string, commit: string): string {
@@ -663,7 +667,7 @@ export function runtimeHomePage(d: SiteData, ctx: PageContext): GeneratedPage | 
       link(rt.upstream.name, rt.upstream.url),
     ],
     [
-      "Fork commits",
+      "Maintained source commits",
       `${rt.commits.count} since ${day(rt.commits.first)} (merge commits excluded)`,
       link("Runtime", "/runtime"),
     ],

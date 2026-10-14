@@ -1,90 +1,47 @@
 ---
 name: bun-agent-shared-memory
-description: Shared source-backed Bun fork decisions and qualification for Claude, Codex, Antigravity and other harnesses
+description: Shared source-backed Bun OS decisions and qualification for coding-agent harnesses
 metadata:
   type: reference
 ---
 
-# Shared Bun fork memory
+# Shared Bun OS source context
 
-Updated 2026-10-13. This is project knowledge, independent of the model or harness.
-Use one canonical Aphrody memory owner, `bun-shared`, for approved project facts.
-Read current sources before relying on a recorded result; no provider credentials,
-raw sessions, cookies, datasets or model weights belong in this fiche.
+This is project knowledge, independent of the model or harness. Read the
+current source and selected qualification receipt before relying on a result.
+Credentials, raw sessions, cookies, private datasets and weights stay in their
+protected stores.
 
-## Decisions and source ownership
+## Source ownership
 
-- The agent plugin belongs to `packages/bun-agent-plugin`. Its Rust/Bun policy
-  source is `skills/bun-rust-first/SKILL.md` within that package.
-- `src/spec.ts` defines harness targets. `src/generate.ts` distributes common
-  skills, source-derived tools and per-harness manifests. `src/install.ts`
-  registers adapters without changing the selected provider/model.
-- `src/hooks/rewrite.ts` owns command conversion. OpenCode delegates via its
-  native callback; command-hook clients delegate via `src/hooks/pre-tool-use.ts`.
-- The owner removed Codex lifecycle hooks. The repository has no `.codex/hooks.json`
-  or formatter hook, and the Codex plugin ships no hooks directory or manifest
-  registration. User hook state was removed and `features.hooks` disabled.
-  This is independent of the tool's execution-policy rejection of recursive deletion.
-- Antigravity (`agy`) is distinct from Gemini CLI (`gemini`): native plugin.json,
-  hook groups and camelCase toolCall inputs vs a Gemini extension and BeforeTool.
-  Do not use GEMINI.md or a Gemini manifest to qualify Antigravity.
-- Local models need a harness supporting tools, MCP and skills. The `local`
-  bundle exports resources without assuming lifecycle events or installing weights.
-- `docs/agent-adapters.md` records Context7 IDs, dated official schema sources and
-  actual compatibility limits. A generated adapter is not a client execution proof.
+`packages/bun-agent-plugin` owns the agent integration. `src/spec.ts` declares
+the harness targets; `src/generate.ts` assembles skills and source-derived tool
+metadata; `src/install.ts` owns adapter installation. The source policy is
+`skills/bun-rust-first/SKILL.md` within that package.
 
-## Graph and types from real code
+`src/hooks/rewrite.ts` owns command conversion. Hooks and callback adapters
+delegate to that owner; they do not choose a provider or change authentication.
+Antigravity and Gemini have distinct schemas. The local bundle makes resources
+available to a compatible harness without downloading models or assuming
+client lifecycle events. See `docs/agent-adapters.md` for adapter contracts.
 
-Graph input/output contracts are owned by `src/graph/api.rs` and exposed through
-`packages/bun-types/graph-native.d.ts`. Deserialization defaults permit omitted
-input metadata; serialized graph outputs contain those fields with null/default
-values. The declaration fixture covers both directions.
+## Evidence boundaries
 
-Index plugin and types as separate bounded domains using native Aphrody graph/home.
-Keep source labels and profiles explicit, and record extraction gaps rather than
-claiming complete AST coverage. The installed parser cannot currently extract
-the TS7.1 import-attribute declarations in `ts7.1/import-attributes.d.ts`; the
-declaration gate still checks the real compiler contract.
+Generation proves source assembly. A hook fixture proves that fixture's
+behavior. Embedded plugin execution, each harness client and installation
+ownership require their own gates against the selected executable and source.
+Do not describe a previous failure or a dated pass as current runtime status.
 
-## Verified qualification and limits
+Graph contracts are owned by `src/graph/api.rs` and
+`packages/bun-types/graph-native.d.ts`. Keep repository, source, profile,
+snapshot and runtime/frontend identity explicit. Preserve unresolved nodes,
+parser limits and metadata-only entries; source extraction does not establish
+complete AST coverage or a complete training dataset.
 
-- The declaration integration gate passed 22 tests on the installed Aphrody runtime
-  during this batch; runtime behavior is a separate changed-binary qualification.
-- Native plugin adapters have local generation, hook, install/uninstall and ownership
-  tests. The OpenCode callback has a direct behavioral test using the shared engine.
-  The adapter batch passed 36 plugin tests. The subsequent removal of Codex hooks
-  passed 14 focused generation/adapter tests; no runtime or type source changed.
-- The installed runtime's embedded agent-plugin launcher has a missing module.
-  Use the checkout's plugin CLI for this batch; do not claim embedded-launcher repair.
-- A build launched by automatic command rewriting encountered a missing sccache
-  wrapper before compilation. Pure plugin script gates use the documented keep-tool
-  escape to avoid an unrelated native rebuild. This does not qualify runtime changes.
-- Antigravity's existing private plugin is an older generated snapshot. It differs
-  from the current shared installation, so the ownership guard preserves it rather
-  than overwriting unidentified edits. The corrected adapter is generated in the
-  repository bundle; execution inside the Antigravity client remains unqualified.
+Use `bun mcp` memory/search and graph tools when they cover the task. Provider
+state and authentication remain separate from shared project context. Preserve
+concurrent checkouts, active artifacts and protected stores; an ignored path
+is not a cleanup authorization.
 
-## Shared retrieval and ignored-path inventory
+Related: `bun-os-runtime`, `bun-skills-catalog`, `bun-graph-structure`.
 
-Use `aphrody memory recall --agent-id bun-shared --query <topic>` for current
-project decisions. Use `aphrody home --profile bun query <topic>` for indexed
-project source and fiches; this home domain profile is not an inference profile.
-Do not pass it as a top-level model profile to the memory CLI. Explicitly select
-the checkout directory in Aphrody Shell before formatting or running project tools.
-
-The git-ignored inventory has 1448 aggregated file/directory entries, including
-1130 vendor and 290 package entries. Ignored does not imply disposable: native
-sources, registries, cookies and current work remain protected. A modified media
-clone, recent CEF/build outputs and rename journals were retained.
-Five old Rust logs, two Git logs and an empty temporary directory were removed
-using separate non-recursive native operations, freeing 51930 bytes. Their
-absence was verified. Recursive deletion of the clean temporary media clones
-remains rejected before Windows execution; elevation cannot resolve that policy
-decision. The modified media clone and concurrent sources remain untouched.
-`sudo.exe` is available in inline mode; these successful deletions needed no
-elevation. The empty embedded-plugin extraction cache is
-also unchanged after a rejected deletion. Its incomplete-cache recovery bug is
-still present in the native launcher source and requires a changed-binary gate.
-
-Read live gate output and the final source commit for delivery evidence. Never
-replace a missing gate with a remembered success from another revision or host.

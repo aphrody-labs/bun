@@ -65,4 +65,4 @@ Source of truth: `<bun>\REVIEW.md` (core) and `<bun>\.claude\docs\landing-prs.md
 - Docs voice (`docs/project/contributing.mdx`): short active sentences, present tense, "you", no easy/simple/just. `.d.ts` mirror runtime exactly; no `*/` in JSDoc; verify by compiling under both tsconfigs.
 - PR: re-read diff, remove residue (`.only`!), description = squash message naming root-cause line and tests; green CI on all platforms; one concern per PR; branches `claude/*` upstream.
 
-Related: `bun-tests-harness`, `bun-core-idioms`, `bun-fork-aphrody`.
+Related: `bun-tests-harness`, `bun-core-idioms`, `bun-os-runtime`.

@@ -54,6 +54,6 @@ Branch names must start with `claude/` for CI (repo CLAUDE.md rule).
 - `update-<dep>.yml` (cares, hdrhistogram, highway, libarchive, libdeflate, lolhtml, lshpack, sqlite3, zstd, vendor): auto-bump dep commits.
 - Others: release.yml, packages-ci.yml, freebsd-smoke.yml, deploy-site.yml, vscode-release.yml, comment-cop.yml, on-slop.yml, claude-dedupe-issues.yml, claude-find-issues-for-pr.yml, auto-label-claude-prs.yml, auto-close-duplicates.yml, close-linked-issues.yml, close-stale-robobun-prs.yml, cancel-buildkite-on-pr-close.yml, stale.yaml, auto-assign-types.yml.
 
-## This fork
+## Bun OS source
 
-`<bun>`: origin = `github.com/aphrody-labs/bun` (fork), upstream = `oven-sh/bun` (merged periodically via `upstream/main`); git user aphrody-dev. `ci:*` scripts query oven-sh's Buildkite (org `bun`); fork pushes are not expected to have Buildkite builds (unverified). User rules: commit+push directly on finish, no AI attribution.
+`<bun>`: origin = `github.com/aphrody-labs/bun`, upstream = `oven-sh/bun` (synchronized via `upstream/main`); git user aphrody-dev. Inspect the current `ci:*` scripts and actual workflow receipts. An upstream CI result does not qualify a Bun OS release. User rules: commit+push completed qualified batches directly, no AI attribution.

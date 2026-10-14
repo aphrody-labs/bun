@@ -54,12 +54,12 @@ An additional stylesheet and script map upstream color variables onto the
 current Aphrody M3 semantic roles and apply shape tokens. Captured typography
 retains upstream `--font-display` and `--font-sans`, mapped to the M3 brand
 and plain typeface roles. The captured stylesheet declares Archivo for display
-and its existing system stack for plain text. New fork surfaces use Aphrody
+and its existing system stack for plain text. Bun OS surfaces use Aphrody
 Google Sans Flex independently, without changing captured line breaks.
-Fork navigation exposes release downloads, docs, guides, plugin skills, the
+Bun OS navigation exposes release downloads, docs, guides, plugin skills, the
 visual code graph and measured benchmarks. Installer and canonical URLs change
 to aphrody.app. Upstream analytics are removed. Upstream benchmark values
-remain attributed to upstream and are never presented as fork measurements.
+retain their original provenance and measurement scope.
 
 `mirror-coverage.json` records each original and adapted SHA-256, missing local
 HTML references, the exact release source SHA and collection limits. Missing
@@ -87,7 +87,7 @@ frontier still contained 16,214 pending URLs; the separate reference collector
 continues resumably. These counts do not establish complete coverage.
 At 390 by 844, upstream and preview both selected the five tested installer
 and benchmark tabs. An isolated page clipboard collector observed the upstream
-Windows installer and its fork URL replacement. Neither rendering exposed a
+Windows installer and its Bun OS URL replacement. Neither rendering exposed a
 theme button or a visible search input after the search action. Both reported
 the mobile menu's `aria-expanded` as false after its opening action. Menu and
 search parity therefore remain unqualified. The initial M3 font override reduced
@@ -104,7 +104,7 @@ page, compare light/dark desktop and narrow layouts, navigation, search,
 installer tabs and copy actions, benchmark tabs, workflow controls, terminal
 replay, release links, responsive menus and keyboard behavior. Keep the release
 gateway authoritative for `/docs`, `/guides`, `/knowledge`, `/plugin`, `/graph`,
-`/benchmarks`, `/downloads`, installers and fork version metadata. Preserve the
+`/benchmarks`, `/downloads`, installers and runtime version metadata. Preserve the
 previous static release and its Nginx configuration for rollback.
 
 Sources inspected: [Bun](https://bun.com/), the installed

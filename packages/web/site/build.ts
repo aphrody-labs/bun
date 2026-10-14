@@ -1,5 +1,5 @@
 // Génère un site statique. Sans données de distribution, c'est le site du runtime, aphrody.app (« Aphrody Bun » :
-// accueil depuis APHRODY.md du fork, /runtime, /docs, téléchargements, notes de version, benchmarks, installateurs) ;
+// accueil depuis APHRODY.md, /runtime, /docs, téléchargements, notes de version, benchmarks, installateurs) ;
 // avec elles (--data d'un collect.ts --distribution), le site de la distribution Aphrody (accueil produit, /components, /runtime, /m3,
 // /security, /contributing, /about, pages générées par pages.ts depuis site-data.json de collect.ts), la doc du
 // runtime aphrody-labs/bun (/docs depuis docs/docs.json + .mdx, pages .md brutes, recherche), /guides,
@@ -228,7 +228,7 @@ const PERF_LABELS: Record<string, string> = {
   "fetch-local": "local `fetch` latency (p50)",
   "fetch-p99": "local `fetch` latency (p99)",
   "fetch-rps": "local `fetch`, sequential throughput",
-  "fork-builtins": "`require` of fork-only modules (fork only)",
+  "fork-builtins": "`require` of additional Bun OS modules",
 };
 
 export function formatMetric(value: number | undefined, unit: string): string {
@@ -276,8 +276,8 @@ export function renderPerfTable({ platform, report }: PerfReport): string {
     ? `<tr><td>Binary size</td><td class="num">${formatBytes(report.binarySize.upstream)}</td><td class="num">${formatBytes(report.binarySize.fork)}</td><td class="num">${report.binarySize.ratio?.toFixed(3) ?? ""}</td><td>${escapeHtml(report.binarySize.status ?? "")}</td></tr>`
     : "";
   return `<h2 id="${escapeHtml(platform)}">${escapeHtml(platform)}</h2>
-<p class="muted">Fork <code>${escapeHtml(m.fork?.version ?? "?")}</code> (${escapeHtml(String(m.fork?.revision ?? "").slice(0, 9))}) against upstream <code>${escapeHtml(m.upstream?.version ?? "?")}</code> (${escapeHtml(String(m.upstream?.revision ?? "").slice(0, 9))}) on ${escapeHtml(m.host ?? "?")}; ${escapeHtml(String(m.runs ?? "?"))} runs, ${escapeHtml(String(m.warmup ?? "?"))} warmup, engine ${escapeHtml(m.engine ?? "?")}, measured ${escapeHtml(m.date ?? "?")}. Median (p95); ratio = fork / upstream, lower is faster for times.</p>
-<table><thead><tr><th>Measure</th><th class="num">Upstream</th><th class="num">Fork</th><th class="num">Ratio</th><th>Gate</th></tr></thead><tbody>${body}${size}</tbody></table>
+<p class="muted">Bun OS <code>${escapeHtml(m.fork?.version ?? "?")}</code> (${escapeHtml(String(m.fork?.revision ?? "").slice(0, 9))}) compared with upstream <code>${escapeHtml(m.upstream?.version ?? "?")}</code> (${escapeHtml(String(m.upstream?.revision ?? "").slice(0, 9))}) on ${escapeHtml(m.host ?? "?")}; ${escapeHtml(String(m.runs ?? "?"))} runs, ${escapeHtml(String(m.warmup ?? "?"))} warmup, engine ${escapeHtml(m.engine ?? "?")}, measured ${escapeHtml(m.date ?? "?")}. Median (p95); ratio = Bun OS / upstream, lower is faster for times. These measurements apply to the recorded executables and workload.</p>
+<table><caption>Recorded runtime measurements</caption><thead><tr><th scope="col">Measure</th><th scope="col" class="num">Upstream</th><th scope="col" class="num">Bun OS</th><th scope="col" class="num">Ratio</th><th scope="col">Gate</th></tr></thead><tbody>${body}${size}</tbody></table>
 ${m.note ? `<blockquote><p>Run note: ${escapeHtml(m.note)}</p></blockquote>` : ""}`;
 }
 
@@ -946,7 +946,7 @@ ${installers.length ? `<div class="cmds">${installers.map(i => cmd(i.label, i.co
 </section>`;
 }
 
-/** En-tête de l'accueil du site du runtime : ce qu'est le fork, commandes d'installation, liens. */
+/** En-tête de Bun OS : rôle du runtime, commandes d'installation, liens. */
 export function renderRuntimeHero(d: SiteData, o: BuildOptions): string {
   const rt = d.runtime!;
   const latest = latestRuntimeRelease(o.releases);
@@ -984,9 +984,9 @@ await video.frame(1).resize(320, 180).webp().write("preview.webp");</code></pre>
 <div class="card"><h3>Bundler</h3><p>Bundle JavaScript, TypeScript, JSX and CSS for browser or runtime targets.</p><pre><code>bun build ./app.tsx --outdir dist</code></pre><a href="/docs/bundler">Bundler docs</a></div>
 </div></section>
 <section aria-labelledby="native-integrations"><h2 id="native-integrations">Native integrations from Aphrody Labs</h2>
-<p>System modules, Python and .NET hosting, graph APIs and desktop integration live alongside the Bun toolkit. Platform requirements and source inventory are documented in the <a href="/runtime">runtime reference</a>.</p>
+<p>The source inventory declares system modules, Python and .NET hosting, graph APIs and desktop integration alongside the Bun toolkit. Each surface requires qualification for the selected executable and platform; see the <a href="/runtime">runtime reference</a>.</p>
 <p>Packages use the <code>@aphrody</code> npm scope. Built-in imports keep their identities: <code>bun</code>, <code>bun:sqlite</code>, <code>bun:test</code> and platform modules. Rust crates retain their manifest and ABI names.</p>
-<p>The Bun OS stable release is pending native factory build and test qualification. See <a href="/downloads">published releases and checksums</a> for the executables currently available.</p>
+<p>See <a href="/downloads">published releases and checksums</a> for available executables. A source version alone does not qualify a release or every declared capability.</p>
 </section>`;
 }
 
@@ -1007,7 +1007,7 @@ function siteFooter(d: SiteData | null, o: BuildOptions): string {
       : []),
     ...(rt
       ? [
-          `the runtime is a fork of ${link(rt.upstream.name, rt.upstream.url)}${rt.licenses.length ? ` (${escapeHtml(rt.licenses.join(", "))}, ${link(rt.license, `https://github.com/${rt.repo}/blob/main/${rt.license}`)})` : ""}`,
+          `Bun OS includes code derived from ${link(rt.upstream.name, rt.upstream.url)}${rt.licenses.length ? ` (${escapeHtml(rt.licenses.join(", "))}, ${link(rt.license, `https://github.com/${rt.repo}/blob/main/${rt.license}`)})` : ""}`,
         ]
       : []),
   ];

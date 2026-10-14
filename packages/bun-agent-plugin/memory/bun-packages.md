@@ -7,9 +7,9 @@ metadata:
 
 # packages/ and completions/ in <bun>
 
-**Fork note:** commit `fa052eaccfd` ("rename publishable npm packages to the @aphrody scope", 2026-10-03) renamed package.json `name` of
+**npm source scope:** commit `fa052eaccfd` ("rename publishable npm packages to the @aphrody scope", 2026-10-03) renamed package.json `name` of
 bun-build-mdx-rs (+ its npm/* platform pkgs), @aphrody/bun-debug-adapter-protocol, bun-inspector-frontend, @aphrody/bun-inspector-protocol, @aphrody/bun-plugin-svelte
-@aphrody/bun-plugin-yaml, @aphrody/bun-types to `@aphrody/...`. READMEs still say `@aphrody/bun-types`, `@aphrody/bun-plugin-svelte`, etc. Fork-only addition: `@aphrody/bun-types/tauri.d.ts`
+@aphrody/bun-plugin-yaml, @aphrody/bun-types to `@aphrody/...`. READMEs still say `@aphrody/bun-types`, `@aphrody/bun-plugin-svelte`, etc. Source declaration addition: `@aphrody/bun-types/tauri.d.ts`
 (commit d2d160ee63b, `namespace tauri` IPC/webview types inside `declare module "bun"`).
 
 ## bun-types (`@aphrody/bun-types`, upstream published as `bun-types`, consumed via `@types/bun`)

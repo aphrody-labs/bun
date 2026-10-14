@@ -41,7 +41,7 @@ bun test                       # run application tests
 bun build ./app.tsx --outdir dist
 \`\`\`
 
-The fork adds native system, Python, .NET, graph and desktop integration surfaces. Their source and platform contracts are listed in the [runtime reference](https://aphrody.app/runtime). Node.js and Bun compatibility remain governed by the documented APIs and scoped tests.
+Bun OS declares native system, Python, .NET, graph and desktop integration surfaces. The [runtime reference](https://aphrody.app/runtime) records their source contracts and platform requirements. Availability requires evidence for the selected executable and target; a source declaration alone does not qualify behavior.
 
 ## Bun.Video
 
@@ -55,7 +55,7 @@ await video.frame(1).resize(320, 180).webp().write("preview.webp");
 
 Read the [Bun.Video reference](https://aphrody.app/docs/runtime/video) for codec support, resource limits and platform requirements. The optional [Bun Video package](packages/bun-video/README.md) adds composition engines, HLS/DASH and FFmpeg/mpv adapters.
 
-Source version: **${version}**. Immutable release source: [${sha}](${source}). A source version does not establish availability of a published executable. The Bun OS stable release remains pending native factory build and test qualification.
+Source version: **${version}**. Immutable release source: [${sha}](${source}). Published downloads and checksums identify available executables. This source revision requires its own native factory and runtime qualification.
 
 ## Install
 
@@ -80,7 +80,7 @@ The [Windows installer](${source}/scripts/aphrody/install.ps1) accepts \`-BinDir
 bun upgrade
 \`\`\`
 
-Upgrades follow the fork's published releases. Build the checkout with \`bun bd\` and test its executable with \`bun bd test <file>\` when working on Bun OS itself.
+Upgrades select published Bun OS releases. Build the checkout with \`bun bd\` and test its executable with \`bun bd test <file>\` when working on Bun OS itself.
 
 ## Packages and native imports
 
@@ -127,7 +127,7 @@ Run \`bun run release:surfaces --out <absolute-directory>\` from a committed che
 
 ## License and provenance
 
-Bun OS is maintained by Aphrody Labs and derives from oven-sh/Bun. The README structure follows the [upstream README](https://github.com/oven-sh/bun/blob/6c1eb067e3c3943d2035bc165b241539c0b673b6/README.md); the homepage follows the runtime, installation and four-tool sections of [bun.sh](https://bun.sh/). Upstream performance results and production endorsements are not measurements of this fork.
+Bun OS is maintained by Aphrody Labs and includes code derived from oven-sh/Bun. The README structure follows the [upstream README](https://github.com/oven-sh/bun/blob/6c1eb067e3c3943d2035bc165b241539c0b673b6/README.md); the homepage follows the runtime, installation and four-tool sections of [bun.sh](https://bun.sh/). Upstream performance results and production endorsements retain their original runtime, host and workload scope.
 
 Bun retains its upstream authors, notices and [license](${source}/LICENSE.md). JavaScriptCore is provided by WebKit under its applicable LGPL and BSD licenses; vendored dependencies retain their own licenses and notices. See [vendor sources](${source}/vendor) and [contribution history](https://github.com/${repo}/commits/${sha}).
 `;
