@@ -1406,8 +1406,7 @@
           "win32": 17,
           "all": 1,
           "posix": 79
-        },
-        "agents": 2089
+        }
       }
     },
     "printf": {
@@ -1422,8 +1421,7 @@
           "win32": 0,
           "all": 0,
           "posix": 48
-        },
-        "agents": 141
+        }
       }
     },
     "dirname": {
@@ -1438,8 +1436,7 @@
           "win32": 6,
           "all": 0,
           "posix": 34
-        },
-        "agents": 36
+        }
       }
     },
     "basename": {
@@ -1454,8 +1451,7 @@
           "win32": 0,
           "all": 0,
           "posix": 7
-        },
-        "agents": 16
+        }
       }
     },
     "test": {
@@ -1471,8 +1467,7 @@
           "win32": 1,
           "all": 0,
           "posix": 7
-        },
-        "agents": 129
+        }
       }
     },
     "[": {
@@ -1487,8 +1482,7 @@
           "win32": 4,
           "all": 0,
           "posix": 23
-        },
-        "agents": 387
+        }
       }
     },
     ":": {
@@ -1498,8 +1492,7 @@
       "prouve": false,
       "remplacant": "introuvable",
       "usage": {
-        "scripts": null,
-        "agents": 0
+        "scripts": null
       }
     },
     "true": {
@@ -1514,8 +1507,7 @@
           "win32": 3,
           "all": 0,
           "posix": 34
-        },
-        "agents": 116
+        }
       }
     },
     "false": {
@@ -1530,8 +1522,7 @@
           "win32": 0,
           "all": 0,
           "posix": 2
-        },
-        "agents": 36
+        }
       }
     },
     "head": {
@@ -1547,8 +1538,7 @@
           "win32": 0,
           "all": 0,
           "posix": 14
-        },
-        "agents": 9230
+        }
       }
     },
     "tail": {
@@ -1563,8 +1553,7 @@
           "win32": 0,
           "all": 0,
           "posix": 5
-        },
-        "agents": 2866
+        }
       }
     },
     "cat": {
@@ -1581,8 +1570,7 @@
           "win32": 0,
           "all": 0,
           "posix": 31
-        },
-        "agents": 3374
+        }
       }
     },
     "ls": {
@@ -1598,8 +1586,7 @@
           "win32": 0,
           "all": 0,
           "posix": 8
-        },
-        "agents": 2701
+        }
       }
     },
     "wc": {
@@ -1615,8 +1602,7 @@
           "win32": 0,
           "all": 1,
           "posix": 1
-        },
-        "agents": 856
+        }
       }
     },
     "cut": {
@@ -1631,8 +1617,7 @@
           "win32": 0,
           "all": 0,
           "posix": 8
-        },
-        "agents": 491
+        }
       }
     },
     "sort": {
@@ -1651,8 +1636,7 @@
           "win32": 0,
           "all": 0,
           "posix": 10
-        },
-        "agents": 377
+        }
       }
     },
     "uniq": {
@@ -1662,8 +1646,7 @@
       "prouve": true,
       "remplacant": "uutils (uniq.exe)",
       "usage": {
-        "scripts": null,
-        "agents": 172
+        "scripts": null
       }
     },
     "tr": {
@@ -1678,8 +1661,7 @@
           "win32": 0,
           "all": 0,
           "posix": 5
-        },
-        "agents": 281
+        }
       }
     },
     "sed": {
@@ -1697,8 +1679,7 @@
           "win32": 1,
           "all": 0,
           "posix": 23
-        },
-        "agents": 4697
+        }
       }
     },
     "cp": {
@@ -1714,8 +1695,7 @@
           "win32": 0,
           "all": 1,
           "posix": 19
-        },
-        "agents": 170
+        }
       }
     },
     "awk": {
@@ -1731,8 +1711,7 @@
           "win32": 0,
           "all": 0,
           "posix": 6
-        },
-        "agents": 227
+        }
       }
     },
     "grep": {
@@ -1751,8 +1730,7 @@
           "win32": 0,
           "all": 0,
           "posix": 35
-        },
-        "agents": 4819
+        }
       }
     },
     "find": {
@@ -1768,8 +1746,7 @@
           "win32": 2,
           "all": 0,
           "posix": 18
-        },
-        "agents": 73
+        }
       }
     },
     "xargs": {
@@ -1784,8 +1761,7 @@
           "win32": 0,
           "all": 0,
           "posix": 6
-        },
-        "agents": 70
+        }
       }
     },
     "diff": {
@@ -1801,8 +1777,7 @@
           "win32": 1,
           "all": 0,
           "posix": 0
-        },
-        "agents": 85
+        }
       }
     },
     "cmp": {
@@ -1817,8 +1792,7 @@
           "win32": 0,
           "all": 0,
           "posix": 3
-        },
-        "agents": 11
+        }
       }
     },
     "env": {
@@ -1833,8 +1807,7 @@
           "win32": 1,
           "all": 0,
           "posix": 7
-        },
-        "agents": 93
+        }
       }
     },
     "printenv": {
@@ -1844,8 +1817,7 @@
       "prouve": true,
       "remplacant": "uutils (printenv.exe)",
       "usage": {
-        "scripts": null,
-        "agents": 0
+        "scripts": null
       }
     },
     "mktemp": {
@@ -1860,8 +1832,7 @@
           "win32": 0,
           "all": 0,
           "posix": 28
-        },
-        "agents": 8
+        }
       }
     },
     "mkdir": {
@@ -1876,8 +1847,7 @@
           "win32": 2,
           "all": 2,
           "posix": 46
-        },
-        "agents": 321
+        }
       }
     },
     "touch": {
@@ -1892,8 +1862,7 @@
           "win32": 0,
           "all": 0,
           "posix": 8
-        },
-        "agents": 7
+        }
       }
     },
     "mv": {
@@ -1908,8 +1877,7 @@
           "win32": 0,
           "all": 0,
           "posix": 20
-        },
-        "agents": 30
+        }
       }
     },
     "rm": {
@@ -1924,8 +1892,7 @@
           "win32": 0,
           "all": 1,
           "posix": 32
-        },
-        "agents": 266
+        }
       }
     },
     "ln": {
@@ -1940,8 +1907,7 @@
           "win32": 0,
           "all": 0,
           "posix": 13
-        },
-        "agents": 11
+        }
       }
     },
     "chmod": {
@@ -1956,8 +1922,7 @@
           "win32": 1,
           "all": 0,
           "posix": 28
-        },
-        "agents": 19
+        }
       }
     },
     "sha256sum": {
@@ -1972,8 +1937,7 @@
           "win32": 0,
           "all": 0,
           "posix": 16
-        },
-        "agents": 21
+        }
       }
     },
     "md5sum": {
@@ -1983,8 +1947,7 @@
       "prouve": true,
       "remplacant": "uutils (md5sum.exe)",
       "usage": {
-        "scripts": null,
-        "agents": 2
+        "scripts": null
       }
     },
     "timeout": {
@@ -1999,8 +1962,7 @@
           "win32": 0,
           "all": 0,
           "posix": 2
-        },
-        "agents": 815
+        }
       }
     },
     "sleep": {
@@ -2015,8 +1977,7 @@
           "win32": 0,
           "all": 0,
           "posix": 11
-        },
-        "agents": 407
+        }
       }
     },
     "nproc": {
@@ -2031,8 +1992,7 @@
           "win32": 1,
           "all": 0,
           "posix": 2
-        },
-        "agents": 6
+        }
       }
     },
     "nice": {
@@ -2047,8 +2007,7 @@
           "win32": 1,
           "all": 0,
           "posix": 1
-        },
-        "agents": 7
+        }
       }
     },
     "seq": {
@@ -2063,8 +2022,7 @@
           "win32": 0,
           "all": 1,
           "posix": 7
-        },
-        "agents": 38
+        }
       }
     },
     "tee": {
@@ -2079,8 +2037,7 @@
           "win32": 0,
           "all": 0,
           "posix": 9
-        },
-        "agents": 8
+        }
       }
     },
     "expr": {
@@ -2090,8 +2047,7 @@
       "prouve": true,
       "remplacant": "uutils (expr.exe)",
       "usage": {
-        "scripts": null,
-        "agents": 3
+        "scripts": null
       }
     },
     "date": {
@@ -2106,8 +2062,7 @@
           "win32": 0,
           "all": 0,
           "posix": 22
-        },
-        "agents": 34
+        }
       }
     },
     "tar": {
@@ -2122,8 +2077,7 @@
           "win32": 1,
           "all": 3,
           "posix": 25
-        },
-        "agents": 80
+        }
       }
     },
     "unzip": {
@@ -2138,8 +2092,7 @@
           "win32": 1,
           "all": 3,
           "posix": 6
-        },
-        "agents": 18
+        }
       }
     },
     "gzip": {
@@ -2154,8 +2107,7 @@
           "win32": 0,
           "all": 0,
           "posix": 3
-        },
-        "agents": 1
+        }
       }
     },
     "which": {
@@ -2170,8 +2122,7 @@
           "win32": 0,
           "all": 0,
           "posix": 1
-        },
-        "agents": 330
+        }
       }
     },
     "uname": {
@@ -2186,8 +2137,7 @@
           "win32": 0,
           "all": 0,
           "posix": 10
-        },
-        "agents": 3
+        }
       }
     },
     "cygpath": {
@@ -2197,8 +2147,7 @@
       "prouve": false,
       "remplacant": "introuvable",
       "usage": {
-        "scripts": null,
-        "agents": 120
+        "scripts": null
       }
     },
     "file": {
@@ -2213,8 +2162,7 @@
           "win32": 0,
           "all": 0,
           "posix": 1
-        },
-        "agents": 94
+        }
       }
     },
     "perl": {
@@ -2229,8 +2177,7 @@
           "win32": 0,
           "all": 0,
           "posix": 1
-        },
-        "agents": 11
+        }
       }
     },
     "flock": {
@@ -2245,8 +2192,7 @@
           "win32": 1,
           "all": 0,
           "posix": 2
-        },
-        "agents": 9
+        }
       }
     },
     "id": {
@@ -2261,8 +2207,7 @@
           "win32": 0,
           "all": 0,
           "posix": 25
-        },
-        "agents": 71
+        }
       }
     },
     "bash": {
@@ -2277,8 +2222,7 @@
           "win32": 6,
           "all": 8,
           "posix": 106
-        },
-        "agents": 74
+        }
       }
     },
     "(syntaxe)": {

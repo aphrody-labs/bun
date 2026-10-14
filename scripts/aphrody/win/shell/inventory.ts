@@ -4,7 +4,7 @@
 // Sortie : { binaires: { <bin>: [{ ref: "fichier:ligne", plateforme, via, ... }] }, ... }
 // plateforme : "win32" (exécuté sous Windows), "all" (tout OS, donc aussi Windows), "posix" (jamais sous Windows).
 import { existsSync } from "node:fs";
-import { join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 export const POSIX_BINS = new Set(
@@ -27,26 +27,62 @@ interface Root {
   globs: string[];
 }
 
-const ROOTS: Root[] = [
-  {
-    repo: "bun",
-    base: "C:/bun",
-    globs: ["scripts/**/*", "package.json", ".github/workflows/*", ".buildkite/**/*", "test/harness.ts"],
-  },
-  {
-    repo: "aphrody",
-    base: "C:/aphrody",
-    globs: [
-      "scripts/**/*",
-      "tools/**/*",
-      "package.json",
-      ".github/workflows/*",
-      "justfile",
-      "packages/engine/yolo/yolo.just",
-    ],
-  },
-  { repo: "aports", base: "C:/aports", globs: ["aphrody/scripts/**/*"] },
-];
+function findWorkspaceRoot(start: string): string | undefined {
+  let current = resolve(start);
+  while (true) {
+    if (existsSync(join(current, "WORKSPACE.md"))) return current;
+    const parent = dirname(current);
+    if (parent === current) return undefined;
+    current = parent;
+  }
+}
+
+function repositoryRoots(): Root[] {
+  const bunCheckout = resolve(process.env.APHRODY_BUN_CHECKOUT?.trim() || resolve(import.meta.dir, "../../../.."));
+  if (!existsSync(join(bunCheckout, "scripts/build.ts"))) {
+    throw new Error(`Bun checkout not found at ${bunCheckout}; set APHRODY_BUN_CHECKOUT`);
+  }
+
+  const configuredWorkspace = process.env.APHRODY_WORKSPACE?.trim();
+  const configuredWorkspaceRoot = configuredWorkspace ? resolve(configuredWorkspace) : undefined;
+  const workspace =
+    (configuredWorkspaceRoot && existsSync(join(configuredWorkspaceRoot, "WORKSPACE.md"))
+      ? configuredWorkspaceRoot
+      : undefined) ??
+    findWorkspaceRoot(process.cwd()) ??
+    findWorkspaceRoot(bunCheckout);
+  if (!workspace) throw new Error("Set APHRODY_WORKSPACE or run from a workspace containing WORKSPACE.md");
+
+  const aphrodyCheckout = resolve(process.env.APHRODY_APHRODY_CHECKOUT?.trim() || join(workspace, "aphrody"));
+  if (!existsSync(join(aphrodyCheckout, "Cargo.toml"))) {
+    throw new Error(`Aphrody checkout not found at ${aphrodyCheckout}; set APHRODY_APHRODY_CHECKOUT`);
+  }
+
+  const roots: Root[] = [
+    {
+      repo: "bun",
+      base: bunCheckout,
+      globs: ["scripts/**/*", "package.json", ".github/workflows/*", ".buildkite/**/*", "test/harness.ts"],
+    },
+    {
+      repo: "aphrody",
+      base: aphrodyCheckout,
+      globs: [
+        "scripts/**/*",
+        "tools/**/*",
+        "package.json",
+        ".github/workflows/*",
+        "justfile",
+        "packages/engine/yolo/yolo.just",
+      ],
+    },
+  ];
+  const aportsCheckout = process.env.APHRODY_APORTS_CHECKOUT?.trim();
+  const aportsRoot = aportsCheckout ? resolve(aportsCheckout) : join(workspace, "aports");
+  if (aportsCheckout && !existsSync(aportsRoot)) throw new Error(`Aports checkout not found at ${aportsRoot}`);
+  if (existsSync(aportsRoot)) roots.push({ repo: "aports", base: aportsRoot, globs: ["aphrody/scripts/**/*"] });
+  return roots;
+}
 
 const CODE_EXT = /\.(m?ts|m?js|cjs|tsx)$/;
 const SKIP_DIR = /[\\/](node_modules|vendor|target|dist|\.cache|fixtures?|aphrody[\\/]win[\\/]shell)[\\/]/;
@@ -120,12 +156,12 @@ function firstWords(cmdline: string): string[] {
     for (;;) {
       const m = /^(exec|command|sudo|time|!|nice(?:\s+-n\s+\S+)?|env|timeout\s+\S+|xargs(?:\s+-\S+)*)\s+/.exec(seg);
       if (!m) break;
-      const w = m[1].split(/\s/)[0];
+      const w = m[1]!.split(/\s/)[0]!;
       if (POSIX_BINS.has(w)) out.push(w);
       seg = seg.slice(m[0].length);
     }
     const m = /^([[\w.+-]+)/.exec(seg);
-    if (m) out.push(m[1].replace(/\.exe$/, ""));
+    if (m) out.push(m[1]!.replace(/\.exe$/, ""));
   }
   return out;
 }
@@ -155,49 +191,9 @@ const ARGV_RE =
 const EXECSYNC_RE = /\bexecSync\(\s*(["'`])([\w.+-]+)[\s"'`]/g;
 const BUNSHELL_RE = /\$`([^`]*)`/g;
 
-/**
- * Commandes réellement passées par les agents à l'outil Bash (Git Bash sous Windows) :
- * transcripts ~/.claude/projects/C--* (sessions Windows). Rend fréquence + 3 exemples par binaire.
- */
-async function agentCommands(home = process.env.USERPROFILE ?? "C:/Users/aphro") {
-  const dir = join(home, ".claude", "projects");
-  const freq = new Map<string, { n: number; exemples: string[] }>();
-  let commandes = 0;
-  let fichiers = 0;
-  if (!existsSync(dir)) return { source: dir, fichiers, commandes, binaires: {} };
-  for await (const f of new Bun.Glob("C--*/**/*.jsonl").scan({ cwd: dir, onlyFiles: true })) {
-    fichiers++;
-    const text = await Bun.file(join(dir, f)).text();
-    for (const line of text.split("\n")) {
-      if (!line.includes('"name":"Bash"')) continue;
-      let msg: any;
-      try {
-        msg = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      for (const c of msg?.message?.content ?? []) {
-        if (c?.type !== "tool_use" || c.name !== "Bash" || typeof c.input?.command !== "string") continue;
-        commandes++;
-        const seen = new Set<string>();
-        for (const l of c.input.command.split("\n"))
-          for (const w of firstWords(l)) {
-            if (!POSIX_BINS.has(w) || seen.has(w)) continue;
-            seen.add(w);
-            const e = freq.get(w) ?? { n: 0, exemples: [] };
-            e.n++;
-            if (e.exemples.length < 3) e.exemples.push(l.trim().slice(0, 120));
-            freq.set(w, e);
-          }
-      }
-    }
-  }
-  const binaires = Object.fromEntries([...freq].sort((a, b) => b[1].n - a[1].n));
-  return { source: dir.replaceAll("\\", "/") + "/C--*/**/*.jsonl", fichiers, commandes, binaires };
-}
-
 export async function inventory() {
   const hits: Hit[] = [];
+  const roots = repositoryRoots();
   const push = (h: Omit<Hit, "builtinBunShell">, bin: string) => {
     if (!POSIX_BINS.has(bin)) return;
     const key = `${h.repo}:${h.ref}`;
@@ -211,7 +207,8 @@ export async function inventory() {
       [Symbol.for("bin")]: bin,
     } as Hit);
   };
-  for (const root of ROOTS) {
+  for (const root of roots) {
+    if (!existsSync(root.base)) continue;
     for await (const rel of walk(root)) {
       const abs = join(root.base, rel);
       const isSh = rel.endsWith(".sh");
@@ -240,7 +237,7 @@ export async function inventory() {
             via: "sh-script",
             plateforme: plat,
             extrait: lines[0] ?? "",
-            note: winNote,
+            ...(winNote ? { note: winNote } : {}),
           },
           shebang,
         );
@@ -251,8 +248,8 @@ export async function inventory() {
               repo: root.repo,
               via: "sh-script",
               plateforme: plat,
-              extrait: lines[ln - 1].trim().slice(0, 160),
-              note: winNote,
+              extrait: lines[ln - 1]!.trim().slice(0, 160),
+              ...(winNote ? { note: winNote } : {}),
             },
             b,
           );
@@ -373,12 +370,12 @@ export async function inventory() {
         for (const m of l.matchAll(ARGV_RE))
           push(
             { ref, repo: root.repo, via: "argv", plateforme: base, extrait: l.trim().slice(0, 160) },
-            m[2].replace(/\.exe$/, ""),
+            m[2]!.replace(/\.exe$/, ""),
           );
         for (const m of l.matchAll(EXECSYNC_RE))
-          push({ ref, repo: root.repo, via: "argv", plateforme: base, extrait: l.trim().slice(0, 160) }, m[2]);
+          push({ ref, repo: root.repo, via: "argv", plateforme: base, extrait: l.trim().slice(0, 160) }, m[2]!);
         for (const m of l.matchAll(BUNSHELL_RE))
-          for (const w of firstWords(m[1]))
+          for (const w of firstWords(m[1]!))
             push({ ref, repo: root.repo, via: "bun-shell", plateforme: base, extrait: l.trim().slice(0, 160) }, w);
       });
     }
@@ -402,7 +399,7 @@ export async function inventory() {
   );
   return {
     genere: new Date().toISOString(),
-    racines: ROOTS.map(r => ({ repo: r.repo, base: r.base, globs: r.globs })),
+    racines: roots.map(r => ({ repo: r.repo, globs: r.globs })),
     legende: {
       plateforme: {
         win32: "exécuté sous Windows",
@@ -414,7 +411,6 @@ export async function inventory() {
     scriptsShSousWindows: SH_RUN_ON_WINDOWS,
     resume,
     binaires: sorted,
-    agentsBashWindows: await agentCommands(),
   };
 }
 
@@ -428,7 +424,4 @@ if (import.meta.main) {
     `${Object.keys(inv.binaires).length} binaires, ${win.length} atteignables sous Windows -> ${relative(process.cwd(), out)}`,
   );
   for (const [b, r] of win) console.log(`  ${b.padEnd(10)} win32=${r.win32} all=${r.all} posix=${r.posix}`);
-  const ag = inv.agentsBashWindows;
-  console.log(`agents : ${ag.commandes} commandes Bash dans ${ag.fichiers} transcripts`);
-  for (const [b, e] of Object.entries(ag.binaires).slice(0, 30)) console.log(`  ${b.padEnd(10)} ${(e as any).n}`);
 }

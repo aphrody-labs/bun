@@ -304,13 +304,13 @@ function describeResolution(bin: string, path: string, uutilsDir: string, forBun
 async function peImports(exe: string): Promise<string[]> {
   const r = await $`llvm-readobj --coff-imports ${exe}`.nothrow().quiet();
   if (r.exitCode !== 0) return [`<llvm-readobj : ${r.stderr.toString().trim().slice(0, 120)}>`];
-  return [...new Set([...r.stdout.toString().matchAll(/^\s*Name:\s*(\S+\.dll)\s*$/gim)].map(m => m[1].toLowerCase()))];
+  return [...new Set([...r.stdout.toString().matchAll(/^\s*Name:\s*(\S+\.dll)\s*$/gim)].map(m => m[1]!.toLowerCase()))];
 }
 
 async function firstLine(argv: string[]): Promise<string> {
   try {
     const r = Bun.spawnSync(argv, { stdin: "ignore" });
-    return (r.stdout.toString() || r.stderr.toString()).split(/\r?\n/)[0].trim();
+    return (r.stdout.toString() || r.stderr.toString()).split(/\r?\n/)[0]?.trim() ?? "";
   } catch {
     return "<absent>";
   }
@@ -348,7 +348,7 @@ async function main() {
     const dirForms = [
       work,
       work.replaceAll("\\", "/"),
-      "/" + work[0].toLowerCase() + work.slice(2).replaceAll("\\", "/"),
+      "/" + work[0]!.toLowerCase() + work.slice(2).replaceAll("\\", "/"),
     ];
 
     const rejected = c.bins
@@ -397,10 +397,7 @@ async function main() {
       if (r.remplacant?.ok && !r.bunShell.ok)
         e.remplacant = `${r.remplacant.cmd.split(" ")[0]} (commande de remplacement)`;
       if (inventory && bin !== SYNTAX) {
-        e.usage = {
-          scripts: inventory.resume?.[bin] ?? null,
-          agents: inventory.agentsBashWindows?.binaires?.[bin]?.n ?? 0,
-        };
+        e.usage = { scripts: inventory.resume?.[bin] ?? null };
       }
     }
   }
@@ -410,7 +407,7 @@ async function main() {
   for (let i = 0; i < exes.length; i += 16) {
     const batch = exes.slice(i, i + 16);
     const res = await Promise.all(batch.map(f => peImports(join(uutilsDir, f))));
-    batch.forEach((f, j) => (imports[`uutils/${f}`] = res[j]));
+    batch.forEach((f, j) => (imports[`uutils/${f}`] = res[j]!));
   }
   for (const extra of [join(SYSTEM32, "tar.exe"), Bun.which("rg")].filter(Boolean) as string[]) {
     imports[extra] = await peImports(extra);
