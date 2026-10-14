@@ -14,7 +14,7 @@
 //   bun src/codegen/generate-agent-tools.ts --inputs   print the input files, one per line
 //   --tools <file> --skills <file> --out <dir>         other sources or output root (tests)
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -87,18 +87,25 @@ function globRegex(glob: string): RegExp {
 }
 
 /** Files of the repository matching `glob` (`*`, `**`, `?`), sorted. */
-function glob(pattern: string): string[] {
+export function glob(pattern: string, root = ROOT): string[] {
   const base = pattern.slice(0, pattern.search(/[*?]/)).replace(/[^/]*$/, "");
   const re = globRegex(pattern);
   const out: string[] = [];
+  let cursor = root;
+  for (const part of ["", ...base.split("/")]) {
+    cursor = join(cursor, part);
+    if (!existsSync(cursor) || lstatSync(cursor).isSymbolicLink()) return out;
+  }
   const visit = (dir: string) => {
-    const abs = join(ROOT, dir);
+    const abs = join(root, dir);
     if (!existsSync(abs)) return;
-    for (const name of readdirSync(abs).sort()) {
+    for (const entry of readdirSync(abs, { withFileTypes: true })) {
+      const name = entry.name;
       if (name === "node_modules" || name === ".git") continue;
+      if (entry.isSymbolicLink()) continue;
       const rel = dir ? `${dir}/${name}` : name;
-      if (statSync(join(ROOT, rel)).isDirectory()) visit(rel);
-      else if (re.test(rel)) out.push(rel);
+      if (entry.isDirectory()) visit(rel);
+      else if (entry.isFile() && re.test(rel)) out.push(rel);
     }
   };
   visit(base.replace(/\/$/, ""));
@@ -337,7 +344,7 @@ function moduleDoc(text: string): string {
 
 function rustdocSection(s: Extract<Section, { kind: "rustdoc" }>): string {
   const items: string[] = [];
-  for (const file of s.globs.flatMap(glob)) {
+  for (const file of s.globs.flatMap(pattern => glob(pattern))) {
     const doc = moduleDoc(source(file));
     if (doc) items.push(`- \`${file}\`: ${doc}`);
   }

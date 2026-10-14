@@ -10,7 +10,7 @@
           "file": "packages/bun-agent-plugin/skills/bun-yolo/SKILL.md",
           "heading": "Typed judgments through Bun"
         },
-        { "kind": "pages", "files": ["docs/runtime/yolo.mdx", "docs/runtime/jev.mdx"] }
+        { "kind": "pages", "files": ["docs/runtime/yolo.mdx", "docs/runtime/decisions.mdx"] }
       ]
     },
     {

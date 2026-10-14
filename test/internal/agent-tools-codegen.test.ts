@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { bunEnv, bunExe, tempDir } from "harness";
-import { readFileSync } from "node:fs";
+import { readFileSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
-import { generate, plan, sanitize } from "../../src/codegen/generate-agent-tools.ts";
+import { generate, glob, plan, sanitize } from "../../src/codegen/generate-agent-tools.ts";
 
 const root = join(import.meta.dir, "..", "..");
 const script = join(root, "src", "codegen", "generate-agent-tools.ts");
@@ -14,6 +14,17 @@ async function run(...args: string[]) {
 }
 
 describe("generate-agent-tools", () => {
+  test("source globs skip cyclic, broken and external directory links", () => {
+    using dir = tempDir("agent-tools-links", { "source/entry.rs": "", "outside/secret.rs": "" });
+    symlinkSync(join(String(dir), "source"), join(String(dir), "source/cycle"), "junction");
+    symlinkSync(join(String(dir), "missing"), join(String(dir), "source/broken"), "junction");
+    symlinkSync(join(String(dir), "outside"), join(String(dir), "source/external"), "junction");
+    expect(glob("source/**/*.rs", String(dir))).toEqual(["source/entry.rs"]);
+    symlinkSync(join(String(dir), "outside"), join(String(dir), "alias"), "junction");
+    expect(glob("alias/**/*.rs", String(dir))).toEqual([]);
+    expect(glob("alias/nested/**/*.rs", String(dir))).toEqual([]);
+  });
+
   test("checked-in outputs are current", async () => {
     const { stderr, exitCode } = await run("--check");
     expect(stderr).toBe("");
