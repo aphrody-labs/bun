@@ -36,7 +36,7 @@ bun n2b --report=json > n2b.json
 bun n2b --report=jsonl
 ```
 
-`bun n2b` runs the embedded migration engine directly. Its reports remain separate from `bun lint` diagnostics. Package scripts may expose the native quality and migration commands but must not replace them with wrappers or external backends; `bunx` remains for unrelated packages.
+`bun n2b` runs the embedded migration engine directly. Its reports remain separate from `bun lint` diagnostics.
 
 ### Migrate a project
 
