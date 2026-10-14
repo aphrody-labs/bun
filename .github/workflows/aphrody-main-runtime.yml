@@ -53,6 +53,10 @@ jobs:
       CARGO_BUILD_JOBS: "2"
       NINJAFLAGS: "-j2"
     steps:
+      - name: Enable Git long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
