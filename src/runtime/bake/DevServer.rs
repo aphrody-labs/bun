@@ -5229,6 +5229,14 @@ impl DevServer {
             host_forbidden(resp);
             return Ok(());
         }
+        if !matches!(
+            Method::which(req.method()),
+            Some(Method::GET | Method::HEAD)
+        ) {
+            req.set_yield(false);
+            StaticRoute::method_not_allowed(resp);
+            return Ok(());
+        }
         let route_bundle_index = self
             .get_or_put_route_bundle(route_bundle::UnresolvedIndex::Html(html))
             .map_err(|_| AllocError)?;

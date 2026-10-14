@@ -79,7 +79,11 @@ Bun.serve({
 });
 ```
 
-When you make a request to `/dashboard` or `/`, Bun automatically bundles the `<script>` and `<link>` tags in the HTML files, exposes them as static routes, and serves the result.
+When you request `/dashboard` or `/`, Bun automatically bundles the `<script>` and `<link>` tags in the HTML files, exposes them as static routes, and serves the result.
+
+With HMR enabled, HTML routes accept `GET` and `HEAD`. Other methods receive an empty `405 Method Not Allowed` response with `Allow: GET, HEAD` before bundling starts. Host validation runs first. Internal HMR assets use their registered methods and unmatched requests reach the `fetch` fallback.
+
+In production or with `development: { hmr: false }`, HTML routes preserve their configured methods, including `POST`. A bundling failure returns `500` on subsequent requests too. Prebundled and compiled HTML manifests retain their own route method configuration.
 
 ### HTML Processing Example
 

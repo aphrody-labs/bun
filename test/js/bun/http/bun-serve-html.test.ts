@@ -20,6 +20,34 @@ function extractHash(html: string, file_kind: "css" | "js") {
   return html.match(re)?.[1];
 }
 
+function firstCapture(text: string, pattern: RegExp) {
+  const capture = pattern.exec(text)?.[1];
+  expect(capture).toBeDefined();
+  if (capture === undefined) throw new Error(`Missing capture for ${pattern}`);
+  return capture;
+}
+
+async function cssWithoutSourceMapMetadata(css: string, assetURL: string | URL) {
+  const metadata = /\n\n\/\*# debugId=([0-9A-F]{32}) \*\/\n\/\*# sourceMappingURL=(\S+) \*\/\n?$/.exec(css);
+  expect(metadata).not.toBeNull();
+  const response = await fetch(new URL(metadata![2], assetURL));
+  expect(response.status).toBe(200);
+  const map = (await response.json()) as {
+    version: number;
+    debugId: string;
+    mappings: string;
+    sources: string[];
+    sourcesContent: string[];
+  };
+  expect(map.version).toBe(3);
+  expect(map.debugId).toBe(metadata![1]);
+  expect(typeof map.mappings).toBe("string");
+  expect(map.mappings.length).toBeGreaterThan(0);
+  expect(map.sources).toContain("styles.css");
+  expect(map.sourcesContent).toHaveLength(map.sources.length);
+  return css.slice(0, metadata!.index) + "\n";
+}
+
 test("serve html", async () => {
   await using dir = tempDir("html-css-js", {
     "dashboard.html": /*html*/ `
@@ -137,11 +165,11 @@ test("serve html", async () => {
   {
     const html = await (await fetch(`http://${hostname}:${port}/dashboard`)).text();
     const jsSrc = new URL(
-      html.match(/<script type="module" crossorigin src="([^"]+)"/)?.[1]!,
+      firstCapture(html, /<script type="module" crossorigin src="([^"]+)"/),
       "http://" + hostname + ":" + port,
     );
     var cssSrc = new URL(
-      html.match(/<link rel="stylesheet" crossorigin href="([^"]+)"/)?.[1]!,
+      firstCapture(html, /<link rel="stylesheet" crossorigin href="([^"]+)"/),
       "http://" + hostname + ":" + port,
     );
     const trimmed = html
@@ -231,7 +259,7 @@ console.log("How...dashing?");
   }
 
   {
-    const css = await (await fetch(cssSrc!)).text();
+    const css = await cssWithoutSourceMapMetadata(await (await fetch(cssSrc!)).text(), cssSrc!);
     /* the order of the properties may change because we made add more handlers to DeclarationHandler which changes the order in which they are flushed, but semantically it should be the same */
     expect(css).toMatchInlineSnapshot(`
 "/* styles.css */
@@ -324,7 +352,7 @@ export default p;
     } = await waitForServer(dir, {
       "/": join(dir, "index.html"),
     });
-    await using subprocess = subprocess1;
+    await using _subprocess = subprocess1;
     const response = await fetch(`http://${hostname}:${port}/`);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("text/html;charset=utf-8");
@@ -346,7 +374,7 @@ export default p;
     console.log("HASH", hash);
     const cssResponse = await fetch(`http://${hostname}:${port}/chunk-${hash}.css`);
     expect(cssResponse.status).toBe(200);
-    const css = await cssResponse.text();
+    const css = await cssWithoutSourceMapMetadata(await cssResponse.text(), cssResponse.url);
     // the base64 encoding of "LMAO OOGA BOOGA"
     expect(css).toMatchInlineSnapshot(`
 "/* styles.css */
@@ -392,7 +420,7 @@ plugins = ["./plugin.ts"]
 const p = {
   name: "failing-plugin",
   setup(build) {
-    build.onLoad({ filter: /\.css$/ }, async () => {
+    build.onLoad({ filter: /\\.css$/ }, async () => {
       throw new Error("Plugin failed intentionally");
     });
   },
@@ -409,7 +437,7 @@ export default p;
     } = await waitForServer(dir, {
       "/": join(dir, "index.html"),
     });
-    await using subprocess = subprocess1;
+    await using _subprocess = subprocess1;
     const response = await fetch(`http://${hostname}:${port}/`);
     expect(response.status).toBe(500);
 
@@ -463,7 +491,7 @@ plugins = []`,
     } = await waitForServer(dir, {
       "/": join(dir, "index.html"),
     });
-    await using subprocess = subprocess1;
+    await using _subprocess = subprocess1;
     const response = await fetch(`http://${hostname}:${port}/`);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");
@@ -601,7 +629,7 @@ async function waitForServer(
     port: number;
     hostname: string;
   }>();
-  const process = Bun.spawn({
+  const _process = Bun.spawn({
     cmd: [bunExe(), join(import.meta.dir, "bun-serve-static-fixture.js")],
     env: {
       ...bunEnv,
@@ -655,7 +683,7 @@ test("serve html error handling", async () => {
             "/": html,
           },
           development: true,
-          fetch(req) {
+          fetch() {
             return new Response("Not found", { status: 404 });
           },
         }),
@@ -1149,7 +1177,7 @@ test("wildcard static routes", async () => {
         "/*": html,
       },
       development,
-      fetch(req) {
+      fetch() {
         return new Response("Not found", { status: 404 });
       },
     });
@@ -1175,7 +1203,7 @@ test("serve html with JSX runtime in development mode", async () => {
     static: {
       "/": html,
     },
-    fetch(req) {
+    fetch() {
       return new Response("Not found", { status: 404 });
     },
   });
@@ -1183,7 +1211,7 @@ test("serve html with JSX runtime in development mode", async () => {
   const response = await fetch(server.url);
   expect(response.status).toBe(200);
   const htmlText = await response.text();
-  const jsSrc = htmlText.match(/<script type="module" crossorigin src="([^"]+)"/)?.[1]!;
+  const jsSrc = firstCapture(htmlText, /<script type="module" crossorigin src="([^"]+)"/);
   const js = await (await fetch(new URL(jsSrc, server.url))).text();
 
   // Development mode should use jsxDEV
@@ -1202,7 +1230,7 @@ test("serve html with JSX runtime in production mode", async () => {
     static: {
       "/": html,
     },
-    fetch(req) {
+    fetch() {
       return new Response("Not found", { status: 404 });
     },
   });
@@ -1210,7 +1238,7 @@ test("serve html with JSX runtime in production mode", async () => {
   const response = await fetch(server.url);
   expect(response.status).toBe(200);
   const htmlText = await response.text();
-  const jsSrc = htmlText.match(/<script type="module" crossorigin src="([^"]+)"/)?.[1]!;
+  const jsSrc = firstCapture(htmlText, /<script type="module" crossorigin src="([^"]+)"/);
   const js = await (await fetch(new URL(jsSrc, server.url))).text();
   // jsxDEV looks like this:
   //  jsxDEV("button", {
@@ -1238,7 +1266,7 @@ test("you can have HTML imports apply to only specific methods outside of the de
         },
       },
     },
-    fetch(req) {
+    fetch() {
       return new Response("Not found", { status: 404 });
     },
   });
@@ -1246,7 +1274,7 @@ test("you can have HTML imports apply to only specific methods outside of the de
   const response = await fetch(server.url);
   expect(response.status).toBe(200);
   const htmlText = await response.text();
-  const jsSrc = htmlText.match(/<script type="module" crossorigin src="([^"]+)"/)?.[1]!;
+  const jsSrc = firstCapture(htmlText, /<script type="module" crossorigin src="([^"]+)"/);
   const js = await (await fetch(new URL(jsSrc, server.url))).text();
   // jsxDEV looks like this:
   //  jsxDEV("button", {
@@ -1308,7 +1336,7 @@ for (let development of [true, false, { hmr: false }]) {
       const response = await fetch(url);
       expect(response.status).toBe(200);
       const htmlText = await response.text();
-      const jsSrc = htmlText.match(/<script type="module" crossorigin src="([^"]+)"/)?.[1]!;
+      const jsSrc = firstCapture(htmlText, /<script type="module" crossorigin src="([^"]+)"/);
       await (await fetch(new URL(jsSrc, server.url))).text();
     }
     for (const url of [new URL("/api", server.url), new URL("/api/", server.url)]) {
@@ -1353,7 +1381,7 @@ for (let development of [true, false, { hmr: false }]) {
       const response = await fetch(url);
       expect(response.status).toBe(200);
       const htmlText = await response.text();
-      const jsSrc = htmlText.match(/<script type="module" crossorigin src="([^"]+)"/)?.[1]!;
+      const jsSrc = firstCapture(htmlText, /<script type="module" crossorigin src="([^"]+)"/);
       await (await fetch(new URL(jsSrc, server.url))).text();
     }
     for (const url of apiroutes) {

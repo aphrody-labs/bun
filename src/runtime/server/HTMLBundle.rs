@@ -297,6 +297,8 @@ impl Route {
                         );
                     }
                     // TODO: use the code from DevServer.rs to render the error
+                    resp.write_status(b"500 Build Failed");
+                    resp.write_header_int(b"Content-Length", 0);
                     resp.end_without_body(true);
                 }
                 State::Html(html) => {

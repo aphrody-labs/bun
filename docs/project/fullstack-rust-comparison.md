@@ -57,6 +57,27 @@ annulation, backpressure, routage, assets WASM et hydratation navigateur.
 Les audits détaillent les autres écarts et leurs critères de validation.
 La disponibilité du source n'est pas une preuve de parité full stack.
 
+## Correctifs HTTP qualifiés
+
+Les routes HTML avec HMR rejettent les méthodes hors GET/HEAD avant de lancer
+la compilation, après validation du Host. La réponse 405 est cadrée avec
+`Allow: GET, HEAD` et `Content-Length: 0`. Une erreur persistante de compilation
+HTML hors HMR conserve désormais son statut 500 sur les requêtes suivantes.
+Les POST configurés, les routes API et les manifests compilés sont préservés.
+
+Le binaire Linux reconstruit via `bun bd` sur le VPS passe les quatre suites
+HTML, méthodes, routes et exécutable compilé : 107 tests, 751 assertions et
+12 snapshots, avec 2 tests LeakSanitizer ignorés. Les assertions CSS vérifient
+aussi les sourcemaps servies et leurs identifiants avant de comparer le contenu.
+Les deux régressions HMR/500 ont été reproduites sur le runtime installé Windows.
+Cette validation Linux ne qualifie pas le binaire Windows ni l'adaptateur Leptos.
+
+Les 12 fichiers runtime, tests, scripts et workflow qualifiés sur le VPS ont
+les mêmes empreintes SHA-256 que les fichiers locaux (normalisation LF).
+Les contrôles ciblés `bun bd check`, `bun bd lint --deny-warnings` et
+`bun bd fmt --check` passent aussi ; le typecheck couvre 10 fichiers dans
+2 projets. Ces contrôles ne constituent pas un gate global du dépôt.
+
 ## Reproduction
 
 Vérification offline des octets vendored :
