@@ -782,7 +782,9 @@ export function emitRust(n: Ninja, cfg: Config, inputs: RustBuildInputs): { rlib
       args: what.args,
       env: planEnv(what.env),
     };
-    const plan = readPlan(dir, input);
+    // A changed source identity removes the vendor tree before Ninja fetches it again.
+    // Bootstrap the plan edge until its fetch inputs exist; cached manifest paths are stale.
+    const plan = inputs.vendorStamps.every(stamp => existsSync(stamp)) ? readPlan(dir, input) : undefined;
     const dependencyManifests = plan ? manifestInputPaths(Object.values(plan.packages)) : [];
     return {
       dir,

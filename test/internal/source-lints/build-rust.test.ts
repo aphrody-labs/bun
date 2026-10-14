@@ -16,7 +16,8 @@
  *   fails: the link reads LLVM bitcode from both.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { tempDir } from "harness";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -29,13 +30,17 @@ import {
   type Toolchain,
 } from "../../../scripts/build/config.ts";
 import { computeDepFlags, computeFlags } from "../../../scripts/build/flags.ts";
+import { Ninja } from "../../../scripts/build/ninja.ts";
 import {
   allRustTargets,
   cargoBuildInvocation,
   cargoBuildStdArg,
+  emitRust,
+  registerRustRules,
   rustTargetIsTier3,
   rustTriple,
 } from "../../../scripts/build/rust.ts";
+import { PLAN_VERSION } from "../../../scripts/build/rust/plan.ts";
 
 const repoRoot = join(import.meta.dir, "..", "..", "..");
 
@@ -89,19 +94,62 @@ function withAbi(cfg: Config, abi: Abi): Config {
   return { ...cfg, abi };
 }
 
+test("an invalidated vendor source bootstraps the cached Rust plan before reading removed manifests", () => {
+  using dir = tempDir("rust-invalidated-vendor", {});
+  const cwd = String(dir);
+  const cfg: Config = {
+    ...resolve({ os: "linux", arch: "x64", linuxSysroot: "/fake" }),
+    cwd,
+    buildDir: cwd,
+    cargo: process.execPath,
+    rustc: process.execPath,
+    rustSysroot: cwd,
+    rustHostTriple: "x86_64-unknown-linux-gnu",
+  };
+  const stamp = join(cwd, "vendor/uutils/.ref");
+  const inputs = { codegenOrderOnly: [], rustSources: [], shimValidations: [], vendorStamps: [stamp] };
+  const emit = () => {
+    const n = new Ninja({ buildDir: cwd });
+    registerRustRules(n, cfg);
+    const result = emitRust(n, cfg, inputs);
+    return { result, graph: n.toString() };
+  };
+  expect(emit().result.rlibs).toEqual([]);
+  const staleManifest = join(cwd, "vendor/uutils/src/uucore/Cargo.toml");
+  writeFileSync(
+    join(cwd, "rust-target/plan.json"),
+    JSON.stringify({
+      version: PLAN_VERSION,
+      plannedWith: JSON.parse(readFileSync(join(cwd, "rust-target/plan.input.json"), "utf8")),
+      packages: { uucore: { source: null, manifest_path: staleManifest } },
+    }),
+  );
+  const { result, graph: rawGraph } = emit();
+  const graph = rawGraph.replaceAll("\\", "/");
+  expect(result.rlibs).toEqual([]);
+  expect(graph).toContain("bun-rust: phony rust-target/plan.json");
+  expect(graph).toContain("vendor/uutils/.ref");
+  expect(graph).not.toContain("vendor/uutils/src/uucore/Cargo.toml");
+  mkdirSync(join(cwd, "vendor/uutils"), { recursive: true });
+  writeFileSync(stamp, "fetched\n");
+  expect(() => emit()).toThrow("ENOENT");
+});
+
 describe("native coreutils feature", () => {
   test("the standard Bun build forwards the enabled native owner to Cargo", () => {
     const cfg = resolve({ os: "linux", arch: "x64", linuxSysroot: "/fake" });
     expect(cfg.coreutils).toBe(true);
     const args = cargoBuildInvocation(cfg).args;
-    expect(args[args.indexOf("--features") + 1].split(",")).toContain("coreutils");
+    expect(args).toContain("--features");
+    expect(args[args.indexOf("--features") + 1]!.split(",")).toContain("coreutils");
   });
 
   test("the existing build configuration supports an explicit opt out", () => {
     const cfg = resolve({ os: "linux", arch: "x64", linuxSysroot: "/fake", coreutils: false });
     expect(cfg.coreutils).toBe(false);
     const args = cargoBuildInvocation(cfg).args;
-    expect(args[args.indexOf("--features") + 1].split(",")).not.toContain("coreutils");
+    expect(args).toContain("--features");
+    expect(args[args.indexOf("--features") + 1]!.split(",")).not.toContain("coreutils");
   });
 });
 
