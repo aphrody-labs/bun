@@ -10,13 +10,19 @@
  * flag has to be the last -g flag the tables emit, for bun's own flags and for
  * the flags forwarded to deps.
  *
- * Pure config evaluation: no compiler needed, runs on every host.
+ * Config evaluation runs on every host. BUN_TEST_THINLTO_CLANG enables a
+ * Clang -### response-file probe without compiling or linking anything.
  */
+import { $ } from "bun";
 import { describe, expect, test } from "bun:test";
-import { isMacOS, tempDir } from "harness";
+import { bunExe, isMacOS, tempDir } from "harness";
+import { join } from "node:path";
 
+import { link, registerCompileRules } from "../../scripts/build/compile.ts";
 import { resolveConfig, type Config, type PartialConfig, type Toolchain } from "../../scripts/build/config.ts";
 import { computeDepFlags, computeFlags } from "../../scripts/build/flags.ts";
+import { Ninja } from "../../scripts/build/ninja.ts";
+import { quote, slash } from "../../scripts/build/shell.ts";
 
 /** A fully-populated fake toolchain; resolveConfig never spawns any of these. */
 function mockToolchain(): Toolchain {
@@ -158,5 +164,155 @@ describe("debug-info flag order", () => {
     for (const flags of allCompileFlagLists(cfg)) {
       expect(levelFlags(flags)).toEqual(["-gdwarf-4", "-glldb", "-g1"]);
     }
+    expect(computeFlags(cfg).ldflags.some(flag => flag.includes("--thinlto-cache-"))).toBe(false);
+  });
+});
+
+describe("Linux ThinLTO cache", () => {
+  function cacheArgs(cfg: Config): string[] {
+    const flags = computeFlags(cfg).ldflags;
+    const index = flags.findIndex(flag => flag.includes("--thinlto-cache-dir="));
+    return index < 0 ? [] : flags.slice(index - 1, index + 3);
+  }
+
+  test.each([
+    ["x64", "gnu"],
+    ["aarch64", "gnu"],
+    ["x64", "musl"],
+    ["aarch64", "musl"],
+  ] as const)("%s %s uses the shared cache with explicit pruning bounds", (arch, abi) => {
+    // Only sysroot detection reads this config fixture; no compiler links it.
+    using dir = tempDir("thinlto-cache", { "usr/lib/libc.so": "" });
+    const saved = process.env.LINUX_MUSL_SYSROOT;
+    try {
+      process.env.LINUX_MUSL_SYSROOT = String(dir);
+      const cfg = linuxConfig({ buildType: "Release", arch, abi, cacheDir: String(dir) }, String(dir));
+      const path = slash(join(cfg.cacheDir, "thinlto", "lld", "llvm-23.1.1", `linux-${arch}-${abi}`));
+      expect(cacheArgs(cfg)).toEqual([
+        "-Xlinker",
+        quote(`--thinlto-cache-dir=${path}`, cfg.host.os === "windows"),
+        "-Xlinker",
+        "--thinlto-cache-policy=cache_size=10%:cache_size_bytes=4g:cache_size_files=20000:prune_after=168h:prune_interval=5m",
+      ]);
+      const flags = computeFlags(cfg);
+      expect([...flags.cflags, ...flags.cxxflags].some(flag => flag.includes("--thinlto-cache-"))).toBe(false);
+      const deps = computeDepFlags(cfg);
+      expect([...deps.cflags, ...deps.cxxflags].some(flag => flag.includes("--thinlto-cache-"))).toBe(false);
+    } finally {
+      if (saved === undefined) delete process.env.LINUX_MUSL_SYSROOT;
+      else process.env.LINUX_MUSL_SYSROOT = saved;
+    }
+  });
+
+  test("cache survives output-directory and LTO-profile changes but isolates LLVM versions and targets", () => {
+    using dir = tempDir("thinlto-cache", {});
+    const cfg = linuxConfig({ buildType: "Release", cacheDir: String(dir) }, String(dir));
+    const args = cacheArgs(cfg);
+    expect(cacheArgs({ ...cfg, buildDir: join(String(dir), "another-output"), lto: false })).toEqual(args);
+    expect(cacheArgs({ ...cfg, clangVersion: "23.1.3" })).not.toEqual(args);
+    expect(cacheArgs({ ...cfg, abi: "musl" })).not.toEqual(args);
+    expect(cacheArgs({ ...cfg, arch: "aarch64", x64: false, arm64: true })).not.toEqual(args);
+  });
+
+  test("Rust-only release ThinLTO is cached; ASAN and debug without LTO are not", () => {
+    using dir = tempDir("thinlto-cache", {});
+    const cfg = linuxConfig({ buildType: "Release", lto: false }, String(dir));
+    expect(computeFlags(cfg).ldflags).not.toContain("-flto=thin");
+    expect(cacheArgs(cfg)).toHaveLength(4);
+    expect(cacheArgs(linuxConfig({ buildType: "Release", asan: true, lto: true }, String(dir)))).toEqual([]);
+    expect(cacheArgs(linuxConfig({ buildType: "Debug", lto: false }, String(dir)))).toEqual([]);
+    expect(cacheArgs(linuxConfig({ buildType: "Debug", asan: false, lto: true }, String(dir)))).toHaveLength(4);
+  });
+
+  test.each(["x64", "aarch64"] as const)("Windows %s never receives ELF cache driver options", arch => {
+    using dir = tempDir("thinlto-cache", {});
+    const cfg = resolveConfig(
+      { os: "windows", arch, buildType: "Release", winsysroot: "/fake/winsysroot", buildDir: String(dir) },
+      mockToolchain(),
+    );
+    expect(cacheArgs(cfg)).toEqual([]);
+    expect(computeFlags(cfg).ldflags).not.toContain("-Xlinker");
+  });
+
+  test("only the resolved ELF LLD with a known LLVM version enables caching", () => {
+    using dir = tempDir("thinlto-cache", {});
+    const cfg = linuxConfig({ buildType: "Release" }, String(dir));
+    for (const ld of ["/fake/ld.bfd", "/fake/ld.gold", "/fake/lld-link.exe", "/fake/ld64.lld", ""]) {
+      expect(cacheArgs({ ...cfg, ld })).toEqual([]);
+    }
+    for (const ld of ["/fake/ld.lld", "/fake/ld.lld-23", "C:\\LLVM\\bin\\ld.lld.exe"]) {
+      expect(cacheArgs({ ...cfg, ld })).toHaveLength(4);
+    }
+    expect(cacheArgs({ ...cfg, clangVersion: undefined })).toEqual([]);
+    expect(cacheArgs({ ...cfg, clangVersion: "../unknown" })).toEqual([]);
+  });
+
+  test("POSIX shell forwarding preserves spaces, commas, apostrophes and dollars in cache paths", async () => {
+    using dir = tempDir("thinlto-cache", {});
+    const cfg = linuxConfig(
+      { buildType: "Release", cacheDir: join(String(dir), "space, apostrophe's $cache") },
+      String(dir),
+    );
+    cfg.host = { ...cfg.host, os: "linux" };
+    const args = cacheArgs(cfg);
+    const source = "process.stdout.write(JSON.stringify(process.argv.slice(1)))";
+    const captured = await $`${bunExe()} -e ${source} -- ${{ raw: args.join(" ") }}`.quiet();
+    expect(JSON.parse(captured.text())).toEqual([
+      "-Xlinker",
+      `--thinlto-cache-dir=${slash(join(cfg.cacheDir, "thinlto", "lld", "llvm-23.1.1", "linux-x64-gnu"))}`,
+      "-Xlinker",
+      "--thinlto-cache-policy=cache_size=10%:cache_size_bytes=4g:cache_size_files=20000:prune_after=168h:prune_interval=5m",
+    ]);
+  });
+
+  test.each(["linux", "windows"] as const)("Ninja preserves cache dollars on a %s host", host => {
+    using dir = tempDir("thinlto-cache", {});
+    const cfg = linuxConfig({ buildType: "Release", cacheDir: join(String(dir), "space, $cache") }, String(dir));
+    cfg.host = { ...cfg.host, os: host };
+    const ninja = new Ninja({ buildDir: cfg.buildDir });
+    registerCompileRules(ninja, cfg);
+    const flags = cacheArgs(cfg);
+    link(ninja, cfg, "unused", [], { flags, libs: [] });
+    const generated = ninja.toString();
+    expect(generated).toContain(`  ldflags = ${flags.join(" ").replaceAll("$", () => "$$")}`);
+    expect(generated).toContain("$$cache");
+    expect(generated).not.toContain("/link $ldflags");
+    expect(generated).toContain(
+      host === "windows"
+        ? "rspfile_content = $in_newline $lazy $driverflags $ldflags"
+        : "@$out.rsp $lazy $driverflags $ldflags -o $out",
+    );
+  });
+
+  const clang = process.env.BUN_TEST_THINLTO_CLANG;
+  test.skipIf(!clang)("Clang response files preserve the full cache path", async () => {
+    using dir = tempDir("thinlto-cache", { "probe.c": "int main(void) { return 0; }\n" });
+    const cfg = linuxConfig(
+      { buildType: "Release", cacheDir: join(String(dir), "space, apostrophe's $cache") },
+      String(dir),
+    );
+    const rsp = join(String(dir), "driver.rsp");
+    await Bun.write(rsp, cacheArgs(cfg).join(" ") + "\n");
+    const child = Bun.spawn(
+      [
+        clang!,
+        `@${rsp}`,
+        "-###",
+        "--target=x86_64-unknown-linux-gnu",
+        "-fuse-ld=lld",
+        "-nostdlib",
+        join(String(dir), "probe.c"),
+        "-o",
+        join(String(dir), "unused"),
+      ],
+      { stdout: "pipe", stderr: "pipe", timeout: 5_000 },
+    );
+    const trace = await new Response(child.stderr).text();
+    const expected = `--thinlto-cache-dir=${slash(join(cfg.cacheDir, "thinlto", "lld", "llvm-23.1.1", "linux-x64-gnu"))}`;
+    // Clang renders a shell command, escaping dollars inside double quotes.
+    expect(trace).toContain(JSON.stringify(expected).replaceAll("$", "\\$"));
+    expect(trace).toContain("--thinlto-cache-policy=cache_size=10%:cache_size_bytes=4g:");
+    expect(await child.exited).toBe(0);
+    expect(await Bun.file(join(String(dir), "unused")).exists()).toBe(false);
   });
 });

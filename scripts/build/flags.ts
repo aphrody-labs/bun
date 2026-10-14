@@ -11,7 +11,7 @@
  * that apply uniformly to bun's own C/C++ sources.
  */
 
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { bunExeName, type Config } from "./config.ts";
 import { quote, slash } from "./shell.ts";
 import { ucrtServicingLibDir } from "./winsysroot.ts";
@@ -27,6 +27,13 @@ export type FlagValue = string | string[] | ((cfg: Config) => string | string[])
  * the Windows `/STACK:` reserve and the Linux `-z stack-size` below.
  */
 export const DARWIN_STACK_SIZE = "0x1200000";
+
+// LLD's bounds apply when pruning runs, not to the peak size of an active link.
+// Per LLVM/target cache: 4 GiB, 10% of available space and 20,000 files;
+// entries unused for seven days expire. Links prune at most once every five minutes.
+// https://github.com/llvm/llvm-project/blob/release/23.x/llvm/lib/Support/CachePruning.cpp
+const ELF_THINLTO_CACHE_POLICY =
+  "cache_size=10%:cache_size_bytes=4g:cache_size_files=20000:prune_after=168h:prune_interval=5m";
 
 export interface Flag {
   /** Flag(s) to emit. Can be a function for flags that interpolate config values. */
@@ -946,6 +953,29 @@ export const linkerFlags: Flag[] = [
     flag: ["-flto=thin", "-fwhole-program-vtables", "-fforce-emit-vtables"],
     when: c => c.unix && c.lto,
     desc: "LTO at link time (matches compile-side -flto=thin)",
+  },
+  {
+    // -Xlinker keeps commas intact; -Wl would split them. Forward slashes
+    // also survive Clang's GNU response-file parser on a Windows host.
+    // Release Rust still uses ThinLTO when C/C++ LTO is disabled.
+    flag: c => [
+      "-Xlinker",
+      quote(
+        `--thinlto-cache-dir=${slash(join(c.cacheDir, "thinlto", "lld", `llvm-${c.clangVersion}`, `${c.os}-${c.arch}-${c.abi}`))}`,
+        c.host.os === "windows",
+      ),
+      "-Xlinker",
+      `--thinlto-cache-policy=${ELF_THINLTO_CACHE_POLICY}`,
+    ],
+    when: c =>
+      c.linux &&
+      (c.abi === "gnu" || c.abi === "musl") &&
+      !c.asan &&
+      linkRunsLto(c) &&
+      c.clangVersion !== undefined &&
+      /^\d+(?:\.\d+){1,2}$/.test(c.clangVersion) &&
+      /^ld\.lld(?:-\d+)?(?:\.exe)?$/.test(basename(slash(c.ld))),
+    desc: "Cache Linux GNU/musl ThinLTO objects in the shared build cache with bounded pruning",
   },
   {
     // Said to lld itself. A link-line `-O` reaches lld only through the clang driver, only on ELF, and only beside
