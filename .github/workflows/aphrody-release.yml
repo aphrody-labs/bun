@@ -114,6 +114,11 @@ jobs:
           expected-sha256: ${{ matrix.controlBootstrap.sha256 }}
           expected-bytes: ${{ matrix.controlBootstrap.bytes }}
           expected-source: ${{ matrix.controlBootstrap.source }}
+      - uses: ./.github/actions/setup-sccache
+        with:
+          endpoint: ${{ secrets.R2_ENDPOINT }}
+          access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       - name: Native capacity, source and owner prerequisites
         run: bun scripts/aphrody/release-native-worker.ts preflight "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
       - name: Build SDK, runtime and sidecars, then execute exact native gates

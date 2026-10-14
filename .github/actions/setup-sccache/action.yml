@@ -1,0 +1,66 @@
+name: Setup shared sccache
+description: Installs sccache and connects the runner-local cache to the Aphrody R2 build cache.
+
+inputs:
+  endpoint:
+    description: Cloudflare R2 S3 endpoint.
+    required: true
+  access-key-id:
+    description: R2 access key ID.
+    required: true
+  secret-access-key:
+    description: R2 secret access key.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install sccache
+      uses: mozilla-actions/sccache-action@fd02668681acd5f960e1372061bee5e3e987195c # v0.0.11
+      with:
+        version: v0.18.0
+    - name: Configure shared disk and R2 cache
+      shell: bash
+      env:
+        CACHE_ENDPOINT: ${{ inputs.endpoint }}
+        CACHE_ACCESS_KEY_ID: ${{ inputs.access-key-id }}
+        CACHE_SECRET_ACCESS_KEY: ${{ inputs.secret-access-key }}
+      run: |
+        set -euo pipefail
+        test -n "$CACHE_ENDPOINT"
+        test -n "$CACHE_ACCESS_KEY_ID"
+        test -n "$CACHE_SECRET_ACCESS_KEY"
+        {
+          echo "AWS_ACCESS_KEY_ID=$CACHE_ACCESS_KEY_ID"
+          echo "AWS_SECRET_ACCESS_KEY=$CACHE_SECRET_ACCESS_KEY"
+          echo "RUSTC_WRAPPER=sccache"
+          echo "SCCACHE_BASEDIRS=$GITHUB_WORKSPACE"
+          echo "SCCACHE_BUCKET=aphrody-dist"
+          echo "SCCACHE_CACHE_SIZE=20G"
+          echo "SCCACHE_CLIENT_SIDE=1"
+          echo "SCCACHE_DIR=$RUNNER_TEMP/sccache"
+          echo "SCCACHE_ENDPOINT=$CACHE_ENDPOINT"
+          echo "SCCACHE_IDLE_TIMEOUT=0"
+          echo "SCCACHE_MULTILEVEL_CHAIN=disk,s3"
+          echo "SCCACHE_MULTILEVEL_WRITE_ERROR_POLICY=l0"
+          echo "SCCACHE_REGION=auto"
+          echo "SCCACHE_S3_KEY_PREFIX=bun-v1"
+          echo "SCCACHE_S3_USE_SSL=true"
+        } >> "$GITHUB_ENV"
+        export AWS_ACCESS_KEY_ID="$CACHE_ACCESS_KEY_ID"
+        export AWS_SECRET_ACCESS_KEY="$CACHE_SECRET_ACCESS_KEY"
+        export SCCACHE_BASEDIRS="$GITHUB_WORKSPACE"
+        export SCCACHE_BUCKET=aphrody-dist
+        export SCCACHE_CACHE_SIZE=20G
+        export SCCACHE_CLIENT_SIDE=1
+        export SCCACHE_DIR="$RUNNER_TEMP/sccache"
+        export SCCACHE_ENDPOINT="$CACHE_ENDPOINT"
+        export SCCACHE_IDLE_TIMEOUT=0
+        export SCCACHE_MULTILEVEL_CHAIN=disk,s3
+        export SCCACHE_MULTILEVEL_WRITE_ERROR_POLICY=l0
+        export SCCACHE_REGION=auto
+        export SCCACHE_S3_KEY_PREFIX=bun-v1
+        export SCCACHE_S3_USE_SSL=true
+        sccache --stop-server >/dev/null 2>&1 || true
+        sccache --start-server
+        sccache --show-stats
