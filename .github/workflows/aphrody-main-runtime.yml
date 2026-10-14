@@ -1,0 +1,107 @@
+name: Aphrody main runtime delivery
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: aphrody-main-runtime-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: github.repository == 'aphrody-labs/bun'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      build: ${{ steps.plan.outputs.build }}
+    steps:
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="main-runtime-${GITHUB_SHA:0:12}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if gh release view "$tag" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            asset: bun-linux-x64
+            executable: build/release/bun
+          - runner: windows-2025
+            asset: bun-windows-x64.exe
+            executable: build/release/bun.exe
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 355
+    env:
+      CARGO_BUILD_JOBS: "2"
+      NINJAFLAGS: "-j2"
+      RUSTC_WRAPPER: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          bun-version: aphrody-v1.4.3-aphrody.2
+      - name: Build exact main runtime
+        shell: bash
+        run: |
+          bun install --frozen-lockfile
+          bun scripts/build.ts --profile=release --lto=off --canary=off -j2
+          "${{ matrix.executable }}" --version
+          revision="$("${{ matrix.executable }}" --revision)"
+          suffix="${revision#1.4.4+}"
+          case "$GITHUB_SHA" in "$suffix"*) ;; *) echo "revision differs: $revision"; exit 1;; esac
+          mkdir -p "$RUNNER_TEMP/main-runtime"
+          cp "${{ matrix.executable }}" "$RUNNER_TEMP/main-runtime/${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ runner.temp }}/main-runtime/${{ matrix.asset }}
+          compression-level: 0
+          if-no-files-found: error
+
+  publish:
+    needs: [plan, build]
+    if: needs.plan.outputs.build == 'true' && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+      TAG: ${{ needs.plan.outputs.tag }}
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Verify, publish and expose checksums
+        run: |
+          cd dist
+          chmod +x bun-linux-x64
+          revision="$(./bun-linux-x64 --revision)"
+          suffix="${revision#1.4.4+}"
+          case "$GITHUB_SHA" in "$suffix"*) ;; *) echo "revision differs: $revision"; exit 1;; esac
+          sha256sum bun-linux-x64 bun-windows-x64.exe > SHA256SUMS.txt
+          gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Aphrody Bun main ${GITHUB_SHA:0:12}" \
+            --notes "Automatic exact-source runtime delivery for Windows, VPS and DBFR." \
+            --prerelease bun-linux-x64 bun-windows-x64.exe SHA256SUMS.txt
