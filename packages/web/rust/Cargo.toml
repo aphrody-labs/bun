@@ -51,7 +51,7 @@ features = []
 version = "1.4.4"
 features = []
 git = "https://github.com/aphrody-labs/material"
-rev = "229a767493818a5dd9f92451b4a99699894a1865"
+rev = "e858361dfd2597b067eea56d471ff4caab7442f8"
 
 [workspace.dependencies.aphrody-patch]
 version = "1.4.4"

@@ -497,7 +497,7 @@ export function generate(options: GenerateOptions): Files {
       return `- \`${s.name}\`: ${(fm.description ?? "").replace(/\s+/g, " ")}`;
     })
     .join("\n");
-  const instructions = `# Bun (Aphrody runtime)\n\n${rules}\n\n${toolsDoc}\n\n## Decision identity\n\nYolo is Bun\'s typed decision layer. Read yolo/system-prompt.md for its public identity and yolo/context-catalog.json for source-derived resource references. A selection proposes a resource; it does not execute or authorize a tool.\n\n## Skills\n\n${skillIndex}\n`;
+  const instructions = `# Bun (Aphrody runtime)\n\n${rules}\n\n${toolsDoc}\n\n## Decision identity\n\nYolo is Bun's typed decision layer. Read yolo/system-prompt.md for its public identity and yolo/context-catalog.json for source-derived resource references. A selection proposes a resource; it does not execute or authorize a tool.\n\n## Skills\n\n${skillIndex}\n`;
   const context = [rules, "## Bun-native code", NATIVE_RULES.map(r => `- ${r}`).join("\n")].join("\n\n");
 
   // Content shared by every target, before the version stamp.
