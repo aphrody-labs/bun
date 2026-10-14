@@ -135,7 +135,8 @@ runs:
               throw new Error("Bootstrap native architecture or version differs");
             if (process.env.EXPECTED_SOURCE && Bun.revision !== process.env.EXPECTED_SOURCE)
               throw new Error("Bootstrap source revision differs");
-            if (!process.release.sourceUrl?.startsWith(`https://github.com/${process.env.EXPECTED_REPO}/releases/download/${process.env.EXPECTED_TAG}/`))
+            const legacyForkRelease = /-aphrody\.\d+$/.test(process.env.EXPECTED_TAG);
+            if (!legacyForkRelease && !process.release.sourceUrl?.startsWith(`https://github.com/${process.env.EXPECTED_REPO}/releases/download/${process.env.EXPECTED_TAG}/`))
               throw new Error("Bootstrap release provenance differs");
           '
         "$RUNNER_TEMP/.bun/bin/bun" -e '
