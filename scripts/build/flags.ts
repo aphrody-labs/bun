@@ -1062,9 +1062,11 @@ export const linkerFlags: Flag[] = [
     desc: "18MB stack reserve (JSC uses deep recursion), no error limit",
   },
   {
-    flag: "/DEBUG:FULL",
+    // lld-link's default 4 KiB PDB pages cap the file below 4 GiB. The full
+    // Windows debug build exceeds that limit as the Rust workspace grows.
+    flag: ["/DEBUG:FULL", "/PDBPAGESIZE:8192"],
     when: c => c.windows && c.debug,
-    desc: "Emit PDB so the crash handler can symbolize stack traces",
+    desc: "Emit a large PDB so the crash handler can symbolize stack traces",
   },
   {
     flag: "/delayload:winfw.dll",
