@@ -3,7 +3,12 @@ import { mkdirSync, symlinkSync } from "node:fs";
 import { join, posix, resolve } from "node:path";
 import { tempDir } from "../../../test/harness";
 import { GitTree } from "./collect";
-import { exportJitWorkspaceMetadata, jitWorkspaceMetadata, verifyJitCloudflareDependencies } from "./jit-source";
+import {
+  exportJitWorkspaceMetadata,
+  jitWorkspaceMetadata,
+  verifyJitCloudflareDependencies,
+  verifyJitGraphFrontendSources,
+} from "./jit-source";
 
 test("the actual JIT archive closes generator and Worker relative imports", async () => {
   using fixture = tempDir("site-jit-closure", {});
@@ -15,6 +20,7 @@ test("the actual JIT archive closes generator and Worker relative imports", asyn
   const available = new Set(
     [...tree.files.keys()].filter(file => paths.some(path => file === path || file.startsWith(path + "/"))),
   );
+  for (const path of jitWorkspaceMetadata(tree).keys()) available.add(path);
   const entries = ["scripts/aphrody/release-surfaces.ts", "packages/web/cloudflare/src/worker.ts"];
   const seen = new Set<string>();
   const compiler = new Bun.Transpiler({ loader: "ts", target: "bun" });
@@ -29,6 +35,7 @@ test("the actual JIT archive closes generator and Worker relative imports", asyn
       seen.add(path);
       const bytes = files.get(path)!;
       await Bun.write(join(String(fixture), path), bytes);
+      if (path.endsWith(".json")) continue;
       for (const dependency of compiler.scan(bytes).imports) {
         if (!dependency.path.startsWith(".")) continue;
         const base = posix.normalize(posix.join(posix.dirname(path), dependency.path));
@@ -171,6 +178,37 @@ test("JIT metadata refuses a workspace symlink into another owner", async () => 
   symlinkSync(join(root, "other"), join(root, "out/packages"), process.platform === "win32" ? "junction" : "dir");
   await expect(exportJitWorkspaceMetadata(tree, join(root, "out"))).rejects.toThrow("parent");
   expect(await Bun.file(join(root, "other/web/package.json")).exists()).toBe(false);
+});
+
+test("graph frontend receipt binds exported source bytes and refuses a changed loader", async () => {
+  const paths = [
+    "src/js/bun/graph-index.ts",
+    "src/js/bun/graphx.ts",
+    "scripts/aphrody/graph-index.ts",
+    "scripts/aphrody/release-graph-index.ts",
+    "scripts/aphrody/fork-graph-docs.ts",
+  ];
+  using fixture = tempDir(
+    "site-jit-frontend",
+    Object.fromEntries(paths.map(path => [path, "export const owner = " + JSON.stringify(path) + ";\n"])),
+  );
+  const root = String(fixture);
+  const run = (...args: string[]) => {
+    const child = Bun.spawnSync(["git", "-C", root, ...args], { stdout: "pipe", stderr: "pipe", timeout: 5000 });
+    if (child.exitCode !== 0) throw new Error(child.stderr.toString());
+  };
+  run("init");
+  run("add", ".");
+  run("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture");
+  const tree = new GitTree(root, "HEAD");
+  const receipt = await verifyJitGraphFrontendSources(tree, root);
+  expect(receipt.source).toBe(tree.sha);
+  expect(receipt.changedBinaryQualified).toBe(false);
+  expect(receipt.files.find(file => file.path === "src/js/bun/graph-index.ts")?.gitBlob).toBe(
+    tree.files.get("src/js/bun/graph-index.ts"),
+  );
+  await Bun.write(join(root, "scripts/aphrody/graph-index.ts"), "export const owner = 'changed';\n");
+  await expect(verifyJitGraphFrontendSources(tree, root)).rejects.toThrow("immutable source");
 });
 
 test("Cloudflare dependency reuse binds the real installed version to its captured pins", async () => {

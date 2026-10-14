@@ -83,6 +83,45 @@ export async function exportJitWorkspaceMetadata(tree: GitTree, destination: str
   return receipt;
 }
 
+/** Bind loaded graph sources to their Git export independently of the runtime executable. */
+export async function verifyJitGraphFrontendSources(tree: GitTree, destination: string) {
+  const root = resolve(destination);
+  const paths = [
+    "src/js/bun/graph-index.ts",
+    "src/js/bun/graphx.ts",
+    "scripts/aphrody/graph-index.ts",
+    "scripts/aphrody/release-graph-index.ts",
+    "scripts/aphrody/fork-graph-docs.ts",
+  ];
+  const files = [];
+  for (const [path, expected] of tree.readBytes(paths)) {
+    const file = join(root, path);
+    for (let parent = dirname(file); parent !== root; parent = dirname(parent)) {
+      const stat = lstatSync(parent);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error("Graph frontend parent is not owned");
+    }
+    const stat = lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || !Buffer.from(await Bun.file(file).bytes()).equals(expected))
+      throw new Error("Graph frontend differs from its immutable source: " + path);
+    files.push({
+      path,
+      gitBlob: tree.files.get(path),
+      bytes: expected.length,
+      sha256: new Bun.CryptoHasher("sha256").update(expected).digest("hex"),
+    });
+  }
+  if (files.length !== paths.length) throw new Error("Incomplete immutable graph frontend closure");
+  const receipt = {
+    schema: 1,
+    source: tree.sha,
+    scope: "runtime-backed-graph-frontends",
+    files,
+    changedBinaryQualified: false,
+  };
+  await Bun.write(join(root, "jit-frontend-inputs.json"), JSON.stringify(receipt, null, 2) + "\n");
+  return receipt;
+}
+
 /** Reuse the installed Cloudflare owner only while its captured pins and lock agree. */
 export async function verifyJitCloudflareDependencies(checkout: string, destination: string, source: string) {
   const installed = join(checkout, "packages/bun-cloudflare");
@@ -140,7 +179,11 @@ if (import.meta.main) {
     console.log(JSON.stringify(await verifyJitCloudflareDependencies(checkout, output, source)));
   else {
     if (mode) throw new Error("Unknown JIT metadata operation");
-    const receipt = await exportJitWorkspaceMetadata(new GitTree(checkout, source), output);
-    console.log(JSON.stringify({ source: receipt.source, manifests: receipt.files.length }));
+    const tree = new GitTree(checkout, source);
+    const receipt = await exportJitWorkspaceMetadata(tree, output);
+    const frontend = await verifyJitGraphFrontendSources(tree, output);
+    console.log(
+      JSON.stringify({ source: receipt.source, manifests: receipt.files.length, frontends: frontend.files.length }),
+    );
   }
 }

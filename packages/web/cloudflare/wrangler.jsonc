@@ -42,7 +42,6 @@
     { "pattern": "vectorcraft.aphrody.app", "custom_domain": true },
     { "pattern": "wordcraft.aphrody.app", "custom_domain": true },
     { "pattern": "www.aphrody.app", "custom_domain": true },
-    { "pattern": "yolo.aphrody.app", "custom_domain": true },
   ],
   "assets": {
     "directory": "./dist/site",
@@ -67,7 +66,7 @@
     "YOLO_QUOTA_QUALIFIED": "false",
     "YOLO_ORIGIN_URL": "",
     "YOLO_NATIVE_SOURCE": "",
-    "YOLO_MODEL": "clef",
+    "YOLO_MODEL": "clef-flash",
   },
   "secrets": {
     "required": ["APP_SECRET", "NEON_DATABASE_URL", "TYPESAFE_API_KEY", "YOLO_API_TOKEN", "YOLO_ORIGIN_TOKEN"],

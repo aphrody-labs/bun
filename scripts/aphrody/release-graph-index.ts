@@ -1,5 +1,5 @@
 import { BunPython } from "bun:graph";
-import { indexCodebase } from "bun:graph-index";
+import { graphIndexerProvenance, indexCodebase } from "./graph-index.ts";
 import { join } from "node:path";
 
 if (import.meta.main) {
@@ -13,5 +13,7 @@ if (import.meta.main) {
     artifactDirectory: join(output, "snapshots"),
     maxFiles: 500000,
   });
-  console.log(JSON.stringify(result));
+  const indexer = await graphIndexerProvenance();
+  if (indexer.nativeBackend.sha256 !== result.producerSHA256) throw new Error("Native graph producer identity changed");
+  console.log(JSON.stringify({ ...result, indexer }));
 }

@@ -118,7 +118,7 @@ async function canonicalDestination(path: string, signal?: AbortSignal) {
     try {
       return resolve(await realpath(ancestor), ...pending.toReversed());
     } catch (error) {
-      if (error?.code !== "ENOENT") throw error;
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error;
       const parent = dirname(ancestor);
       if (parent === ancestor) throw error;
       pending.push(relative(parent, ancestor));
@@ -638,7 +638,7 @@ async function indexDomain(
             const conflict = {
               source_file: node.source_file ?? null,
               source_location: node.source_location ?? null,
-              kind: node.kind ?? null,
+              file_type: node.file_type,
               label: node.label ?? null,
             };
             if (conflicts.length < 8 && !conflicts.some(value => JSON.stringify(value) === JSON.stringify(conflict)))

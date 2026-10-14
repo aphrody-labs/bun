@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import type { ForkCapabilities } from "./fork-capabilities.ts";
 import { writeGraphDocs } from "./graph-docs.ts";
+import { graphIndexerProvenance, indexCodebase } from "./graph-index.ts";
 
 export async function exportForkGraphDocs(
   root: string,
@@ -11,7 +12,7 @@ export async function exportForkGraphDocs(
   if (!isAbsolute(options.out)) throw new Error("--graph-docs must be an absolute staging directory");
   options.signal?.throwIfAborted();
   await mkdir(options.out, { recursive: true });
-  const [{ BunPython }, { indexCodebase }] = await Promise.all([import("bun:graph"), import("bun:graph-index")]);
+  const { BunPython } = await import("bun:graph");
   using registry = new BunPython(join(options.out, "fork-graph.sqlite"));
   const index = await indexCodebase(registry, root, {
     profile: "bun",
@@ -38,12 +39,15 @@ export async function exportForkGraphDocs(
     });
     documents.push({ domain: domain.domain, source: domain.source, snapshot: domain.snapshot, out: docs.out });
   }
+  const indexer = await graphIndexerProvenance();
+  if (indexer.nativeBackend.sha256 !== index.producerSHA256) throw new Error("Native graph producer identity changed");
   const evidence = {
     schema: "bun-fork-native-docs/1",
     catalogSHA256: new Bun.CryptoHasher("sha256").update(JSON.stringify(catalog)).digest("hex"),
     source: catalog.source,
     coverage: catalog.coverage,
     runtime: { version: Bun.version, revision: Bun.revision },
+    indexer,
     index,
     documents,
     capabilities: {
