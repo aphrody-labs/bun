@@ -64,8 +64,10 @@ test("WinUI -> Fluent -> M3: every key is a WinUI resource, a Fluent token and a
 test("XAML resources: theme dictionaries of WinUI brushes", () => {
   const xaml = fluentWinuiResources();
   expect(xaml).toContain('<ResourceDictionary x:Key="Light">');
+  expect(xaml).toContain('<ResourceDictionary x:Key="HighContrast">');
   expect(xaml).toContain('<SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#FF0F6CBD"/>');
   expect(xaml).toContain('<SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#FF115EA3"/>');
   expect(xaml).toContain('<CornerRadius x:Key="ControlCornerRadius">4</CornerRadius>');
   expect(xaml).toMatch(/<SolidColorBrush x:Key="SmokeFillColorDefaultBrush" Color="#[0-9A-F]{8}"\/>/);
+  expect(fluentWinuiResources({ highContrast: false })).not.toContain('x:Key="HighContrast"');
 });

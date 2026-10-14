@@ -2,7 +2,7 @@
 // ./tokens) exposed as JS objects, CSS custom properties and a Tailwind v4 theme, with the WinUI 3 -> Fluent 2 ->
 // Material 3 correspondence used by bun:winui.
 import type { BunPlugin } from "bun";
-import { typographyStyles, webDarkTheme, webLightTheme } from "./tokens/index.ts";
+import { teamsHighContrastTheme, typographyStyles, webDarkTheme, webLightTheme } from "./tokens/index.ts";
 import type { Theme } from "./tokens/types.ts";
 
 export * from "./tokens/index.ts";
@@ -45,6 +45,11 @@ export interface FluentCssOptions {
   light?: Theme;
   /** Dark theme. Default: `webDarkTheme`; `false` writes the light theme only. */
   dark?: Theme | false;
+}
+
+export interface FluentWinuiOptions extends FluentCssOptions {
+  /** High-contrast theme. Default: `teamsHighContrastTheme`; `false` omits the fallback dictionary. */
+  highContrast?: Theme | false;
 }
 
 /**
@@ -214,11 +219,12 @@ function xamlColor(value: string) {
 
 /**
  * A XAML `ResourceDictionary` that sets the WinUI brushes of {@link winuiResources} to a Fluent 2 theme
- * (light and dark theme dictionaries), for `MergedDictionaries` of a bun:winui application.
+ * (light, dark and high-contrast theme dictionaries), for `MergedDictionaries` of a bun:winui application.
  */
-export function fluentWinuiResources(options: FluentCssOptions = {}): string {
+export function fluentWinuiResources(options: FluentWinuiOptions = {}): string {
   const light = options.light ?? webLightTheme;
   const dark = options.dark === undefined ? webDarkTheme : options.dark || light;
+  const highContrast = options.highContrast === undefined ? teamsHighContrastTheme : options.highContrast;
   const brushes = (theme: Theme) =>
     Object.entries(winuiResources)
       .filter(([key]) => key.endsWith("Brush"))
@@ -233,6 +239,9 @@ export function fluentWinuiResources(options: FluentCssOptions = {}): string {
     `  <ResourceDictionary.ThemeDictionaries>`,
     `    <ResourceDictionary x:Key="Light">\n${brushes(light)}\n    </ResourceDictionary>`,
     `    <ResourceDictionary x:Key="Dark">\n${brushes(dark)}\n    </ResourceDictionary>`,
+    ...(highContrast
+      ? [`    <ResourceDictionary x:Key="HighContrast">\n${brushes(highContrast)}\n    </ResourceDictionary>`]
+      : []),
     `  </ResourceDictionary.ThemeDictionaries>`,
     `  <CornerRadius x:Key="ControlCornerRadius">${parseFloat(String(light.borderRadiusMedium))}</CornerRadius>`,
     `  <CornerRadius x:Key="OverlayCornerRadius">${parseFloat(String(light.borderRadiusXLarge))}</CornerRadius>`,

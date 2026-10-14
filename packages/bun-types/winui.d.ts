@@ -55,8 +55,12 @@ declare module "bun:winui" {
   }
 
   interface WinUIStartOptions extends WinUIRuntimeOptions {
-    /** Load `XamlControlsResources` (the Fluent styles of the WinUI controls). @default true */
-    resources?: boolean;
+    /**
+     * Load `XamlControlsResources` (the Fluent styles of the WinUI controls). XAML or an array of XAML
+     * resource dictionaries loads the control resources first, then merges the custom dictionaries.
+     * @default true
+     */
+    resources?: boolean | string | readonly string[];
     /** Application theme. Defaults to the system theme. */
     theme?: "light" | "dark";
     /** Call {@link Application.exit} when the last window closes. @default true */
@@ -159,6 +163,8 @@ declare module "bun:winui" {
     load(xaml: string): Element;
     /** Creates an element from its XAML type name and sets properties: `create("Button", { Content: "OK" })`. */
     create(type: string, properties?: Record<string, unknown>): Element;
+    /** Merges one or more XAML resource dictionaries after the WinUI control resources. */
+    mergeResources(xaml: string | readonly string[]): this;
     createWindow(options?: WindowOptions): Window;
     /** Dispatches the pending window messages now (the timer does it every few milliseconds). */
     pump(): void;

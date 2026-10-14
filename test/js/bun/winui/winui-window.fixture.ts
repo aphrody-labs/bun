@@ -2,7 +2,12 @@
 // itself: bun winui-window.fixture.ts.
 import winui from "bun:winui";
 
-const app = winui.start();
+const app = winui.start({
+  resources: `<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="BunFixtureBrush" Color="#FF0F6CBD"/>
+  </ResourceDictionary>`,
+});
 const win = app.createWindow({
   title: "bun:winui fixture",
   width: 640,
@@ -67,6 +72,7 @@ console.log(
       toggle: added.get("IsOn"),
       menu: win.find("menu")?.type ?? null,
       events: events.sort(),
+      resources: app.application.get("Resources").get("MergedDictionaries").get("Size"),
     },
     null,
     2,

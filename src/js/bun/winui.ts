@@ -511,9 +511,13 @@ class Application {
       application.put_RequestedTheme(theme);
     }
     if (this.#options.resources !== false) {
-      const resources = this.load(`<XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>`);
+      const resources = this.load(`<ResourceDictionary/>`);
+      const controls = this.load(`<XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>`);
+      resources.get("MergedDictionaries").call("Append", controls);
       application.put_Resources(resources.winrt.as("Microsoft.UI.Xaml.IResourceDictionary"));
     }
+    if (typeof this.#options.resources === "string" || Array.isArray(this.#options.resources))
+      this.mergeResources(this.#options.resources);
   }
 
   get application() {
@@ -532,6 +536,18 @@ class Application {
     const element = this.load(`<${type}/>`);
     for (const [key, value] of Object.entries(properties ?? {})) element.set(key, value);
     return element;
+  }
+
+  mergeResources(xaml: string | readonly string[]) {
+    const dictionaries = typeof xaml === "string" ? [xaml] : xaml;
+    if (!Array.isArray(dictionaries) || dictionaries.some(value => typeof value !== "string"))
+      throw new TypeError("bun:winui: resources must be XAML or an array of XAML strings");
+    const resources = this.application.get("Resources");
+    if (!(resources instanceof Element))
+      throw new TypeError("bun:winui: application resources are disabled");
+    const merged = resources.get("MergedDictionaries");
+    for (const source of dictionaries) merged.call("Append", this.load(source));
+    return this;
   }
 
   createWindow(options?: any): Window {
@@ -605,7 +621,8 @@ class Application {
 
 function start(options?: {
   version?: string;
-  resources?: boolean;
+  resources?: boolean | string | readonly string[];
+  theme?: "light" | "dark";
   exitOnLastWindowClosed?: boolean;
   bootstrapDll?: string;
   winrt?: unknown;

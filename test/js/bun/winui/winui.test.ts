@@ -103,6 +103,7 @@ describe("bun:winui", () => {
         toggle: true,
         menu: "MenuFlyout",
         events: ["Click Button", "TextChanged modifié"],
+        resources: 2,
       });
       expect(last).toBe("closed true true\n");
       expect(exitCode).toBe(0);

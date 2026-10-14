@@ -119,7 +119,7 @@ Le catalogue `md-*` est chargé à la demande avec `@aphrody/m3-front` (`registe
 
 ### Ressources de thème WinUI → Fluent 2 → M3
 
-Source unique : `winuiResources` de [`packages/bun-fluent`](../../../packages/bun-fluent) (tokens Fluent 2 absorbés de `microsoft/fluentui` `packages/tokens`). `packages/bun-fluent/test/fluent.test.ts` vérifie que chaque clé existe dans `winui-inventory.json`, que chaque token Fluent existe dans `webLightTheme` et que chaque token M3 est écrit par le thème `m3` de `bun-plugin-tailwind`. `fluentWinuiResources()` produit le `ResourceDictionary` XAML (dictionnaires Light/Dark) qui applique ces valeurs dans une app `bun:winui`; `fluent:theme.css` les expose à Tailwind (`schemeImport`). `SystemAccentColor*` n'est pas dans les dictionnaires de thème du dépôt : l'accent Windows reste le seed M3 (section suivante).
+Source unique : `winuiResources` de [`packages/bun-fluent`](../../../packages/bun-fluent) (tokens Fluent 2 absorbés de `microsoft/fluentui` `packages/tokens`). `packages/bun-fluent/test/fluent.test.ts` vérifie que chaque clé existe dans `winui-inventory.json`, que chaque token Fluent existe dans `webLightTheme` et que chaque token M3 est écrit par le thème `m3` de `bun-plugin-tailwind`. `fluentWinuiResources()` produit le `ResourceDictionary` XAML (dictionnaires Light/Dark/HighContrast) qui applique ces valeurs dans une app `bun:winui`; `fluent:theme.css` les expose à Tailwind (`schemeImport`). `SystemAccentColor*` n'est pas dans les dictionnaires de thème du dépôt : l'accent Windows reste le seed M3 (section suivante).
 
 | Ressource WinUI | Token Fluent 2 | Valeur web clair / sombre | Token M3 |
 | --- | --- | --- | --- |
